@@ -27,3 +27,8 @@
 *.exe
 *.out
 *.app
+# Dictionary files
+*.d
+# Backups
+*~
+*.bak
