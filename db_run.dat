@@ -3,9 +3,5 @@
 # the current working directory.
 
 ebeam      = 1.
-R.theta    = -16.
-R.pcentral = 0.8
-L.theta    = 16.
-L.pcentral = 0.8
 sbs.theta    = 32.0
 sbs.pcentral = 11.0

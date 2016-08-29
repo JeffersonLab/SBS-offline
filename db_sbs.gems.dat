@@ -1,20 +1,28 @@
 
-
-
 sbs.gems.planeconfig = x1 y1
-sbs.gems.cratemap = 11  0   24  3561  1024
+sbs.gems.cratemap = 11  0
 
 sbs.gems.xp.res = 200e-6
 
 sbs.gems.x1.position = 0.0 0.0 0.0
 sbs.gems.x1.size     = 0.1 0.1 0.001
 
-sbs.gems.x1.detmap = \
-  11  0  0  2304
-
+sbs.gems.x1.chanmap = \
+11 0 3 0 0 15 0 1 \
+11 0 3 0 1 14 1 1 \
+11 0 3 0 2 13 2 1 \
+11 0 3 0 3 12 3 1 \
+11 0 3 0 5 11 4 1 \
+11 0 3 0 6 10 5 1 \
+11 0 3 0 7  9 6 1 \
+11 0 3 0 8  8 7 1
 
 sbs.gems.y1.position = 0.0 0.0 0.0
 sbs.gems.y1.size     = 0.1 0.1 0.001
 
-sbs.gems.y1.detmap = \
-  11  0  2560 3840
+sbs.gems.y1.chanmap = \
+11 0 3 0 14 24 5 1 \
+11 0 3 0 13 25 6 1 \
+11 0 3 0 12 26 7 1 \
+11 0 3 0 11 27 8 1 \
+11 0 3 0 10 28 9 1

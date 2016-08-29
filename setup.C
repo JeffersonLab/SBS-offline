@@ -1,23 +1,22 @@
 
 #include "TSystem.h"
+#include "TList.h"
 #include "THaRun.h"
 #include "THaEvent.h"
 #include "THaAnalyzer.h"
 #include "THaApparatus.h"
 
-//#include "TreeSearch/GEMTracker.h"
-
+//#include "SBSGEMStand.h"
+//#include "SBSBigBite.h"
 
 void setup(){
 
     gSystem->Load("libsbs.so");
-    gSystem->Load("TreeSearch/libTreeSearch.so");
-    gSystem->Load("TreeSearch/libTreeSearch-GEM.so");
 
-    SBSBigBite *sbs = new SBSBigBite("sbs", "Generic detector stand");
-    TreeSearch::GEMTracker *gems = new TreeSearch::GEMTracker("gems");
+    SBSBigBite   *sbs = new SBSBigBite("sbs", "Generic apparatus");
+    SBSGEMStand *gems = new SBSGEMStand("gems", "Collection of GEMs in stand");
 
-//    sbs->AddDetector(gems);
+    sbs->AddDetector(gems);
 
   //
   //  Steering script for Hall A analyzer demo
@@ -66,5 +65,5 @@ void setup(){
   analyzer->SetSummaryFile("summary_example.log"); // optional
   
   //analyzer->SetCompressionLevel(0); // turn off compression
-    analyzer->Process(run);     // start the actual analysis
+  analyzer->Process(run);     // start the actual analysis
 }

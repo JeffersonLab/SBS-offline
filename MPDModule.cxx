@@ -61,12 +61,9 @@ namespace Decoder {
 
       UInt_t data_count = 0;
 
-      printf("Loading slot!\n");
-
       for( Int_t i = 0; i < len; i++ ){
           tag = p[i] & 0xf0000000;
 
-          printf("tag %x!\n", tag >> 28);
           switch(tag) {
               case MPD_MODULE_TAG:
                   mpdID = p[i] & 0xffff;
@@ -104,7 +101,7 @@ namespace Decoder {
                   // Otherwise we have data
                   effCh = (mpdID) << 8 | adcCh;
                   if( fDebugFile ){
-                      *fDebugFile << hex << "raw ev buff   "<<i<<"   "<< p[i]  <<endl;
+                      *fDebugFile << hex << "raw ev buff   "<< mpdID << "   " << adcCh <<"   "<< p[i]  <<endl;
                   }
                   status = sldat->loadData("adc",effCh, data, data);
                   if( status != SD_OK ) return -1;

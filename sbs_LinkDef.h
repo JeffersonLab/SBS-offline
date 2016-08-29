@@ -10,4 +10,6 @@
 
 #pragma link C++ class Decoder::MPDModule+;
 #pragma link C++ class SBSBigBite+;
+#pragma link C++ class SBSGEMStand+;
+#pragma link C++ class SBSGEMPlane+;
 #endif

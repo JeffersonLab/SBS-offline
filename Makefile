@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # Core library
-SRC = MPDModule.cxx SBSBigBite.cxx
-EXTRAHDR = MPDModule.h SBSBigBite.h
+SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
+EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h
 
 CORE = sbs
 CORELIB  = lib$(CORE).so
