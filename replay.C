@@ -9,7 +9,7 @@
 //#include "SBSGEMStand.h"
 //#include "SBSBigBite.h"
 
-void setup(){
+void replay(){
 
     gSystem->Load("libsbs.so");
 
