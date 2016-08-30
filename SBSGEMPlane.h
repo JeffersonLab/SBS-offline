@@ -42,6 +42,9 @@ class SBSGEMPlane : public THaSubDetector {
         std::vector<mpdmap_t>    fMPDmap;
         std::vector<Int_t>       fChanMapData;
 
+        Double_t fZeroSuppressRMS;
+        Bool_t fZeroSuppress;
+
         // Output variables
         Int_t  fNch;
         Int_t *fStrip; // [fNch]
@@ -53,7 +56,8 @@ class SBSGEMPlane : public THaSubDetector {
         Int_t *fadc3; // [fNch]
         Int_t *fadc4; // [fNch]
         Int_t *fadc5; // [fNch]
-        Int_t *fPedestal; 
+        Double_t *fPedestal; 
+        Double_t *fRMS; 
 
         ClassDef(SBSGEMPlane,0)
 

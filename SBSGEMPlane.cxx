@@ -10,6 +10,9 @@ SBSGEMPlane::SBSGEMPlane( const char *name, const char *description,
     THaSubDetector(name,description,parent),
     fNch(0),fStrip(NULL),fPedestal(NULL)
 {
+    // FIXME:  To database
+    fZeroSuppress    = kFALSE;
+    fZeroSuppressRMS = 5.0;
 
         for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
             fadc[i] = NULL;
@@ -48,8 +51,13 @@ Int_t SBSGEMPlane::ReadDatabase( const TDatime& date ){
     FILE* file = OpenFile( date );
     if( !file ) return kFileError;
 
+    std::vector<Double_t> rawped;
+    std::vector<Double_t> rawrms;
+
     const DBRequest request[] = {
         { "chanmap",        &fChanMapData,        kIntV},
+        { "ped",            &rawped,        kDoubleV},
+        { "rms",            &rawrms,        kDoubleV},
         {}
     };
     status = LoadDB( file, date, request, fPrefix );
@@ -73,13 +81,13 @@ Int_t SBSGEMPlane::ReadDatabase( const TDatime& date ){
 
     // FIXME:  make sure to delete if already initialized
     fStrip    = new Int_t [N_APV25_CHAN*nentry];
-    fPedestal = new Int_t [N_APV25_CHAN*nentry];
-    for( Int_t i = 0; i < N_APV25_CHAN*nentry; i++ ){
-        // FIXME needs to read in pedestal map
-        fPedestal[i] = 0;
-    }
+
+
     for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
         fadc[i] = new Int_t [N_APV25_CHAN*nentry];
+        for( Int_t j = 0; j < N_MPD_TIME_SAMP; j++ ){
+            fadc[i][j] = 0.0;
+        }
     }
     fadc0 = fadc[0];
     fadc1 = fadc[1];
@@ -87,6 +95,37 @@ Int_t SBSGEMPlane::ReadDatabase( const TDatime& date ){
     fadc3 = fadc[3];
     fadc4 = fadc[4];
     fadc5 = fadc[5];
+
+    // Find max strip number
+    int maxstrip = -1e9;
+    for( UInt_t i = 0; i < rawped.size(); i++ ){
+        // Odd values are pedestals themselves
+        if( (i % 2) == 1 ) continue;
+        if( rawped[i] > maxstrip ){
+            maxstrip = rawped[i];
+        }
+    }
+
+    fPedestal = new Double_t [maxstrip+1];
+    fRMS      = new Double_t [maxstrip+1];
+    for( Int_t i = 0; i < N_APV25_CHAN*nentry; i++ ){
+        // FIXME needs to read in pedestal map
+        fPedestal[i] = 0.0;
+        fRMS[i] = 0.0;
+    }
+
+    for( UInt_t i = 0; i < rawped.size(); i++ ){
+        if( (i % 2) == 1 ) continue;
+        int idx = (int) rawped[i];
+        fPedestal[idx] = rawped[i+1];
+    }
+
+    for( UInt_t i = 0; i < rawrms.size(); i++ ){
+        if( (i % 2) == 1 ) continue;
+        int idx = (int) rawrms[i];
+        fRMS[idx] = rawrms[i+1];
+    }
+
 
     return 0;
 }
@@ -113,6 +152,7 @@ Int_t SBSGEMPlane::DefineVariables( EMode mode ) {
       if( ret != kOK )
           return ret;
 
+      return kOK;
 
 }
 
@@ -134,7 +174,10 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
             Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
             if( chan != effChan ) continue; // not part of this detector
 
+
             Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
+
+//            std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
 
 //            std::cout << nsamp << " samples detected" << std::endl;
 
@@ -151,20 +194,38 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 
                 Int_t RstripPos = RstripNb + 128*it->pos;
 
+                /*
+                if( it->adc_id == 10 ){
+                std::cout << "ADC " << it->adc_id << " final strip pos: " << RstripPos << std::endl;
+                }
+                */
+
                 fStrip[fNch] = RstripPos;
+
+
+
                 for( Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++ ){
                     int isamp = adc_samp*N_APV25_CHAN + strip;
+
+                    assert(isamp < nsamp);
 
                     fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot, chan, isamp) -
                                             fPedestal[RstripPos];
 
                     assert( fNch < fMPDmap.size()*N_APV25_CHAN );
                 }
-                fNch++;
+
+                // Zero suppression
+                if( !fZeroSuppress ||  
+                      ( fRMS[RstripPos] > 0.0 && fabs(fadc[2][fNch])/fRMS[RstripPos] > fZeroSuppressRMS ) ){
+                    fNch++;
+                }
             }
         }
 
     }
+
+//    std::cout << fName << " channels found  " << fNch << std::endl;
 
     return 0;
 }

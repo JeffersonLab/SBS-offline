@@ -75,7 +75,7 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
     }
 
     for (std::vector<std::string>::iterator it = planes.begin() ; it != planes.end(); ++it){
-        fPlanes.push_back(new SBSGEMPlane((*it).c_str(), (*it).c_str(), this));
+        fPlanes.push_back(new SBSGEMPlane( (*it).c_str(), (*it).c_str(), this));
     }
 
     status = kOK;
