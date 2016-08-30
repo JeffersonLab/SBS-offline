@@ -70,16 +70,4 @@ void getpedandrms(){
     }
     fclose(output);
 
-    h[50]->Draw();
-    new TCanvas();
-    h[51]->Draw();
-    new TCanvas();
-    h[52]->Draw();
-    new TCanvas();
-    h[53]->Draw();
 }
-
-
-
-
-
