@@ -55,9 +55,9 @@ Int_t SBSGEMPlane::ReadDatabase( const TDatime& date ){
     std::vector<Double_t> rawrms;
 
     const DBRequest request[] = {
-        { "chanmap",        &fChanMapData,        kIntV},
-        { "ped",            &rawped,        kDoubleV},
-        { "rms",            &rawrms,        kDoubleV},
+        { "chanmap",        &fChanMapData,        kIntV, 0, 0},
+        { "ped",            &rawped,        kDoubleV, 0, 1},
+        { "rms",            &rawrms,        kDoubleV, 0, 1},
         {}
     };
     status = LoadDB( file, date, request, fPrefix );
@@ -96,18 +96,8 @@ Int_t SBSGEMPlane::ReadDatabase( const TDatime& date ){
     fadc4 = fadc[4];
     fadc5 = fadc[5];
 
-    // Find max strip number
-    int maxstrip = -1e9;
-    for( UInt_t i = 0; i < rawped.size(); i++ ){
-        // Odd values are pedestals themselves
-        if( (i % 2) == 1 ) continue;
-        if( rawped[i] > maxstrip ){
-            maxstrip = rawped[i];
-        }
-    }
-
-    fPedestal = new Double_t [maxstrip+1];
-    fRMS      = new Double_t [maxstrip+1];
+    fPedestal = new Double_t [N_APV25_CHAN*nentry];
+    fRMS      = new Double_t [N_APV25_CHAN*nentry];
     for( Int_t i = 0; i < N_APV25_CHAN*nentry; i++ ){
         // FIXME needs to read in pedestal map
         fPedestal[i] = 0.0;
@@ -117,13 +107,23 @@ Int_t SBSGEMPlane::ReadDatabase( const TDatime& date ){
     for( UInt_t i = 0; i < rawped.size(); i++ ){
         if( (i % 2) == 1 ) continue;
         int idx = (int) rawped[i];
-        fPedestal[idx] = rawped[i+1];
+	
+	if( idx < N_APV25_CHAN*nentry ){
+		fPedestal[idx] = rawped[i+1];
+	} else {
+		
+	    std::cout << "[SBSGEMPlane::ReadDatabase]  WARNING: " << " strip " << idx  << " listed but not enough strips in cratemap" << std::endl;
+	}
     }
 
     for( UInt_t i = 0; i < rawrms.size(); i++ ){
         if( (i % 2) == 1 ) continue;
         int idx = (int) rawrms[i];
-        fRMS[idx] = rawrms[i+1];
+	if( idx < N_APV25_CHAN*nentry ){
+		fRMS[idx] = rawrms[i+1];
+	} else {
+	    std::cout << "[SBSGEMPlane::ReadDatabase]  WARNING: " << " strip " << idx  << " listed but not enough strips in cratemap" << std::endl;
+	}
     }
 
 
