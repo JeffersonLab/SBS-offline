@@ -177,9 +177,15 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 
             Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
 
-//            std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
+/*
+            std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
 
-//            std::cout << nsamp << " samples detected" << std::endl;
+            std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
+*/
+
+	    if( (nsamp/N_APV25_CHAN) != N_MPD_TIME_SAMP ){
+		continue;
+	    }
 
             assert( (nsamp/N_APV25_CHAN) == N_MPD_TIME_SAMP );
             for( Int_t strip = 0; strip < N_APV25_CHAN; ++strip ) {
@@ -194,11 +200,11 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 
                 Int_t RstripPos = RstripNb + 128*it->pos;
 
-                /*
+/*
                 if( it->adc_id == 10 ){
                 std::cout << "ADC " << it->adc_id << " final strip pos: " << RstripPos << std::endl;
                 }
-                */
+*/
 
                 fStrip[fNch] = RstripPos;
 
