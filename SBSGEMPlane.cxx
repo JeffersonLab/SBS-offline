@@ -177,17 +177,13 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 
             Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
 
-/*
+            /*
             std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
-
             std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
-*/
+            */
 
-	    if( (nsamp/N_APV25_CHAN) != N_MPD_TIME_SAMP ){
-		continue;
-	    }
+            assert( nsamp == N_APV25_CHAN*N_MPD_TIME_SAMP );
 
-            assert( (nsamp/N_APV25_CHAN) == N_MPD_TIME_SAMP );
             for( Int_t strip = 0; strip < N_APV25_CHAN; ++strip ) {
                 // data is packed like this
                 // [ts1 of 128 chan] [ts2 of 128chan] ... [ts6 of 128chan]
@@ -218,7 +214,7 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
                     fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot, chan, isamp) -
                                             fPedestal[RstripPos];
 
-                    assert( fNch < fMPDmap.size()*N_APV25_CHAN );
+                    assert( ((UInt_t) fNch) < fMPDmap.size()*N_APV25_CHAN );
                 }
 
                 // Zero suppression

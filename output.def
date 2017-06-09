@@ -1,2 +1,2 @@
-block sbs.gems.x1.*
-block sbs.gems.y1.*
+block sbs.gems.x*
+block sbs.gems.y*

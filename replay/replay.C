@@ -50,7 +50,8 @@ void replay(){
   
   // Define the run(s) that we want to analyze.
   // We just set up one, but this could be many.
-  THaRun* run = new THaRun( "prod12_4100V_TrigRate25_4.dat" );
+//  THaRun* run = new THaRun( "prod12_4100V_TrigRate25_4.dat" );
+  THaRun* run = new THaRun( "5GEM_sample.dat" );
   run->SetLastEvent(-1);
 
   run->SetDataRequired(0);
