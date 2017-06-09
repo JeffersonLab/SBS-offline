@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           
-// THaBBTotalShower                                                            
+// SBSBBTotalShower                                                            
 //                                                                           
 // A total shower counter, consisting of a shower and a preshower.           
 // Calculates the total energy deposited in Shower+Preshower.           
@@ -20,8 +20,8 @@
 //                                                                           
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "THaBBTotalShower.h"
-#include "THaBBShower.h"
+#include "SBSBBTotalShower.h"
+#include "SBSBBShower.h"
 
 #include "VarType.h"
 #include "VarDef.h"
@@ -36,10 +36,10 @@ class THaEvData;
 class TClonesArray;
 class TDatime;
 
-ClassImp(THaBBTotalShower)
+ClassImp(SBSBBTotalShower)
 
 //_____________________________________________________________________________
-THaBBTotalShower::THaBBTotalShower( const char* name, const char* description,
+SBSBBTotalShower::SBSBBTotalShower( const char* name, const char* description,
                                    THaApparatus* apparatus ) :
 THaPidDetector(name,description,apparatus), 
 fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0), fE(NULL)
@@ -56,7 +56,7 @@ fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0), fE(NULL)
 
 
 //_____________________________________________________________________________
-THaBBTotalShower::THaBBTotalShower( const char* name, 
+SBSBBTotalShower::SBSBBTotalShower( const char* name, 
                                    const char* shower_name,
                                    const char* preshower_name,
                                    const char* description,
@@ -72,7 +72,7 @@ fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0), fE(NULL)
 }
 
 //_____________________________________________________________________________
-void THaBBTotalShower::Setup( const char* name,
+void SBSBBTotalShower::Setup( const char* name,
                              const char* shower_name,
                              const char* preshower_name,
                              const char* description,
@@ -128,7 +128,7 @@ void THaBBTotalShower::Setup( const char* name,
     size_t dlen = strlen(desc);
     strcat( desc, " shower subdetector" );
 
-    fShower = new THaBBShower( sname, desc, apparatus );
+    fShower = new SBSBBShower( sname, desc, apparatus );
     if( !fShower || fShower->IsZombie() ) {
         MakeZombie();
         goto exit;
@@ -140,7 +140,7 @@ void THaBBTotalShower::Setup( const char* name,
         sname = preshower_name;
     strcpy( desc+dlen, " preshower subdetector" );
 
-    fPreShower = new THaBBShower( sname, desc, apparatus );
+    fPreShower = new SBSBBShower( sname, desc, apparatus );
     if( !fPreShower && fPreShower->IsZombie() ) {
         MakeZombie();
         goto exit;
@@ -153,7 +153,7 @@ exit:
 }
 
 //_____________________________________________________________________________
-void THaBBTotalShower::ClearEvent() {
+void SBSBBTotalShower::ClearEvent() {
 
     for (Int_t i=0;i<kMaxNClust;i++) {
         fE[i] = 0.0;
@@ -164,7 +164,7 @@ void THaBBTotalShower::ClearEvent() {
 }
 
 //_____________________________________________________________________________
-THaBBTotalShower::~THaBBTotalShower()
+SBSBBTotalShower::~SBSBBTotalShower()
 {
     // Destructor. Remove variables from global list.
     if( fIsSetup )
@@ -180,7 +180,7 @@ THaBBTotalShower::~THaBBTotalShower()
 }
 
 //_____________________________________________________________________________
-THaAnalysisObject::EStatus THaBBTotalShower::Init( const TDatime& run_time )
+THaAnalysisObject::EStatus SBSBBTotalShower::Init( const TDatime& run_time )
 {
     // Set up total shower counter. This function 
     // reads the total shower parameters from a local database file 
@@ -200,7 +200,7 @@ THaAnalysisObject::EStatus THaBBTotalShower::Init( const TDatime& run_time )
 }
 
 //_____________________________________________________________________________
-Int_t THaBBTotalShower::ReadDatabase( const TDatime& date )
+Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
 {
     // Read this detector's parameters from the database file 'fi'.
     // This function is called by THaDetectorBase::Init() once at the
@@ -236,7 +236,7 @@ Int_t THaBBTotalShower::ReadDatabase( const TDatime& date )
 }
 
 //_____________________________________________________________________________
-Int_t THaBBTotalShower::DefineVariables( EMode mode )
+Int_t SBSBBTotalShower::DefineVariables( EMode mode )
 {
     // Initialize global variables and lookup table for decoder
 
@@ -259,7 +259,7 @@ Int_t THaBBTotalShower::DefineVariables( EMode mode )
 }
 
 //_____________________________________________________________________________
-Int_t THaBBTotalShower::Decode( const THaEvData& evdata )
+Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 {
     // Decode total shower detector. Calls Decode() of fPreShower and fShower.
     // Return the return value of fShower->Decode().
@@ -274,7 +274,7 @@ Int_t THaBBTotalShower::Decode( const THaEvData& evdata )
 }
 
 //_____________________________________________________________________________
-Int_t THaBBTotalShower::CoarseProcess(TClonesArray& tracks )
+Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 {
     // Reconstruct Clusters in shower and preshower detectors.
     // Then compute total shower energy and cluster ID.
@@ -338,7 +338,7 @@ Int_t THaBBTotalShower::CoarseProcess(TClonesArray& tracks )
     return 0;
 }
 //_____________________________________________________________________________
-Int_t THaBBTotalShower::FineProcess( TClonesArray& tracks )
+Int_t SBSBBTotalShower::FineProcess( TClonesArray& tracks )
 {
     // Fine processing. 
     // Call fPreShower->FineProcess() and fShower->FineProcess() in turn.
@@ -352,7 +352,7 @@ Int_t THaBBTotalShower::FineProcess( TClonesArray& tracks )
 }
 
 //_____________________________________________________________________________
-void THaBBTotalShower::SetApparatus( THaApparatus* app )
+void SBSBBTotalShower::SetApparatus( THaApparatus* app )
 {
     // Set the apparatus of this detector as well as the subdetectors
 
@@ -364,7 +364,7 @@ void THaBBTotalShower::SetApparatus( THaApparatus* app )
 
 //_____________________________________________________________________________
 
-void THaBBTotalShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
+void SBSBBTotalShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {
     ClearEvent();
     fNclust = 0;

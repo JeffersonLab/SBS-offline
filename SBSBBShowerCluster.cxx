@@ -1,22 +1,22 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// THaBBShowerCluster                                                        //
+// SBSBBShowerCluster                                                        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#include "THaBBShowerCluster.h"
+#include "SBSBBShowerCluster.h"
 #include <iostream>
 
 using namespace std;
 
-const Float_t THaBBShowerCluster::kBig =(Float_t)1e15;
+const Float_t SBSBBShowerCluster::kBig =(Float_t)1e15;
 
 //_____________________________________________________________
-THaBBShowerCluster::THaBBShowerCluster(Int_t nmaxblk, THaBBShowerBlock* block) 
+SBSBBShowerCluster::SBSBBShowerCluster(Int_t nmaxblk, SBSShowerBlock* block) 
 : fNMaxBlocks(nmaxblk)
 {
-    fBlocks = new THaBBShowerBlock*[fNMaxBlocks];
+    fBlocks = new SBSShowerBlock*[fNMaxBlocks];
     fBlocks[0] = block;
     fX = block->GetX();
     fY = block->GetY();
@@ -26,10 +26,10 @@ THaBBShowerCluster::THaBBShowerCluster(Int_t nmaxblk, THaBBShowerBlock* block)
 
 
 //_____________________________________________________________
-THaBBShowerCluster::THaBBShowerCluster(Int_t nmaxblk) 
+SBSBBShowerCluster::SBSBBShowerCluster(Int_t nmaxblk) 
 : fNMaxBlocks(nmaxblk)
 {
-    fBlocks = new THaBBShowerBlock*[fNMaxBlocks];
+    fBlocks = new SBSShowerBlock*[fNMaxBlocks];
     fX = 0;
     fY = 0;
     fE = 0;
@@ -38,7 +38,7 @@ THaBBShowerCluster::THaBBShowerCluster(Int_t nmaxblk)
 
 
 //_____________________________________________________________
-THaBBShowerCluster::THaBBShowerCluster() {
+SBSBBShowerCluster::SBSBBShowerCluster() {
     fX = kBig;
     fY = kBig;
     fE = kBig;
@@ -46,14 +46,14 @@ THaBBShowerCluster::THaBBShowerCluster() {
 }
 
 //_____________________________________________________________
-THaBBShowerCluster::~THaBBShowerCluster() {
+SBSBBShowerCluster::~SBSBBShowerCluster() {
 
     DeleteArrays();
 
 }
 
 //_____________________________________________________________
-void THaBBShowerCluster::AddBlock(THaBBShowerBlock* block) {
+void SBSBBShowerCluster::AddBlock(SBSShowerBlock* block) {
 
     if (fMult<fNMaxBlocks) {
         fBlocks[fMult] = block;
@@ -72,16 +72,16 @@ void THaBBShowerCluster::AddBlock(THaBBShowerBlock* block) {
 }
 
 //_____________________________________________________________
-void THaBBShowerCluster::ClearEvent() {
+void SBSBBShowerCluster::ClearEvent() {
     fMult=0;fX=fY=fE=0.;
     DeleteArrays();
-    fBlocks = new THaBBShowerBlock*[fNMaxBlocks];
+    fBlocks = new SBSShowerBlock*[fNMaxBlocks];
 }
 
 //_____________________________________________________________
-void THaBBShowerCluster::DeleteArrays() {
+void SBSBBShowerCluster::DeleteArrays() {
     delete [] fBlocks; fBlocks = 0;
 }
 
-ClassImp(THaBBShowerCluster)
+ClassImp(SBSBBShowerCluster)
 

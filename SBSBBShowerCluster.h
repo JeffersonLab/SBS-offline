@@ -1,23 +1,23 @@
-#ifndef ROOT_THaBBShowerCluster
-#define ROOT_THaBBShowerCluster
+#ifndef ROOT_SBSBBShowerCluster
+#define ROOT_SBSBBShowerCluster
 
 ////////////////////////////////////////////////////////////////////////////
 //                                                                        //
-// THaBBShowerCluster                                                      //
+// SBSBBShowerCluster                                                      //
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
 
 #include "TObject.h"
-#include "THaBBShowerBlock.h"
+#include "SBSShowerBlock.h"
 
-class THaBBShowerCluster : public TObject {
+class SBSBBShowerCluster : public TObject {
 
 public:
 
-    THaBBShowerCluster();
-    THaBBShowerCluster(Int_t nmaxblk);
-    THaBBShowerCluster(Int_t nmaxblk, THaBBShowerBlock* block);
-    virtual ~THaBBShowerCluster();
+    SBSBBShowerCluster();
+    SBSBBShowerCluster(Int_t nmaxblk);
+    SBSBBShowerCluster(Int_t nmaxblk, SBSShowerBlock* block);
+    virtual ~SBSBBShowerCluster();
 
     Float_t GetX() const {return fX;}
     Float_t GetY() const {return fY;}
@@ -31,11 +31,11 @@ public:
     void SetE(Float_t var) {fE=var;}
     void SetMult(Int_t var) {fMult=var;}
 
-    THaBBShowerBlock** GetBlocks() {return fBlocks;}
+    SBSShowerBlock** GetBlocks() {return fBlocks;}
 
     Int_t GetSize() {return fMult;}
 
-    void AddBlock(THaBBShowerBlock* block);
+    void AddBlock(SBSShowerBlock* block);
 
     void ClearEvent();
     void DeleteArrays();
@@ -53,9 +53,9 @@ private:
     Int_t fNMaxBlocks;// Max number of blocks
 
 
-    THaBBShowerBlock** fBlocks; //[fNMaxBlocks] List of blocks in cluster
+    SBSShowerBlock** fBlocks; //[fNMaxBlocks] List of blocks in cluster
 
-    ClassDef(THaBBShowerCluster,0)   // Generic shower cluster class
+    ClassDef(SBSBBShowerCluster,0)   // Generic shower cluster class
 };
 
 #endif

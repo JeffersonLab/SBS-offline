@@ -1,23 +1,23 @@
-#ifndef ROOT_THaBBShower
-#define ROOT_THaBBShower
+#ifndef ROOT_SBSBBShower
+#define ROOT_SBSBBShower
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// THaBBShower                                                               //
+// SBSBBShower                                                               //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "THaPidDetector.h"
-#include "THaBBShowerCluster.h"
+#include "SBSBBShowerCluster.h"
 #include "TRotation.h"
 #include "TVector3.h"
 
-class THaBBShower : public THaPidDetector {
+class SBSBBShower : public THaPidDetector {
 
  public:
-  THaBBShower( const char* name, const char* description = "",
+  SBSBBShower( const char* name, const char* description = "",
 	     THaApparatus* a = NULL );
-  virtual ~THaBBShower();
+  virtual ~SBSBBShower();
 
   virtual Int_t      Decode( const THaEvData& );
   virtual Int_t      CoarseProcess(TClonesArray& tracks);
@@ -46,11 +46,11 @@ class THaBBShower : public THaPidDetector {
 
 	  // Blocks should have a Z!!!
 	  
-	  THaBBShowerCluster* GetClust(Int_t i) { return fClusters[i]; }
+	  SBSBBShowerCluster* GetClust(Int_t i) { return fClusters[i]; }
   
-	  void       AddCluster(THaBBShowerCluster* clus);
+	  void       AddCluster(SBSBBShowerCluster* clus);
 	  void       RemoveCluster(int i);
-	  void       AddCluster(THaBBShowerCluster& clus);
+	  void       AddCluster(SBSBBShowerCluster& clus);
 
 	  void       LoadMCHitAt( Double_t x, Double_t y, Double_t E );
 	  
@@ -113,9 +113,9 @@ class THaBBShower : public THaPidDetector {
   Double_t   fdY;
   Double_t   fdZ;
 
-  THaBBShowerBlock** fBlocks; //[fNelem] Array of blocks
-  THaBBShowerCluster** fClusters; //[fMaxNClust] 
-  THaBBShowerBlock*** fBlkGrid; //[fNrows]
+  SBSShowerBlock** fBlocks; //[fNelem] Array of blocks
+  SBSBBShowerCluster** fClusters; //[fMaxNClust] 
+  SBSShowerBlock*** fBlkGrid; //[fNrows]
 
   //TRotation  fDetToTarg;
   //TVector3   fDetOffset;
@@ -129,7 +129,7 @@ class THaBBShower : public THaPidDetector {
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
   
-  ClassDef(THaBBShower,0)     //Generic shower detector class
+  ClassDef(SBSBBShower,0)     //Generic shower detector class
 };
 
 ////////////////////////////////////////////////////////////////////////////////

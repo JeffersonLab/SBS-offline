@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// THaBBShower                                                               //
+// SBSBBShower                                                               //
 //                                                                           //
 // Shower counter class, describing a generic segmented shower detector      //
 // (preshower or shower).                                                    //
@@ -10,7 +10,7 @@
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "THaBBShower.h"
+#include "SBSBBShower.h"
 
 //#include "THaBBe.h"
 //#include "THaGlobals.h"
@@ -31,10 +31,10 @@
 
 using namespace std;
 
-ClassImp(THaBBShower)
+ClassImp(SBSBBShower)
 
 //_____________________________________________________________________________
-THaBBShower::THaBBShower( const char* name, const char* description,
+SBSBBShower::SBSBBShower( const char* name, const char* description,
                          THaApparatus* apparatus ) :
 THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
 {
@@ -44,7 +44,7 @@ THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
 }
 
 //_____________________________________________________________________________
-Int_t THaBBShower::ReadDatabase( const TDatime& date )
+Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 {
     // Read this detector's parameters from the database file 'fi'.
     // This function is called by THaDetectorBase::Init() once at the
@@ -215,17 +215,17 @@ Int_t THaBBShower::ReadDatabase( const TDatime& date )
     fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );  //new line added
     
     // Compute block positions and creates blocks array
-    fBlkGrid = new THaBBShowerBlock**[fNrows];
-    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new THaBBShowerBlock*[fNcols];
-    fClusters = new THaBBShowerCluster*[fMaxNClust];
-    fBlocks = new THaBBShowerBlock*[fNelem];
+    fBlkGrid = new SBSShowerBlock**[fNrows];
+    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new SBSShowerBlock*[fNcols];
+    fClusters = new SBSBBShowerCluster*[fMaxNClust];
+    fBlocks = new SBSShowerBlock*[fNelem];
     for( int c=0; c<ncols; c++ ) {
         for( int r=0; r<nrows; r++ ) {
             int k = nrows*c + r;
             fBlockX[k] = x + r*dx;                         // Units are meters
             fBlockY[k] = y + c*dy;
-            THaBBShowerBlock* block = 
-                new THaBBShowerBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
+            SBSShowerBlock* block = 
+                new SBSShowerBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
             fBlocks[k]=block;
             fBlkGrid[r][c]=fBlocks[k];
         }
@@ -266,7 +266,7 @@ Int_t THaBBShower::ReadDatabase( const TDatime& date )
 }
 
 //_____________________________________________________________________________
-Int_t THaBBShower::DefineVariables( EMode mode )
+Int_t SBSBBShower::DefineVariables( EMode mode )
 {
     // Initialize global variables
 
@@ -301,7 +301,7 @@ Int_t THaBBShower::DefineVariables( EMode mode )
 }
 
 //_____________________________________________________________________________
-THaBBShower::~THaBBShower()
+SBSBBShower::~SBSBBShower()
 {
     // Destructor. Removes internal arrays and global variables.
 
@@ -312,7 +312,7 @@ THaBBShower::~THaBBShower()
 }
 
 //_____________________________________________________________________________
-void THaBBShower::DeleteArrays()
+void SBSBBShower::DeleteArrays()
 {
     // Delete member arrays. Internal function used by destructor.
 
@@ -350,7 +350,7 @@ void THaBBShower::DeleteArrays()
 
 //_____________________________________________________________________________
 inline
-void THaBBShower::ClearEvent()
+void SBSBBShower::ClearEvent()
 {
     // Reset all local data to prepare for next event.
 
@@ -390,7 +390,7 @@ void THaBBShower::ClearEvent()
 }
 
 //_____________________________________________________________________________
-Int_t THaBBShower::Decode( const THaEvData& evdata )
+Int_t SBSBBShower::Decode( const THaEvData& evdata )
 {
     // Decode shower data, scale the data to energy deposition
     // ( in MeV ), and copy the data into the following local data structure:
@@ -466,7 +466,7 @@ Int_t THaBBShower::Decode( const THaEvData& evdata )
 }
 
 //_____________________________________________________________________________
-Int_t THaBBShower::CoarseProcess(TClonesArray& tracks)
+Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 {
     // Reconstruct Clusters in shower detector and copy the data 
     // into the following local data structure:
@@ -495,7 +495,7 @@ Int_t THaBBShower::CoarseProcess(TClonesArray& tracks)
 # endif
 
     Double_t energyTotal = 0.0;
-    THaBBShowerCluster cluster(9);
+    SBSBBShowerCluster cluster(9);
 
     //  for( col = 0; col < fNcols; col++ )
     //     {
@@ -631,7 +631,7 @@ Int_t THaBBShower::CoarseProcess(TClonesArray& tracks)
 }
 
 //_____________________________________________________________________________
-Int_t THaBBShower::FineProcess(TClonesArray& tracks)
+Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
 {
 
     if( fFineProcessed ) return 0;
@@ -673,34 +673,34 @@ Int_t THaBBShower::FineProcess(TClonesArray& tracks)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void THaBBShower::AddCluster(THaBBShowerCluster* clus) {
+void SBSBBShower::AddCluster(SBSBBShowerCluster* clus) {
     fClusters[fNclust++]=clus;
 }
 
-void THaBBShower::AddCluster(THaBBShowerCluster& clus) {
+void SBSBBShower::AddCluster(SBSBBShowerCluster& clus) {
 
-    fClusters[fNclust] = new THaBBShowerCluster(clus.GetNMaxBlocks());
+    fClusters[fNclust] = new SBSBBShowerCluster(clus.GetNMaxBlocks());
     fClusters[fNclust]->SetE(clus.GetE());
     fClusters[fNclust]->SetX(clus.GetX());
     fClusters[fNclust]->SetY(clus.GetY());
     fClusters[fNclust++]->SetMult(clus.GetMult());
 }
 
-void THaBBShower::RemoveCluster(int i) {
+void SBSBBShower::RemoveCluster(int i) {
     fNclust--;
     for (int j=i;j<fNclust;j++) fClusters[j]=fClusters[j+1];
 }
 
-Int_t THaBBShower::BlockColRowToNumber( Int_t col, Int_t row )
+Int_t SBSBBShower::BlockColRowToNumber( Int_t col, Int_t row )
 {
     return col*fNrows + row;
 }
 
-void THaBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
+void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {  
     ClearEvent();
     fNclust = 0;
-    fClusters[fNclust] = new THaBBShowerCluster(0);
+    fClusters[fNclust] = new SBSBBShowerCluster(0);
     fClusters[fNclust]->SetE(E);
     fClusters[fNclust]->SetX(x);
     fClusters[fNclust]->SetY(y);

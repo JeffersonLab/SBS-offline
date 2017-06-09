@@ -1,9 +1,9 @@
-#ifndef ROOT_THaBBTotalShower
-#define ROOT_THaBBTotalShower
+#ifndef ROOT_SBSBBTotalShower
+#define ROOT_SBSBBTotalShower
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// THaBBTotalShower                                                          //
+// SBSBBTotalShower                                                          //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -30,17 +30,17 @@
 
 #include "THaPidDetector.h"
 
-class THaBBShower;
+class SBSBBShower;
 
-class THaBBTotalShower : public THaPidDetector {
+class SBSBBTotalShower : public THaPidDetector {
 
 public:
-    THaBBTotalShower( const char* name, const char* description = "",
+    SBSBBTotalShower( const char* name, const char* description = "",
         THaApparatus* a = NULL );
-    THaBBTotalShower( const char* name, const char* shower_name,
+    SBSBBTotalShower( const char* name, const char* shower_name,
         const char* preshower_name, const char* description = "",
         THaApparatus* a = NULL );
-    virtual ~THaBBTotalShower();
+    virtual ~SBSBBTotalShower();
 
     virtual Int_t      Decode( const THaEvData& );
     virtual Int_t      CoarseProcess( TClonesArray& tracks );
@@ -49,8 +49,8 @@ public:
     Float_t    GetY(Int_t i) const           { return fY[i]; }
     Float_t    GetX(Int_t i) const           { return fX[i]; }
     Int_t      GetID(Int_t i) const          { return fID[i]; }
-    THaBBShower* GetShower() const      { return fShower; }
-    THaBBShower* GetPreShower() const   { return fPreShower; }
+    SBSBBShower* GetShower() const      { return fShower; }
+    SBSBBShower* GetPreShower() const   { return fPreShower; }
     virtual EStatus    Init( const TDatime& run_time );
     virtual void       SetApparatus( THaApparatus* );
     void               LoadMCHitAt( Double_t x, Double_t y, Double_t E );
@@ -60,8 +60,8 @@ protected:
     static const Int_t kMaxNClust = 16;
 
     // Subdetectors
-    THaBBShower* fShower;      // Shower subdetector
-    THaBBShower* fPreShower;   // Preshower subdetector
+    SBSBBShower* fShower;      // Shower subdetector
+    SBSBBShower* fPreShower;   // Preshower subdetector
 
     // Parameters
     Float_t    fMaxDx;       // Maximum dx between shower and preshower centers
@@ -83,7 +83,7 @@ private:
         const char* shnam, const char* psnam,
         THaApparatus* app, bool mode );
 
-    ClassDef(THaBBTotalShower,0)    //A total shower detector (shower plus preshower)
+    ClassDef(SBSBBTotalShower,0)    //A total shower detector (shower plus preshower)
 };
 
 ///////////////////////////////////////////////////////////////////////////////
