@@ -10,13 +10,13 @@
 
 
 //_______________________________________________________________________________
-SBSScintHit::SBSScintHit(  const THaScintBar* bar,Int_t planenum, Int_t barnum,
+SBSScintHit::SBSScintHit(  const SBSScintBar* bar,Int_t planenum, Int_t barnum,
 			   Double_t ypos,
 			   Double_t Tof, Double_t HitEnergy, Double_t Tdiff)
 {
   Clear();
 
-  fScBar = const_cast<THaScintBar*>(bar);
+  fScBar = const_cast<SBSScintBar*>(bar);
   fPlaneNum = planenum;
   fBarNum = barnum;
   fHitYPos = ypos;

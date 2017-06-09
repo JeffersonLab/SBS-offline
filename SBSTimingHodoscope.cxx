@@ -41,12 +41,12 @@
 #include "TVector3.h"
 #include "THaOutput.h"
 
-#include "THaScintHit.h"
-#include "THaScintBar.h"
-#include "THaScintPMT.h"
-#include "THaAdcHit.h"
-#include "THaTdcHit.h"
-#include "THaPartialHit.h"
+#include "SBSScintHit.h"
+#include "SBSScintBar.h"
+#include "SBSScintPMT.h"
+#include "SBSAdcHit.h"
+#include "SBSTdcHit.h"
+#include "SBSScintPartialHit.h"
 
 //put this header file below all other headers
 #include "SBSTimingHodoscope.h"
@@ -78,20 +78,20 @@ THaSubDetector(name,description,parent)
 
 
     // Persistent properties of the class
-    fBars  = new TClonesArray("THaScintBar", 25 );
-    fRefCh       = new TClonesArray("THaScintPMT", 5 );
+    fBars  = new TClonesArray("SBSScintBar", 25 );
+    fRefCh       = new TClonesArray("SBSScintPMT", 5 );
 
     // per-event information
-    fHits   = new TClonesArray("THaScintHit", 200);
+    fHits   = new TClonesArray("SBSScintHit", 200);
     //fCombHits   = new TClonesArray("THaMultiHit", 200);
 
-    fLaHits = new TClonesArray("THaAdcHit", 200);
-    fRaHits = new TClonesArray("THaAdcHit", 200);
-    fLtHits = new TClonesArray("THaTdcHit", 200);
-    fRtHits = new TClonesArray("THaTdcHit", 200);
-    fPartHits = new TClonesArray("THaPartialHit", 200);
+    fLaHits = new TClonesArray("SBSAdcHit", 200);
+    fRaHits = new TClonesArray("SBSAdcHit", 200);
+    fLtHits = new TClonesArray("SBSTdcHit", 200);
+    fRtHits = new TClonesArray("SBSTdcHit", 200);
+    fPartHits = new TClonesArray("SBSScintPartialHit", 200);
 
-    fRefHits     = new TClonesArray("THaTdcHit", 5 );
+    fRefHits     = new TClonesArray("SBSTdcHit", 5 );
 
     //fThreshold = 0.;
     fNBars = 0;
@@ -682,9 +682,9 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
         }
         if (first>prevlast+1) { 
             for (i=prevlast+1;i<first;i++) {
-                new((*fRefCh)[i]) THaScintPMT(1.,0,lres);
+                new((*fRefCh)[i]) SBSScintPMT(1.,0,lres);
 #if DEBUG_LEVEL>=4//massive info
-                Info(Here(here),"\tlres:new((*fRefCh)[%d]) THaScintPMT(1.0,0,%lg)",i, lres);
+                Info(Here(here),"\tlres:new((*fRefCh)[%d]) SBSScintPMT(1.0,0,%lg)",i, lres);
 #endif//#if DEBUG_LEVEL>=4
             }
         }
@@ -708,9 +708,9 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
                     return kInitError;
                 }
                 for (i=first;i<=last;i++) {
-                    new((*fRefCh)[i]) THaScintPMT(1.0,0,rres);
+                    new((*fRefCh)[i]) SBSScintPMT(1.0,0,rres);
 #if DEBUG_LEVEL>=4//massive info
-                    Info(Here(here),"\trres:new((*fRefCh)[%d]) THaScintPMT(1.0,0,%lg)",i, rres);
+                    Info(Here(here),"\trres:new((*fRefCh)[%d]) SBSScintPMT(1.0,0,%lg)",i, rres);
 #endif//#if DEBUG_LEVEL>=4
                 }
             }
@@ -751,9 +751,9 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
         if (first>prevlast+1) { 
             for (i=prevlast+1;i<first;i++) {
 #if DEBUG_LEVEL>=4//massive info
-                Info(Here(here),"\tnew((*fBars)[%d]) THaScintBar",i);
+                Info(Here(here),"\tnew((*fBars)[%d]) SBSScintBar",i);
 #endif//#if DEBUG_LEVEL>=4
-                new((*fBars)[i]) THaScintBar(x,y,z,xw,yw,zw,c,att,
+                new((*fBars)[i]) SBSScintBar(x,y,z,xw,yw,zw,c,att,
                     lgain,lped,lres,ltoff,lwalk,
                     rgain,rped,rres,rtoff,rwalk,
                     i,
@@ -831,7 +831,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
                 }
 
                 for (i=first;i<=last;i++) {
-                    new((*fBars)[i]) THaScintBar(x,y,z,xw,yw,zw,c,att,
+                    new((*fBars)[i]) SBSScintBar(x,y,z,xw,yw,zw,c,att,
                         lgain,lped,lres,ltoff,lwalk,
                         rgain,rped,rres,rtoff,rwalk,
                         i,
@@ -1159,7 +1159,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
         if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
             j=0;
             for (i=first; i<=last; i++) {
-                THaScintBar* b = GetBar(i);
+                SBSScintBar* b = GetBar(i);
                 if (!b) {
                     Error( Here(here), "Error setting geometry, found at entry %d for bar %d", j,i );
                     fclose(file);
@@ -1273,65 +1273,65 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     RVarDef vars[] = {
         { "refchokay",         "All relevant ref channels are okay",        "AreRefChOkay()" },
         //      { "nbar",              "Number of bars",                            "GetNBars()"},  
-        //      { "bar_num",           "bar number of bar",                         "fBars.THaScintBar.GetBarNum()"},
-        //      { "bar_xpos",          "x position of bar",                         "fBars.THaScintBar.GetXPos()"},
-        //      { "bar_ypos",          "y position of bar",                         "fBars.THaScintBar.GetYPos()"},
-        //      { "bar_zpos",          "z position of bar",                         "fBars.THaScintBar.GetZPos()"},
-        //      { "bar_xwidth",        "width_x of bar",                            "fBars.THaScintBar.GetXWidth()"},
-        //      { "bar_ywidth",        "width_y of bar",                            "fBars.THaScintBar.GetYWidth()"},
-        //      { "bar_zwidth",        "width_z of bar",                            "fBars.THaScintBar.GetZWidth()"},
-        //      { "bar_c",             "speed of light in bar",                     "fBars.THaScintBar.GetC()"},
-        //      { "bar_att",           "Attenuation length of bar",                 "fBars.THaScintBar.GetAtt()"},
-        //      { "bar_type",          "Type of bar",                               "fBars.THaScintBar.GetBarType()"},
-        //      { "bar_nd",            "Type of bar",                               "fBars.THaScintBar.GetBarNum_nd()"},
+        //      { "bar_num",           "bar number of bar",                         "fBars.SBSScintBar.GetBarNum()"},
+        //      { "bar_xpos",          "x position of bar",                         "fBars.SBSScintBar.GetXPos()"},
+        //      { "bar_ypos",          "y position of bar",                         "fBars.SBSScintBar.GetYPos()"},
+        //      { "bar_zpos",          "z position of bar",                         "fBars.SBSScintBar.GetZPos()"},
+        //      { "bar_xwidth",        "width_x of bar",                            "fBars.SBSScintBar.GetXWidth()"},
+        //      { "bar_ywidth",        "width_y of bar",                            "fBars.SBSScintBar.GetYWidth()"},
+        //      { "bar_zwidth",        "width_z of bar",                            "fBars.SBSScintBar.GetZWidth()"},
+        //      { "bar_c",             "speed of light in bar",                     "fBars.SBSScintBar.GetC()"},
+        //      { "bar_att",           "Attenuation length of bar",                 "fBars.SBSScintBar.GetAtt()"},
+        //      { "bar_type",          "Type of bar",                               "fBars.SBSScintBar.GetBarType()"},
+        //      { "bar_nd",            "Type of bar",                               "fBars.SBSScintBar.GetBarNum_nd()"},
         // raw-data information
         { "nrefhit",           "Number of ref hits",                        "GetNRefHits()"},
-        { "ref_bar",           "bars in fRefHits",                          "fRefHits.THaTdcHit.GetBarNum()"},
-        { "ref_tdc",           "raw time in fRefHits",                      "fRefHits.THaTdcHit.GetRawTime()"},
-        { "ref_time",          "time in fRefHits",                          "fRefHits.THaTdcHit.GetTime()"},
+        { "ref_bar",           "bars in fRefHits",                          "fRefHits.SBSTdcHit.GetBarNum()"},
+        { "ref_tdc",           "raw time in fRefHits",                      "fRefHits.SBSTdcHit.GetRawTime()"},
+        { "ref_time",          "time in fRefHits",                          "fRefHits.SBSTdcHit.GetTime()"},
         { "nlthit",            "Number of lt hits",                         "GetNLtHits()"},
-        { "lthit_bar",          "bars in fLtHits",                           "fLtHits.THaTdcHit.GetBarNum()"},
-        { "lthit_tdc",          "raw time in fLtHits",                       "fLtHits.THaTdcHit.GetRawTime()"},
-        { "lthit_time",         "time in fLtHits",                           "fLtHits.THaTdcHit.GetTime()"},
-        { "lthit_side",         "side in fLtHits",                           "fLtHits.THaTdcHit.GetSide()"},
+        { "lthit_bar",          "bars in fLtHits",                           "fLtHits.SBSTdcHit.GetBarNum()"},
+        { "lthit_tdc",          "raw time in fLtHits",                       "fLtHits.SBSTdcHit.GetRawTime()"},
+        { "lthit_time",         "time in fLtHits",                           "fLtHits.SBSTdcHit.GetTime()"},
+        { "lthit_side",         "side in fLtHits",                           "fLtHits.SBSTdcHit.GetSide()"},
         { "nrthit",            "Number of rt hits",                         "GetNRtHits()"},
-        { "rthit_bar",          "bars in fRtHits",                           "fRtHits.THaTdcHit.GetBarNum()"},
-        { "rthit_tdc",          "raw time in fRtHits",                       "fRtHits.THaTdcHit.GetRawTime()"},
-        { "rthit_time",         "time in fRtHits",                           "fRtHits.THaTdcHit.GetTime()"},
-        { "rthit_side",         "side in fRtHits",                           "fRtHits.THaTdcHit.GetSide()"},
+        { "rthit_bar",          "bars in fRtHits",                           "fRtHits.SBSTdcHit.GetBarNum()"},
+        { "rthit_tdc",          "raw time in fRtHits",                       "fRtHits.SBSTdcHit.GetRawTime()"},
+        { "rthit_time",         "time in fRtHits",                           "fRtHits.SBSTdcHit.GetTime()"},
+        { "rthit_side",         "side in fRtHits",                           "fRtHits.SBSTdcHit.GetSide()"},
         { "nlahit",            "Number of la hits",                         "GetNLaHits()"},
-        { "lahit_bar",         "bars in fLaHits",                           "fLaHits.THaAdcHit.GetBarNum()"},
-        { "lahit_adc",         "raw amplitude in fLaHits",                  "fLaHits.THaAdcHit.GetRawAmpl()"},
-        { "lahit_ap",          "pedistal corrected ampl in fLaHits",        "fLaHits.THaAdcHit.GetAmplPedCor()"},
-        { "lahit_ac",          "Amplitude in fLaHits",                      "fLaHits.THaAdcHit.GetAmpl()"}, 
-        { "lahit_side",        "side of bar in fLaHits",                    "fLaHits.THaAdcHit.GetSide()"}, 
+        { "lahit_bar",         "bars in fLaHits",                           "fLaHits.SBSAdcHit.GetBarNum()"},
+        { "lahit_adc",         "raw amplitude in fLaHits",                  "fLaHits.SBSAdcHit.GetRawAmpl()"},
+        { "lahit_ap",          "pedistal corrected ampl in fLaHits",        "fLaHits.SBSAdcHit.GetAmplPedCor()"},
+        { "lahit_ac",          "Amplitude in fLaHits",                      "fLaHits.SBSAdcHit.GetAmpl()"}, 
+        { "lahit_side",        "side of bar in fLaHits",                    "fLaHits.SBSAdcHit.GetSide()"}, 
         { "nrahit",            "Number of Rahits",                          "GetNRaHits()"},
-        { "rahit_bar",         "bars in fRaHits",                           "fRaHits.THaAdcHit.GetBarNum()"},
-        { "rahit_adc",         "raw amplitude in fRaHits",                  "fRaHits.THaAdcHit.GetRawAmpl()"},
-        { "rahit_ap",          "pedistal corrected ampl in fRaHits",        "fRaHits.THaAdcHit.GetAmplPedCor()"},
-        { "rahit_ac",          "Amplitude in fRaHits",                      "fRaHits.THaAdcHit.GetAmpl()"}, 
-        { "rahit_side",        "side of bar in fRaHits",                    "fRaHits.THaAdcHit.GetSide()"},
+        { "rahit_bar",         "bars in fRaHits",                           "fRaHits.SBSAdcHit.GetBarNum()"},
+        { "rahit_adc",         "raw amplitude in fRaHits",                  "fRaHits.SBSAdcHit.GetRawAmpl()"},
+        { "rahit_ap",          "pedistal corrected ampl in fRaHits",        "fRaHits.SBSAdcHit.GetAmplPedCor()"},
+        { "rahit_ac",          "Amplitude in fRaHits",                      "fRaHits.SBSAdcHit.GetAmpl()"}, 
+        { "rahit_side",        "side of bar in fRaHits",                    "fRaHits.SBSAdcHit.GetSide()"},
         // complete reconstructed hits
         { "nhit",              "Number of hits",                            "GetNHits()"},
-        { "hit_bar",           "bars in fHits",                             "fHits.THaScintHit.GetBarNum()"},
-        { "hit_xpos",          "X position in fHits",                       "fHits.THaScintHit.GetHitXPos()"},
-        { "hit_ypos",          "Y position in fHits",                       "fHits.THaScintHit.GetHitYPos()"},
-        { "hit_tof",           "TOF in fHits = .5*(Lt + Rt)",               "fHits.THaScintHit.GetHitTOF()"},
-        { "hit_Edep",          "Edep in fHits",                             "fHits.THaScintHit.GetHitEdep()"},
-        { "hit_tdiff",         "Time diff in fHits=.5*(Rt - Lt)",           "fHits.THaScintHit.GetHitTdiff()"},    
+        { "hit_bar",           "bars in fHits",                             "fHits.SBSScintHit.GetBarNum()"},
+        { "hit_xpos",          "X position in fHits",                       "fHits.SBSScintHit.GetHitXPos()"},
+        { "hit_ypos",          "Y position in fHits",                       "fHits.SBSScintHit.GetHitYPos()"},
+        { "hit_tof",           "TOF in fHits = .5*(Lt + Rt)",               "fHits.SBSScintHit.GetHitTOF()"},
+        { "hit_Edep",          "Edep in fHits",                             "fHits.SBSScintHit.GetHitEdep()"},
+        { "hit_tdiff",         "Time diff in fHits=.5*(Rt - Lt)",           "fHits.SBSScintHit.GetHitTdiff()"},    
 #if BUILD_PARTIAL_HIT 
         // partial hits -- probably will NOT use
         { "nparthit",          "Number of partial hits",                    "GetNPartHits()"},   
-        { "phit_bar",          "bars in fPartHits",                         "fPartHits.THaPartialHit.GetBarNum()"},
-        { "phit_case",         "Case number in fPartHits",                  "fPartHits.THaPartialHit.GetCaseNum()"},
-        { "phit_lt",           "left tdc in fPartHits",                     "fPartHits.THaPartialHit.GetLt()"},
-        { "phit_rt",           "right tdc in fPartHits",                    "fPartHits.THaPartialHit.GetRt()"},
-        { "phit_la",           "left adc in fPartHits",                     "fPartHits.THaPartialHit.GetLa()"},
-        { "phit_ra",           "right adc in fPartHits",                    "fPartHits.THaPartialHit.GetRa()"},
-        { "phit_ltdc",         "left_raw tdc in fPartHits",                 "fPartHits.THaPartialHit.GetLt_raw()"},
-        { "phit_rtdc",         "right_raw tdc in fPartHits",                "fPartHits.THaPartialHit.GetRt_raw()"},
-        { "phit_ladc",         "left_raw adc in fPartHits",                 "fPartHits.THaPartialHit.GetLa_raw()"},
-        { "phit_radc",         "right_raw adc in fPartHits",                "fPartHits.THaPartialHit.GetRa_raw()"},
+        { "phit_bar",          "bars in fPartHits",                         "fPartHits.SBSScintPartialHit.GetBarNum()"},
+        { "phit_case",         "Case number in fPartHits",                  "fPartHits.SBSScintPartialHit.GetCaseNum()"},
+        { "phit_lt",           "left tdc in fPartHits",                     "fPartHits.SBSScintPartialHit.GetLt()"},
+        { "phit_rt",           "right tdc in fPartHits",                    "fPartHits.SBSScintPartialHit.GetRt()"},
+        { "phit_la",           "left adc in fPartHits",                     "fPartHits.SBSScintPartialHit.GetLa()"},
+        { "phit_ra",           "right adc in fPartHits",                    "fPartHits.SBSScintPartialHit.GetRa()"},
+        { "phit_ltdc",         "left_raw tdc in fPartHits",                 "fPartHits.SBSScintPartialHit.GetLt_raw()"},
+        { "phit_rtdc",         "right_raw tdc in fPartHits",                "fPartHits.SBSScintPartialHit.GetRt_raw()"},
+        { "phit_ladc",         "left_raw adc in fPartHits",                 "fPartHits.SBSScintPartialHit.GetLa_raw()"},
+        { "phit_radc",         "right_raw adc in fPartHits",                "fPartHits.SBSScintPartialHit.GetRa_raw()"},
 #endif
         // Reconstructed Multi-bar hits
         //{ "ncmbhit",           "Number of combined-bar hits",               "GetNCombinedHits()"},
@@ -1550,7 +1550,7 @@ void SBSTimingHodoscope::ClearEvent()
 }
 
 //_____________________________________________________________________________
-Double_t SBSTimingHodoscope::TimeWalkCorrection( THaScintPMT* pmt, Double_t ADC, Double_t time)
+Double_t SBSTimingHodoscope::TimeWalkCorrection( SBSScintPMT* pmt, Double_t ADC, Double_t time)
 {
     // Calculate the time-walk correction. The timewalk might be
     // dependent upon the specific PMT, so information about exactly
@@ -1689,13 +1689,13 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
             << ", using " << data << endl;
 #endif
         // PMT numbers and channels go in the same order ... 
-        const THaScintPMT* pmt = GetRefCh(i);
+        const SBSScintPMT* pmt = GetRefCh(i);
         if( !pmt ) { 
-            clog<<"THaScintPLane::Decode : Ref Channels are not initialized"<<endl;
+            clog<<"SBSScintPlane::Decode : Ref Channels are not initialized"<<endl;
             clog<<"Skipping event"<<endl;
             return -1;
         }
-        new( (*fRefHits)[i] )  THaTdcHit( pmt , data );    
+        new( (*fRefHits)[i] )  SBSTdcHit( pmt , data );    
         i++;
     }
     if (i!=GetNRefCh()) {
@@ -1757,8 +1757,8 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 
 
             Bool_t isLeft;
-            THaScintBar* abar=NULL;
-            THaScintPMT* pmt=NULL;
+            SBSScintBar* abar=NULL;
+            SBSScintPMT* pmt=NULL;
 
             // PMT  numbers and channels go in the same order ... 
             // PMTNum is kind of artificial, since it comes from the 
@@ -1824,9 +1824,9 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
                 Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
                 if (isAdc) {  // it is an ADC module
                     if (isLeft) {              
-                        new( (*fLaHits)[nextLaHit++] )  THaAdcHit( pmt, data );
+                        new( (*fLaHits)[nextLaHit++] )  SBSAdcHit( pmt, data );
                     } else {
-                        new( (*fRaHits)[nextRaHit++] )  THaAdcHit( pmt, data );
+                        new( (*fRaHits)[nextRaHit++] )  SBSAdcHit( pmt, data );
                     }
                 }
                 else { // it is a TDC module and hit
@@ -1834,7 +1834,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
                     if ((d->refindex)>=0) {
                         // handle the clock/scaler based TDCs and remove the reference time,
                         // taking care of when the clock rolls-over
-                        const THaTdcHit* ahit = GetRefHit(d->refindex);
+                        const SBSTdcHit* ahit = GetRefHit(d->refindex);
                         if (ahit && ahit->GetRawTime()>=0) {
                             Int_t diff = data - ahit->GetRawTime();
                             Double_t wrap = pmt->GetRawWrapAround();
@@ -1853,9 +1853,9 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
                     }
 
                     if (isLeft) {              
-                        new( (*fLtHits)[nextLtHit++] )  THaTdcHit( pmt, data, timeoff );
+                        new( (*fLtHits)[nextLtHit++] )  SBSTdcHit( pmt, data, timeoff );
                     } else {
-                        new( (*fRtHits)[nextRtHit++] )  THaTdcHit( pmt, data, timeoff );
+                        new( (*fRtHits)[nextRtHit++] )  SBSTdcHit( pmt, data, timeoff );
                     }
                 }
             } // End hit loop
@@ -1867,7 +1867,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 #if SAVEFLAT
     Int_t barno=0;
     for(Int_t i=0; i< nextLaHit; i++){
-        const THaAdcHit *la = GetLaHit(i);
+        const SBSAdcHit *la = GetLaHit(i);
         barno=la->GetPMT()->GetBarNum();
         fLrawA[barno]=la->GetRawAmpl();    
         fLpedcA[barno]=la->GetAmplPedCor();    
@@ -1875,7 +1875,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
     }
 
     for(Int_t i=0; i< nextRaHit; i++){
-        const THaAdcHit *ra = GetRaHit(i);
+        const SBSAdcHit *ra = GetRaHit(i);
         barno=ra->GetPMT()->GetBarNum();
         fRrawA[barno]=ra->GetRawAmpl();    
         fRpedcA[barno]=ra->GetAmplPedCor();    
@@ -1883,7 +1883,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
     }
 
     for(Int_t i=0; i< nextLtHit; i++){
-        const THaTdcHit *lt = GetLtHit(i);
+        const SBSTdcHit *lt = GetLtHit(i);
         barno=lt->GetPMT()->GetBarNum();
         fLTcounter[barno]++;
         if (fLTcounter[barno]==1) {
@@ -1892,7 +1892,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
     }   
 
     for(Int_t i=0; i< nextRtHit; i++){
-        const THaTdcHit *rt = GetRtHit(i);
+        const SBSTdcHit *rt = GetRtHit(i);
         barno=rt->GetPMT()->GetBarNum();
         fRTcounter[barno]++;
         if (fRTcounter[barno]==1) {
@@ -1925,19 +1925,19 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 
     // build the indices
     for (Int_t i=0; i< nlt; i++) {
-        Int_t barno=static_cast<THaTdcHit*>(fLtHits->At(i))->GetPMT()->GetBarNum();
+        Int_t barno=static_cast<SBSTdcHit*>(fLtHits->At(i))->GetPMT()->GetBarNum();
         if (fLtIndex[barno]<0) fLtIndex[barno] = i;
     }
     for (Int_t i=0; i< nrt; i++) {
-        Int_t barno=static_cast<THaTdcHit*>(fRtHits->At(i))->GetPMT()->GetBarNum();
+        Int_t barno=static_cast<SBSTdcHit*>(fRtHits->At(i))->GetPMT()->GetBarNum();
         if (fRtIndex[barno]<0) fRtIndex[barno] = i;
     }
     for (Int_t i=0; i< nla; i++) {
-        Int_t barno=static_cast<THaAdcHit*>(fLaHits->At(i))->GetPMT()->GetBarNum();
+        Int_t barno=static_cast<SBSAdcHit*>(fLaHits->At(i))->GetPMT()->GetBarNum();
         if (fLaIndex[barno]<0) fLaIndex[barno] = i;
     }
     for (Int_t i=0; i< nra; i++) {
-        Int_t barno=static_cast<THaAdcHit*>(fRaHits->At(i))->GetPMT()->GetBarNum();
+        Int_t barno=static_cast<SBSAdcHit*>(fRaHits->At(i))->GetPMT()->GetBarNum();
         if (fRaIndex[barno]<0) fRaIndex[barno] = i;
     }
 
@@ -1959,7 +1959,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
     Int_t HitNum=0;
     Int_t PartHitNum=0;
     Int_t CaseNum=0;
-    THaScintBar* ptBar;
+    SBSScintBar* ptBar;
     Double_t Lt_c=0.0;
     Double_t Rt_c=0.0;
     Double_t La_c=0.0;
@@ -1992,8 +1992,8 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
     //     For complete information, build a real 'Hit' into fHits
     //       otherwise, build something less useful into fPartialHits
 
-    const THaTdcHit *lt, *rt;
-    const THaAdcHit *la, *ra;
+    const SBSTdcHit *lt, *rt;
+    const SBSAdcHit *la, *ra;
     for(Int_t BarNum=0; BarNum<fNBars; BarNum++) {
         ptBar = GetBar(BarNum);
         la = GetBarHitA('l',ptBar);
@@ -2054,7 +2054,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     }
 
                     // Not applying any consistency-cut at this level	
-                    new( (*fHits)[HitNum] )  THaScintHit(  ptBar ,0,BarNum, Ypos_c, Tof, Ampl, Tdiff);   // add bar num
+                    new( (*fHits)[HitNum] )  SBSScintHit(  ptBar ,0,BarNum, Ypos_c, Tof, Ampl, Tdiff);   // add bar num
                     HitNum++;		    
                 }  
                 else if (lt && rt && la) {
@@ -2068,7 +2068,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     La_raw = la->GetRawAmpl();
 
                     CaseNum = 14;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum, Lt_c, Lt_raw, Rt_c , Rt_raw,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum, Lt_c, Lt_raw, Rt_c , Rt_raw,
                         La_c, La_raw, 0.0,0.0 );  
                     PartHitNum++;	      
                 }
@@ -2083,7 +2083,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Ra_raw = ra->GetRawAmpl();
 
                     CaseNum = 13;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar ,BarNum, CaseNum, Lt_c,Lt_raw, Rt_c , Rt_raw ,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar ,BarNum, CaseNum, Lt_c,Lt_raw, Rt_c , Rt_raw ,
                         0.0 , 0.0, Ra_c, Ra_raw );  
                     PartHitNum++;
                 }
@@ -2096,7 +2096,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Rt_raw = rt->GetRawTime();
 
                     CaseNum = 12;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar ,BarNum, CaseNum, Lt_c, Lt_raw ,Rt_c , Rt_raw,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar ,BarNum, CaseNum, Lt_c, Lt_raw ,Rt_c , Rt_raw,
                         0.0 ,0.0 ,0.0, 0.0 );  
                     PartHitNum++;
 
@@ -2114,7 +2114,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Ra_raw = ra->GetRawAmpl();
 
                     CaseNum = 11;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar ,BarNum, CaseNum, Lt_c, Lt_raw , 0.0, 0.0 ,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar ,BarNum, CaseNum, Lt_c, Lt_raw , 0.0, 0.0 ,
                         La_c, La_raw , Ra_c,Ra_raw );  
                     PartHitNum++;
                 } else if (lt && la) {
@@ -2127,7 +2127,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     La_raw = la->GetRawAmpl();
 
                     CaseNum = 10;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum, Lt_c, Lt_raw, 0.0, 0.0 ,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum, Lt_c, Lt_raw, 0.0, 0.0 ,
                         La_c, La_raw ,0.0, 0.0  );  
                     PartHitNum++;
                 } else if (lt && ra) {
@@ -2139,7 +2139,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Ra_raw = ra->GetRawAmpl();
 
                     CaseNum = 9;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum, Lt_c,Lt_raw ,0.0 , 0.0,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum, Lt_c,Lt_raw ,0.0 , 0.0,
                         0.0 ,0.0, Ra_c, Ra_raw );  
                     PartHitNum++;
                 } else if (lt) {
@@ -2148,7 +2148,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Lt_raw = lt->GetRawTime();
 
                     CaseNum = 8;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum, Lt_c,Lt_raw ,0.0, 0.0,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum, Lt_c,Lt_raw ,0.0, 0.0,
                         0.0 , 0.0, 0.0, 0.0 );  
                     PartHitNum++;
                 }
@@ -2171,7 +2171,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Ra_raw = ra->GetRawAmpl();
 
                     CaseNum = 7;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum,0.0 ,0.0, Rt_c , Rt_raw,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum,0.0 ,0.0, Rt_c , Rt_raw,
                         La_c, La_raw , Ra_c, Ra_raw );  
                     PartHitNum++;
                 } else if (rt && la) {
@@ -2184,7 +2184,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     La_raw = la->GetRawAmpl();
 
                     CaseNum = 6;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum, 0.0 ,0.0, Rt_c ,Rt_raw ,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum, 0.0 ,0.0, Rt_c ,Rt_raw ,
                         La_c, La_raw, 0.0, 0.0 );  
                     PartHitNum++;
                 } else if (rt && ra) {
@@ -2197,7 +2197,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Ra_raw = ra->GetRawAmpl();
 
                     CaseNum = 5;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum,0.0, 0.0 , Rt_c , Rt_raw,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum,0.0, 0.0 , Rt_c , Rt_raw,
                         0.0 , 0.0, Ra_c, Ra_raw );  
                     PartHitNum++;
                 } else if (rt) {
@@ -2208,7 +2208,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Rt_raw = rt->GetRawTime();
 
                     CaseNum = 4;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit(  ptBar,BarNum, CaseNum,0.0 , 0.0, Rt_c, Rt_raw ,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit(  ptBar,BarNum, CaseNum,0.0 , 0.0, Rt_c, Rt_raw ,
                         0.0 , 0.0, 0.0, 0.0  );  
                     PartHitNum++;
                 }
@@ -2223,7 +2223,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Ra_raw = ra->GetRawAmpl();
 
                     CaseNum = 3;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum,0.0 ,0.0, 0.0 , 0.0,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum,0.0 ,0.0, 0.0 , 0.0,
                         La_c, La_raw, Ra_c, Ra_raw);  
                     PartHitNum++;
                 } else if (la) {
@@ -2233,7 +2233,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     La_raw = la->GetRawAmpl();
 
                     CaseNum = 2;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit(  ptBar,BarNum, CaseNum,0.0 , 0.0, 0.0, 0.0,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit(  ptBar,BarNum, CaseNum,0.0 , 0.0, 0.0, 0.0,
                         La_c, La_raw, 0.0, 0.0 );  
                     PartHitNum++;
                 } else if (ra) {
@@ -2244,7 +2244,7 @@ Int_t SBSTimingHodoscope::BuildAllBars( TClonesArray& tracks )
                     Ra_raw = ra->GetRawAmpl();
 
                     CaseNum = 1;
-                    new( (*fPartHits)[PartHitNum] )  THaPartialHit( ptBar,BarNum, CaseNum, 0.0, 0.0, 0.0, 0.0,
+                    new( (*fPartHits)[PartHitNum] )  SBSScintPartialHit( ptBar,BarNum, CaseNum, 0.0, 0.0, 0.0, 0.0,
                         0.0, 0.0, Ra_c, Ra_raw );  
                     PartHitNum++;
                 }
@@ -2301,8 +2301,8 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
 }
 
 //_____________________________________________________________________________
-const THaTdcHit* SBSTimingHodoscope::GetBarHitT(const char side,
-                                           const THaScintBar *const ptr,
+const SBSTdcHit* SBSTimingHodoscope::GetBarHitT(const char side,
+                                           const SBSScintBar *const ptr,
                                            const int n) const 
 {
     // return matching Tdc from bar ptr on side, the n'th Tdc signal
@@ -2316,14 +2316,14 @@ const THaTdcHit* SBSTimingHodoscope::GetBarHitT(const char side,
         index=fRtIndex;
     }
 
-    const THaTdcHit *r=0;
+    const SBSTdcHit *r=0;
 
     Int_t barno = ptr->GetBarNum();
     if (barno>=0 && index[barno]>=0) {
         int cnt=0;
         int narr = arr->GetLast();
         for (int i=index[barno]; i<=narr; i++) {
-            const THaTdcHit *h = static_cast<const THaTdcHit*>(arr->At(i));
+            const SBSTdcHit *h = static_cast<const SBSTdcHit*>(arr->At(i));
             if ( h->GetPMT()->GetScintBar() == ptr ) {
                 if ( cnt == n ) {
                     r = h;
@@ -2341,8 +2341,8 @@ const THaTdcHit* SBSTimingHodoscope::GetBarHitT(const char side,
 
 
 //_____________________________________________________________________________
-const THaAdcHit* SBSTimingHodoscope::GetBarHitA(const char side,
-                                           const THaScintBar *const ptr,
+const SBSAdcHit* SBSTimingHodoscope::GetBarHitA(const char side,
+                                           const SBSScintBar *const ptr,
                                            const int n) const
 {
     // return matching Adc from bar ptr on side, return n'th signal (over-doingit)
@@ -2356,14 +2356,14 @@ const THaAdcHit* SBSTimingHodoscope::GetBarHitA(const char side,
         index=fRaIndex;
     }
 
-    THaAdcHit *r=0;
+    SBSAdcHit *r=0;
 
     Int_t barno = ptr->GetBarNum();
     if (barno>=0 && index[barno]>=0) {
         int cnt=0;
         int narr = arr->GetLast();
         for (int i=index[barno]; i<=narr; i++) {
-            THaAdcHit *h = static_cast<THaAdcHit*>(arr->At(i));
+            SBSAdcHit *h = static_cast<SBSAdcHit*>(arr->At(i));
             if ( h->GetPMT()->GetScintBar() == ptr ) {
                 if ( cnt == n ) {
                     r = h;
@@ -2389,17 +2389,17 @@ Int_t SBSTimingHodoscope::BuildCompleteBars( TClonesArray& tracks ) {
 
     // loop through Left-TDCs first, only worrying about complete hits
 
-    THaScintBar* ptBar;
+    SBSScintBar* ptBar;
     Double_t yt, tof, amp, tdiff;
     Int_t nlt = GetNLtHits();
     for (Int_t i=0; i<nlt; i++) {  // loop through left-hits
-        const THaTdcHit *lt = GetLtHit(i);
+        const SBSTdcHit *lt = GetLtHit(i);
         ptBar = lt->GetPMT()->GetScintBar();
 
         // make sure the hit is within "range"
         {
             Double_t t = lt->GetTime();
-            THaScintPMT *pmt = lt->GetPMT();
+            SBSScintPMT *pmt = lt->GetPMT();
             if (t < pmt->GetRawLowLim() || t > pmt->GetRawUpLim() )
             {
 #if DEBUG_LEVEL>=3// info
@@ -2410,15 +2410,15 @@ Int_t SBSTimingHodoscope::BuildCompleteBars( TClonesArray& tracks ) {
         }
 
         // ADC info
-        const THaAdcHit *la = GetBarHitA('l',ptBar);
-        const THaAdcHit *ra = GetBarHitA('r',ptBar);
+        const SBSAdcHit *la = GetBarHitA('l',ptBar);
+        const SBSAdcHit *ra = GetBarHitA('r',ptBar);
 
-        const THaTdcHit *rt=0;
+        const SBSTdcHit *rt=0;
         int rcnt=0;
         for (rcnt=0; ( rt=GetBarHitT('r',ptBar,rcnt) ); rcnt++) {
             {
                 Double_t t = rt->GetTime();
-                THaScintPMT *pmt = rt->GetPMT();
+                SBSScintPMT *pmt = rt->GetPMT();
                 if (t < pmt->GetRawLowLim() || t > pmt->GetRawUpLim() )
                 {
 #if DEBUG_LEVEL>=3// info
@@ -2456,7 +2456,7 @@ Int_t SBSTimingHodoscope::BuildCompleteBars( TClonesArray& tracks ) {
 #if CUT_ON_YPOS
                 //position cut by Jin Huang
                 if (abs(yt)<ptBar-> GetYWidth()*2.)
-                    new( (*fHits)[HitNum++] ) THaScintHit( ptBar, 0, bar, yt + ptBar->GetYPos(), tof, amp, tdiff );
+                    new( (*fHits)[HitNum++] ) SBSScintHit( ptBar, 0, bar, yt + ptBar->GetYPos(), tof, amp, tdiff );
                 else
                 {
 #if DEBUG_LEVEL>=3//start show info
@@ -2465,7 +2465,7 @@ Int_t SBSTimingHodoscope::BuildCompleteBars( TClonesArray& tracks ) {
 #endif//#if DEBUG_LEVEL>=3                    
                 }
 #else//#if CUT_ON_YPOS
-                new( (*fHits)[HitNum++] ) THaScintHit( ptBar, 0, bar, yt + ptBar->GetYPos(), tof, amp, tdiff );
+                new( (*fHits)[HitNum++] ) SBSScintHit( ptBar, 0, bar, yt + ptBar->GetYPos(), tof, amp, tdiff );
 #endif //#if CUT_ON_YPOS
             }
         }
@@ -2491,9 +2491,9 @@ Int_t SBSTimingHodoscope::BuildCompleteBars( TClonesArray& tracks ) {
 //	Int_t nCmbHits=0;
 //	int lastbar=-10;
 //	for (int i=0; i<nhits; i++) {
-//		THaScintHit *h = static_cast<THaScintHit*>(fHits->At(i));
+//		SBSScintHit *h = static_cast<SBSScintHit*>(fHits->At(i));
 //		int bar = h->GetBarNum();
-//		THaScintBar *b = h->GetScintBar();
+//		SBSScintBar *b = h->GetScintBar();
 //
 //		// test if the hit is good enough
 //		if (h->GetHitEdep() < fThreshold) continue;

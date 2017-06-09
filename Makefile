@@ -1,7 +1,14 @@
 #------------------------------------------------------------------------------
 # Core library
-SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
-EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h
+SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCluster.cxx\
+      SBSBBShower.cxx SBSBBTotalShower.cxx SBSCDet.cxx SBSECal.cxx SBSGRINCH.cxx\
+      SBSHCal.cxx SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx SBSTimingHodoscope.cxx\
+      SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx
+
+EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
+	   SBSBBShower.h SBSBBTotalShower.h SBSCDet.h SBSECal.h SBSGRINCH.h SBSHCal.h\
+	   SBSScintHit.h SBSScintPMT.h SBSShowerBlock.h SBSTimingHodoscope.h SBSScintBar.h\
+           SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h
 
 CORE = sbs
 CORELIB  = lib$(CORE).so
@@ -202,4 +209,5 @@ develdist:	srcdist
 ###
 
 -include $(DEP)
+
 

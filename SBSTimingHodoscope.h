@@ -26,13 +26,13 @@
 
 //#include "THaNeutronApp.h"
 
-class THaScintPMT;
-class THaScintHit;
-class THaScintBar;
-class THaAdcHit;
-class THaTdcHit;
+class SBSScintPMT;
+class SBSScintHit;
+class SBSScintBar;
+class SBSAdcHit;
+class SBSTdcHit;
 class THaSubDetector;
-class THaPartialHit;
+class SBSScintPartialHit;
 //class THaMultiHit;
 //class THaNeutronDetector;
 
@@ -114,55 +114,55 @@ public:
 	//Int_t GetNCombinedHits() const { return fCombHits->GetLast()+1; }
 
 	TClonesArray* GetBars() const {return fBars;}
-	THaScintBar* GetBar(Int_t i) const
-	{return (THaScintBar*)fBars->At(i);}
+	SBSScintBar* GetBar(Int_t i) const
+	{return (SBSScintBar*)fBars->At(i);}
 
 	TClonesArray* GetHits() const {return fHits;}
-	THaScintHit* GetHit(Int_t i) const
-	{return (THaScintHit*)fHits->At(i);}
+	SBSScintHit* GetHit(Int_t i) const
+	{return (SBSScintHit*)fHits->At(i);}
 
 	//TClonesArray* GetCombinedHits() const {return fCombHits;}
 	//THaMultiHit* GetCombHit(Int_t i) const
 	//  {return (THaMultiHit*)fCombHits->At(i);}
 
 	TClonesArray* GetRefHits() const {return fRefHits;}
-	const THaTdcHit* GetRefHit(Int_t i) const
-	{return (THaTdcHit*)fRefHits->At(i);}
+	const SBSTdcHit* GetRefHit(Int_t i) const
+	{return (SBSTdcHit*)fRefHits->At(i);}
 
 	TClonesArray* GetLtHits() const {return fLtHits;}
-	const THaTdcHit* GetLtHit(Int_t i) const
-	{return (THaTdcHit*)fLtHits->At(i);}
+	const SBSTdcHit* GetLtHit(Int_t i) const
+	{return (SBSTdcHit*)fLtHits->At(i);}
 
 	TClonesArray* GetRtHits() const {return fRtHits;}
-	const THaTdcHit* GetRtHit(Int_t i) const
-	{return (THaTdcHit*)fRtHits->At(i);}
+	const SBSTdcHit* GetRtHit(Int_t i) const
+	{return (SBSTdcHit*)fRtHits->At(i);}
 
 	TClonesArray* GetLaHits() const {return fLaHits;}
-	const THaAdcHit* GetLaHit(Int_t i) const
-	{return (THaAdcHit*)fLaHits->At(i);}
+	const SBSAdcHit* GetLaHit(Int_t i) const
+	{return (SBSAdcHit*)fLaHits->At(i);}
 
 	TClonesArray* GetRaHits() const {return fRaHits;}
-	const THaAdcHit* GetRaHit(Int_t i) const
-	{return (THaAdcHit*)fRaHits->At(i);}  
+	const SBSAdcHit* GetRaHit(Int_t i) const
+	{return (SBSAdcHit*)fRaHits->At(i);}  
 
 	// return matching Tdc from bar ptr on side, n'th hit
-	const THaTdcHit* GetBarHitT(const char side, const THaScintBar *const ptr,
+	const SBSTdcHit* GetBarHitT(const char side, const SBSScintBar *const ptr,
 		const int n=0) const;
 
 	// return matching Adc from bar ptr on side, n'th hit
-	const THaAdcHit* GetBarHitA(const char side, const THaScintBar *const ptr,
+	const SBSAdcHit* GetBarHitA(const char side, const SBSScintBar *const ptr,
 		const int n=0) const;
 
 	Int_t          GetNRefCh()    const { return fRefCh->GetLast()+1; }
 	TClonesArray*  GetRefCh()     const { return fRefCh; }
-	const THaScintPMT*   GetRefCh(Int_t i) const
-	{ return (THaScintPMT*)fRefCh->At(i);}
+	const SBSScintPMT*   GetRefCh(Int_t i) const
+	{ return (SBSScintPMT*)fRefCh->At(i);}
 
 	Int_t AreRefChOkay() const { return ( fRefOkay ? 1 : 0 ); } 
 
 	TClonesArray* GetPartHits() const {return fPartHits;}
-	const THaPartialHit* GetPartHit(Int_t i) const
-	{return (THaPartialHit*)fPartHits->At(i);}  
+	const SBSScintPartialHit* GetPartHit(Int_t i) const
+	{return (SBSScintPartialHit*)fPartHits->At(i);}  
 
 protected:
 	
@@ -243,7 +243,7 @@ protected:
 	virtual Int_t  ReadDatabase( const TDatime& date );
 	virtual Int_t  DefineVariables( EMode mode = kDefine );
 	virtual  Double_t TimeWalkCorrection(
-        THaScintPMT* pmt,
+        SBSScintPMT* pmt,
         Double_t ADC,
         Double_t time);
 	enum ESide { kLeft = 0, kRight = 1 };

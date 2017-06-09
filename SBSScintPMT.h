@@ -11,7 +11,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 //class SBSScintPMT;
-class THaScintBar;
+class SBSScintBar;
 
 #include "TObject.h"
 #include "TRef.h"
@@ -28,7 +28,7 @@ class SBSScintPMT : public TObject {
 	  Double_t res=1.0, 
 	  Double_t off=0.0,
 	  Double_t walk=0.0, 
-	  THaScintBar* bar=0, 
+	  SBSScintBar* bar=0, 
 	  Int_t barnum=0, 
 	  Int_t side=0,
       Int_t lowlim=0, 
@@ -39,7 +39,7 @@ class SBSScintPMT : public TObject {
     
   virtual ~SBSScintPMT(void);
 
-  THaScintBar* GetScintBar() const { return (THaScintBar*)fScBar.GetObject(); }
+  SBSScintBar* GetScintBar() const { return (SBSScintBar*)fScBar.GetObject(); }
 
   void SetGain(Double_t gain) {fGain=gain;}
   void SetPed(Int_t ped) {fPed=ped;}
@@ -47,7 +47,7 @@ class SBSScintPMT : public TObject {
   void SetTOffset(Double_t off) {fTOffset=off;}
   void SetTimeWalk(Double_t walk) {fTimeWalkPar=walk;}
   void SetTimeWExp(Double_t wexp) {fTimeWalkExp=wexp;}
-  void SetScintBar(THaScintBar* bar);
+  void SetScintBar(SBSScintBar* bar);
   void SetBarNum(Int_t barnum) {fBarNum=barnum;}
   void SetSide(Int_t side) {fSide=side;}
   void SetRawLowLim(Int_t lowlim) {fRawLowLim=lowlim;}

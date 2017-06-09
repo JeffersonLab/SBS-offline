@@ -9,7 +9,7 @@
 
 #include "TObject.h"
 #include "TRef.h"
-#include "THaScintBar.h"
+#include "SBSScintBar.h"
 #include <cstdio>
 
 class SBSScintHit : public TObject {
@@ -17,7 +17,7 @@ class SBSScintHit : public TObject {
  public:
  
     
-  SBSScintHit(const THaScintBar* bar,Int_t planenum, Int_t barnum, 
+  SBSScintHit(const SBSScintBar* bar,Int_t planenum, Int_t barnum, 
 	      Double_t ypos, Double_t Tof, Double_t HitEnergy, Double_t Tdiff);   
   SBSScintHit(const SBSScintHit* pScHit = 0);
   SBSScintHit(const SBSScintHit* pScHit, Int_t clusternum);
@@ -25,7 +25,7 @@ class SBSScintHit : public TObject {
 
   virtual ~SBSScintHit();
 
-  THaScintBar* GetScintBar() const { return (THaScintBar*)fScBar.GetObject(); }
+  SBSScintBar* GetScintBar() const { return (SBSScintBar*)fScBar.GetObject(); }
   Int_t GetPlaneNum() {return fPlaneNum;}
   Int_t GetBarNum() {return fBarNum;}
   Int_t GetBarNum_nd() {return fBarNum_nd;}
@@ -40,7 +40,7 @@ class SBSScintHit : public TObject {
   Int_t GetOrder() {return fOrder;}
   Int_t GetClusterNum() {return fClusterNum;}
 
-  void SetScintBar(THaScintBar* bar) {fScBar=bar;}
+  void SetScintBar(SBSScintBar* bar) {fScBar=bar;}
   void SetPlaneNum(Int_t planenum) {fPlaneNum=planenum;}
   void SetBarNum(Int_t barnum) {fBarNum=barnum;}
   void SetBarNum_nd(Int_t barnum_nd) {fBarNum_nd=barnum_nd;}
