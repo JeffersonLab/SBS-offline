@@ -10,7 +10,7 @@
 
 ClassImp(SBSScintPartialHit)
 
-SBSScintPartialHit::THaPartialHit( SBSScintBar* bar, Int_t barnum, Int_t CaseNum,
+SBSScintPartialHit::SBSScintPartialHit( SBSScintBar* bar, Int_t barnum, Int_t CaseNum,
 			      Double_t lt, Double_t lt_raw,
 			      Double_t rt, Double_t rt_raw,
 			      Double_t la, Double_t la_raw,

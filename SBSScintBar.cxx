@@ -1,17 +1,16 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// THaScintBar                                                               //
+// SBSScintBar                                                               //
 //                                                                           //
-// Class to represent a  neutron bar                                         //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "THaScintPMT.h"
-#include "THaScintBar.h"
+#include "SBSScintPMT.h"
+#include "SBSScintBar.h"
 
 // constructor 
 
-THaScintBar::THaScintBar( Double_t x,Double_t y,Double_t z,
+SBSScintBar::SBSScintBar( Double_t x,Double_t y,Double_t z,
 			  Double_t wx, Double_t wy, Double_t wz,
 			  Double_t c, Double_t att,
 			  Double_t lgain, Int_t lped, Double_t lres,
@@ -36,7 +35,7 @@ THaScintBar::THaScintBar( Double_t x,Double_t y,Double_t z,
 
 //______________________________________________________________________
 
-THaScintBar::~THaScintBar()
+SBSScintBar::~SBSScintBar()
 {
   
 }
@@ -44,7 +43,7 @@ THaScintBar::~THaScintBar()
 
 
 
-ClassImp(THaScintBar)
+ClassImp(SBSScintBar)
 
 
 ///////////////////////////////////////////////////////////////////////////////
