@@ -132,7 +132,12 @@ CXXFLAGS     += $(DEFINES) $(ROOTCFLAGS) $(ROOTCFLAGS) $(PKGINCLUDES)
 LIBS         += $(ROOTLIBS) $(SYSLIBS)
 GLIBS        += $(ROOTGLIBS) $(SYSLIBS)
 
+## ROOT6 requires c++11 enabled in gcc
+ifeq ($(shell root-config --has-cxx11),yes)
+MAKEDEPEND    = gcc --std=c++11
+else
 MAKEDEPEND    = gcc
+endif
 
 ifndef PKG
 PKG           = lib$(CORE)
