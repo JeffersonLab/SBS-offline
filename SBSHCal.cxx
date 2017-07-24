@@ -215,17 +215,17 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
     fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );  //new line added
     
     // Compute block positions and creates blocks array
-    fBlkGrid = new SBSHCalBlock**[fNrows];
-    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new SBSHCalBlock*[fNcols];
-    fClusters = new SBSHCalCluster*[fMaxNClust];
-    fBlocks = new SBSHCalBlock*[fNelem];
+    fBlkGrid = new SBSShowerBlock**[fNrows];
+    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new SBSShowerBlock*[fNcols];
+    fClusters = new SBSBBShowerCluster*[fMaxNClust];
+    fBlocks = new SBSShowerBlock*[fNelem];
     for( int c=0; c<ncols; c++ ) {
         for( int r=0; r<nrows; r++ ) {
             int k = nrows*c + r;
             fBlockX[k] = x + r*dx;                         // Units are meters
             fBlockY[k] = y + c*dy;
-            SBSHCalBlock* block = 
-                new SBSHCalBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
+            SBSShowerBlock* block = 
+                new SBSShowerBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
             fBlocks[k]=block;
             fBlkGrid[r][c]=fBlocks[k];
         }
@@ -495,7 +495,7 @@ Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
 # endif
 
     Double_t energyTotal = 0.0;
-    SBSHCalCluster cluster(9);
+    SBSBBShowerCluster cluster(9);
 
     //  for( col = 0; col < fNcols; col++ )
     //     {
@@ -673,13 +673,13 @@ Int_t SBSHCal::FineProcess(TClonesArray& tracks)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SBSHCal::AddCluster(SBSHCalCluster* clus) {
+void SBSHCal::AddCluster(SBSBBShowerCluster* clus) {
     fClusters[fNclust++]=clus;
 }
 
-void SBSHCal::AddCluster(SBSHCalCluster& clus) {
+void SBSHCal::AddCluster(SBSBBShowerCluster& clus) {
 
-    fClusters[fNclust] = new SBSHCalCluster(clus.GetNMaxBlocks());
+    fClusters[fNclust] = new SBSBBShowerCluster(clus.GetNMaxBlocks());
     fClusters[fNclust]->SetE(clus.GetE());
     fClusters[fNclust]->SetX(clus.GetX());
     fClusters[fNclust]->SetY(clus.GetY());
@@ -700,7 +700,7 @@ void SBSHCal::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {  
     ClearEvent();
     fNclust = 0;
-    fClusters[fNclust] = new SBSHCalCluster(0);
+    fClusters[fNclust] = new SBSBBShowerCluster(0);
     fClusters[fNclust]->SetE(E);
     fClusters[fNclust]->SetX(x);
     fClusters[fNclust]->SetY(y);

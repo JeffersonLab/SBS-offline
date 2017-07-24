@@ -8,7 +8,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "THaPidDetector.h"
-#include "SBSHCalCluster.h"
+#include "SBSBBShowerCluster.h"
 #include "TRotation.h"
 #include "TVector3.h"
 
@@ -46,11 +46,11 @@ class SBSHCal : public THaPidDetector {
 
 	  // Blocks should have a Z!!!
 	  
-	  SBSHCalCluster* GetClust(Int_t i) { return fClusters[i]; }
+	  SBSBBShowerCluster* GetClust(Int_t i) { return fClusters[i]; }
   
-	  void       AddCluster(SBSHCalCluster* clus);
+	  void       AddCluster(SBSBBShowerCluster* clus);
 	  void       RemoveCluster(int i);
-	  void       AddCluster(SBSHCalCluster& clus);
+	  void       AddCluster(SBSBBShowerCluster& clus);
 
 	  void       LoadMCHitAt( Double_t x, Double_t y, Double_t E );
 	  
@@ -113,9 +113,9 @@ class SBSHCal : public THaPidDetector {
   Double_t   fdY;
   Double_t   fdZ;
 
-  SBSHCalBlock** fBlocks; //[fNelem] Array of blocks
-  SBSHCalCluster** fClusters; //[fMaxNClust] 
-  SBSHCalBlock*** fBlkGrid; //[fNrows]
+  SBSShowerBlock** fBlocks; //[fNelem] Array of blocks
+  SBSBBShowerCluster** fClusters; //[fMaxNClust] 
+  SBSShowerBlock*** fBlkGrid; //[fNrows]
 
   //TRotation  fDetToTarg;
   //TVector3   fDetOffset;
