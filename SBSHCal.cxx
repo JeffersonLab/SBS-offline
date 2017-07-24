@@ -152,7 +152,7 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
     fscanf ( fi, "%f%f%f", &x, &y, &z );               // Detector's X,Y,Z coord
     fOrigin.SetXYZ( x, y, z );
     fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%f%f%f", fSize, fSize+1, fSize+2 );  // Sizes of det in X,Y,Z
+    fscanf ( fi, "%lf%lf%lf", fSize, fSize+1, fSize+2 );  // Sizes of det in X,Y,Z
     fdZ = TMath::Abs(fSize[2]);
     fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
 
