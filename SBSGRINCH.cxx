@@ -119,20 +119,20 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     maxdist, hit_max_number=0, MIP_through_interception = 0;
 
   // Set up a table of tags to read and locations to store values.
-  const TagDef tags[] = { 
-    { "l_emission", &l_emission, 1 },
-    { "maxdist",    &maxdist, 2 },
-    { "hit_max_number", &hit_max_number},
-    { "MIP_through_interception", &MIP_through_interception},
-    { "fiducial_zone_range", &fiducial_zone_range},
-    { "cluster_distribution_sigma", &cluster_distribution_sigma },
-    { "acceptable_chi2_prob", &acceptable_chi2_prob },
-    { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom },
-    { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number},
-    { "epsilon", &epsilon },
-    { "use_bad",    &use_bad },
-    { "do_resolve", &do_resolve },
-    { "debug",      &debug },
+  const DBRequest tags[] = { 
+    { "l_emission", &l_emission, kDouble, 1, false },
+    { "maxdist",    &maxdist, kDouble, 1, false },
+    { "hit_max_number", &hit_max_number, kDouble, 1, true },
+    { "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
+    { "fiducial_zone_range", &fiducial_zone_range, kDouble, 1, true },
+    { "cluster_distribution_sigma", &cluster_distribution_sigma, kDouble, 1, true  },
+    { "acceptable_chi2_prob", &acceptable_chi2_prob, kDouble, 1, true  },
+    { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom, kDouble, 1, true  },
+    { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number, kDouble, 1, true },
+    { "epsilon", &epsilon, kDouble, 1, true  },
+    { "use_bad",    &use_bad, kDouble, 1, true  },
+    { "do_resolve", &do_resolve, kDouble, 1, true  },
+    { "debug",      &debug, kDouble, 1, true  },
     { 0 }
   };
 
@@ -159,34 +159,34 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   Double_t size[3] = { 0.0, 0.0, 0.0 };
   Double_t* rotdef[3] = { xrot, yrot, zrot };
   Int_t ntotal, nxpads, nypads;
-  const TagDef atags[] = {
-    { "origin",       ctr,        1, 3 },
-    { "xrot",         xrot,       0, 2 },
-    { "yrot",         yrot,       0, 2 },
-    { "zrot",         zrot,       0, 2 },
-    { "rad",          rad,        5, 4 },
-    { "quartz",       quartz,     6, 4 },
-    { "gap",          gap,        7, 2 },
-    { "npads",        npads,      8, 2 },
-    { "padsize",      padsize,    9, 2 },
-    { "xmip_range",   xmip,       0, 2 },
-    { "ymip_range",   ymip,       0, 2 },
-    { "size",         size,       0, 3 },
+  const DBRequest atags[] = {
+    { "origin",       ctr,      kDoubleV,   3, false},
+    { "xrot",         xrot,     kDoubleV,   2, true},
+    { "yrot",         yrot,     kDoubleV,   2, true},
+    { "zrot",         zrot,     kDoubleV,   2, true},
+    { "rad",          rad,      kDoubleV,   4, false},
+    { "quartz",       quartz,   kDoubleV,   4, false},
+    { "gap",          gap,      kDoubleV,   2, false},
+    { "npads",        npads,    kDoubleV,   2, false },
+    { "padsize",      padsize,  kDoubleV,   2, false },
+    { "xmip_range",   xmip,     kDoubleV,   2, true },
+    { "ymip_range",   ymip,     kDoubleV,   2, true },
+    { "size",         size,     kDoubleV,   3, true },
     //    { "npads_adc",    npads_adc,  13, 2 },
     { 0 }
   };
-  const TagDef* item = atags;
+  const DBRequest* item = atags;
   while( item->name ) {
     tag = item->name;
     err = LoadDBvalue( fi, date, tag, line );
     if( err == 0 ) {
       ISTR inp(line.Data());
-      for(UInt_t i=0; i<item->expected; i++) {
+      for(UInt_t i=0; i<item->nelem; i++) {
 	inp >> ((Double_t*)item->var)[i];
 	if( !inp ) 
 	  goto bad_data;
       }
-    } else if( err>0 && item->fatal )
+    } else if( err>0 && !(item->optional) )
       goto bad_data;
     item++;
   }
