@@ -120,8 +120,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   // Set up a table of tags to read and locations to store values.
   const DBRequest tags[] = { 
-    { "l_emission", &l_emission, kDouble, 1, false },
-    { "maxdist",    &maxdist, kDouble, 1, false },
+    { "l_emission", &l_emission, kDouble, 1, false},
+    { "maxdist",    &maxdist, kDouble, 1, true},
     { "hit_max_number", &hit_max_number, kDouble, 1, true },
     { "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
     { "fiducial_zone_range", &fiducial_zone_range, kDouble, 1, true },
@@ -160,37 +160,25 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   Double_t* rotdef[3] = { xrot, yrot, zrot };
   Int_t ntotal, nxpads, nypads;
   const DBRequest atags[] = {
-    { "origin",       ctr,      kDoubleV,   3, false},
-    { "xrot",         xrot,     kDoubleV,   2, true},
-    { "yrot",         yrot,     kDoubleV,   2, true},
-    { "zrot",         zrot,     kDoubleV,   2, true},
-    { "rad",          rad,      kDoubleV,   4, false},
-    { "quartz",       quartz,   kDoubleV,   4, false},
-    { "gap",          gap,      kDoubleV,   2, false},
-    { "npads",        npads,    kDoubleV,   2, false },
-    { "padsize",      padsize,  kDoubleV,   2, false },
-    { "xmip_range",   xmip,     kDoubleV,   2, true },
-    { "ymip_range",   ymip,     kDoubleV,   2, true },
-    { "size",         size,     kDoubleV,   3, true },
+    { "origin",       &ctr,      kDoubleV,   3, false},
+    { "xrot",         &xrot,     kDoubleV,   2, true},
+    { "yrot",         &yrot,     kDoubleV,   2, true},
+    { "zrot",         &zrot,     kDoubleV,   2, true},
+    { "rad",          &rad,      kDoubleV,   4, false},
+    { "quartz",       &quartz,   kDoubleV,   4, false},
+    { "gap",          &gap,      kDoubleV,   2, false},
+    { "npads",        &npads,    kDoubleV,   2, false},
+    { "padsize",      &padsize,  kDoubleV,   2, false},
+    { "xmip_range",   &xmip,     kDoubleV,   2, true },
+    { "ymip_range",   &ymip,     kDoubleV,   2, true },
+    { "size",         &size,     kDoubleV,   3, true },
     //    { "npads_adc",    npads_adc,  13, 2 },
     { 0 }
   };
-  const DBRequest* item = atags;
-  while( item->name ) {
-    tag = item->name;
-    err = LoadDBvalue( fi, date, tag, line );
-    if( err == 0 ) {
-      ISTR inp(line.Data());
-      for(UInt_t i=0; i<item->nelem; i++) {
-	inp >> ((Double_t*)item->var)[i];
-	if( !inp ) 
-	  goto bad_data;
-      }
-    } else if( err>0 && !(item->optional) )
-      goto bad_data;
-    item++;
-  }
- 
+
+  Int_t status = LoadDB( fi, date, atags, fPrefix );
+  
+
   //--- Process the data
 
   // Check nelem for sanity
