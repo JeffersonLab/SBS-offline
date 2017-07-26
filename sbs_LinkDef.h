@@ -30,4 +30,5 @@
 #pragma link C++ class SBSTdcHit+;
 #pragma link C++ class SBSAdcHit+;
 #pragma link C++ class SBSScintPartialHit+;
+#pragma link C++ class SBSScintPlane+;
 #endif

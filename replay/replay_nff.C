@@ -16,13 +16,13 @@ void replay_nff(){
     SBSGEMStand *gems = new SBSGEMStand("gems", "Collection of GEMs in stand", sbs);
     sbs->AddDetector(gems);
 
-    SBSGRINCH *grinch = new SBSGEMStand("gr", "GRINCH detector");
+    SBSGRINCH *grinch = new SBSGRINCH("gr", "GRINCH detector");
     sbs->AddDetector(grinch);
 
-    SBSTimingHodoscope *= new SBSTimingHodoscope("s", "Timing Hodoscope");
-    sbs->AddDetector(s);
+    SBSTimingHodoscope *th = new SBSTimingHodoscope("s", "Timing Hodoscope");
+    sbs->AddDetector(th);
 
-    SBSBBTotalShower *bbts = new SBSGEMStand("ts", "Total Shower");
+    SBSBBTotalShower *bbts = new SBSBBTotalShower("ts", "Total Shower");
     sbs->AddDetector(bbts);
 
 
