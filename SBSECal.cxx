@@ -215,17 +215,17 @@ Int_t SBSECal::ReadDatabase( const TDatime& date )
     fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );  //new line added
     
     // Compute block positions and creates blocks array
-    fBlkGrid = new SBSECalBlock**[fNrows];
-    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new SBSECalBlock*[fNcols];
+    fBlkGrid = new SBSShowerBlock**[fNrows];
+    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new SBSShowerBlock*[fNcols];
     fClusters = new SBSECalCluster*[fMaxNClust];
-    fBlocks = new SBSECalBlock*[fNelem];
+    fBlocks = new SBSShowerBlock*[fNelem];
     for( int c=0; c<ncols; c++ ) {
         for( int r=0; r<nrows; r++ ) {
             int k = nrows*c + r;
             fBlockX[k] = x + r*dx;                         // Units are meters
             fBlockY[k] = y + c*dy;
-            SBSECalBlock* block = 
-                new SBSECalBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
+            SBSShowerBlock* block = 
+                new SBSShowerBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
             fBlocks[k]=block;
             fBlkGrid[r][c]=fBlocks[k];
         }

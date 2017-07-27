@@ -6,17 +6,23 @@
 #include "THaAnalyzer.h"
 #include "THaApparatus.h"
 
-//#include "SBSGEMStand.h"
-//#include "SBSBigBite.h"
 
-void replay(){
+void replay_pff(){
 
     gSystem->Load("libsbs.so");
 
     SBSBigBite   *sbs = new SBSBigBite("sbs", "Generic apparatus");
-    SBSGEMStand *gems = new SBSGEMStand("gems", "Collection of GEMs in stand");
 
+    SBSGEMStand *gems = new SBSGEMStand("gems", "Collection of GEMs in stand", sbs);
     sbs->AddDetector(gems);
+
+    // HCal
+    // sbs->AddDetector(hcal);
+
+    SBSEArm *earm = new SBSEArm("earm", "Generic apparatus");
+    SBSCDet *cdet= new SBSCDet("cdet", "CDet", earm);
+    SBSECal *ecal= new SBSECal("ecal", "ECal", earm);
+
 
   //
   //  Steering script for Hall A analyzer demo

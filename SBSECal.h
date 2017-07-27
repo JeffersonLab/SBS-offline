@@ -113,9 +113,9 @@ class SBSECal : public THaPidDetector {
   Double_t   fdY;
   Double_t   fdZ;
 
-  SBSECalBlock** fBlocks; //[fNelem] Array of blocks
+  SBSShowerBlock** fBlocks; //[fNelem] Array of blocks
   SBSECalCluster** fClusters; //[fMaxNClust] 
-  SBSECalBlock*** fBlkGrid; //[fNrows]
+  SBSShowerBlock*** fBlkGrid; //[fNrows]
 
   //TRotation  fDetToTarg;
   //TVector3   fDetOffset;

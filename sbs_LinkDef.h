@@ -15,9 +15,10 @@
 #pragma link C++ class SBSGRINCH+;
 #pragma link C++ class SBSGRINCH_Cluster+;
 #pragma link C++ class SBSGRINCH_Hit+;
-//#pragma link C++ class SBSECal+;
+#pragma link C++ class SBSECal+;
+#pragma link C++ class SBSECalCluster+;
+#pragma link C++ class SBSEArm+;
 //#pragma link C++ class SBSHCal+;
-//#pragma link C++ class SBSGRINCH+;
 #pragma link C++ class SBSCDet+;
 #pragma link C++ class SBSTimingHodoscope+;
 #pragma link C++ class SBSBBShower+;
