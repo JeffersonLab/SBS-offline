@@ -153,38 +153,49 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   TString line, tag;
   Int_t retval = kOK;
   int n;
-  Double_t ctr[3], xrot[] = {0,1,1}, yrot[] = {0,2,2}, zrot[] = {0,3,3};
-  Double_t rad[4], quartz[4], gap[2], npads[2], /*npads_adc[2],*/ padsize[2];
-  Double_t xmip[2] = { fMinxMIP,fMaxxMIP }, ymip[2] = { fMinyMIP,fMaxyMIP };
-  Double_t size[3] = { 0.0, 0.0, 0.0 };
+  std::vector<double> ctr, xrotv, yrotv, zrotv, rad, quartz, gap;
+  std::vector<int> npads;
+  std::vector<double> padsize, xmip, ymip, size;
+
+  Double_t xrot[] = {0,1,1}, yrot[] = {0,2,2}, zrot[] = {0,3,3};
+
   Double_t* rotdef[3] = { xrot, yrot, zrot };
+
   Int_t ntotal, nxpads, nypads;
   const DBRequest atags[] = {
     { "origin",       &ctr,      kDoubleV,   3, false},
-    { "xrot",         &xrot,     kDoubleV,   2, true},
-    { "yrot",         &yrot,     kDoubleV,   2, true},
-    { "zrot",         &zrot,     kDoubleV,   2, true},
+    { "xrot",         &xrotv,     kDoubleV,   2, false},
+    { "yrot",         &yrotv,     kDoubleV,   2, false},
+    { "zrot",         &zrotv,     kDoubleV,   2, false},
     { "rad",          &rad,      kDoubleV,   4, false},
     { "quartz",       &quartz,   kDoubleV,   4, false},
-    { "gap",          &gap,      kDoubleV,   2, false},
-    { "npads",        &npads,    kDoubleV,   2, false},
+    { "gap",          &gap,      kDoubleV,   3, false},
+    { "npads",        &npads,    kIntV,      2, false},
     { "padsize",      &padsize,  kDoubleV,   2, false},
-    { "xmip_range",   &xmip,     kDoubleV,   2, true },
-    { "ymip_range",   &ymip,     kDoubleV,   2, true },
-    { "size",         &size,     kDoubleV,   3, true },
+    { "xmip_range",   &xmip,     kDoubleV,   2, false},
+    { "ymip_range",   &ymip,     kDoubleV,   2, false},
+    { "size",         &size,     kDoubleV,   3, false},
     //    { "npads_adc",    npads_adc,  13, 2 },
     { 0 }
   };
 
-  Int_t status = LoadDB( fi, date, atags, fPrefix );
+  err = LoadDB( fi, date, atags, fPrefix );
   
 
   //--- Process the data
+
+  if( npads.size() != 2) {
+    Error( Here(here), "Illegal number of pads: nx = %d, ny = %d. "
+	   "Detector initialization failed.", nxpads, nypads );
+    fclose(fi);
+    return kInitError;
+  }
 
   // Check nelem for sanity
   nxpads = int(npads[0]+0.5);
   nypads = int(npads[1]+0.5);
   ntotal = nxpads*nypads;
+
   if( nxpads <= 0 || nypads <= 0 || ntotal <= 0 ) {
     Error( Here(here), "Illegal number of pads: nx = %d, ny = %d. "
 	   "Detector initialization failed.", nxpads, nypads );
@@ -247,6 +258,17 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   // Origin of RICH coordinate system. Include offsets here.
   fOrigin.SetXYZ(ctr[0],ctr[1],ctr[2]);
+
+  ///////////////////////
+
+
+  std::vector<double> rotset[3] = {xrotv, yrotv, zrotv};
+
+  for( int j = 0; j < 3; j++ ){
+      for( int i = 0; i < xrotv.size(); i++ ){
+          rotdef[j][i] = rotset[j][i];
+      }
+  }
 
   // Define the x/y-plane vectors according to the rotations specified.
   // Put the rotations in the desired order
@@ -320,10 +342,11 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   fDetMap->Clear();
   n = 1;
+  int status;
   while(1) {
     Int_t crate, slot, lo, hi;
-    tag = Form("detmap_%d", n);
-    if( LoadDBvalue( fi, date, tag, line ) != 0 )
+    tag = TString(Form("detmap_%02d", n));
+    if( status = LoadDBvalue( fi, date, tag, line ) != 0 )
       break;
     ISTR inp(line.Data());
     inp >> crate >> slot >> lo >> hi;
