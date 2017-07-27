@@ -1,0 +1,271 @@
+######################### BB SCINTILLATOR PLANE ############################
+Number of Scintillator paddles ------------------------------------------
+       13
+Crate,Slot,1st,Last ADC chans,Beg S1 chan --------------------------------------
+        8       1       0      12       1             - ADCs pads 1-13  (right)
+        8       1      13      25      14             - ADCs pads 14-26 (left)
+        8      16      26      38       1             - TDCs pads 1-13  (right)
+        8      16      39      51      14             - TDCs pads 14-26 (left)
+      -1        0       0       0       0
+X,Y,Z coords of S front plane in spectrom cs ----------------------------------
+     0.0    0.0      0.95                            - Meters
+Half of X, half of Y, full Z sizes of S1 ---------------------------------------
+    1.10   0.32     0.038                           - Meters
+Rotation angle of the S plane -------------------------------------------------
+     0.0                                             - Degrees
+TDC time offsets of S in TDC channels -------------------
+ 36 45 45 24 71 134 52 -11 -7 22 10 85 16 - Left Paddles
+ -76 51 -0 9 -48 -50 -60 11 -21 -40 -28 9 12 - Right Paddles
+Pedestal values of S ADC channels ---------------------------------------------
+  378.0 350.6 398.4 416.2 315.1 264.0 271.2 424.9
+  472.2 436.4 465.6 311.5 311.2  - Left Paddles
+  403.9 313.8 285.1 319.6 388.3 390.5 381.2 376.7
+  306.8 364.0 287.0 300.3 401.3 - Right Paddles 
+Amplitude transformation coefficients of S ADC channels -----------------------
+  1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 - Left Paddles
+  1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 1.00 - Right Paddles
+# TDC resolution (time per channel -- assuming it is 35ps/channel : putting in ns)
+ 0.035
+# Speed of light in the medium (m/ns)
+ 0.146
+################################################################################
+
+################################################################################
+
+===================== spliter of old and new database format ============================
+
+###############################################################
+#
+# Data Base for THaScintPlaneDet
+#
+# units: m & ns
+#
+# Author: Jin Huang <mailto:jinhuang@jlab.org>    Sept 2008
+#
+###############################################################
+
+
+###############################################################
+# Example
+###############################################################
+# comment line start with '#' or empty line
+# WARNING: "empty line" means completely empty, even with out 
+#   space or tab
+#
+# example section for Bigbite trigger plane dE subdetector TDC cratemap
+#
+[ sbs.s.cratemap.tdc.example ]
+#
+# reference channel goes first
+# crate	slot	lo	hi	model	refindex
+25      13      32     32     6401    -1
+# crate=-1 end to this subsection
+-1       0       0      0        0     0
+#
+# subsection for the left PMTs
+# crate	slot	lo	hi	model	refindex
+25       1       0      0     6401     0
+25       1       0      0     6401     0
+25      12      32     32     6401     0
+# lines ignored here	
+-1       0       0      0        0     0
+#
+# subsection for the right PMTs
+# crate	slot	lo	hi	model	refindex
+25       1       0      0     6401     0
+25       1       0      0     6401     0
+25       4      31     31     6401     0
+# lines ignored here
+-1       0       0      0        0     0
+
+[ sbs.s.left_pedestals.example ]
+# first and last index in array
+0 30
+# no comment in table
+# Table start here
+  0   0 397 423 464 
+487 496 576 522 335 
+361 433 347 648 512 
+609 529 451 537 540 
+496 554 385 382 294 
+376 403 331 335 230 
+288 
+
+
+###############################################################
+# Bigbite Timing Scintilator plane
+###############################################################
+
+[ sbs.s.geometry ]
+# TERMINOLOGY follows conventions of Hall A Tech Notes JLAB-TN-02-012:  
+# http://hallaweb.jlab.org/publications/Technotes/files/2002/02-012.pdf
+# origin of the detector
+# relative to Transport Coordinate System 
+#   x   y   z
+    0   0   1.13
+
+# x and y axis of the detector
+# relative to Transport Coordinate System
+# z axis will be calculated by z=x cross y
+# x axis
+#   x   y   z
+    1   0   0
+# y axis
+#   x   y   z
+    0   1   0
+
+[ sbs.s.hit_acceptance ]
+# limits of accepatble x and y diffence between hit 
+# and track projection on the plane
+#	dx	    dy
+	.3   	 .64
+	
+	
+[ sbs.s.cratemap.tdc ]
+# Ref Idx:index for reference channel
+# crate	slot	Lo	Hi	Model	Ref Idx.
+5	5	16	16	3201	-1
+-1	0	0	0	0	0
+# left PMTs				
+5	8	7	15	3201	0
+5	9	0	3	3201	0
+-1	0	0	0	0	0
+# right PMTs					
+5	6	10	15	3201	0
+5	8	0	6	3201	0
+-1	0	0	0	0	0
+
+
+
+[ sbs.s.cratemap.adc ]
+# crate	slot	Lo	Hi	Model
+# left 24 PMT
+8	1	13	25	1881	
+-1	0	0	0	0
+# right 24 PMT
+8	1	0	12	1881
+-1	0	0	0	0
+ 
+ 
+[ sbs.s.calib ]
+# -----------------------------------------------------------------------
+# first and last index of reference channel with same time resorlution
+# ex. 0 1 stand for 2 reference channel with index 0 & 1
+0 0
+# TDC resorlution of above reference channels
+0.0602
+# if necessary, continue this list untill reach nRefCh-1
+# -----------------------------------------------------------------------
+# first and last index of bars with same specification
+0 12
+
+# middle of the first bar, relative to the center of the detector it belongs to
+# x,y,z,of first bar and dx,dy,dz between bars
+1.015   0.0   .0   -0.16923   0.   0. 
+
+# full width (from end to end)
+# xw,yw,zw
+0.16923   1e16   .038   
+
+# effective speed of light(m/ns) and attenuation in scintillator
+# attenuation: Y_ADC = TMath::Log(L_ADC/R_ADC)*attenuation/2.0;
+0.146   1.e8
+# n=1.58, taking reflection into consideration, I just set c=1^8 m/s temporarily 
+# I do not know attenuation, probably it's not useful
+
+# (default value of) gain, ped, res, toff, walk, lowtdclim, uptdclim, wrapa
+#
+# gain, ped: fAmplPedCor = fRawAmpl - pmt->GetPed();
+#            fAmpl = fAmplPedCor * pmt->GetGain();
+# res, toff: fTime = fRawTime * res - toff
+# walk:      time-walk correction, t=t-walk*pow(adc,-0.5)
+# lowtdclim, uptdclim: Lower and upper boundary
+# for an acceptable hit
+# wrapa:     F1TDC wrap-round time (in Rawtime format)
+#
+# left PMT
+# gain, ped, res, toff, walk, lowtdclim, uptdclim, wrapa
+1.	0	0.0602	0.0	0.0	-9000	9000	65253
+# right PMT
+# gain, ped, res, toff, walk, lowtdclim, uptdclim, wrapa
+1.	0	0.0602	0.0	0.0	-9000	9000	65253
+# -----------------------------------------------------------------------
+
+[ sbs.s.left_gain ]
+# first and last index in array
+0 12
+# Table start here
+1	1	1	1
+1	1	1	1
+1	1	1	1
+1	
+
+[ sbs.s.left_pedestals ]
+# first and last index in array
+0 12
+# Table start here
+  377.1 339.0 390.9 421.6 310.9 243.1 246.9 424.1 
+  467.2 432.4 486.2 305.1 305.3
+  
+   
+[ sbs.s.left_toff ]
+# toff should contain correction for 
+# the time of light traveling through bars
+#
+# first and last index in array
+0 12
+# Table start here
+-0.04
+-0.07
+0.66
+-0.16
+0.38
+0.91
+-0.56
+1.92
+0.14
+0.06
+-0.89
+0.41
+2.17
+
+
+[ sbs.s.right_gain ]
+# first and last index in array
+0 12
+# Table start here
+1	1	1	1
+1	1	1	1
+1	1	1	1
+1	
+
+[ sbs.s.right_pedestals ]
+# first and last index in array
+0 12
+# Table start here
+  405.0 308.0 278.2 308.2 385.9 390.3 376.5 368.2 
+  302.6 365.5 284.6 299.1 404.1
+
+[ sbs.s.right_toff ]
+# first and last index in array
+0 12
+# Table start here
+0.47
+0.78
+0.44
+-0.05
+0.96
+1.89
+-0.10
+2.46
+0.34
+0.65
+-0.49
+1.13
+1.81
+
+[sbs.s.WarningThreshold]
+# Threshold of ave. error reference per event that will pop up warnings
+0.006
+
+
