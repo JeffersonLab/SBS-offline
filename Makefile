@@ -60,12 +60,23 @@ ifeq ($(strip $(INCDIRS)),)
   $(error No Analyzer header files found. Check $$ANALYZER)
 endif
 
+ROOTVERMAJOR := $(shell root-config --version | cut -d. -f1)
+ROOTVERMINOR := $(shell root-config --version | cut -d. -f1 | cut -d/ -f1)
+ROOTVERPATCH := $(shell root-config --version | cut -d. -f1 | cut -d/ -f2)
 ROOTCFLAGS   := $(shell root-config --cflags)
 ROOTLIBS     := $(shell root-config --libs)
 ROOTGLIBS    := $(shell root-config --glibs)
 ROOTBIN      := $(shell root-config --bindir)
 CXX          := $(shell root-config --cxx)
 LD           := $(shell root-config --ld)
+
+## ROOT5 and under used rootcint to make dictionaries
+ifeq ($(ROOTVERMAJOR),5)
+	ROOTDICT_CMD = $(ROOTBIN)/rootcint
+else
+	## ROOT6 uses rootcling
+	ROOTDICT_CMD = $(ROOTBIN)/rootcling
+endif
 
 PKGINCLUDES  = $(addprefix -I, $(INCDIRS) ) -I$(shell pwd)
 INCLUDES     = -I$(shell root-config --incdir) $(PKGINCLUDES)
@@ -168,7 +179,7 @@ endif
 
 $(COREDICT).cxx: $(HDR) $(LINKDEF)
 	@echo "Generating dictionary $(COREDICT)..."
-	$(ROOTBIN)/rootcint -f $@ -c $(INCLUDES) $(DEFINES) $^
+	$(ROOTDICT_CMD) -f $@ -c $(INCLUDES) $(DEFINES) $^ ; \
 
 install:	all
 		$(error Please define install yourself)
@@ -179,7 +190,7 @@ clean:
 		rm -f *.o *~ $(CORELIB) $(COREDICT).*
 
 realclean:	clean
-		rm -f *.d
+		rm -f *.d *.pcm *.rootmap
 
 srcdist:
 		rm -f $(DISTFILE).gz
