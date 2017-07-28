@@ -8,7 +8,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "THaPidDetector.h"
-#include "SBSBBShowerCluster.h"
+#include "SBSShowerBlock.h"
+//2//#include "SBSBBShowerCluster.h"
 #include "TRotation.h"
 #include "TVector3.h"
 
@@ -22,6 +23,7 @@ class SBSHCal : public THaPidDetector {
   virtual Int_t      Decode( const THaEvData& );
   virtual Int_t      CoarseProcess(TClonesArray& tracks);
   virtual Int_t      FineProcess(TClonesArray& tracks);
+  //virtual Int_t      DecodeFADC( const THaEvData& );
   
           Int_t      GetNclust() const { return fNclust; }
           Int_t      GetNhits() const  { return fNhits; }
@@ -30,8 +32,8 @@ class SBSHCal : public THaPidDetector {
           Float_t    GetY(int i) const { return fY[i]; }
 
 	  Int_t      GetNBlocks() { return (fNrows * fNcols);}
-	  Float_t    GetBlockX( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetX(); else return 0.0;}
-	  Float_t    GetBlockY( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetY(); else  return 0.0;}
+	  //2//Float_t    GetBlockX( Int_t i )  { if(i < fNrows*fNcols) return fModules[i]->GetX(); else return 0.0;}
+	  //2//Float_t    GetBlockY( Int_t i )  { if(i < fNrows*fNcols) return fModules[i]->GetY(); else  return 0.0;}
 	  
 	  Float_t    GetBlockdX()  {return fdX;}
 	  Float_t    GetBlockdY()  {return fdY;}
@@ -46,11 +48,11 @@ class SBSHCal : public THaPidDetector {
 
 	  // Blocks should have a Z!!!
 	  
-	  SBSBBShowerCluster* GetClust(Int_t i) { return fClusters[i]; }
+	  //2//SBSBBShowerCluster* GetClust(Int_t i) { return fClusters[i]; }
   
-	  void       AddCluster(SBSBBShowerCluster* clus);
+	  //2//void       AddCluster(SBSBBShowerCluster* clus);
 	  void       RemoveCluster(int i);
-	  void       AddCluster(SBSBBShowerCluster& clus);
+	  //2//void       AddCluster(SBSBBShowerCluster& clus);
 
 	  void       LoadMCHitAt( Double_t x, Double_t y, Double_t E );
 	  
@@ -64,20 +66,13 @@ class SBSHCal : public THaPidDetector {
 
   // Mapping (see also fDetMap)
   UShort_t*  fNChan;     // Number of channels for each module
-  UShort_t** fChanMap;   // Logical channel numbers 
+  std::vector< std::vector<UShort_t> > fChanMap; // Logical channel numbers
+                                                 // for each detector map module
 
   // Configuration
   Int_t      fNclublk;   // Max. number of blocks composing a cluster
   Int_t      fNrows;     // Number of rows
   Int_t      fNcols;     // Number of columns
-
-  // Geometry
-  Float_t*   fBlockX;    // [fNelem] x positions (cm) of block centers
-  Float_t*   fBlockY;    // [fNelem] y positions (cm) of block centers
-
-  // Calibration
-  Float_t*   fPed;       // [fNelem] Pedestals for each block
-  Float_t*   fGain;      // [fNelem] Gains for each block
 
   //Gain correction 
    Float_t   gconst;     // const from gain correction 
@@ -92,6 +87,18 @@ class SBSHCal : public THaPidDetector {
   Float_t*   fA;         // [fNelem] Array of ADC amplitudes of blocks
   Float_t*   fA_p;       // [fNelem] Array of ADC minus pedestal values of blocks
   Float_t*   fA_c;       // [fNelem] Array of corrected ADC amplitudes of blocks
+
+  Float_t*   fA0;         // [fNelem] Array of ADC sample0
+  Float_t*   fA1;         // [fNelem] Array of ADC sample1
+  Float_t*   fA2;         // [fNelem] Array of ADC sample2
+  Float_t*   fA3;         // [fNelem] Array of ADC sample3
+  Float_t*   fA4;         // [fNelem] Array of ADC sample4
+  Float_t*   fA5;         // [fNelem] Array of ADC sample5
+  Float_t*   fA6;         // [fNelem] Array of ADC sample6
+  Float_t*   fA7;         // [fNelem] Array of ADC sample7
+  Float_t*   fA8;         // [fNelem] Array of ADC sample8
+  Float_t*   fA9;         // [fNelem] Array of ADC sample9
+
   Float_t    fAsum_p;    // Sum of blocks ADC minus pedestal values
   Float_t    fAsum_c;    // Sum of blocks corrected ADC amplitudes
   Int_t      fNclust;    // Number of clusters
@@ -113,9 +120,9 @@ class SBSHCal : public THaPidDetector {
   Double_t   fdY;
   Double_t   fdZ;
 
-  SBSShowerBlock** fBlocks; //[fNelem] Array of blocks
-  SBSBBShowerCluster** fClusters; //[fMaxNClust] 
-  SBSShowerBlock*** fBlkGrid; //[fNrows]
+  std::vector<SBSShowerBlock*> fBlocks; //[fNelem] Array of modules
+  //SBSBBShowerCluster** fClusters; //[fMaxNClust] 
+  std::vector<std::vector<SBSShowerBlock*> > fBlkGrid; //[fNrows]
 
   //TRotation  fDetToTarg;
   //TVector3   fDetOffset;
@@ -128,7 +135,10 @@ class SBSHCal : public THaPidDetector {
   void           DeleteArrays();
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
-  
+
+ private:
+  void SetBlockADCSamples(Int_t block, std::vector<UInt_t> samples);
+
   ClassDef(SBSHCal,0)     //Generic shower detector class
 };
 
