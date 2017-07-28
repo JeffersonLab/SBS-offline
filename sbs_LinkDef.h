@@ -13,7 +13,7 @@
 #pragma link C++ class SBSGEMStand+;
 #pragma link C++ class SBSGEMPlane+;
 //#pragma link C++ class SBSECal+;
-//#pragma link C++ class SBSHCal+;
+#pragma link C++ class SBSHCal+;
 //#pragma link C++ class SBSGRINCH+;
 #pragma link C++ class SBSCDet+;
 #pragma link C++ class SBSTimingHodoscope+;
