@@ -62,7 +62,6 @@ public:
   void                 SetMaxNumHits( Int_t MaxNumHit ) 
     { fMaxNumHits=MaxNumHit; }
 
-  void                 SetUsingBadPads(Bool_t onoff) {fuseBadPads=onoff;}
   void                 SetMIPArea(Double_t xmin, Double_t xmax, 
 				  Double_t ymin, Double_t ymax) 
   {fMaxxMIP=xmax; fMinxMIP=xmin; fMaxyMIP=ymax; fMinyMIP=ymin;}
@@ -143,8 +142,6 @@ protected:
                                   //            cluster of this kind is found
   Int_t   fMaxNumHits;            
 
-  TBits   fBadPad;   // bitfield of pads to ignore which are e.g. too noisy
-  Bool_t  fuseBadPads;   // false = don't care about the above field
 
   Bool_t  fDoResolve;    // true = resolve overlapping clusters
   Int_t   fNseg;         // Number of x segments

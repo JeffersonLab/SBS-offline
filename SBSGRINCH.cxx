@@ -45,7 +45,7 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
   THaPidDetector(name,description,apparatus), 
   fMIPs(0),
   fMaxxMIP(100000), fMinxMIP(-100000), fMaxyMIP(100000), fMinyMIP(-100000),
-  fuseBadPads(false), fDoResolve(false), fNseg(0), fXseg(0),
+  fDoResolve(false), fNseg(0), fXseg(0),
   fTrackX(kBig), fTrackY(kBig)
 {
   //keep this line first
@@ -115,24 +115,23 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   // Storage and default values for non-Double_t and non-member 
   // data from database. Note: These must be Double_t
-  Double_t debug = 0, use_bad = fuseBadPads, do_resolve = false,
+  Double_t debug = 0, do_resolve = false,
     maxdist, hit_max_number=0, MIP_through_interception = 0;
 
   // Set up a table of tags to read and locations to store values.
-  const TagDef tags[] = { 
-    { "l_emission", &l_emission, 1 },
-    { "maxdist",    &maxdist, 2 },
-    { "hit_max_number", &hit_max_number},
-    { "MIP_through_interception", &MIP_through_interception},
-    { "fiducial_zone_range", &fiducial_zone_range},
-    { "cluster_distribution_sigma", &cluster_distribution_sigma },
-    { "acceptable_chi2_prob", &acceptable_chi2_prob },
-    { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom },
-    { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number},
-    { "epsilon", &epsilon },
-    { "use_bad",    &use_bad },
-    { "do_resolve", &do_resolve },
-    { "debug",      &debug },
+  const DBRequest tags[] = { 
+    { "l_emission", &l_emission, kDouble, 1, false},
+    { "maxdist",    &maxdist, kDouble, 1, true},
+    { "hit_max_number", &hit_max_number, kDouble, 1, true },
+    { "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
+    { "fiducial_zone_range", &fiducial_zone_range, kDouble, 1, true },
+    { "cluster_distribution_sigma", &cluster_distribution_sigma, kDouble, 1, true  },
+    { "acceptable_chi2_prob", &acceptable_chi2_prob, kDouble, 1, true  },
+    { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom, kDouble, 1, true  },
+    { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number, kDouble, 1, true },
+    { "epsilon", &epsilon, kDouble, 1, true  },
+    { "do_resolve", &do_resolve, kDouble, 1, true  },
+    { "debug",      &debug, kDouble, 1, true  },
     { 0 }
   };
 
@@ -153,50 +152,49 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   TString line, tag;
   Int_t retval = kOK;
   int n;
-  Double_t ctr[3], xrot[] = {0,1,1}, yrot[] = {0,2,2}, zrot[] = {0,3,3};
-  Double_t rad[4], quartz[4], gap[2], npads[2], /*npads_adc[2],*/ padsize[2];
-  Double_t xmip[2] = { fMinxMIP,fMaxxMIP }, ymip[2] = { fMinyMIP,fMaxyMIP };
-  Double_t size[3] = { 0.0, 0.0, 0.0 };
+  std::vector<double> ctr, xrotv, yrotv, zrotv, rad, quartz, gap;
+  std::vector<int> npads;
+  std::vector<double> padsize, xmip, ymip, size;
+
+  Double_t xrot[] = {0,1,1}, yrot[] = {0,2,2}, zrot[] = {0,3,3};
+
   Double_t* rotdef[3] = { xrot, yrot, zrot };
+
   Int_t ntotal, nxpads, nypads;
-  const TagDef atags[] = {
-    { "origin",       ctr,        1, 3 },
-    { "xrot",         xrot,       0, 2 },
-    { "yrot",         yrot,       0, 2 },
-    { "zrot",         zrot,       0, 2 },
-    { "rad",          rad,        5, 4 },
-    { "quartz",       quartz,     6, 4 },
-    { "gap",          gap,        7, 2 },
-    { "npads",        npads,      8, 2 },
-    { "padsize",      padsize,    9, 2 },
-    { "xmip_range",   xmip,       0, 2 },
-    { "ymip_range",   ymip,       0, 2 },
-    { "size",         size,       0, 3 },
+  const DBRequest atags[] = {
+    { "origin",       &ctr,      kDoubleV,   3, false},
+    { "xrot",         &xrotv,     kDoubleV,   2, false},
+    { "yrot",         &yrotv,     kDoubleV,   2, false},
+    { "zrot",         &zrotv,     kDoubleV,   2, false},
+    { "rad",          &rad,      kDoubleV,   4, false},
+    { "quartz",       &quartz,   kDoubleV,   4, false},
+    { "gap",          &gap,      kDoubleV,   3, false},
+    { "npads",        &npads,    kIntV,      2, false},
+    { "padsize",      &padsize,  kDoubleV,   2, false},
+    { "xmip_range",   &xmip,     kDoubleV,   2, false},
+    { "ymip_range",   &ymip,     kDoubleV,   2, false},
+    { "size",         &size,     kDoubleV,   3, false},
     //    { "npads_adc",    npads_adc,  13, 2 },
     { 0 }
   };
-  const TagDef* item = atags;
-  while( item->name ) {
-    tag = item->name;
-    err = LoadDBvalue( fi, date, tag, line );
-    if( err == 0 ) {
-      ISTR inp(line.Data());
-      for(UInt_t i=0; i<item->expected; i++) {
-	inp >> ((Double_t*)item->var)[i];
-	if( !inp ) 
-	  goto bad_data;
-      }
-    } else if( err>0 && item->fatal )
-      goto bad_data;
-    item++;
-  }
- 
+
+  err = LoadDB( fi, date, atags, fPrefix );
+  
+
   //--- Process the data
+
+  if( npads.size() != 2) {
+    Error( Here(here), "Illegal number of pads: nx = %d, ny = %d. "
+	   "Detector initialization failed.", nxpads, nypads );
+    fclose(fi);
+    return kInitError;
+  }
 
   // Check nelem for sanity
   nxpads = int(npads[0]+0.5);
   nypads = int(npads[1]+0.5);
   ntotal = nxpads*nypads;
+
   if( nxpads <= 0 || nypads <= 0 || ntotal <= 0 ) {
     Error( Here(here), "Illegal number of pads: nx = %d, ny = %d. "
 	   "Detector initialization failed.", nxpads, nypads );
@@ -216,7 +214,6 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   fNypads = nypads;
   // All ok - convert to non-Double_t types
   fDebug  = int(debug+0.5);
-  fuseBadPads = bool(use_bad);
   fDoResolve  = bool(do_resolve);
   fMaxdist2   = maxdist*maxdist;
   fMIP_through_interception = int(MIP_through_interception);
@@ -247,7 +244,6 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   fMaxyMIP = ymip[1];
 
   //FIXME: put in database
-  ReadBadPads("RICH_badpads.dat");
 
   // Geometry stuff. 
   // NB: The RICH depends heavily on correct geometry/orientation data.
@@ -259,6 +255,17 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   // Origin of RICH coordinate system. Include offsets here.
   fOrigin.SetXYZ(ctr[0],ctr[1],ctr[2]);
+
+  ///////////////////////
+
+
+  std::vector<double> rotset[3] = {xrotv, yrotv, zrotv};
+
+  for( int j = 0; j < 3; j++ ){
+      for( unsigned int i = 0; i < xrotv.size(); i++ ){
+          rotdef[j][i] = rotset[j][i];
+      }
+  }
 
   // Define the x/y-plane vectors according to the rotations specified.
   // Put the rotations in the desired order
@@ -332,10 +339,11 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   fDetMap->Clear();
   n = 1;
+  int status;
   while(1) {
     Int_t crate, slot, lo, hi;
-    tag = Form("detmap_%d", n);
-    if( LoadDBvalue( fi, date, tag, line ) != 0 )
+    tag = TString(Form("detmap_%02d", n));
+    if( status = LoadDBvalue( fi, date, tag, line ) != 0 )
       break;
     ISTR inp(line.Data());
     inp >> crate >> slot >> lo >> hi;
@@ -530,40 +538,17 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	  return -2;
 	}
 	
-	register UShort_t ADC = ( d->crate == 14) ?  d->slot-1 : d->slot+19;
-	//register UShort_t ADC = ( d->crate == 14) ?  d->slot-1 : d->slot+19;
-	//register UShort_t ADC = ( d->crate == 15) ?  d->slot-1 : d->slot+19;
-	Int_t richtemp=0;
-        if (/*ADC>=0 && */ADC<=19) richtemp=2*ADC;
-        if (ADC>=20&&ADC<=39) richtemp=2*(ADC-20)+1;
-        ADC=richtemp;
 	 for (int hit = 0; hit < nhit; hit++) {
 
-	  if (!fuseBadPads||!fBadPad.TestBitNumber(480*ADC+chan)){
-	    // cout << " read " << endl;
-	    // adc runs form 0..47
-	    
-	    // joh: here's my rendition of the code commented out below
-	    // note: I shifted the ranges down by one, so now we have
-	    //  xhit = 0...239, yhit = 0...47
-	    //	    static const Int_t ylookup[6] = { 0, 5, 1, 4, 2, 3 };
-            //static const Int_t chx[6]={2,3,1,4,0,5};
-            //static const Int_t chx[6]={5,0,4,1,3,2};
-	    static const Int_t chx[6]={0,5,1,4,2,3};
-            //static const Int_t chx[6]={3,2,4,1,5,0};
-            Int_t richADC,richYPAD_X_ADC,richXPAD_X_ADC;
-	    richXPAD_X_ADC=6;
-            richYPAD_X_ADC=80;
-            richADC=ADC;
-	    //  richchan=ADC*480+chan;
-	    // AC 06-04-2008 okay... new RICH geometry is 480 x 40 
-	    // 
-	    //Int_t xhit = 40+80*(ADC>>3)-200*(ADC/20) - (chan/6) - 1;
-	    // Int_t yhit = 6*(ADC&7) + ylookup[chan%6];
-	       Int_t xhit = richADC*richXPAD_X_ADC+chx[chan%richXPAD_X_ADC];
-	       Int_t yhit = (chan/richXPAD_X_ADC)%richYPAD_X_ADC;
-            // Int_t yhit = (testchan/testXPAD_X_ADC)%testYPAD_X_ADC;
-//  	    }
+             // FIXME:  Need to fix how geometry gets mapped to x/y
+             static const Int_t chx[6]={0,5,1,4,2,3};
+
+             Int_t richADC = 0;
+             Int_t richXPAD_X_ADC=6;
+             Int_t richYPAD_X_ADC=80;
+             Int_t xhit = richADC*richXPAD_X_ADC+chx[chan%richXPAD_X_ADC];
+             Int_t yhit = (chan/richXPAD_X_ADC)%richYPAD_X_ADC;
+
 	  
 	    // Fill hit array
 	    UInt_t data = evdata.GetData(d->crate,d->slot,chan,hit);
@@ -582,7 +567,6 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	      // cout << "; charge " << charge << endl; 
 	    }
 	  }
-	  } 
       }
   }
   //  }
@@ -2299,23 +2283,6 @@ Int_t SBSGRINCH::FineProcess_old( TClonesArray& tracks )
 #endif
 
 //_____________________________________________________________________________
-//FIXME: put into ReadDatabase
-void SBSGRINCH::ReadBadPads( Char_t *infilename )
-{
-  fBadPad.ResetAllBits();
-  char line[100];
-  Int_t adc=-1;
-  Int_t chan=-1;
-  Int_t value1=0,value2=0;
-  ifstream infile( infilename );
-  while( infile.getline(line,100) ) {
-    sscanf(line,"%d %d %d %d",&adc,&chan,&value1,&value2);
-    if ((value1!=0)&&(adc>=0)&&(adc<48)&&(chan>=0)&&(chan<240))
-      fBadPad.SetBitNumber(240*adc+chan); 
-  }
-  infile.close();
-  return;
-}
 
 //_____________________________________________________________________________
 void SBSGRINCH::PrintBenchmarks() const

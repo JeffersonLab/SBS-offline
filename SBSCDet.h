@@ -1,9 +1,8 @@
 //////////////////////////////////////////////////////////////////////////
 //                                                                          
 // SBSCDet                                                            
-//                                                                          
-// Class for trigger plane  consisting of multiple                         
-// paddles with phototubes on both ends.                                    
+//                                                                 
+// General F1TDC supported scintilator plane detector                          
 //                                                                          
 //////////////////////////////////////////////////////////////////////////
 //	
@@ -11,7 +10,9 @@
 //	Modify History:
 //		Jin Huang <mailto:jinhuang@jlab.org>    July 2007	
 //			make database file supporting comment
-//			disable Multi Hit which is for neutron detection
+//			disable Multi Hit which is for neutron detection   
+//      Jin Huang    Sept 2008
+//          Convert to a detector version of SBSCDet
 //
 //////////////////////////////////////////////////////////////////////////
 
@@ -20,7 +21,7 @@
 
 
 #include "THaNonTrackingDetector.h"
-#include "THaSubDetector.h"
+#include "THaNonTrackingDetector.h"
 #include "THaApparatus.h"
 #include "TClonesArray.h"
 
@@ -31,8 +32,9 @@ class SBSScintHit;
 class SBSScintBar;
 class SBSAdcHit;
 class SBSTdcHit;
-class THaSubDetector;
+class THaNonTrackingDetector;
 class SBSScintPartialHit;
+class THaTrackProj;
 //class THaMultiHit;
 //class THaNeutronDetector;
 
@@ -71,12 +73,12 @@ class SBSScintPartialHit;
 
 //------------------------------------------------------//
 
-class SBSCDet : public THaSubDetector {
+class SBSCDet : public THaNonTrackingDetector {
 
 public:
 
 	SBSCDet( const char* name, const char* description, 
-		THaDetectorBase* parent);
+		THaApparatus* apparatus=0);
 
 	SBSCDet( );
 
@@ -84,12 +86,9 @@ public:
 	virtual Int_t        InitOutput( THaOutput* output );
 
 	virtual Int_t      Decode( const THaEvData& );
-	virtual EStatus    Init( const TDatime& run_time); 
 	virtual Int_t      CoarseProcess( TClonesArray& tracks );
 	virtual Int_t      FineProcess( TClonesArray& tracks );
 	//Int_t              ConstructTracks( TClonesArray * tracks = NULL ) {return 0;} 
-	Bool_t             IsTracking() { return kFALSE; }
-	virtual Bool_t     IsPid()      { return kFALSE; }
 
 	//function for jump through lines starting with #
 	char* ReadNumberSignStartComment( FILE* fp, char *buf, const int len );
@@ -164,8 +163,19 @@ public:
 	const SBSScintPartialHit* GetPartHit(Int_t i) const
 	{return (SBSScintPartialHit*)fPartHits->At(i);}  
 
+
+	Double_t        GetMatchRatioTrack() const {return fMatchRatioTrack;}
+	virtual Int_t FineMatchingHits(TClonesArray& tracks); 
+
+	Double_t        GetMaxADCHitBar() const {return fMaxADCHitBar;}//Hit Bar number with max sqrt(RApedc*LApedc)
+	Double_t        GetMaxEnergyHitBar() const {return fMaxEnergyHitBar;}//Hit Bar number with max sqrt(RE*LE)
+	Double_t        GetMaxADCHit() const {return fMaxADCHit;}//Hit Bar number with max sqrt(RApedc*LApedc)
+	Double_t        GetMaxEnergyHit() const {return fMaxEnergyHit;}//Hit Bar number with max sqrt(RE*LE)
 protected:
-	
+
+	Bool_t fCoarseProcessed;
+	Bool_t fFineProcessed;
+
 	Int_t GetParameter( FILE* file, const TString tag, Double_t* value  );
 	Int_t GetTable( FILE* file, const TString tag, Double_t* value,
 		const Int_t maxval, int* first, int* last );
@@ -211,6 +221,12 @@ protected:
 	Double_t* fLpedcA;    // [fNBars]    
 	Double_t* fRpedcA;    // [fNBars]
 
+	Double_t  fMaxADCHitBar; //Hit Bar number with max sqrt(RApedc*LApedc)
+	Double_t  fMaxEnergyHitBar; //Hit Bar number with max sqrt(RE*LE)
+	Double_t  fMaxADCHit; // max sqrt(RApedc*LApedc)
+	Double_t  fMaxEnergyHit; //max sqrt(RE*LE)
+
+
 	Double_t* fLT;        // [fNBars]
 	Double_t* fRT;        // [fNBars]
 	Int_t* fLTcounter;    // [fNBars]
@@ -227,15 +243,26 @@ protected:
 	Double_t* Y_dev;      // [fNBars]
 	Double_t* fAngle;     // [fNBars]
 
-	TVector3  fXax;
+	//TVector3  fXax;
 
-    //event statistic
-    Int_t   fEventCount;            //how many event processed
+	//when x y distance between hit and track projection is smaller
+	//than the number below, the hit will be matched to the track
+	//(the index of hit will be saved to fTrackProj.THaTrackProj.fChannel)
+	//if there are more than 1 hit in this region, then the nearest one wins
+	Double_t fTrackAcceptanceDx;
+	Double_t fTrackAcceptanceDy;
 
-    Int_t   fErrorReferenceChCount; //how many event got no reference channel
-    Double_t fErrorReferenceChRateWarningThreshold; 
-    //Threshold of ave. error reference per event that will pop up warnings
-    Bool_t  fTooManyErrRefCh;       //flag whether there are too much error reference
+	Double_t fMatchRatioTrack;
+	TClonesArray*  fTrackProj;  // projection of track onto scintillator plane
+	// and estimated match to TOF paddle
+
+	//event statistic
+	Int_t   fEventCount;            //how many event processed
+
+	Int_t   fErrorReferenceChCount; //how many event got no reference channel
+	Double_t fErrorReferenceChRateWarningThreshold; 
+	//Threshold of ave. error reference per event that will pop up warnings
+	Bool_t  fTooManyErrRefCh;       //flag whether there are too much error reference
 
 
 	void           ClearEvent();
@@ -243,16 +270,16 @@ protected:
 	virtual Int_t  ReadDatabase( const TDatime& date );
 	virtual Int_t  DefineVariables( EMode mode = kDefine );
 	virtual  Double_t TimeWalkCorrection(
-        SBSScintPMT* pmt,
-        Double_t ADC,
-        Double_t time);
+		SBSScintPMT* pmt,
+		Double_t ADC,
+		Double_t time);
 	enum ESide { kLeft = 0, kRight = 1 };
 
 	SBSCDet& operator=( const SBSCDet& ) {return *this; }
 
 public:
 
-	ClassDef(SBSCDet,4) // Describes scintillator plane with F1TDC as a subdetector
+	ClassDef(SBSCDet,4)  // Describes scintillator plane with F1TDC as a detector
 };
 
 #endif

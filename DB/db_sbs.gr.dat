@@ -1,0 +1,230 @@
+# Database for RICH detector in HRSL
+#
+# For Hypernuclear Spectroscopy experiment E94-107 (Dec 2003-Mar 2004)
+#
+
+# Number of pads in x and y directions. The total number of pads is the
+# product of these two numbers.
+# IMPORTANT: The mapping of ADC channels to pad x/y coordinates is currently
+# hardcoded in Decode(), but should probably also be here.
+#npads = 240 48
+sbs.gr.npads = 240 80
+
+# x and y size of a pad (mm)
+#padsize = 8.0 8.4
+sbs.gr.padsize = 8.4 8.0
+
+# Radiator parameters: thickness (mm), average index, min index, max index
+sbs.gr.rad = 15. 1.29 1.27332 1.30944
+
+# Quartz parameters: thickness (mm), average index, min index, max index
+sbs.gr.quartz = 5. 1.54 1.32288 1.89293
+
+# Proximity gap parameters: thickness (mm), index, anode-cathode distance (mm)
+#gap = 100. 1. 2.
+sbs.gr.gap = 159.55 1. 2.
+# gap = 147. 1. 2.
+
+#k3_x and k3_y parameters for Mathieson formula. These parameters depends
+#on Multiwire Proportional Chamber geometry (radius and pitch of andode wires).
+#Default k3_x = 0.6; k3_y = 0.8.
+# k3 = 0.6 0.8
+
+# average emission depth of Cherenkov (mm)
+sbs.gr.l_emission = 7.5
+
+# radius around track intercept in which to search for MIP cluster(s) (mm)
+sbs.gr.maxdist = 35.
+
+# if true (!=0), use bad pad veto table from file RICH_badpads.dat
+sbs.gr.use_bad = 0
+
+# search area for MIP. min and max x and y values (mm)
+sbs.gr.xmip_range = 0 2200
+sbs.gr.ymip_range = 0 650
+
+# flag that set the MIP search algorithm for each event (default is 0):
+# MIP_through_interception = 3   the MIP will be always the interception
+#                                between the track and the PAD Plane regardless
+#                                of the cluster pattern in the Pad plane
+#                                (it is recomended to use this option only
+#                                for test purposes).
+# MIP_through_interception = 2   the MIP is the maximum charge cluster inside
+#                                the search radius (maxdist described above)
+#                                or, in case no cluster of this kind is found,
+#                                is the interception between the track and
+#                                the PAD plane (to be used very carefully!)
+# MIP_through_interception = 1   the MIP is the maximum charge cluster inside
+#                                the search radius or, ONLY IN CASE THE
+#                                INTERCEPTION OF THE TRACK WITH THE PAD PLANE
+#                                FALLS IN A NOT SENSIBLE REGION OF THE
+#                                RICH (and hence no MIP spot in the pad plane
+#                                is supposed to exist), is the track
+#                                interception on the pad plane (use with
+#                                care!).
+# MIP_through_interception = 0   the MIP is the maximum charge cluster inside
+#                                the search radius. No action is taken (and
+#                                hence no MIP is given) if no cluster of this
+#                                kind is found ("normal mode", recomended).
+sbs.gr.MIP_through_interception = 0
+
+# Maximum number of allowed hits per event. More hits than this
+# usually indicate garbage events.
+# If this parameter is not given, it defaults to the total number of pads.
+#hit_max_number = 350.
+
+# Fiducial zone range. It defines the fiducial zone the three average
+# cherenkov angles (one for each of the three hypotesis about the particle
+# crossing the rich) are calculated in. The fiducial zone is in the range
+# expected_angle - Fiducial_zone_range | expected_angle + Fiducial_zone_range
+# Default is 0.05
+# fiducial_zone_range = 0.048
+sbs.gr.fiducial_zone_range = 0.045
+
+# Cluster distribution sigma. The variance of the single photon distribution
+# peaks. It is assumed equal for pion, kaon and proton. Used in chi square
+# test.
+# Default is 0.025
+sbs.gr.cluster_distribution_sigma = 0.0174
+# cluster_distribution_sigma = 0.0160
+
+# The following three parameters are involved in the "cutting noise away"
+# algorithm.
+
+# acceptable_chi2_prob. It is the probability a chi square value test
+# is defined "acceptable".
+#The Rich module of analyzer will try to throw away the cluster
+# that give the greatest contribution to the chi square value until one of
+# the reduced chi square probability (one for each hypothesis on the particle
+# crossing the rich) is greater than acceptable_chi2_prob.
+#Default is 0.01
+sbs.gr.acceptable_chi2_prob = 0.01
+
+# minum_chi2_degree_of_freedom. The minumum cluster number the chi square
+# test is performed with. This parameter does not affect the "raw" chi
+# square test (that is performed even with only one photon/cluster) but
+# the "corrected" chi square test. This means that whem the number of
+# clusters/photons remained for the chi square test (after the worst
+# chi sqare contributions are thrown away) is lower than
+# minum_chi2_degree_of_freedom, the program stops its trials to reach a
+# reasonable chi square value for one kind of particle.
+# Default is 4.
+sbs.gr.minimum_chi2_degree_of_freedom = 2
+
+# clearnoisetrialmaximumnumber. The maximum number of "bad" contributions
+# to the chi square values to thrown away.
+# Default is 5.
+sbs.gr.clear_noise_trial_maximum_number = 3
+
+# epsilon parameter needed for the Maximum Likelihood method algorithm.
+# Default is 1.
+sbs.gr.epsilon = 1.
+
+#do_mathieson. when it is equal to 0 X and Y MIP coordinates are
+#calculated according to the formula:
+#X = sum(Charge_i*X_i)/(sum(Charge_i).
+#Y = sum(Charge_i*Y_i)/(sum(Charge_i).
+#(Charge_i, X_i and Y_i charge and coordinates of the ith Pad making up the
+#MIP).
+#When it is equal to 1 X and Y MIP coordinates are calculated according to
+#the Mathieson formula.
+#Default is 0
+#do_mathieson = 0;
+
+# do_resolve. when it is equal to 0 only unresolved clusters are considered
+# in the analysis. When it is equal to 1 both resolved and unresolved
+# clusterswill be taken in account
+# Default is 0.
+sbs.gr.do_resolve = 0
+
+# Geometry data. For good matching of tracks with MIP clusters, these must
+# be calibrated carefully
+
+# Coordinates of the origin of the RICH plane IN METERS.
+# IMPORTANT: Include any offsets of the detector position here
+# These are TRANSPORT coordinates with respect to the VDC reference plane.
+# x,y = 0,0 corresponds to the central ray. z is the distance from
+# the VDC. x points towards the back of the spectrometer ("bottom" of RICH)
+# y points in the direction of counterclockwise rotation of the spectrometer
+# NOTE: This is the origin of the RICH coordinate system. It does not
+# necessarily correspond to the center of the RICH detector plane!
+
+#origin = 0.9456 -0.202 2.60
+#origin = -0.05728 0.0   2.35
+sbs.gr.origin = -1.1589  0.3302  2.972
+ 
+# Rotation angles of the RICH detector plane with respect to the
+# TRANSPORT system. One can specify three independent rotations (xrot, yrot,
+# zrot), about the three respective TRANSPORT axes. Note that the TRANSPORT
+# axes are considered fixed, i.e. each rotation is about a stationary axis.
+# Each rotation takes two parameters, the rotation angle IN DEGREES and the
+# order of the rotation. The rotations are carried out in turn starting with
+# the lowest order.
+#
+# The following example reverses the direction of x only with respect to
+# the TRANSPORT system, as it is done in the RICH (I think). This means
+# x_rich = -x_TRANSPORT, y_rich = y_TRANSPORT 
+
+sbs.gr.zrot = 180 1
+# to get y_rich = -y_TRANSPORT, comment this out:
+sbs.gr.xrot = 180 2
+sbs.gr.yrot = 0 2 
+
+# size of the RICH in METERS. Currently only used by event display.
+# x and y are half-sizes, z is the total thickness
+#size = 1.05 0.32 0.18
+sbs.gr.size = 2.05 0.64 0.2
+
+# Plane x-boundaries and x-offsets in mm. If <lowx> <= raw x_RICH < <highx>
+# then subtract the offset. Takes into account "the presence
+# of not sensible materials between the planes". For positive offsets, this
+# leads to overlapping regions of x coordinates.
+# The format of the line is:
+#  <n_segments> <lowx1> <highx1> <offset1> <lowx2> <highx2> <offset2> ...
+# Any raw x_RICH coordinates outside of the specified <low>-<high> ranges
+# are considered invalid.
+
+#x_segments = 3 0 640 0 667 1307 27 1339.67 1979.67 59.67
+x_segments = 5 0 403.2 0 440.5 843.7 37.3 881.0 1284.2 74.6 1321.5 1724.7 111.9 1762.0 2165.2 149.2
+# The detector map. This is somewhat longish since the RICH has so
+# many modules. The data are crate,slot,first chan,last chan
+detmap_01 = 14 1   0 479
+detmap_02 = 15 1   0 479
+detmap_03 = 14 2   0 479
+detmap_04 = 15 2   0 479
+detmap_05 = 14 3   0 479
+detmap_06 = 15 3   0 479
+detmap_07 = 14 4   0 479
+detmap_08 = 15 4   0 479
+detmap_09 = 14 5   0 479
+detmap_10 = 15 5   0 479
+detmap_11 = 14 6   0 479
+detmap_12 = 15 6   0 479
+detmap_13 = 14 7   0 479
+detmap_14 = 15 7   0 479
+detmap_15 = 14 8   0 479
+detmap_16 = 15 8   0 479
+detmap_17 = 14 9   0 479
+detmap_18 = 15 9   0 479
+detmap_19 = 14 10  0 479
+detmap_20 = 15 10  0 479
+detmap_21 = 14 11  0 479
+detmap_22 = 15 11  0 479
+detmap_23 = 14 12  0 479
+detmap_24 = 15 12  0 479
+detmap_25 = 14 13  0 479
+detmap_26 = 15 13  0 479
+detmap_27 = 14 14  0 479
+detmap_28 = 15 14  0 479
+detmap_29 = 14 15  0 479
+detmap_30 = 15 15  0 479
+detmap_31 = 14 16  0 479
+detmap_32 = 15 16  0 479
+detmap_33 = 14 17  0 479
+detmap_34 = 15 17  0 479
+detmap_35 = 14 18  0 479
+detmap_36 = 15 18  0 479
+detmap_37 = 14 19  0 479
+detmap_38 = 15 19  0 479
+detmap_39 = 14 20  0 479
+detmap_40 = 15 20  0 479

@@ -3,16 +3,16 @@
 SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCluster.cxx\
       SBSBBShower.cxx SBSBBTotalShower.cxx SBSCDet.cxx\
       SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx SBSTimingHodoscope.cxx\
-      SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx\
-      SBSHCal.cxx #\
-#      SBSHCal.cxx SBSECal.cxx SBSGRINCH.cxx\
+      SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx \
+      SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx SBSScintPlane.cxx \
+      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx
 
 EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
 	   SBSBBShower.h SBSBBTotalShower.h SBSCDet.h\
 	   SBSScintHit.h SBSScintPMT.h SBSShowerBlock.h SBSTimingHodoscope.h SBSScintBar.h\
-		 SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h\
-     SBSHCal.h #\
-#           SBSECal.h SBSGRINCH.h SBSHCal.h
+           SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h \
+	   SBSGRINCH.h SBSGRINCH_ClusterList.h SBSScintPlane.h \
+           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h
 
 CORE = sbs
 CORELIB  = lib$(CORE).so

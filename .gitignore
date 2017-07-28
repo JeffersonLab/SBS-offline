@@ -33,4 +33,4 @@
 # Backups
 *~
 *.bak
-*.*.swp
+.*.swp
