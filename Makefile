@@ -5,14 +5,14 @@ SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCl
       SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx SBSTimingHodoscope.cxx\
       SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx \
       SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx SBSScintPlane.cxx \
-      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  #SBSHCal.cxx 
+      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx
 
 EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
 	   SBSBBShower.h SBSBBTotalShower.h SBSCDet.h\
 	   SBSScintHit.h SBSScintPMT.h SBSShowerBlock.h SBSTimingHodoscope.h SBSScintBar.h\
            SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h \
 	   SBSGRINCH.h SBSGRINCH_ClusterList.h SBSScintPlane.h \
-           SBSECal.h SBSECalCluster.h SBSEArm.h #SBSHCal.h
+           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h
 
 CORE = sbs
 CORELIB  = lib$(CORE).so
@@ -60,12 +60,23 @@ ifeq ($(strip $(INCDIRS)),)
   $(error No Analyzer header files found. Check $$ANALYZER)
 endif
 
+ROOTVERMAJOR := $(shell root-config --version | cut -d. -f1)
+ROOTVERMINOR := $(shell root-config --version | cut -d. -f1 | cut -d/ -f1)
+ROOTVERPATCH := $(shell root-config --version | cut -d. -f1 | cut -d/ -f2)
 ROOTCFLAGS   := $(shell root-config --cflags)
 ROOTLIBS     := $(shell root-config --libs)
 ROOTGLIBS    := $(shell root-config --glibs)
 ROOTBIN      := $(shell root-config --bindir)
 CXX          := $(shell root-config --cxx)
 LD           := $(shell root-config --ld)
+
+## ROOT5 and under used rootcint to make dictionaries
+ifeq ($(ROOTVERMAJOR),5)
+	ROOTDICT_CMD = $(ROOTBIN)/rootcint
+else
+	## ROOT6 uses rootcling
+	ROOTDICT_CMD = $(ROOTBIN)/rootcling
+endif
 
 PKGINCLUDES  = $(addprefix -I, $(INCDIRS) ) -I$(shell pwd)
 INCLUDES     = -I$(shell root-config --incdir) $(PKGINCLUDES)
@@ -134,7 +145,12 @@ CXXFLAGS     += $(DEFINES) $(ROOTCFLAGS) $(ROOTCFLAGS) $(PKGINCLUDES)
 LIBS         += $(ROOTLIBS) $(SYSLIBS)
 GLIBS        += $(ROOTGLIBS) $(SYSLIBS)
 
+## ROOT6 requires c++11 enabled in gcc
+ifeq ($(shell root-config --has-cxx11),yes)
+MAKEDEPEND    = gcc --std=c++11
+else
 MAKEDEPEND    = gcc
+endif
 
 ifndef PKG
 PKG           = lib$(CORE)
@@ -163,7 +179,7 @@ endif
 
 $(COREDICT).cxx: $(HDR) $(LINKDEF)
 	@echo "Generating dictionary $(COREDICT)..."
-	$(ROOTBIN)/rootcint -f $@ -c $(INCLUDES) $(DEFINES) $^
+	$(ROOTDICT_CMD) -f $@ -c $(INCLUDES) $(DEFINES) $^ ; \
 
 install:	all
 		$(error Please define install yourself)
@@ -174,7 +190,7 @@ clean:
 		rm -f *.o *~ $(CORELIB) $(COREDICT).*
 
 realclean:	clean
-		rm -f *.d
+		rm -f *.d *.pcm *.rootmap
 
 srcdist:
 		rm -f $(DISTFILE).gz

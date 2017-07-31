@@ -29,7 +29,8 @@
 *.app
 # Dictionary files
 *.d
+*.pcm
 # Backups
 *~
 *.bak
-*.swp
+.*.swp

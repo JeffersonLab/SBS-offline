@@ -16,6 +16,8 @@
 //#include "THaGlobals.h"
 
 #include "THaEvData.h"
+//#include "THaCodaDecoder.h"
+#include "Fadc250Module.h"
 #include "THaDetMap.h"
 #include "VarDef.h"
 #include "VarType.h"
@@ -36,7 +38,7 @@ ClassImp(SBSHCal)
 //_____________________________________________________________________________
 SBSHCal::SBSHCal( const char* name, const char* description,
                          THaApparatus* apparatus ) :
-THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
+THaPidDetector(name,description,apparatus), fNChan(NULL)
 {
     // Constructor.
     fCoarseProcessed = 0;
@@ -46,223 +48,172 @@ THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
 //_____________________________________________________________________________
 Int_t SBSHCal::ReadDatabase( const TDatime& date )
 {
-    // Read this detector's parameters from the database file 'fi'.
-    // This function is called by THaDetectorBase::Init() once at the
-    // beginning of the analysis.
-    // 'date' contains the date/time of the run being analyzed.
+  // Read database for HCal detector.
+  // This function is called by THaDetectorBase::Init() once at the
+  // beginning of the analysis.
+  // 'date' contains the date/time of the run being analyzed.
+  // Most of this was borrowed from THaShower as a starting point
 
-    static const char* const here = "ReadDatabase()";
-    const int LEN = 100;
-    char buf[LEN];
-    Int_t nelem, ncols, nrows, nclbl;
+  // We can use this name here for logs
+  static const char* const here = "ReadDatabase()";
 
-    // clean out the old
-    RemoveVariables();
+  // Read database
 
-    // Read data from database
-    FILE* fi = OpenFile( date );
-    if( !fi ) return kFileError;
+  FILE* file = OpenFile( date );
+  if( !file ) return kFileError;
 
-    // Blocks, rows, max blocks per cluster
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );          
-    fscanf ( fi, "%d%d", &ncols, &nrows );  
+  // Read fOrigin and fSize (required!)
+  Int_t err = ReadGeometry( file, date, true );
+  if( err ) {
+    fclose(file);
+    return err;
+  }
 
-    nelem = ncols * nrows;
-    nclbl = TMath::Min( 3, nrows ) * TMath::Min( 3, ncols );
-    // Reinitialization only possible for same basic configuration 
-    if( fIsInit && (nelem != fNelem || nclbl != fNclublk) ) {
-        Error( Here(here), "Cannot re-initalize with different number of blocks or "
-            "blocks per cluster. Detector not re-initialized." );
-        fclose(fi);
-        return kInitError;
+  vector<Int_t> detmap, chanmap;
+  vector<Double_t> xy, dxy;
+  Int_t ncols, nrows;
+  Double_t angle = 0.0;
+
+  // Read mapping/geometry/configuration parameters
+  DBRequest config_request[] = {
+    { "detmap",       &detmap,  kIntV },
+    { "chanmap",      &chanmap, kIntV,    0, 1 },
+    { "ncols",        &ncols,   kInt },
+    { "nrows",        &nrows,   kInt },
+    { "angle",        &angle,   kDouble,  0, 1 },
+    { "xy",           &xy,      kDoubleV, 2 },  // center pos of block 1
+    { "dxdy",         &dxy,     kDoubleV, 2 },  // dx and dy block spacings
+    { "emin",         &fEmin,   kDouble },
+    { 0 }
+  };
+  err = LoadDB( file, date, config_request, fPrefix );
+
+  // Sanity checks
+  if( !err && (nrows <= 0 || ncols <= 0) ) {
+    Error( Here(here), "Illegal number of rows or columns: %d %d. Must be > 0. "
+	   "Fix database.", nrows, ncols );
+    err = kInitError;
+  }
+
+  Int_t nelem = ncols * nrows; 
+  Int_t nclbl = TMath::Min( 3, nrows ) * TMath::Min( 3, ncols );
+
+  // Reinitialization only possible for same basic configuration
+  if( !err ) {
+    if( fIsInit && (nelem != fNelem || nrows != fNrows || ncols != fNcols ) ) {
+      Error( Here(here), "Cannot re-initalize with different number of blocks or "
+          "blocks per cluster (was: %d, now: %d). Detector not re-initialized.",
+          fNelem, nelem );
+      err = kInitError;
+    } else {
+      fNelem = nelem;
+      fNrows = nrows;
+      fNcols = ncols;
+      fNclublk = nclbl;
     }
+  }
 
-    if( nrows <= 0 || ncols <= 0 || nclbl <= 0 ) {
-        Error( Here(here), "Illegal number of rows or columns: "
-            "%d %d", nrows, ncols );
-        fclose(fi);
-        return kInitError;
+  if( !err ) {
+    // Clear out the old channel map before reading a new one
+    fChanMap.clear();
+    if( FillDetMap(detmap, 0, here) <= 0 ) {
+      err = kInitError;  // Error already printed by FillDetMap
+    } else if( (nelem = fDetMap->GetTotNumChan()) != fNelem ) {
+      Error( Here(here), "Number of detector map channels (%d) "
+          "inconsistent with number of blocks (%d)", nelem, fNelem );
+      err = kInitError;
     }
-    fNelem = nelem;
-    fNrows = nrows;
-    fNcols = ncols;
-    fNclublk = nclbl;
-
-    // Clear out the old detector map before reading a new one
-    UShort_t mapsize = fDetMap->GetSize();
-    delete [] fNChan;
-    if( fChanMap ) {
-        for( UShort_t i = 0; i<mapsize; i++ )
-            delete [] fChanMap[i];
+  }
+  if( !err ) {
+    if( !chanmap.empty() ) {
+      // If a map is found in the database, ensure it has the correct size
+      Int_t cmapsize = chanmap.size();
+      if( cmapsize != fNelem ) {
+        Error( Here(here), "Channel map size (%d) and number of detector "
+            "channels (%d) must be equal. Fix database.", cmapsize, fNelem );
+        err = kInitError;
+      }
     }
-    delete [] fChanMap;
-    fDetMap->Clear();
-
-    // Read detector map
-
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    while (1) {
-        Int_t crate, slot, first, last;
-        fscanf ( fi,"%d%d%d%d", &crate, &slot, &first, &last );
-        fgets ( buf, LEN, fi );
-        if( crate < 0 ) break;
-        if( fDetMap->AddModule( crate, slot, first, last ) < 0 ) {
-            Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-                THaDetMap::kDetMapSize);
-            fclose(fi);
-            return kInitError;
-        }
-    }
-
-    // Set up the new channel map
-    mapsize = fDetMap->GetSize();
-    if( mapsize == 0 ) {
-        Error( Here(here), "No modules defined in detector map.");
-        fclose(fi);
-        return kInitError;
-    }
-
-    fNChan = new UShort_t[ mapsize ];
-    fChanMap = new UShort_t*[ mapsize ];
-    for( UShort_t i=0; i < mapsize; i++ ) {
+    if( !err ) {
+      // Set up the new channel map
+      Int_t nmodules = fDetMap->GetSize();
+      assert( nmodules > 0 );
+      fChanMap.resize(nmodules);
+      for( Int_t i=0, k=0; i < nmodules && !err; i++ ) {
         THaDetMap::Module* module = fDetMap->GetModule(i);
-        fNChan[i] = module->hi - module->lo + 1;
-        if( fNChan[i] > 0 )
-            fChanMap[i] = new UShort_t[ fNChan[i] ];
-        else {
-            Error( Here(here), "No channels defined for module %d.", i);
-            delete [] fNChan; fNChan = NULL;
-            for( UShort_t j=0; j<i; j++ )
-                delete [] fChanMap[j];
-            delete [] fChanMap; fChanMap = NULL;
-            fclose(fi);
-            return kInitError;
+        Int_t nchan = module->hi - module->lo + 1;
+        if( nchan > 0 ) {
+          fChanMap.at(i).resize(nchan);
+          for( Int_t j=0; j<nchan; ++j ) {
+            assert( k < fNelem );
+            fChanMap.at(i).at(j) = chanmap.empty() ? k+1 : chanmap[k];
+            ++k;
+          }
+        } else {
+          Error( Here(here), "No channels defined for module %d.", i);
+          fChanMap.clear();
+          err = kInitError;
         }
+      }
     }
-    // Read channel map
-    fgets ( buf, LEN, fi );
-    for ( UShort_t i = 0; i < mapsize; i++ ) {
-        for ( UShort_t j = 0; j < fNChan[i]; j++ ) 
-            fscanf (fi, "%hu", *(fChanMap+i)+j ); 
-        fgets ( buf, LEN, fi );
-    }
-    fgets ( buf, LEN, fi );
+  }
 
-    Float_t x,y,z;
-    fscanf ( fi, "%f%f%f", &x, &y, &z );               // Detector's X,Y,Z coord
-    fOrigin.SetXYZ( x, y, z );
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%f%f%f", fSize, fSize+1, fSize+2 );  // Sizes of det in X,Y,Z
-    fdZ = TMath::Abs(fSize[2]);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
+  // Read calibration parameters
+  // Default ADC pedestals (0) and ADC gains (1)
+  std::vector<Float_t> peds(fNelem);
+  std::vector<Float_t> gains(fNelem);
+  for( Int_t i = 0; i < fNelem; i++) {
+    gains[i] = 1.0;
+    peds[i] = 0.0;
+  }
 
-    Float_t angle;
-    fscanf ( fi, "%f", &angle );                       // Rotation angle of det
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    const Double_t degrad = TMath::Pi()/180.0;
-    tan_angle = TMath::Tan(angle*degrad);
-    sin_angle = TMath::Sin(angle*degrad);
-    cos_angle = TMath::Cos(angle*degrad);
+  // Read ADC pedestals and gains (in order of logical channel number)
+  DBRequest calib_request[] = {
+    { "pedestals",   &peds,   kFloatV, UInt_t(fNelem), 1 },
+    { "gains",       &gains,  kFloatV, UInt_t(fNelem), 1 },
+    { 0 }
+  };
+  err = LoadDB( file, date, calib_request, fPrefix );
+  fclose(file);
+  if( err )
+    return err;
 
-    DefineAxes(angle*degrad);
+  DefineAxes( angle*TMath::DegToRad() );
 
-    // Dimension arrays
-    if( !fIsInit ) {
-        fBlockX = new Float_t[ fNelem ];
-        fBlockY = new Float_t[ fNelem ];
-        fPed    = new Float_t[ fNelem ];
-        fGain   = new Float_t[ fNelem ];
-
-        // Per-event data
-        fA    = new Float_t[ fNelem ];
-        fA_p  = new Float_t[ fNelem ];
-        fA_c  = new Float_t[ fNelem ];
-        fNblk = new Int_t[ fNclublk ];
-        fEblk = new Float_t[ fNclublk ];
-
-        fIsInit = true;
-    }
-
-    fscanf ( fi, "%f%f", &x, &y );                     // Block 1 center position
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    Float_t dx, dy;
-    fscanf ( fi, "%f%f", &dx, &dy );                   // Block spacings in x and y
-    fdX = TMath::Abs(dx); 
-    fdY = TMath::Abs(dy);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%f", &fEmin );                       // Emin thresh for center
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%i", &fMaxNClust );                   // Max number of clusters
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-
-    // Read calibrations.
-    // Before doing this, search for any date tags that follow, and start reading from
-    // the best matching tag if any are found. If none found, but we have a configuration
-    // string, search for it.
-    if( SeekDBdate( fi, date ) == 0 && fConfig.Length() > 0 && 
-        SeekDBconfig( fi, fConfig.Data() ));
-
-    fgets ( buf, LEN, fi );  
-    // Crude protection against a missed date/config tag
-    if( buf[0] == '[' ) fgets ( buf, LEN, fi );
-
-    // Read ADC pedestals and gains (in order of logical channel number)
-    for (int j=0; j<fNelem; j++)
-        fscanf (fi,"%f",fPed+j);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    for (int j=0; j<fNelem; j++) 
-        fscanf (fi, "%f",fGain+j);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );  //new line added
-    
+  // Dimension arrays
+  if( !fIsInit ) {
     // Compute block positions and creates blocks array
-    fBlkGrid = new SBSHCalBlock**[fNrows];
-    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new SBSHCalBlock*[fNcols];
-    fClusters = new SBSHCalCluster*[fMaxNClust];
-    fBlocks = new SBSHCalBlock*[fNelem];
-    for( int c=0; c<ncols; c++ ) {
-        for( int r=0; r<nrows; r++ ) {
-            int k = nrows*c + r;
-            fBlockX[k] = x + r*dx;                         // Units are meters
-            fBlockY[k] = y + c*dy;
-            SBSHCalBlock* block = 
-                new SBSHCalBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
-            fBlocks[k]=block;
-            fBlkGrid[r][c]=fBlocks[k];
-        }
+    fBlkGrid.clear();
+    fBlkGrid.resize(fNrows);
+    for (int i=0;i<fNrows;i++) fBlkGrid[i].resize(fNcols);
+    //2//fClusters = new SBSHCalCluster*[fMaxNClust];
+    fBlocks.clear();
+    fBlocks.resize(fNelem);
+    fA = new Float_t[UInt_t(fNelem)];
+    fA0 = new Float_t[UInt_t(fNelem)];
+    fA1 = new Float_t[UInt_t(fNelem)];
+    fA2 = new Float_t[UInt_t(fNelem)];
+    fA3 = new Float_t[UInt_t(fNelem)];
+    fA4 = new Float_t[UInt_t(fNelem)];
+    fA5 = new Float_t[UInt_t(fNelem)];
+    fA6 = new Float_t[UInt_t(fNelem)];
+    fA7 = new Float_t[UInt_t(fNelem)];
+    fA9 = new Float_t[UInt_t(fNelem)];
+    for( int r=0; r<nrows; r++ ) {
+      for( int c=0; c<ncols; c++ ) {
+        int k = nrows*c + r;
+        Float_t x = xy[0] + r*dxy[0];
+        Float_t y = xy[1] + r*dxy[1];
+        SBSShowerBlock* block = 
+          new SBSShowerBlock(x,y,peds[k],gains[k],r,c);
+        fBlocks[k]=block;
+        fBlkGrid[r][c]=fBlocks[k];
+      }
     }
+    fIsInit = true;
+  }
 
-
-    fE = new Float_t[fMaxNClust];
-    fE_c = new Float_t[fMaxNClust];
-    fX = new Float_t[fMaxNClust];
-    fY = new Float_t[fMaxNClust]; 
-    //fXtarg = new Float_t[fMaxNClust];
-    //fYtarg = new Float_t[fMaxNClust];
-    //fZtarg = new Float_t[fMaxNClust];
-    fMult = new Int_t[fMaxNClust];
-    
-    //Read parameters for correcting gain drop.
-    fscanf ( fi, "%f%f%f", &gconst, &gslope, &acc_charge );  
-    //    cout << "gconst : " << gconst << endl;
-    //    cout << "gslope : " << gslope <<endl;
-    //    cout << "acc_charge : " << acc_charge <<endl;
-
-    fclose(fi);
-
-
-    //THaBBe *bb = dynamic_cast<THaBBe *> (GetApparatus());
-    //if( bb )
-    //{
-    //    fDetToTarg = bb->GetDetectorToTarg();
-    //    fDetOffset = bb->GetDetectorOffset();
-    //}
-    //else
-    //{
-    //    fDetToTarg.SetToIdentity();
-    //    fDetOffset.SetXYZ( 0.0, 0.0, 0.0 );
-    //}
-
-    return kOK;
+  return kOK;
 }
 
 //_____________________________________________________________________________
@@ -295,6 +246,16 @@ Int_t SBSHCal::DefineVariables( EMode mode )
         { "eblk",   "Energies of blocks in main cluster", "fEblk" },
         //     { "trx",    "track x-position in det plane",      "fTRX" },
         //     { "try",    "track y-position in det plane",      "fTRY" },
+        { "a0",      "Raw ADC for Sample0",                 "fA0" },
+        { "a1",      "Raw ADC for Sample1",                 "fA1" },
+        { "a2",      "Raw ADC for Sample2",                 "fA2" },
+        { "a3",      "Raw ADC for Sample3",                 "fA3" },
+        { "a4",      "Raw ADC for Sample4",                 "fA4" },
+        { "a5",      "Raw ADC for Sample5",                 "fA5" },
+        { "a6",      "Raw ADC for Sample6",                 "fA6" },
+        { "a7",      "Raw ADC for Sample7",                 "fA7" },
+        { "a8",      "Raw ADC for Sample8",                 "fA8" },
+        { "a9",      "Raw ADC for Sample9",                 "fA9" },
         { 0 }
     };
     return DefineVarsFromList( vars, mode );
@@ -316,28 +277,29 @@ void SBSHCal::DeleteArrays()
 {
     // Delete member arrays. Internal function used by destructor.
 
+    fChanMap.clear();
     delete [] fNChan; fNChan = 0;
-    UShort_t mapsize = fDetMap->GetSize();
-    if( fChanMap ) {
-        for( UShort_t i = 0; i<mapsize; i++ )
-            delete [] fChanMap[i];
-    }
-    delete [] fChanMap; fChanMap = 0;
-    delete [] fBlockX;  fBlockX  = 0;
-    delete [] fBlockY;  fBlockY  = 0;
-    delete [] fPed;     fPed     = 0;
-    delete [] fGain;    fGain    = 0;
     delete [] fA;       fA       = 0;
     delete [] fA_p;     fA_p     = 0;
     delete [] fA_c;     fA_c     = 0;
     delete [] fNblk;    fNblk    = 0;
     delete [] fEblk;    fEblk    = 0;
-    delete [] fBlocks;  fBlocks  = 0;
-    for (int i=0;i<fNrows;i++) {
-        delete [] fBlkGrid[i]; fBlkGrid[i] = 0;
+
+    // Clear vectors
+    for(size_t i = 0; i < fBlocks.size(); i++) {
+      if (fBlocks[i])
+        delete fBlocks[i];
     }
-    delete [] fBlkGrid; fBlkGrid = 0;
-    delete [] fClusters; fClusters = 0;
+    fBlocks.clear();
+    for(size_t r = 0; r < fBlkGrid.size(); r++) {
+      for(size_t c = 0; c < fBlkGrid[r].size(); c++) {
+        if(fBlkGrid[r][c])
+          delete fBlkGrid[r][c];
+      }
+      fBlkGrid[r].clear();
+    }
+    fBlkGrid.clear();
+    //2//delete [] fClusters; fClusters = 0;
     delete [] fX; fX = 0;
     delete [] fY; fY = 0;
     //delete [] fXtarg; fXtarg = 0;
@@ -383,87 +345,95 @@ void SBSHCal::ClearEvent()
     fTRX = 0.0;
     fTRY = 0.0;
   
-    for (int i=0;i<fNelem;i++) 
-        fBlocks[i]->ClearEvent();
-
+    //2//for (int i=0;i<fNelem;i++) 
+        //2//fBlocks[i]->ClearEvent();
 
 }
 
 //_____________________________________________________________________________
 Int_t SBSHCal::Decode( const THaEvData& evdata )
 {
-    // Decode shower data, scale the data to energy deposition
-    // ( in MeV ), and copy the data into the following local data structure:
-    //
-    // fNhits           -  Number of hits on shower;
-    // fA[]             -  Array of ADC values of shower blocks;
-    // fA_p[]           -  Array of ADC minus ped values of shower blocks;
-    // fA_c[]           -  Array of corrected ADC values of shower blocks;
-    // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
-    // fAsum_c          -  Sum of shower blocks corrected ADC values;
+  // Decode data and store into the following local data structure:
+  //
+  // fNhits           - Number of hits on HCal
+  // fA[]             - Array of ADC values of shower blocks
+  //
+  // Decode shower data, scale the data to energy deposition
+  // ( in MeV ), and copy the data into the following local data structure:
+  //
+  // fA[]             -  Array of ADC values of shower blocks;
+  // fA_p[]           -  Array of ADC minus ped values of shower blocks;
+  // fA_c[]           -  Array of corrected ADC values of shower blocks;
+  // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
+  // fAsum_c          -  Sum of shower blocks corrected ADC values;
 
-    ClearEvent();
+  // Clear last event
+  ClearEvent();
 
-    // Loop over all modules defined for shower detector
-    for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
-        THaDetMap::Module* d = fDetMap->GetModule( i );
+  // Loop over all modules defined for HCal
+  for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
+    THaDetMap::Module *d = fDetMap->GetModule( i );
+    Bool_t isADC = false;
+    //Bool_t isTDC = false;
 
-        // Loop over all channels that have a hit.
-        for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+    // Get a pointer to the abstract module, and we'll proceed
+    // depending on the type of module we encounter
+    Decoder::Module *m = evdata.GetModule(d->crate,d->slot);
 
-            Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
-            if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
+    // Try to see if it's an FADC
+    Decoder::Fadc250Module *fadc = dynamic_cast<Decoder::Fadc250Module*>(m);
+    if(fadc != NULL) isADC = true;
 
-            // Get the data. shower blocks are assumed to have only single hit (hit=0)
-            Int_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
+    // Loop over all channels that have a hit.
+    for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
 
-            // Copy the data to the local variables.
-            Int_t k = *(*(fChanMap+i)+(chan-d->lo)) - 1;
-#ifdef WITH_DEBUG
-            if( k<0 || k>=fNelem ) 
-                Warning( Here("Decode()"), "Bad array index: %d. Your channel map is "
-                "invalid. Data skipped.", k );
-            else
-#endif
-            {
-                fA[k]   = (Float_t)data;                   // ADC value
-                fA_p[k] = data - fPed[k];         // ADC minus ped
-                fA_c[k] = fA_p[k] * fGain[k];     // ADC corrected
-                if( fA_p[k] > 0.0 )
-                    fAsum_p += fA_p[k];             // Sum of ADC minus ped
-                if( fA_c[k] > 0.0 )
-                    fAsum_c += fA_c[k];             // Sum of ADC corrected
-                fNhits++;
-            }
+      // Get the next available channel, but 
+      Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+      // Skip channels that do not belong to our detector
+      if( chan > d->hi || chan < d->lo ) continue;
+
+      // Get the block that corresponds to this module and channel
+      Int_t jchan = (d->reverse) ? d->hi - chan : chan-d->lo;
+      Int_t k = fChanMap[i][jchan] - 1;
+
+      // Is this module an FADC?
+      if(isADC) {
+        // Get the mode, number of events and number of samples from
+        // the event data.
+        //   (jc2) We can probably later specify just a fixed number of samples
+        //   (perhaps in the DB itself) if this proves too slow.
+        Int_t mode, num_events, num_samples;
+        Bool_t raw_mode = kFALSE;
+
+        mode = fadc->GetFadcMode();
+        raw_mode = (mode == 1) || (mode == 8) || (mode == 10);
+        num_events = fadc->GetNumFadcEvents(chan);
+
+        // In raw mode, raw samples are read out for each hit
+        if( raw_mode) {
+          num_samples = fadc->GetNumFadcSamples(chan,0);
+          // Wow, this is such a terrible way of going about it.
+          // Better would be the ability to store vectors of vectors in
+          // the root tree
+          std::vector<UInt_t> samples = fadc->GetPulseSamplesVector(chan);
+          fA0[k] = Float_t(samples[0]);
+          fA1[k] = Float_t(samples[1]);
+          fA2[k] = Float_t(samples[2]);
+          fA3[k] = Float_t(samples[3]);
+          fA4[k] = Float_t(samples[4]);
+          fA5[k] = Float_t(samples[5]);
+          fA6[k] = Float_t(samples[6]);
+          fA7[k] = Float_t(samples[7]);
+          fA8[k] = Float_t(samples[8]);
+          fA9[k] = Float_t(samples[9]);
         }
+      }
     }
+  }
 
-
-    if ( fDebug > 3 ) {
-        printf("\nShower Detector %s:\n",GetPrefix());
-        int ncol=3;
-        for (int i=0; i<ncol; i++) {
-            printf("  Block  ADC  ADC_p  ");
-        }
-        printf("\n");
-
-        for (int i=0; i<(fNelem+ncol-1)/ncol; i++ ) {
-            for (int c=0; c<ncol; c++) {
-                int ind = c*fNelem/ncol+i;
-                if (ind < fNelem) {
-                    printf("  %3d  %5.0f  %5.0f  ",ind+1,fA[ind],fA_p[ind]);
-                } else {
-                    //	  printf("\n");
-                    break;
-                }
-            }
-            printf("\n");
-        }
-    }
-
-       
-    return fNhits;
+  return fNhits;
 }
+
 
 //_____________________________________________________________________________
 Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
@@ -482,6 +452,7 @@ Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
     // fTRY;          -  Y-coordinate of track cross point with shower plane
     //
 
+  /*
     if( fCoarseProcessed ) return 0;
 
     Int_t col, row;
@@ -495,7 +466,7 @@ Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
 # endif
 
     Double_t energyTotal = 0.0;
-    SBSHCalCluster cluster(9);
+    SBSBBShowerCluster cluster(9);
 
     //  for( col = 0; col < fNcols; col++ )
     //     {
@@ -626,6 +597,7 @@ Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
     //  cout << "Added - we now have " << fNclust << endl;
 
     fCoarseProcessed = 1;
+    */
     return 0;
 
 }
@@ -636,6 +608,7 @@ Int_t SBSHCal::FineProcess(TClonesArray& tracks)
 
     if( fFineProcessed ) return 0;
 
+    /*
     // Fine Shower processing.
 
     //   cout << endl << fNclust << " clusters " << GetName()  << endl;
@@ -668,18 +641,20 @@ Int_t SBSHCal::FineProcess(TClonesArray& tracks)
     }
 
     fFineProcessed = 1;
+    */
     return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SBSHCal::AddCluster(SBSHCalCluster* clus) {
+/*
+void SBSHCal::AddCluster(SBSBBShowerCluster* clus) {
     fClusters[fNclust++]=clus;
 }
 
-void SBSHCal::AddCluster(SBSHCalCluster& clus) {
+void SBSHCal::AddCluster(SBSBBShowerCluster& clus) {
 
-    fClusters[fNclust] = new SBSHCalCluster(clus.GetNMaxBlocks());
+    fClusters[fNclust] = new SBSBBShowerCluster(clus.GetNMaxBlocks());
     fClusters[fNclust]->SetE(clus.GetE());
     fClusters[fNclust]->SetX(clus.GetX());
     fClusters[fNclust]->SetY(clus.GetY());
@@ -690,6 +665,7 @@ void SBSHCal::RemoveCluster(int i) {
     fNclust--;
     for (int j=i;j<fNclust;j++) fClusters[j]=fClusters[j+1];
 }
+*/
 
 Int_t SBSHCal::BlockColRowToNumber( Int_t col, Int_t row )
 {
@@ -698,9 +674,10 @@ Int_t SBSHCal::BlockColRowToNumber( Int_t col, Int_t row )
 
 void SBSHCal::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {  
+  /*
     ClearEvent();
     fNclust = 0;
-    fClusters[fNclust] = new SBSHCalCluster(0);
+    fClusters[fNclust] = new SBSBBShowerCluster(0);
     fClusters[fNclust]->SetE(E);
     fClusters[fNclust]->SetX(x);
     fClusters[fNclust]->SetY(y);
@@ -711,4 +688,10 @@ void SBSHCal::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
     fY[fNclust] = fClusters[fNclust]->GetY();
     fMult[fNclust] = fClusters[fNclust]->GetMult();
     fNclust++;
+    */
+}
+
+
+void SBSHCal::SetBlockADCSamples(Int_t block, std::vector<UInt_t> samples)
+{
 }
