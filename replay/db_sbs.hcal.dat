@@ -4,18 +4,18 @@ sbs.hcal.detmap =
 ## FADC modules        #     Module number that starts at channel 0
 ## This map is for the 12 fADC modules used for testing
 ## as described in https://logbooks.jlab.org/entry/3480927
-  0     4     0     15 #      0
-  0     5     0     15 #     16
-  0     6     0     15 #     32
-  0     7     0     15 #     48
-  0     8     0     15 #     64
-  0     9     0     15 #     80
-  0    10     0     15 #     96
-  0    13     0     15 #     112
-  0    14     0     15 #     128
-  0    15     0     15 #     144
-  0    16     0     15 #     160
-  0    17     0     15 #     176
+  10     4     0     15 #      0
+  10     5     0     15 #     16
+  10     6     0     15 #     32
+  10     7     0     15 #     48
+  10     8     0     15 #     64
+  10     9     0     15 #     80
+  10    10     0     15 #     96
+  10    13     0     15 #     112
+  10    14     0     15 #     128
+  10    15     0     15 #     144
+  10    16     0     15 #     160
+  10    17     0     15 #     176
 
 ## Channel map from channel to logical channel
 #sbs.hcal.chanmap = 
