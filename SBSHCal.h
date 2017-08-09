@@ -88,16 +88,16 @@ class SBSHCal : public THaPidDetector {
   Float_t*   fA_p;       // [fNelem] Array of ADC minus pedestal values of blocks
   Float_t*   fA_c;       // [fNelem] Array of corrected ADC amplitudes of blocks
 
-  Float_t*   fA0;         // [fNelem] Array of ADC sample0
-  Float_t*   fA1;         // [fNelem] Array of ADC sample1
-  Float_t*   fA2;         // [fNelem] Array of ADC sample2
-  Float_t*   fA3;         // [fNelem] Array of ADC sample3
-  Float_t*   fA4;         // [fNelem] Array of ADC sample4
-  Float_t*   fA5;         // [fNelem] Array of ADC sample5
-  Float_t*   fA6;         // [fNelem] Array of ADC sample6
-  Float_t*   fA7;         // [fNelem] Array of ADC sample7
-  Float_t*   fA8;         // [fNelem] Array of ADC sample8
-  Float_t*   fA9;         // [fNelem] Array of ADC sample9
+  std::vector<Double_t>   fA0;         // [fNelem] Array of ADC sample0
+  std::vector<Double_t>   fA1;         // [fNelem] Array of ADC sample1
+  std::vector<Double_t>   fA2;         // [fNelem] Array of ADC sample2
+  std::vector<Double_t>   fA3;         // [fNelem] Array of ADC sample3
+  std::vector<Double_t>   fA4;         // [fNelem] Array of ADC sample4
+  std::vector<Double_t>   fA5;         // [fNelem] Array of ADC sample5
+  std::vector<Double_t>   fA6;         // [fNelem] Array of ADC sample6
+  std::vector<Double_t>   fA7;         // [fNelem] Array of ADC sample7
+  std::vector<Double_t>   fA8;         // [fNelem] Array of ADC sample8
+  std::vector<Double_t>   fA9;         // [fNelem] Array of ADC sample9
 
   Float_t    fAsum_p;    // Sum of blocks ADC minus pedestal values
   Float_t    fAsum_c;    // Sum of blocks corrected ADC amplitudes

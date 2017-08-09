@@ -190,15 +190,30 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
     fBlocks.clear();
     fBlocks.resize(fNelem);
     fA = new Float_t[UInt_t(fNelem)];
-    fA0 = new Float_t[UInt_t(fNelem)];
-    fA1 = new Float_t[UInt_t(fNelem)];
-    fA2 = new Float_t[UInt_t(fNelem)];
-    fA3 = new Float_t[UInt_t(fNelem)];
-    fA4 = new Float_t[UInt_t(fNelem)];
-    fA5 = new Float_t[UInt_t(fNelem)];
-    fA6 = new Float_t[UInt_t(fNelem)];
-    fA7 = new Float_t[UInt_t(fNelem)];
-    fA9 = new Float_t[UInt_t(fNelem)];
+    fA0.resize(fNelem);
+    fA1.resize(fNelem);
+    fA2.resize(fNelem);
+    fA3.resize(fNelem);
+    fA4.resize(fNelem);
+    fA5.resize(fNelem);
+    fA6.resize(fNelem);
+    fA7.resize(fNelem);
+    fA8.resize(fNelem);
+    fA9.resize(fNelem);
+    fA_p = new Float_t[UInt_t(fNelem)];
+    fA_c = new Float_t[UInt_t(fNelem)];
+    // Yup, hard-coded in because it's only a test
+    // TODO: Fix me, don't hard code it in
+    fMaxNClust = 9;
+    fE = new Float_t[UInt_t(fMaxNClust)];
+    fE_c = new Float_t[UInt_t(fMaxNClust)];
+    fX = new Float_t[UInt_t(fMaxNClust)];
+    fY = new Float_t[UInt_t(fMaxNClust)];
+    fMult = new Int_t[UInt_t(fMaxNClust)];
+
+    fNblk = new Int_t[UInt_t(fNclublk)];
+    fEblk = new Float_t[UInt_t(fNclublk)];
+
     for( int r=0; r<nrows; r++ ) {
       for( int c=0; c<ncols; c++ ) {
         int k = nrows*c + r;
@@ -314,7 +329,19 @@ void SBSHCal::DeleteArrays()
 inline
 void SBSHCal::ClearEvent()
 {
-    // Reset all local data to prepare for next event.
+  // Reset all local data to prepare for next event.
+  for(size_t i = 0; i < fA0.size(); i++) {
+    fA0[i] = 0.0;
+    fA1[i] = 0.0;
+    fA2[i] = 0.0;
+    fA3[i] = 0.0;
+    fA4[i] = 0.0;
+    fA5[i] = 0.0;
+    fA6[i] = 0.0;
+    fA7[i] = 0.0;
+    fA8[i] = 0.0;
+    fA9[i] = 0.0;
+  }
 
     fCoarseProcessed = 0;
     fFineProcessed = 0;
@@ -386,6 +413,8 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
 
     // Loop over all channels that have a hit.
     for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+      // Increment the number of hits
+      fNhits++;
 
       // Get the next available channel, but 
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
