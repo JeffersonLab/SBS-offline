@@ -1,11 +1,3 @@
-variable sbs.hcal.a0
-variable sbs.hcal.a1
-variable sbs.hcal.a2
-variable sbs.hcal.a3
-variable sbs.hcal.a4
-variable sbs.hcal.a5
-variable sbs.hcal.a6
-variable sbs.hcal.a7
-variable sbs.hcal.a8
-variable sbs.hcal.a9
-variable sbs.hcal.nhit
+block sbs.hcal.a.*
+block sbs.hcal.a_p.*
+block sbs.hcal.a_c.*

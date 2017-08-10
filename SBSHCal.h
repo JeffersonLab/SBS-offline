@@ -88,16 +88,12 @@ class SBSHCal : public THaPidDetector {
   Float_t*   fA_p;       // [fNelem] Array of ADC minus pedestal values of blocks
   Float_t*   fA_c;       // [fNelem] Array of corrected ADC amplitudes of blocks
 
-  std::vector<Double_t>   fA0;         // [fNelem] Array of ADC sample0
-  std::vector<Double_t>   fA1;         // [fNelem] Array of ADC sample1
-  std::vector<Double_t>   fA2;         // [fNelem] Array of ADC sample2
-  std::vector<Double_t>   fA3;         // [fNelem] Array of ADC sample3
-  std::vector<Double_t>   fA4;         // [fNelem] Array of ADC sample4
-  std::vector<Double_t>   fA5;         // [fNelem] Array of ADC sample5
-  std::vector<Double_t>   fA6;         // [fNelem] Array of ADC sample6
-  std::vector<Double_t>   fA7;         // [fNelem] Array of ADC sample7
-  std::vector<Double_t>   fA8;         // [fNelem] Array of ADC sample8
-  std::vector<Double_t>   fA9;         // [fNelem] Array of ADC sample9
+  std::vector<Int_t>   fNumSamples; // [fNelem] Number of samples in each ADC/module
+  std::vector<std::vector<Double_t> > fASamples; // [fNumSamples] Raw ADC samples
+  std::vector<std::vector<Double_t> > fASamplesPed; // [fNumSamples] Ped correct ADC samples
+  std::vector<std::vector<Double_t> > fASamplesCal; // [fNumSamples] Calibrated ADC samples
+  std::vector<Float_t> fPed; // [fNelem] Pedestal for each module
+  std::vector<Float_t> fGain; // [fNelem] Gain for each module
 
   Float_t    fAsum_p;    // Sum of blocks ADC minus pedestal values
   Float_t    fAsum_c;    // Sum of blocks corrected ADC amplitudes
@@ -138,6 +134,23 @@ class SBSHCal : public THaPidDetector {
 
  private:
   void SetBlockADCSamples(Int_t block, std::vector<UInt_t> samples);
+
+  // Simple and quick routine to clear most vectors (of integers, floats,
+  // doubles, etc...)
+  template<class T>
+  void ResetVector(std::vector<T> &vec, T val = 0) {
+    for(size_t i = 0; i < vec.size(); i++) {
+      vec[i] = val;
+    }
+  }
+
+  // Reset 2D vector
+  template<class T>
+  void ResetVector(std::vector<std::vector<T> > &vec, T val = 0) {
+    for(size_t i = 0; i < vec.size(); i++) {
+      ResetVector(vec[i],val);
+    }
+  }
 
   ClassDef(SBSHCal,0)     //Generic shower detector class
 };

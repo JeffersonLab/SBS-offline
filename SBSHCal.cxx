@@ -30,6 +30,7 @@
 #include <iostream>
 #include <iomanip>
 #define CLUSTER_BLOCK_RADIUS 1
+#define MAX_FADC_SAMPLES 250 // Max number of samples allowed
 
 using namespace std;
 
@@ -160,17 +161,15 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
 
   // Read calibration parameters
   // Default ADC pedestals (0) and ADC gains (1)
-  std::vector<Float_t> peds(fNelem);
-  std::vector<Float_t> gains(fNelem);
-  for( Int_t i = 0; i < fNelem; i++) {
-    gains[i] = 1.0;
-    peds[i] = 0.0;
-  }
+  fPed.resize(fNelem);
+  fGain.resize(fNelem);
+  ResetVector(fPed,Float_t(0.0));
+  ResetVector(fGain,Float_t(1.0));
 
   // Read ADC pedestals and gains (in order of logical channel number)
   DBRequest calib_request[] = {
-    { "pedestals",   &peds,   kFloatV, UInt_t(fNelem), 1 },
-    { "gains",       &gains,  kFloatV, UInt_t(fNelem), 1 },
+    { "pedestals",   &fPed,   kFloatV, UInt_t(fNelem), 1 },
+    { "gains",       &fGain,  kFloatV, UInt_t(fNelem), 1 },
     { 0 }
   };
   err = LoadDB( file, date, calib_request, fPrefix );
@@ -190,16 +189,18 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
     fBlocks.clear();
     fBlocks.resize(fNelem);
     fA = new Float_t[UInt_t(fNelem)];
-    fA0.resize(fNelem);
-    fA1.resize(fNelem);
-    fA2.resize(fNelem);
-    fA3.resize(fNelem);
-    fA4.resize(fNelem);
-    fA5.resize(fNelem);
-    fA6.resize(fNelem);
-    fA7.resize(fNelem);
-    fA8.resize(fNelem);
-    fA9.resize(fNelem);
+    fASamples.resize(fNelem);
+    fASamplesPed.resize(fNelem);
+    fASamplesCal.resize(fNelem);
+    fNumSamples.resize(fNelem);
+    for(Int_t i = 0; i < fNelem; i++) {
+      // We'll resize the vector now to make sure the data are contained
+      // in a contigous part of memory (needed by THaOutput when writing
+      // to the ROOT file)
+      fASamples[i].resize(MAX_FADC_SAMPLES);
+      fASamplesPed[i].resize(MAX_FADC_SAMPLES);
+      fASamplesCal[i].resize(MAX_FADC_SAMPLES);
+    }
     fA_p = new Float_t[UInt_t(fNelem)];
     fA_c = new Float_t[UInt_t(fNelem)];
     // Yup, hard-coded in because it's only a test
@@ -220,7 +221,7 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
         Float_t x = xy[0] + r*dxy[0];
         Float_t y = xy[1] + r*dxy[1];
         SBSShowerBlock* block = 
-          new SBSShowerBlock(x,y,peds[k],gains[k],r,c);
+          new SBSShowerBlock(x,y,fPed[k],fGain[k],r,c);
         fBlocks[k]=block;
         fBlkGrid[r][c]=fBlocks[k];
       }
@@ -234,46 +235,68 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
 //_____________________________________________________________________________
 Int_t SBSHCal::DefineVariables( EMode mode )
 {
-    // Initialize global variables
+  // Initialize global variables
 
-    if( mode == kDefine && fIsSetup ) return kOK;
-    fIsSetup = ( mode == kDefine );
+  if( mode == kDefine && fIsSetup ) return kOK;
+  fIsSetup = ( mode == kDefine );
 
-    // Register variables in global list
+  // Register variables in global list
+  RVarDef vars[] = {
+    { "nhit",   "Number of hits",                     "fNhits" },
+    //{ "a",      "Raw ADC amplitudes",                 "fA" },
+    { "a_p",    "Ped-subtracted ADC amplitudes",      "fA_p" },
+    { "a_c",    "Calibrated ADC amplitudes",          "fA_c" },
+    { "asum_p", "Sum of ped-subtracted ADCs",         "fAsum_p" },
+    { "asum_c", "Sum of calibrated ADCs",             "fAsum_c" },
+    { "nclust", "Number of clusters",                 "fNclust" },
+    { "e",      "Energy (MeV) of largest cluster",    "fE" },
+    { "e_c",    "Corrected Energy (MeV) of largest cluster",    "fE_c" },
+    { "x",      "x-position (m) of largest cluster", "fX" },
+    { "y",      "y-position (m) of largest cluster", "fY" },
+    //{ "targ.x", "x-position (m) of largest cluster in target coords", "fXtarg" },
+    //{ "targ.y", "y-position (m) of largest cluster in target coords", "fYtarg" },
+    //{ "targ.z", "z-position (m) of largest cluster in target coords", "fZtarg" },
+    { "mult",   "Multiplicity of largest cluster",    "fMult" },
+    { "nblk",   "Numbers of blocks in main cluster",  "fNblk" },
+    { "eblk",   "Energies of blocks in main cluster", "fEblk" },
+    //     { "trx",    "track x-position in det plane",      "fTRX" },
+    //     { "try",    "track y-position in det plane",      "fTRY" },
+    { 0 }
+  };
+  Int_t err = DefineVarsFromList(vars, mode);
+  if( err != kOK )
+    return err;
 
-    RVarDef vars[] = {
-        { "nhit",   "Number of hits",                     "fNhits" },
-        { "a",      "Raw ADC amplitudes",                 "fA" },
-        { "a_p",    "Ped-subtracted ADC amplitudes",      "fA_p" },
-        { "a_c",    "Calibrated ADC amplitudes",          "fA_c" },
-        { "asum_p", "Sum of ped-subtracted ADCs",         "fAsum_p" },
-        { "asum_c", "Sum of calibrated ADCs",             "fAsum_c" },
-        { "nclust", "Number of clusters",                 "fNclust" },
-        { "e",      "Energy (MeV) of largest cluster",    "fE" },
-        { "e_c",    "Corrected Energy (MeV) of largest cluster",    "fE_c" },
-        { "x",      "x-position (m) of largest cluster", "fX" },
-        { "y",      "y-position (m) of largest cluster", "fY" },
-        //{ "targ.x", "x-position (m) of largest cluster in target coords", "fXtarg" },
-        //{ "targ.y", "y-position (m) of largest cluster in target coords", "fYtarg" },
-        //{ "targ.z", "z-position (m) of largest cluster in target coords", "fZtarg" },
-        { "mult",   "Multiplicity of largest cluster",    "fMult" },
-        { "nblk",   "Numbers of blocks in main cluster",  "fNblk" },
-        { "eblk",   "Energies of blocks in main cluster", "fEblk" },
-        //     { "trx",    "track x-position in det plane",      "fTRX" },
-        //     { "try",    "track y-position in det plane",      "fTRY" },
-        { "a0",      "Raw ADC for Sample0",                 "fA0" },
-        { "a1",      "Raw ADC for Sample1",                 "fA1" },
-        { "a2",      "Raw ADC for Sample2",                 "fA2" },
-        { "a3",      "Raw ADC for Sample3",                 "fA3" },
-        { "a4",      "Raw ADC for Sample4",                 "fA4" },
-        { "a5",      "Raw ADC for Sample5",                 "fA5" },
-        { "a6",      "Raw ADC for Sample6",                 "fA6" },
-        { "a7",      "Raw ADC for Sample7",                 "fA7" },
-        { "a8",      "Raw ADC for Sample8",                 "fA8" },
-        { "a9",      "Raw ADC for Sample9",                 "fA9" },
-        { 0 }
-    };
-    return DefineVarsFromList( vars, mode );
+  // Now register 
+  std::vector<VarDef> vars2;
+  for(Int_t m = 0; m < fNelem; m++) {
+    VarDef v;
+    char *name   =  new char[128];
+    char *name_p = new char[128];
+    char *name_c = new char[128];
+    sprintf(name,"a.m%d",m);
+    sprintf(name_p,"a_p.m%d",m);
+    sprintf(name_c,"a_c.m%d",m);
+    char *desc = new char[256];
+    sprintf(desc,"Raw ADC samples for Module %d",m);
+    v.name = name;
+    v.desc = "Raw ADC samples";
+    v.type = kDouble;
+    v.size = MAX_FADC_SAMPLES;
+    v.loc  = &(fASamples[m].data()[0]);
+    v.count = &fNumSamples[m];
+    vars2.push_back(v);
+    v.name = name_p;
+    v.desc = "Pedestal subtracted ADC samples";
+    v.loc = &(fASamplesPed[m].data()[0]);
+    vars2.push_back(v);
+    v.name = name_c;
+    v.desc = "Pedestal subtracted calibrated ADC samples";
+    v.loc = &(fASamplesCal[m].data()[0]);
+    vars2.push_back(v);
+  }
+  vars2.push_back(VarDef());
+  return DefineVarsFromList( vars2.data(), mode );
 }
 
 //_____________________________________________________________________________
@@ -330,18 +353,10 @@ inline
 void SBSHCal::ClearEvent()
 {
   // Reset all local data to prepare for next event.
-  for(size_t i = 0; i < fA0.size(); i++) {
-    fA0[i] = 0.0;
-    fA1[i] = 0.0;
-    fA2[i] = 0.0;
-    fA3[i] = 0.0;
-    fA4[i] = 0.0;
-    fA5[i] = 0.0;
-    fA6[i] = 0.0;
-    fA7[i] = 0.0;
-    fA8[i] = 0.0;
-    fA9[i] = 0.0;
-  }
+  ResetVector(fNumSamples,0);
+  ResetVector(fASamples,0.0);
+  ResetVector(fASamplesPed,0.0);
+  ResetVector(fASamplesCal,0.0);
 
     fCoarseProcessed = 0;
     fFineProcessed = 0;
@@ -396,6 +411,7 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
 
   // Clear last event
   ClearEvent();
+  static const char* const here = "Decode()";
 
   // Loop over all modules defined for HCal
   for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
@@ -425,6 +441,7 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
       Int_t jchan = (d->reverse) ? d->hi - chan : chan-d->lo;
       Int_t k = fChanMap[i][jchan] - 1;
 
+
       // Is this module an FADC?
       if(isADC) {
         // Get the mode, number of events and number of samples from
@@ -441,20 +458,19 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
         // In raw mode, raw samples are read out for each hit
         if( raw_mode) {
           num_samples = fadc->GetNumFadcSamples(chan,0);
-          // Wow, this is such a terrible way of going about it.
-          // Better would be the ability to store vectors of vectors in
-          // the root tree
-          std::vector<UInt_t> samples = fadc->GetPulseSamplesVector(chan);
-          fA0[k] = Float_t(samples[0]);
-          fA1[k] = Float_t(samples[1]);
-          fA2[k] = Float_t(samples[2]);
-          fA3[k] = Float_t(samples[3]);
-          fA4[k] = Float_t(samples[4]);
-          fA5[k] = Float_t(samples[5]);
-          fA6[k] = Float_t(samples[6]);
-          fA7[k] = Float_t(samples[7]);
-          fA8[k] = Float_t(samples[8]);
-          fA9[k] = Float_t(samples[9]);
+          if(num_samples > MAX_FADC_SAMPLES || num_samples < 0) {
+            Error( Here(here),
+                "Too manu samples in fADC: %d out of %d MAX",num_samples,
+                MAX_FADC_SAMPLES);
+          } else {
+            fNumSamples[k] = num_samples;
+            std::vector<UInt_t> samples = fadc->GetPulseSamplesVector(chan);
+            for(Int_t s = 0; s < num_samples; s++) {
+              fASamples[k][s] = samples[s];
+              fASamplesPed[k][s] = fASamples[k][s]-fPed[k];
+              fASamplesCal[k][s] = fASamplesPed[k][s]*fGain[k];
+            }
+          }
         }
       }
     }
