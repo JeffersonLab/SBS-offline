@@ -40,7 +40,7 @@ class SBSHCal : public THaPidDetector {
 	  Float_t    GetBlockdZ()  {return fdZ;}
 	  
 
-	  Float_t    GetBlockA_c( Int_t i ) const { return fA_c[i]; }
+	  //Float_t    GetBlockA_c( Int_t i ) const { return fA_c[i]; }
 
 	  Int_t    GetNRows() {return fNrows;}
 	  Int_t    GetNCols() {return fNcols;}
@@ -84,9 +84,6 @@ class SBSHCal : public THaPidDetector {
 
   // Per-event data
   Int_t      fNhits;     // Number of hits
-  Float_t*   fA;         // [fNelem] Array of ADC amplitudes of blocks
-  Float_t*   fA_p;       // [fNelem] Array of ADC minus pedestal values of blocks
-  Float_t*   fA_c;       // [fNelem] Array of corrected ADC amplitudes of blocks
 
   std::vector<Int_t>   fNumSamples; // [fNelem] Number of samples in each ADC/module
   std::vector<std::vector<Double_t> > fASamples; // [fNumSamples] Raw ADC samples

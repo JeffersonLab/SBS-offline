@@ -188,7 +188,6 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
     //2//fClusters = new SBSHCalCluster*[fMaxNClust];
     fBlocks.clear();
     fBlocks.resize(fNelem);
-    fA = new Float_t[UInt_t(fNelem)];
     fASamples.resize(fNelem);
     fASamplesPed.resize(fNelem);
     fASamplesCal.resize(fNelem);
@@ -201,8 +200,6 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
       fASamplesPed[i].resize(MAX_FADC_SAMPLES);
       fASamplesCal[i].resize(MAX_FADC_SAMPLES);
     }
-    fA_p = new Float_t[UInt_t(fNelem)];
-    fA_c = new Float_t[UInt_t(fNelem)];
     // Yup, hard-coded in because it's only a test
     // TODO: Fix me, don't hard code it in
     fMaxNClust = 9;
@@ -243,9 +240,6 @@ Int_t SBSHCal::DefineVariables( EMode mode )
   // Register variables in global list
   RVarDef vars[] = {
     { "nhit",   "Number of hits",                     "fNhits" },
-    //{ "a",      "Raw ADC amplitudes",                 "fA" },
-    { "a_p",    "Ped-subtracted ADC amplitudes",      "fA_p" },
-    { "a_c",    "Calibrated ADC amplitudes",          "fA_c" },
     { "asum_p", "Sum of ped-subtracted ADCs",         "fAsum_p" },
     { "asum_c", "Sum of calibrated ADCs",             "fAsum_c" },
     { "nclust", "Number of clusters",                 "fNclust" },
@@ -317,9 +311,6 @@ void SBSHCal::DeleteArrays()
 
     fChanMap.clear();
     delete [] fNChan; fNChan = 0;
-    delete [] fA;       fA       = 0;
-    delete [] fA_p;     fA_p     = 0;
-    delete [] fA_c;     fA_c     = 0;
     delete [] fNblk;    fNblk    = 0;
     delete [] fEblk;    fEblk    = 0;
 
@@ -368,9 +359,6 @@ void SBSHCal::ClearEvent()
     const int lsj = fMaxNClust*sizeof(Int_t);
 
     fNhits = 0;
-    memset( fA, 0, lsh );
-    memset( fA_p, 0, lsh );
-    memset( fA_c, 0, lsh );
     memset( fE, 0, lshh );
     memset( fE_c, 0, lshh );
     memset( fX, 0, lshh );
@@ -398,14 +386,11 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
   // Decode data and store into the following local data structure:
   //
   // fNhits           - Number of hits on HCal
-  // fA[]             - Array of ADC values of shower blocks
+  // fASamples[][]    - 2D Array of ADC samples/values for each block
+  // fASamplesPed[][] - 2D Array of ped subtracted fASamples[][]
+  // fASamplesCal[][] - 2D array of ped subtracted and calibrated fASamples[][]
   //
-  // Decode shower data, scale the data to energy deposition
-  // ( in MeV ), and copy the data into the following local data structure:
-  //
-  // fA[]             -  Array of ADC values of shower blocks;
-  // fA_p[]           -  Array of ADC minus ped values of shower blocks;
-  // fA_c[]           -  Array of corrected ADC values of shower blocks;
+  // (The following are presently now being used)
   // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
   // fAsum_c          -  Sum of shower blocks corrected ADC values;
 
