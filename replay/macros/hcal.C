@@ -66,6 +66,8 @@ Int_t hcal(Int_t run = 931)
       } else if ( numSamples[m] > 0) {
         h[m] = MakeHisto(m,numSamples[m] );
         foundModules++;
+        std::cout << "Entry: " << entry << " found channel: " <<
+          m << std::endl;
       }
     }
   }
