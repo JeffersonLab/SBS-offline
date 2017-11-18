@@ -36,6 +36,9 @@ public:
   virtual Int_t        CoarseProcess( TClonesArray& tracks );
   virtual Int_t        FineProcess( TClonesArray& tracks );
 
+  //virtual Int_t        Decode_( const THaEvData& );
+  //virtual Int_t        FineProcess_( TClonesArray& tracks );
+  
   void                 ReadBadPads(Char_t* infilename);
   Int_t                ReadData( FILE *infile );
   SBSGRINCH_Hit*         GetHit(Int_t i) const 
@@ -61,10 +64,11 @@ public:
   Int_t                GetMaxNumHits() const { return fMaxNumHits; }
   void                 SetMaxNumHits( Int_t MaxNumHit ) 
     { fMaxNumHits=MaxNumHit; }
-
+  /*
   void                 SetMIPArea(Double_t xmin, Double_t xmax, 
 				  Double_t ymin, Double_t ymax) 
   {fMaxxMIP=xmax; fMinxMIP=xmin; fMaxyMIP=ymax; fMinyMIP=ymin;}
+  */
   void                 EnableClusterResolving( Bool_t flag = kTRUE )
   { fDoResolve = flag; }
   void                 EnableBenchmarks( Bool_t b = kTRUE )
@@ -80,8 +84,8 @@ protected:
   TClonesArray*     fResolvedHits;  // Hits of resolved clusters
   TClonesArray*     fResolvedClusters; // Resolved clusters
 
-  SBSGRINCH_Cluster** fMIPs;          //MIP clusters for each track
-  SBSGRINCH_Cluster   fMIP;           //MIP cluster of the Golden Track
+  /* SBSGRINCH_Cluster** fMIPs;          //MIP clusters for each track */
+  /* SBSGRINCH_Cluster   fMIP;           //MIP cluster of the Golden Track */
 
   //RICH parameters from database
   Double_t L_RAD,l_quartz,l_gap;    //length of radiator,quartz,proxiity gap
@@ -99,12 +103,15 @@ protected:
   Double_t cluster_distribution_sigma;
   // sigma of single cluster angular distribution.
 
-  Double_t PAD_SIZE_X;              //dimension of a pad (mm). 
-  Double_t PAD_SIZE_Y;              //dimension of a pad (mm).
-  Double_t fMaxdist2;               // Search radius for MIP finding
+  /* Double_t PAD_SIZE_X;              //dimension of a pad (mm).  */
+  /* Double_t PAD_SIZE_Y;              //dimension of a pad (mm). */
+  /* Double_t fMaxdist2;               // Search radius for MIP finding */
+  /*
   Double_t fMaxxMIP,fMinxMIP,fMaxyMIP,fMinyMIP;
                                    // Window, where the MIP is allowed to be
                                    // FIX ME one should use a cut instead
+				   */
+  /*
   Int_t fMIP_through_interception;
                                   // flag that set the MIP search algorithm 
                                   // for each event:
@@ -140,6 +147,7 @@ protected:
                                   //            radius. No action is taken (and
                                   //            hence no MIP is given) if no 
                                   //            cluster of this kind is found
+				  */
   Int_t   fMaxNumHits;            
 
 
@@ -153,10 +161,11 @@ protected:
   Bool_t         fDoBench;         //Collect detailed timing statistics
   THaBenchmark*  fBench;           //Counters for timing statistics
 
-  void    Padn2xy(Int_t, Int_t, Double_t);
+  /* void    Padn2xy(Int_t, Int_t, Double_t); */
   void    DeleteClusters();
   Int_t   FindClusters();
   Int_t   ResolveClusters();
+  /*
   Int_t   FindMIP( const TClonesArray& tracks );
 
 
@@ -183,10 +192,10 @@ protected:
 		    Double_t theta_mip, Double_t phi_mip, 
 		    Int_t Calculation_kind) const;
 
+  */
   Double_t Cherenkov_Angle(double mass, double momentum) const;
 
-  Int_t ClearNoise(Int_t igold, Int_t ResolvedFlag);
-
+  /* Int_t ClearNoise(Int_t igold, Int_t ResolvedFlag); */
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
 

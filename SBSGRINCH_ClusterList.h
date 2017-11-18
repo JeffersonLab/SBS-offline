@@ -23,24 +23,26 @@ class TClonesArray;
 
 class SBSGRINCH_Hit : public TObject {
 
-public:
-  SBSGRINCH_Hit() 
-    : fFlag(0), fVeto(0) {}
-  SBSGRINCH_Hit( Int_t number, Int_t ADC, Int_t i, Int_t j, 
-	       Float_t x, Float_t y ) :
-    fNumber(number), fADC(ADC), fI(i), fJ(j), fX(x), fY(y), fFlag(0), 
+ public:
+ SBSGRINCH_Hit() 
+   : fFlag(0), fVeto(0) {}
+ SBSGRINCH_Hit( Int_t number, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
+		Float_t x, Float_t y ) :
+  fNumber(number), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), fI(i), fJ(j), fX(x), fY(y), fFlag(0), 
     fVeto(0) {}
   virtual ~SBSGRINCH_Hit() {}
-
+  
   void       Show(FILE * fout1);
   void       Show(FILE * fout1, FILE * fout2);
-
+  
   Int_t      GetNumber()   const {return fNumber;}
   Float_t    GetX()        const {return fX;}
   Float_t    GetY()        const {return fY;}
   Int_t      GetI()        const {return fI;}
   Int_t      GetJ()        const {return fJ;}
   Int_t      GetADC()      const {return fADC;}
+  Int_t      GetTDC_r()    const {return fTDC_r;}
+  Int_t      GetTDC_f()    const {return fTDC_f;}
   Int_t      GetFlag()     const {return fFlag;}
   Int_t      GetVeto()     const {return fVeto;} 
   void       SetNumber( Int_t number ) {fNumber = number;}
@@ -49,6 +51,8 @@ public:
   void       SetI( Int_t i )           {fI = i;}
   void       SetJ( Int_t j )           {fJ = j;}
   void       SetADC( Int_t ADC )       {fADC = ADC;}
+  void       SetTDC_r( Int_t TDC_r )   {fTDC_r = TDC_r;}
+  void       SetTDC_f( Int_t TDC_f )   {fTDC_f = TDC_f;}
   void       SetFlag( Int_t Flag )     {fFlag = Flag;}
   void       SetVeto( Int_t Veto )     {fVeto = Veto;}
 
@@ -56,14 +60,16 @@ public:
   virtual Bool_t  IsSortable() const { return kTRUE; }
 
 private:
-  Int_t     fNumber;
-  Int_t     fADC;
-  Int_t     fI;
-  Int_t     fJ;
-  Float_t   fX;
-  Float_t   fY;
-  Int_t     fFlag;
-  Int_t     fVeto;
+  Int_t     fNumber; // Hit number
+  Int_t     fTDC_r;  // Hit rise time TDC
+  Int_t     fTDC_f;  // Hit fall time TDC
+  Int_t     fADC;    // Hit ADC /!\ deduced from TDC values
+  Int_t     fI;      // Hit row number in PMT matrix
+  Int_t     fJ;      // Hit column number in PMT matrix
+  Float_t   fX;      // Hit X position in PMT matrix
+  Float_t   fY;      // Hit Y position in PMT matrix
+  Int_t     fFlag;   // ?
+  Int_t     fVeto;   // ?
 
   ClassDef(SBSGRINCH_Hit,0)   //A hit in the RICH
 };
