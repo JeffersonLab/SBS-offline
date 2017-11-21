@@ -75,6 +75,27 @@ private:
 };
 
 
+
+class SBSGRINCH_Cluster : public TObject {
+public:
+  SBSGRINCH_Cluster();
+  SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs );
+  SBSGRINCH_Cluster& operator=( const SBSGRINCH_Cluster& rhs );
+
+  ~SBSGRINCH_Cluster() { delete fHitList; }
+  
+  void       Clear( Option_t* opt="" );
+  void       Insert( SBSGRINCH_Hit* theHit );
+  
+  Int_t      Test( const SBSGRINCH_Hit* theHit,  Float_t par1, 
+		   Float_t par2,  Float_t par3 ) const;
+ 
+ private:
+  TList*     fHitList;   //List of hits belonging to this cluster
+ 
+  ClassDef(SBSGRINCH_Cluster,0)  //A cluster of hits in the GRINCH
+};
+
 // --------------------------------------------------------------
 
 // ClusterElement: class of elements that make up a cluster. They are orderd
@@ -101,18 +122,18 @@ private:
 // Hits must be TObjects.
 // If you want a sorted list, just replace TList with TSortedList
 
-class SBSGRINCH_Cluster : public TObject {
+class SBSRICH_Cluster : public TObject {
 
 public:
-  SBSGRINCH_Cluster();
-  SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs );
-  SBSGRINCH_Cluster& operator=( const SBSGRINCH_Cluster& rhs );
+  SBSRICH_Cluster();
+  SBSRICH_Cluster( const SBSRICH_Cluster& rhs );
+  SBSRICH_Cluster& operator=( const SBSRICH_Cluster& rhs );
 
-  ~SBSGRINCH_Cluster() { delete fHitList; }
+  ~SBSRICH_Cluster() { delete fHitList; }
 
 
   void       Clear( Option_t* opt="" );
-  Float_t    Dist( const SBSGRINCH_Cluster* c ) const;
+  Float_t    Dist( const SBSRICH_Cluster* c ) const;
   void       Insert( SBSGRINCH_Hit* theHit );
   void       Insert( SBSGRINCH_Hit* theHit, Float_t factor);
   void       Insert_Photon(Int_t flag, Float_t angle, Int_t ResolvedFlag);
@@ -154,14 +175,14 @@ public:
   void       Setnoise_cut_success(Int_t value, Int_t ResolvedFlag);
   Int_t      FindLocalMaximumNumber();
   Int_t FindResolvedClusterElements (const SBSGRINCH_Hit* localMaximum,
-				     SBSGRINCH_Cluster* resolvedCluster,
+				     SBSRICH_Cluster* resolvedCluster,
 				     TClonesArray* resolvedHits );
   Float_t    GetTheta_photon() const         { return fTheta_photon; }
   Float_t    GetPhi_photon() const           { return fPhi_photon; }
   Float_t    GetAngle()   const              { return fAngle; }
   THaTrack*  GetTrack()   const              { return fTrack; }
   void       MakeMIP( Bool_t flag = kTRUE );
-  void       SetMIP( SBSGRINCH_Cluster* mip )  { fMIP = mip; }
+  void       SetMIP( SBSRICH_Cluster* mip )  { fMIP = mip; }
   void       SetFictious_MIP_Flag(Int_t value) { fFictious_Mip_Flag = value; }
   void       SetTheta_photon ( Float_t Theta_photon) 
     { fTheta_photon = Theta_photon; }
@@ -278,7 +299,7 @@ private:
   Float_t fPhi_photon;   // Phi angle in the RICH system of the photon 
                          // associated with the cluster.
   Float_t    fAngle;     //Calculated angle wrt particle ray (not used yet)
-  SBSGRINCH_Cluster* fMIP; //Pointer to MIP cluster belonging to this cluster
+  SBSRICH_Cluster* fMIP; //Pointer to MIP cluster belonging to this cluster
   THaTrack*  fTrack;     //Track associated with this cluster (only for MIPs)
   Int_t N_Photon[3];     //Only for MIPs; number of clusters whose angles 
                          // with respect to the MIP considered are in the 
@@ -405,14 +426,14 @@ private:
                                             // MaximumLikelihood_Photon for 
                                             // resolved clusters.
 
-  ClassDef(SBSGRINCH_Cluster,0)  //A cluster of hits in the RICH
+  ClassDef(SBSRICH_Cluster,0)  //A cluster of hits in the RICH
 };
 
 
 // ---------------- inlines -------------------------------------
-
+/*
 inline
-void SBSGRINCH_Cluster::MakeMIP( Bool_t flag )
+void SBSRICH_Cluster::MakeMIP( Bool_t flag )
 {
   fMIPflag = flag;
   if( flag )
@@ -420,7 +441,7 @@ void SBSGRINCH_Cluster::MakeMIP( Bool_t flag )
   else
     fMIP = NULL;
 }
-
+*/
 #endif
 
 

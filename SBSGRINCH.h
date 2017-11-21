@@ -36,9 +36,6 @@ public:
   virtual Int_t        CoarseProcess( TClonesArray& tracks );
   virtual Int_t        FineProcess( TClonesArray& tracks );
 
-  //virtual Int_t        Decode_( const THaEvData& );
-  //virtual Int_t        FineProcess_( TClonesArray& tracks );
-  
   void                 ReadBadPads(Char_t* infilename);
   Int_t                ReadData( FILE *infile );
   SBSGRINCH_Hit*         GetHit(Int_t i) const 
@@ -64,11 +61,6 @@ public:
   Int_t                GetMaxNumHits() const { return fMaxNumHits; }
   void                 SetMaxNumHits( Int_t MaxNumHit ) 
     { fMaxNumHits=MaxNumHit; }
-  /*
-  void                 SetMIPArea(Double_t xmin, Double_t xmax, 
-				  Double_t ymin, Double_t ymax) 
-  {fMaxxMIP=xmax; fMinxMIP=xmin; fMaxyMIP=ymax; fMinyMIP=ymin;}
-  */
   void                 EnableClusterResolving( Bool_t flag = kTRUE )
   { fDoResolve = flag; }
   void                 EnableBenchmarks( Bool_t b = kTRUE )
@@ -83,9 +75,6 @@ protected:
   TClonesArray*     fClusters;      // Clusters of hits
   TClonesArray*     fResolvedHits;  // Hits of resolved clusters
   TClonesArray*     fResolvedClusters; // Resolved clusters
-
-  /* SBSGRINCH_Cluster** fMIPs;          //MIP clusters for each track */
-  /* SBSGRINCH_Cluster   fMIP;           //MIP cluster of the Golden Track */
 
   //RICH parameters from database
   Double_t L_RAD,l_quartz,l_gap;    //length of radiator,quartz,proxiity gap
@@ -102,52 +91,9 @@ protected:
   // kind of particle
   Double_t cluster_distribution_sigma;
   // sigma of single cluster angular distribution.
-
-  /* Double_t PAD_SIZE_X;              //dimension of a pad (mm).  */
-  /* Double_t PAD_SIZE_Y;              //dimension of a pad (mm). */
-  /* Double_t fMaxdist2;               // Search radius for MIP finding */
-  /*
-  Double_t fMaxxMIP,fMinxMIP,fMaxyMIP,fMinyMIP;
-                                   // Window, where the MIP is allowed to be
-                                   // FIX ME one should use a cut instead
-				   */
-  /*
-  Int_t fMIP_through_interception;
-                                  // flag that set the MIP search algorithm 
-                                  // for each event:
-                                  // MIP_through_interception = 3   
-                                  //            the MIP will be always 
-                                  //            the interception between 
-                                  //            the track and the PAD 
-                                  //            Plane regardless
-                                  //            of the cluster pattern in the 
-                                  //            Pad plane 
-                                  // MIP_through_interception = 2   
-                                  //            the MIP is the maximum charge 
-                                  //            cluster inside the Mip search 
-                                  //            radius or, in case no cluster 
-                                  //            of this kind is found, 
-                                  //            is the interception between 
-                                  //            the track and the PAD plane
-                                  // MIP_through_interception = 1   
-                                  //            the MIP is the maximum 
-                                  //            charge cluster inside the Mip
-                                  //            search radius or, ONLY IN 
-                                  //            CASE THE INTERCEPTION OF THE 
-                                  //            TRACK WITH THE PAD PLANE
-                                  //            FALLS IN A NOT SENSIBLE 
-                                  //            REGION OF THE RICH (and hence
-                                  //            no MIP spot in the pad plane 
-                                  //            is supposed to exist), is the 
-                                  //            track interception on the pad 
-                                  //            plane 
-                                  // MIP_through_interception = 0   
-                                  //            the MIP is the maximum charge
-                                  //            cluster inside the Mip search
-                                  //            radius. No action is taken (and
-                                  //            hence no MIP is given) if no 
-                                  //            cluster of this kind is found
-				  */
+  //Double_t PMTinterdist;// distance between two PMTs in a row, or between 2 rows of PMTs
+  
+  
   Int_t   fMaxNumHits;            
 
 
@@ -161,41 +107,11 @@ protected:
   Bool_t         fDoBench;         //Collect detailed timing statistics
   THaBenchmark*  fBench;           //Counters for timing statistics
 
-  /* void    Padn2xy(Int_t, Int_t, Double_t); */
   void    DeleteClusters();
   Int_t   FindClusters();
   Int_t   ResolveClusters();
-  /*
-  Int_t   FindMIP( const TClonesArray& tracks );
-
-
-  Double_t Get_phi_photon( Double_t x_photon, Double_t y_photon,
-			   Double_t x_mip, Double_t y_mip,
-			   Double_t theta_mip, Double_t phi_mip,
-			   Int_t Calculation_kind) const;
-
-  Double_t Get_a( Double_t theta_mip, Int_t Calculation_Kind ) const;
-
-  Double_t Get_b( Double_t x_photon, Double_t y_photon,
-		  Double_t x_mip, Double_t y_mip,
-		  Double_t theta_mip, Double_t phi_mip,
-		  Int_t Calculation_kind) const;
-
-  Double_t Get_theta_photon(Double_t x_photon, Double_t y_photon,
-			    Double_t x_mip, Double_t y_mip,
-			    Double_t theta_mip, Double_t phi_mip,
-			    Int_t Calculation_kind) const;
-
-  Double_t RecoAng( Double_t x_photon, Double_t y_photon,
-		    Double_t &theta_photon, Double_t &phi_photon, 
-		    Double_t x_mip, Double_t y_mip,
-		    Double_t theta_mip, Double_t phi_mip, 
-		    Int_t Calculation_kind) const;
-
-  */
   Double_t Cherenkov_Angle(double mass, double momentum) const;
 
-  /* Int_t ClearNoise(Int_t igold, Int_t ResolvedFlag); */
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
 
