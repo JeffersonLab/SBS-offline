@@ -75,23 +75,73 @@ private:
 };
 
 
+// --------------------------------------------------------------
+
+// Cluster: List of Hits of elements that make up a cluster in GRINCH. 
+// Specifically, in the GRINCH, a cluster is a list of adjacent PMT hits;
+// 
 
 class SBSGRINCH_Cluster : public TObject {
-public:
+ public:
   SBSGRINCH_Cluster();
   SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs );
   SBSGRINCH_Cluster& operator=( const SBSGRINCH_Cluster& rhs );
 
   ~SBSGRINCH_Cluster() { delete fHitList; }
   
-  void       Clear( Option_t* opt="" );
-  void       Insert( SBSGRINCH_Hit* theHit );
+  void    Clear( Option_t* opt="" );
+  void    Insert( SBSGRINCH_Hit* theHit );
   
-  Int_t      Test( const SBSGRINCH_Hit* theHit,  Float_t par1, 
-		   Float_t par2,  Float_t par3 ) const;
- 
+  Bool_t  IsNeighbor( const SBSGRINCH_Hit* theHit,  Float_t par);
+  
+  Int_t   GetNHits()   const { return fHitList->GetSize(); }
+  TList*  GetHitList()      { return fHitList; }
+  
+  Float_t GetXcenter() const { return fXcenter; }
+  Float_t GetYcenter() const  { return fYcenter; }
+  Float_t GetXcenter_w() const { return fXcenter_w; }
+  Float_t GetYcenter_w() const  { return fYcenter_w; }
+  Float_t GetCharge()  const     { return fCharge; }
+  
+  Float_t GetMeanRisingTime() const { return fMeanRisingTime; }
+  Float_t GetMeanFallingTime() const { return fMeanFallingTime; }
+  Float_t GetRisingTimeRMS() const    { return fRisingTimeRMS; }
+  Float_t GetFallingTimeRMS() const    { return fFallingTimeRMS; }
+
+  THaTrack* GetTrack() const            { return fTrack; }
+
+  void    SetXcenter(Float_t xcenter)    { fXcenter = xcenter; }
+  void    SetYcenter(Float_t ycenter)     { fYcenter = ycenter; }
+  void    SetXcenter_w(Float_t xcenter_w)  { fXcenter_w = xcenter_w; }
+  void    SetYcenter_w(Float_t ycenter_w)   { fYcenter_w = ycenter_w; }
+  void    SetCharge(Float_t charge)          { fCharge = charge; }
+  
+  void    SetMeanRisingTime(Float_t meanrisingtime)  { fMeanRisingTime = meanrisingtime; }
+  void    SetMeanFallingTime(Float_t meanfallingtime) { fMeanFallingTime = meanfallingtime; }
+  void    SetRisingTimeRMS(Float_t risingtimerms)      { fRisingTimeRMS = risingtimerms; }
+  void    SetFallingTimeRMS(Float_t fallingtimerms)     { fFallingTimeRMS = fallingtimerms; }
+  
+  void    SetTrack( THaTrack* track ) { fTrack = track; }
+
+  void MergeCluster( const SBSGRINCH_Cluster& rhs );
+  
  private:
   TList*     fHitList;   //List of hits belonging to this cluster
+  
+  Float_t    fXcenter;   // X mean of all hits in the list
+  Float_t    fYcenter;   // Y mean of all hits in the list
+  Float_t    fXcenter_w; // Weighted X mean : (Sum of x*adc)/(sum adc) of all hits in the list
+  Float_t    fYcenter_w; // Weighted Y mean : (Sum of y*adc)/(sum adc) of all hits in the list
+  Float_t    fCharge;    // Sum of ADCs
+  
+  Float_t    fMeanRisingTime;  // Mean rising time of all hits in the list
+  Float_t    fMeanFallingTime; // Mean falling time of all hits in the list
+  Float_t    fRisingTimeRMS;   // Rising time RMS of all hits in the list
+  Float_t    fFallingTimeRMS;  // Falling time RMS of all hits in the list
+  
+  Bool_t     fTrackMatch;// true if a track can be matched to the cluster
+  THaTrack*  fTrack;     // Track best associated with this cluster
+  
  
   ClassDef(SBSGRINCH_Cluster,0)  //A cluster of hits in the GRINCH
 };

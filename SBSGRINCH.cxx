@@ -45,7 +45,7 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
   THaPidDetector(name,description,apparatus), 
   // fMIPs(0),
   // fMaxxMIP(100000), fMinxMIP(-100000), fMaxyMIP(100000), fMinyMIP(-100000),
-  fDoResolve(false), fNseg(0), fXseg(0),
+  fDoResolve(false), //fNseg(0), fXseg(0),
   fTrackX(kBig), fTrackY(kBig)
 {
   //keep this line first
@@ -74,7 +74,7 @@ SBSGRINCH::~SBSGRINCH()
   delete fClusters;
   delete fResolvedClusters;
   //delete [] fMIPs;
-  delete [] fXseg;
+  //delete [] fXseg;
   delete fBench;
 }
 
@@ -313,24 +313,24 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   // Any raw x_RICH coordinates outside of the specified <low>-<high> ranges
   // are considered invalid.
 
-  tag = "x_segments";
-  err = LoadDBvalue( fi, date, tag, line );
-  if( err == 0 && line.Length()>0 ) {
-    ISTR inp(line.Data());
-    Int_t nseg;
-    inp >> nseg;
-    if( !inp )
-      goto bad_data;
-    fNseg = nseg;
-    delete [] fXseg; fXseg = new Double_t[3*fNseg];
-    for( int i=0; i<fNseg; i++ ) {
-      int k = 3*i;
-      inp >> fXseg[k] >> fXseg[k+1] >> fXseg[k+2];
-      if( !inp )
-	goto bad_data;
-    }
-  }
-
+  // tag = "x_segments";
+  // err = LoadDBvalue( fi, date, tag, line );
+  // if( err == 0 && line.Length()>0 ) {
+  //   ISTR inp(line.Data());
+  //   Int_t nseg;
+  //   inp >> nseg;
+  //   if( !inp )
+  //     goto bad_data;
+  //   //fNseg = nseg;
+  //   //delete [] fXseg; fXseg = new Double_t[3*fNseg];
+  //   //for( int i=0; i<fNseg; i++ ) {
+  //   //int k = 3*i;
+  //   //inp >> fXseg[k] >> fXseg[k+1] >> fXseg[k+2];
+  //   if( !inp )
+  //     goto bad_data;
+  //   //}
+  // }
+  
   // Read detector map
   // Multiple lines are allowed. The format is:
   //  detmap_1  <crate> <slot> <first channel> <last channel>
@@ -539,7 +539,8 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	  cout<< "Something strange happened, "
 	    "raw data and data are not consistent" 
 	      << endl;
-	}
+       	}
+	
 	
       }
 
@@ -567,13 +568,8 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   // The main RICH processing method. Here we
   //  
   // - Identify clusters
-  // - Find the MIP(s) among the clusters
-  // - Calculate photon angles
+  // - Attempt to match a traceto these
   // - Calculate particle probabilities
-
-  // To put here otherwise Mip global variables are not zeroed in case 
-  // of no cluster or no Mip were found 
-  // fMIP.Clear("F");
 
   if( !fIsInit ) return -255;
 
@@ -964,14 +960,14 @@ Int_t SBSGRINCH::FindClusters()
   // Group the hits that are currently in the array into clusters.
   // Return number of clusters found.
  
-  // minimum distance between two pads.
-  const double par1 = 2.0; 
+  // // minimum distance between two pads.
+  const double par = sqrt(fPMTdistX*fPMTdistX+fPMTdistY*fPMTdistY);//2.0; 
 
-  // maximum distance in X between two fired pads to be in the same cluster.
-  const double par2 = 0.1;//PAD_SIZE_X+0.1;  
+  // // maximum distance in X between two fired pads to be in the same cluster.
+  // const double par2 = 0.1;//PAD_SIZE_X+0.1;  
 
-  // maximum distance in Y between two fired pads to be in the same cluster.
-  const double par3 = 0.1;//PAD_SIZE_Y+0.1;  
+  // // maximum distance in Y between two fired pads to be in the same cluster.
+  // const double par3 = 0.1;//PAD_SIZE_Y+0.1;
 
   DeleteClusters();
 
@@ -981,54 +977,63 @@ Int_t SBSGRINCH::FindClusters()
   SBSGRINCH_Cluster* theCluster;
   Int_t nHits  = GetNumHits();
   Int_t nClust = 0;
-
+  Int_t hit_1stclusmatch;
+  
+  //loop on hits
   for( int k=0; k<nHits; k++ ) {
     if( !(theHit = GetHit(k))) continue;
-
+    hit_1stclusmatch = -1;
     // HitFlag not equal 0: The Hit was alredy processed
     // HitFlag equal 0: insert the Hit as first element of the cluster
-
+    
     if( theHit->GetFlag() == 0 ) {
-  
-      theCluster = new( (*fClusters)[nClust++] ) SBSGRINCH_Cluster();
-      theHit->SetFlag(1);
-      theCluster->Insert( theHit );
-      
-      //---Scanning all the hit pads
-
-      int flag = 0;
-      while( flag==0 ) {
-	flag = 1;
-	SBSGRINCH_Hit* hit;
-	for( int i=0; i<nHits; i++ ) {
-	  if( !(hit = GetHit(i))) continue;
-	  if( hit->GetFlag() == 0 && 
-	      theCluster->Test( hit, par1, par2, par3 )) {
-	      
-	    // the hit belongs to the Cluster
-
-	    theCluster->Insert( hit );
-
-	    //tagging to avoid double processing
-	    hit->SetFlag(1);  
-
-	    flag = 0;
-	    // at least one new element in the Cluster; check again.
-	    // FIXME: this loop is O(2*nHits^2) - 2e6 iterations for 1k hits!!
-	    // ->extremely inefficient
+      // we loop on *all* existing clusters to check which of them the hit can already be associated to.
+      for(int i_cl = 0; i_cl<nClust; i_cl++){
+	theCluster = GetCluster(i_cl);
+	if(theCluster->IsNeighbor(theHit, par)){
+	  if(theHit->GetFlag() == 0){
+	    // if it is the first cluster the hit may be associated to,
+	    // the hit is inserted to the cluster, and the cluster number is stored
+	    theCluster->Insert(theHit);
+	    theHit->SetFlag(1);
+	    hit_1stclusmatch = i_cl;
+	  }else{
+	    SBSGRINCH_Cluster* refCluster = GetCluster(hit_1stclusmatch);
+	    // if it is not the first cluster the hit is associated to, 
+	    // the cluster is added to the first cluster associated to the hit
+	    // and removed after
+	    refCluster->MergeCluster(*theCluster);
+	    // theCluster->AddCluster(GetCluster(hit_1stclusmatch));
+	    theCluster->Clear("F");
+	    fClusters->RemoveAt(i_cl);
+	    nClust--;
 	  }
 	}
       }
+      
+      // if the hit cannot be asscoiated to any existing cluster, we create a new one
+      if(theHit->GetFlag() == 0){
+	theCluster = new( (*fClusters)[nClust++] ) SBSGRINCH_Cluster();
+	theHit->SetFlag(1);
+	theCluster->Insert( theHit );
+      }
+      
     }
   }
+  // Now attempt to match clusters with tracks
+  //
+  // for(int i_cl = 0; i_cl<nClust; i_cl++){
+  //   theCluster = GetCluster(i_cl);
+  //   //theCluster->MatchTracks();
+  // }
   // now find if there are clusters genetrated by overlapping of clusters
   // (number of overlapping clusters = number of local maximums in a cluster).
-  if( fDoResolve ) {
-    for( int k = 0; k < nClust; k++ ) {
-      if( !(theCluster = GetCluster(k))) continue;
-      //theCluster->FindLocalMaximumNumber();
-    }
-  }
+  // if( fDoResolve ) {
+  //   for( int k = 0; k < nClust; k++ ) {
+  //     if( !(theCluster = GetCluster(k))) continue;
+  //     //theCluster->FindLocalMaximumNumber();
+  //   }
+  // }
   if( fDoBench ) fBench->Stop("FindClusters");
   return nClust;
 }

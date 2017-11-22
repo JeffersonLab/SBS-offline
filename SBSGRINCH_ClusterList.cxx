@@ -59,6 +59,189 @@ void SBSGRINCH_Hit::Show(FILE * fout1)
 
 
 //=============================================================================
+// SBSGRINCH_Cluster
+//=============================================================================
+
+//_____________________________________________________________________________
+SBSGRINCH_Cluster::SBSGRINCH_Cluster() : // f(0)
+  fXcenter(0), fYcenter(0),
+  fXcenter_w(0), fYcenter_w(0), fCharge(0),
+  fMeanRisingTime(0), fMeanFallingTime(0),
+  fRisingTimeRMS(0), fFallingTimeRMS(0),
+  fTrackMatch(false), fTrack(0)
+{
+  fHitList = new TList; 
+}
+
+//_____________________________________________________________________________
+SBSGRINCH_Cluster::SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs ) : // f(rhs.f)
+  fXcenter(rhs.fXcenter), fYcenter(rhs.fYcenter),
+  fXcenter_w(rhs.fXcenter_w), fYcenter_w(rhs.fYcenter_w), fCharge(rhs.fCharge), 
+  fMeanRisingTime(rhs.fMeanRisingTime), fMeanFallingTime(rhs.fMeanFallingTime),
+  fRisingTimeRMS(rhs.fRisingTimeRMS), fFallingTimeRMS(rhs.fFallingTimeRMS),
+  fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack)
+{
+  fHitList = new TList; 
+  if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+    TIter next( rhs.fHitList );
+    while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() ))
+      fHitList->AddLast(pHit);
+  }
+}
+
+//_____________________________________________________________________________
+SBSGRINCH_Cluster& SBSGRINCH_Cluster::operator=( const SBSGRINCH_Cluster& rhs ) // f = rhs.f;
+{
+  // Assignment operator
+  if( this != &rhs ) {
+    fXcenter = rhs.fXcenter;
+    fYcenter = rhs.fYcenter;
+    fXcenter_w = rhs.fXcenter_w;
+    fYcenter_w = rhs.fYcenter_w;
+    fCharge = rhs.fCharge;
+    fMeanRisingTime = rhs.fMeanRisingTime;
+    fMeanFallingTime = rhs.fMeanFallingTime;
+    fRisingTimeRMS = rhs.fRisingTimeRMS;
+    fFallingTimeRMS = rhs.fFallingTimeRMS;
+    fTrackMatch = rhs.fTrackMatch;
+    fTrack = rhs.fTrack;
+    
+    if( !fHitList )
+      fHitList = new TList;
+    else
+      fHitList->Clear("nodelete");
+    if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+      TIter next( rhs.fHitList ); 
+      while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() ))
+	fHitList->AddLast(pHit);
+    }
+  }
+  return *this;
+}
+
+//_____________________________________________________________________________
+void SBSGRINCH_Cluster::MergeCluster( const SBSGRINCH_Cluster& rhs )
+{//adds the cluster in argument to the cluster which the method is applied to 
+  if( !fHitList ) fHitList = new TList;
+  Int_t list1size = fHitList->GetSize();
+  Int_t list2size = 0;
+  
+  if(list1size==0){
+    *this = rhs;
+    //return *this;
+  }
+  
+  if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+    list2size = rhs.fHitList->GetSize();
+    TIter next( rhs.fHitList ); 
+    while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() ))
+      fHitList->AddLast(pHit);
+  }
+  
+  if(list2size==0)return;// return *this;
+  
+  fXcenter = (fXcenter*((Double_t)(list1size))+ rhs.fXcenter*((Double_t)(list2size)))/
+    ((Double_t)(list1size+list2size));
+  fYcenter = (fYcenter*((Double_t)(list1size))+ rhs.fYcenter*((Double_t)(list2size)))/
+    ((Double_t)(list1size+list2size));
+  
+  fXcenter_w = (fXcenter_w*fCharge+rhs.fXcenter_w*rhs.fCharge)/(fCharge+rhs.fCharge);
+  fYcenter_w = (fYcenter_w*fCharge+rhs.fYcenter_w*rhs.fCharge)/(fCharge+rhs.fCharge);
+  
+  fCharge += rhs.fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)list1size)+rhs.fMeanRisingTime*((Double_t)list2size))/
+    ((Double_t)(list1size+list2size));
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)list1size)+rhs.fMeanFallingTime*((Double_t)list2size))/
+    ((Double_t)(list1size+list2size));
+  
+  fRisingTimeRMS = sqrt( (pow(fRisingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fRisingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  fFallingTimeRMS = sqrt( (pow(fFallingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fFallingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  //return *this;
+}
+
+//_____________________________________________________________________________
+void SBSGRINCH_Cluster::Clear( Option_t* opt ) // f = 0;
+{
+  //Reset the cluster to an empty state.
+
+  //Don't delete the hits, just clear the internal list.
+  if( fHitList ) 
+    fHitList->Clear("nodelete");
+
+  // Full clear
+  if( opt && opt[0] == 'F' ) {
+    fXcenter = 0;
+    fYcenter = 0;
+    fXcenter_w = 0;
+    fYcenter_w = 0;
+    fCharge = 0;
+    fMeanRisingTime = 0;
+    fMeanFallingTime = 0;
+    fRisingTimeRMS = 0;
+    fFallingTimeRMS = 0;
+    fTrackMatch = false;
+    fTrack = 0;
+  } else {
+    // Fast clear for clearing TClonesArrays of clusters
+    // Needs to be deleted since a TList allocates memory
+    // FIXME: performance issue?
+    delete fHitList;
+    fHitList = 0;
+  }  
+}
+
+//_____________________________________________________________________________
+void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit )
+{
+  //Add a hit to the cluster
+    
+  if( !fHitList ) fHitList = new TList;
+  fHitList->AddLast( theHit );
+  
+  Int_t listnewsize = fHitList->GetSize();
+  fXcenter = (fXcenter*((Double_t)(listnewsize-1))+theHit->GetX())/((Double_t)listnewsize);
+  fYcenter = (fYcenter*((Double_t)(listnewsize-1))+theHit->GetY())/((Double_t)listnewsize);
+  
+  fXcenter_w = fXcenter_w*fCharge;
+  fYcenter_w = fYcenter_w*fCharge;
+  fCharge  += theHit->GetADC();
+  fXcenter_w += theHit->GetADC()*theHit->GetX();
+  fYcenter_w += theHit->GetADC()*theHit->GetY();
+  fXcenter_w = fXcenter_w/fCharge;
+  fYcenter_w = fYcenter_w/fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_r())/((Double_t)listnewsize);
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_f())/((Double_t)listnewsize);
+  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_r(), 2))/
+  			((Double_t)listnewsize));
+  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_f(), 2))/
+  			 ((Double_t)listnewsize));
+}
+
+//_____________________________________________________________________________
+Bool_t SBSGRINCH_Cluster::IsNeighbor(const SBSGRINCH_Hit* theHit, Float_t par)
+{
+  Float_t dx,dy,dist;
+  if( !fHitList ) return 0;
+  TIter next( fHitList );
+
+  while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() )) {
+    dx   = theHit->GetX() - pHit->GetX();
+    dy   = theHit->GetY() - pHit->GetY();
+    dist = sqrt( dx*dx + dy*dy );
+    if( dist<par )
+      return true;
+  }
+  return false;
+}
+
+
+//=============================================================================
+// SBSRICH_Cluster
+//=============================================================================
+
+//_____________________________________________________________________________
 SBSRICH_Cluster::SBSRICH_Cluster() :
   fLocalMaximumNumber(1), fMIPflag(kFALSE), fFictious_Mip_Flag(0),
   fPionChi2AnalysisFlag(kFALSE), fKaonChi2AnalysisFlag(kFALSE), 

@@ -36,8 +36,6 @@ public:
   virtual Int_t        CoarseProcess( TClonesArray& tracks );
   virtual Int_t        FineProcess( TClonesArray& tracks );
 
-  void                 ReadBadPads(Char_t* infilename);
-  Int_t                ReadData( FILE *infile );
   SBSGRINCH_Hit*         GetHit(Int_t i) const 
     { return (SBSGRINCH_Hit*)fHits->At(i); }
   SBSGRINCH_Hit*         GetResolvedHit(Int_t i) const 
@@ -69,7 +67,7 @@ public:
 
 protected:
 
-  Int_t             fNypads;  // Number of pads along y (transverse)
+  //Int_t             fNypads;  // Number of pads along y (transverse)
 
   TClonesArray*     fHits;          // Array of hits for each event
   TClonesArray*     fClusters;      // Clusters of hits
@@ -93,14 +91,17 @@ protected:
   // sigma of single cluster angular distribution.
   //Double_t PMTinterdist;// distance between two PMTs in a row, or between 2 rows of PMTs
   
-  
   Int_t   fMaxNumHits;            
-
+  
+  
 
   Bool_t  fDoResolve;    // true = resolve overlapping clusters
-  Int_t   fNseg;         // Number of x segments
-  Double_t* fXseg;       // Array of x segmentation boudaries and offsets
-
+  /* Int_t   fNseg;         // Number of x segments */
+  /* Double_t* fXseg;       // Array of x segmentation boudaries and offsets */
+  
+  Double_t fPMTdistX;    // projected X distance between the center of 2 PMT tubes in consecutive rows
+  Double_t fPMTdistY;    // Y distance between the center of 2 PMT tubes in consecutive columns
+  
   Double_t fTrackX;      // x pos of Golden Track in RICH plane
   Double_t fTrackY;      // y pos of Golden Track in RICH plane
 
