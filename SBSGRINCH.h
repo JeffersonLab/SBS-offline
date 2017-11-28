@@ -38,21 +38,21 @@ public:
 
   SBSGRINCH_Hit*         GetHit(Int_t i) const 
     { return (SBSGRINCH_Hit*)fHits->At(i); }
-  SBSGRINCH_Hit*         GetResolvedHit(Int_t i) const 
-    { return (SBSGRINCH_Hit*)fResolvedHits->At(i); }
+  /* SBSGRINCH_Hit*         GetResolvedHit(Int_t i) const  */
+  /*   { return (SBSGRINCH_Hit*)fResolvedHits->At(i); } */
   SBSGRINCH_Cluster*     GetCluster(Int_t i) const 
     { return (SBSGRINCH_Cluster*)fClusters->At(i); }
-  SBSGRINCH_Cluster*     GetResolvedCluster(Int_t i) const 
-    { return (SBSGRINCH_Cluster*)fResolvedClusters->At(i); }
+  /* SBSGRINCH_Cluster*     GetResolvedCluster(Int_t i) const  */
+  /*   { return (SBSGRINCH_Cluster*)fResolvedClusters->At(i); } */
   Int_t                GetNumHits() const 
     { return fHits->GetLast()+1; }
   Int_t                GetNumClusters() const 
     { return fClusters->GetLast()+1; }
-  Int_t                GetNumResolvedHits() const 
-    { return fResolvedHits->GetLast()+1; }
-  Int_t                GetNumResolvedClusters() const 
-    { return fResolvedClusters->GetLast()+1; }
-
+  /* Int_t                GetNumResolvedHits() const  */
+  /*   { return fResolvedHits->GetLast()+1; } */
+  /* Int_t                GetNumResolvedClusters() const  */
+  /*   { return fResolvedClusters->GetLast()+1; } */
+  
   // FIX ME the latter ones return non sense if decode has not been processed
 
   //  Int_t                GetTIRDat() const { return fTIRDat; }
@@ -71,10 +71,11 @@ protected:
 
   TClonesArray*     fHits;          // Array of hits for each event
   TClonesArray*     fClusters;      // Clusters of hits
-  TClonesArray*     fResolvedHits;  // Hits of resolved clusters
-  TClonesArray*     fResolvedClusters; // Resolved clusters
+  /* TClonesArray*     fResolvedHits;  // Hits of resolved clusters */
+  /* TClonesArray*     fResolvedClusters; // Resolved clusters */
 
   //RICH parameters from database
+  Double_t Z_CkovIn; // Z of the Cherenkov entrance window in the spectrometer 
   Double_t L_RAD,l_quartz,l_gap;    //length of radiator,quartz,proxiity gap
   Double_t l_emission;              //photon emission depth in the radiator.
   Double_t n_radiator,n_quartz,n_gap; //the refraction indices 
@@ -90,17 +91,21 @@ protected:
   Double_t cluster_distribution_sigma;
   // sigma of single cluster angular distribution.
   //Double_t PMTinterdist;// distance between two PMTs in a row, or between 2 rows of PMTs
+  Int_t    fNPMTs;         // number of PMTs
+  Int_t    fNPMTrows;      // number of PMT rows
+  Int_t    fNPMTcolsMax;   // max number of PMT columns 
+  Double_t fPMTmatrixHext; // horizontal extension, in m, of the PMT matrix (from lower PMT center to higher PMT center)
+  Double_t fPMTmatrixVext; // vertical extension, in m, of the PMT matrix (from left PMT center to right PMT center)
+  Double_t fPMTdistX;      // Y distance between the center of 2 PMT tubes in consecutive columns
+  Double_t fPMTdistY;      // Y distance between the center of 2 PMT tubes in consecutive columns, in m
+  Double_t fX_TCPMT;       // X position of the top close PMT center in the PMT matrix (transport coord)
+  Double_t fY_TCPMT;       // Y position of the top close PMT center in the PMT matrix (transport coord)
   
-  Int_t   fMaxNumHits;            
+  Int_t   fMaxNumHits;
   
-  
-
   Bool_t  fDoResolve;    // true = resolve overlapping clusters
   /* Int_t   fNseg;         // Number of x segments */
   /* Double_t* fXseg;       // Array of x segmentation boudaries and offsets */
-  
-  Double_t fPMTdistX;    // projected X distance between the center of 2 PMT tubes in consecutive rows
-  Double_t fPMTdistY;    // Y distance between the center of 2 PMT tubes in consecutive columns
   
   Double_t fTrackX;      // x pos of Golden Track in RICH plane
   Double_t fTrackY;      // y pos of Golden Track in RICH plane
@@ -110,7 +115,9 @@ protected:
 
   void    DeleteClusters();
   Int_t   FindClusters();
-  Int_t   ResolveClusters();
+  Int_t   MatchClustersWithTracks( TClonesArray& tracks );
+  Int_t   CleanClustersWithTime();
+  //Int_t   ResolveClusters();
   Double_t Cherenkov_Angle(double mass, double momentum) const;
 
   virtual Int_t  ReadDatabase( const TDatime& date );

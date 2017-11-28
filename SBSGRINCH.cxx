@@ -55,8 +55,8 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
 
   fHits             = new TClonesArray("SBSGRINCH_Hit",1000);
   fClusters         = new TClonesArray("SBSGRINCH_Cluster",100);
-  fResolvedHits     = new TClonesArray("SBSGRINCH_Hit",1000);
-  fResolvedClusters = new TClonesArray("SBSGRINCH_Cluster",100);
+  // fResolvedHits     = new TClonesArray("SBSGRINCH_Hit",1000);
+  // fResolvedClusters = new TClonesArray("SBSGRINCH_Cluster",100);
 
   Clear();
 
@@ -70,11 +70,11 @@ SBSGRINCH::~SBSGRINCH()
 
   RemoveVariables();
   delete fHits;
-  delete fResolvedHits;
+  // delete fResolvedHits;
   delete fClusters;
-  delete fResolvedClusters;
-  //delete [] fMIPs;
-  //delete [] fXseg;
+  // delete fResolvedClusters;
+  // delete [] fMIPs;
+  // delete [] fXseg;
   delete fBench;
 }
 
@@ -86,7 +86,7 @@ void SBSGRINCH::Clear( Option_t* opt )
   if( fDoBench ) fBench->Begin("Clear");
   THaPidDetector::Clear(opt);
   fHits->Clear();
-  fResolvedHits->Clear();
+  //fResolvedHits->Clear();
   DeleteClusters();
   if( fDoBench ) fBench->Stop("Clear");
 }
@@ -121,6 +121,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   // Set up a table of tags to read and locations to store values.
   const DBRequest tags[] = { 
     { "l_emission", &l_emission, kDouble, 1, false},
+    { "z_ckovin", &Z_CkovIn, kDouble, 1, false},
     { "maxdist",    &maxdist, kDouble, 1, true},
     { "hit_max_number", &hit_max_number, kDouble, 1, true },
     //{ "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
@@ -376,9 +377,9 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
 
   RVarDef var1[] = {
     { "nhit",    "Number of pads with hits",    "GetNumHits()" },
-    { "nrhit",   "Number of resolved hits",     "GetNumResolvedHits()" },
+    //{ "nrhit",   "Number of resolved hits",     "GetNumResolvedHits()" },
     { "nclust",  "Number of clusters",          "GetNumClusters()" },
-    { "nresolv", "Number of resolved clusters", "GetNumResolvedClusters()" },
+    //{ "nresolv", "Number of resolved clusters", "GetNumResolvedClusters()" },
     // { "ngood",   "Number of clusters within cone",   "fNClustersGood" },
     // { "nextra",  "Number of clusters outside cone",  "fNClustersOut" },
     { "track.x", "Golden Track x in RICH plane (mm)",   "fTrackX" },
@@ -393,12 +394,14 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
     { "hit.x",   "Hit x position (mm)",              "fX" },
     { "hit.y",   "Hit y position (mm)",              "fY" },
     { "hit.adc", "Hit charge (ADC value)",           "fADC" },
+    { "hit.tdc_r", "Hit rise time (TDC value)",      "fTDC_r" },
+    { "hit.tdc_f", "Hit fall time (TDC value)",      "fTDC_f" },
     { "hit.flag","Hit status flag",                  "fFlag" },
     { "hit.veto","Hit local maximum veto flag",      "fVeto" },
     { 0 }
   };
   DefineVarsFromList( var2, mode, "fHits.SBSGRINCH_Hit." );
-  
+  /*
   RVarDef var3[] = {
     { "rhit.i",   "Resolved hit i index (along x_rich)",  "fI" },
     { "rhit.j",   "Resolved hit j index (along y_rich)",  "fJ" },
@@ -409,7 +412,7 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
     { 0 }
   };
   DefineVarsFromList( var3, mode, "fResolvedHits.SBSGRINCH_Hit." );
-
+  */
   RVarDef var4[] = {
     { "clus.x",     "Cluster x position (mm)",        "fXcenter" },
     { "clus.y",     "Cluster y position (mm)",        "fYcenter" },
@@ -428,7 +431,7 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
     { 0 }
   };
   DefineVarsFromList( var4, mode, "fClusters.SBSGRINCH_Cluster." );
-
+  /*
   RVarDef var5[] = {
     { "rclus.x",     "Resolved cluster x position (mm)",    "fXcenter" },
     { "rclus.y",     "Resolved cluster y position (mm)",    "fYcenter" },
@@ -447,7 +450,7 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
     { 0 }
   };
   DefineVarsFromList( var5, mode, "fResolvedClusters.SBSGRINCH_Cluster." );
-  
+  */
   /*
   RVarDef var6[] = {
     { "mip.size",  "Golden Track MIP size",                 "GetNHits()" },
@@ -512,6 +515,13 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 
   if( fDoBench ) fBench->Begin("Decode");
 
+  Int_t nHit = 0;
+  SBSGRINCH_Hit* theHit;
+  int row, col;
+  double X, Y;
+  double TDC_r, TDC_f;
+  double ADC;
+
   for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
     THaDetMap::Module* d = fDetMap->GetModule( i );
   
@@ -540,8 +550,28 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	    "raw data and data are not consistent" 
 	      << endl;
        	}
-	
-	
+
+	//fill fHits !!!
+	theHit = new( (*fHits)[nHit++] ) SBSGRINCH_Hit();
+	theHit->SetNumber(hit);
+	//stupid values...
+	row = chan;
+	col = chan;
+	X = row;
+	Y = col;
+	TDC_r = 0.0;
+	TDC_f = 1.0;
+	ADC = (TDC_f-TDC_r);
+	//
+	theHit->SetRow(row);
+	theHit->SetCol(col);
+	theHit->SetX(X);
+	theHit->SetY(Y);
+	theHit->SetADC(ADC);
+	theHit->SetTDC_r(TDC_r);
+	theHit->SetTDC_f(TDC_f);
+	theHit->SetFlag(0);
+	theHit->SetVeto(0);
       }
 
     }
@@ -576,20 +606,21 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   if (fMaxNumHits<GetNumHits()) {  
     return -25;
   }  
-
+  
+  // Clusters reconstructed here
   if( FindClusters() == 0 ) { 
     return -1;
   }
-
-  // if( FindMIP( tracks ) == 0 ) {
-  //   return -2;
-  // }
-
-  if( fDoResolve )
-    ResolveClusters();
+  
+  // if( fDoResolve )
+  //   ResolveClusters();
   //cout<<"stay and stop here!!!"<<endl;
   if( fDoBench ) fBench->Begin("FineProcess");
 
+  // Clusters matched with tracks here!
+  MatchClustersWithTracks(tracks);
+  
+  
   /*
     Double_t central_momentum = 0.;
     Double_t central_e_angle     = 0.;
@@ -950,7 +981,7 @@ void SBSGRINCH::DeleteClusters()
   //Delete all clusters
 
   fClusters->Clear("C");
-  fResolvedClusters->Clear("C");
+  //fResolvedClusters->Clear("C");
   return;
 }
 
@@ -1020,12 +1051,6 @@ Int_t SBSGRINCH::FindClusters()
       
     }
   }
-  // Now attempt to match clusters with tracks
-  //
-  // for(int i_cl = 0; i_cl<nClust; i_cl++){
-  //   theCluster = GetCluster(i_cl);
-  //   //theCluster->MatchTracks();
-  // }
   // now find if there are clusters genetrated by overlapping of clusters
   // (number of overlapping clusters = number of local maximums in a cluster).
   // if( fDoResolve ) {
@@ -1038,6 +1063,40 @@ Int_t SBSGRINCH::FindClusters()
   return nClust;
 }
 
+//_____________________________________________________________________________
+Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
+{
+  // std::vector<bool> TrackIsAssociated;
+  // TrackIsAssociated.resize(tracks.GetSize());
+  SBSGRINCH_Cluster* theCluster;
+  THaTrack* theTrack;
+  Int_t nClust = GetNumClusters();
+
+  // for(int l = 0; l<tracks.GetSize(); l++){
+  //   TrackIsAssociated[l] = false;
+  // }
+  Int_t Nassociated = 0;
+  for( int k = 0; k < nClust; k++ ) {
+    if( !(theCluster = GetCluster(k))) continue;
+    for(int l = 0; l<tracks.GetSize(); l++){
+      theTrack = (THaTrack*)tracks.At(l);
+      //Assuming the TClonesArray is indeed a THaTrack TClonesArray
+      
+      double x_ckov_in = theTrack->GetX(Z_CkovIn);
+      double y_ckov_in = theTrack->GetY(Z_CkovIn);
+      
+      // compare
+      if(x_ckov_in && y_ckov_in){
+	theCluster->SetTrack(theTrack);
+       	Nassociated++;
+      }
+    }
+    
+  }
+  return(Nassociated);
+}
+
+/*
 //__________________________________________________________________________
 Int_t SBSGRINCH::ResolveClusters()
 {
@@ -1051,7 +1110,7 @@ Int_t SBSGRINCH::ResolveClusters()
   fResolvedHits->Clear("C");
   fResolvedClusters->Clear("C");
   Int_t nResolvedClusters = 0;
-  /*
+
   for( int k = 0; k < nClust; k++ ) {
     SBSGRINCH_Cluster* theCluster = GetCluster(k);
     if( !theCluster ) continue;
@@ -1075,11 +1134,11 @@ Int_t SBSGRINCH::ResolveClusters()
 	SBSGRINCH_Cluster( *theCluster );
     }
   }
-  */
   if( fDoBench ) fBench->Stop("ResolveClusters");
   return nResolvedClusters;
 
 }
+*/
 
 //_____________________________________________________________________________
 void SBSGRINCH::PrintBenchmarks() const
@@ -1094,7 +1153,7 @@ void SBSGRINCH::PrintBenchmarks() const
   fBench->Print("FineProcess");
   fBench->Print("FindClusters");
   fBench->Print("FindMIP");
-  fBench->Print("ResolveClusters");
+  //fBench->Print("ResolveClusters");
 
   cout << endl << "Breakdown of time spent in FineProcess:" << endl;
   fBench->Print("RecoAng");

@@ -35,8 +35,8 @@ void SBSGRINCH_Hit::Show(FILE * fout1, FILE* fout2)
 {
   // FIXME comment on fprintf(fout1...) should be changed accordingly 
   // when ntuple will be created 
-  fprintf(fout2," I, J ");
-  fprintf(fout2,"%4d,%4d",fI,fJ);
+  fprintf(fout2," Row, Col ");
+  fprintf(fout2,"%4d,%4d",fRow,fCol);
   fprintf(fout2," ; X, Y ");
   fprintf(fout2,"%4f,%4f",fX,fY);
   fprintf(fout2,"; fADC = ");
@@ -51,7 +51,7 @@ void SBSGRINCH_Hit::Show(FILE * fout1)
 {
   // FIXME comment on fprintf(fout1...) should be changed accordingly 
   // when ntuple will be created
-  fprintf(fout1," %4d %4d",fI,fJ);
+  fprintf(fout1," %4d %4d",fRow,fCol);
   fprintf(fout1,"% 4f %4f",fX,fY);
   fprintf(fout1," %4d \n",fADC);
   fprintf(fout1," %4d %4d \n",fTDC_r, fTDC_f);
@@ -1117,13 +1117,13 @@ Int_t SBSRICH_Cluster::FindLocalMaximumNumber( )
 
   next.Reset();
   while( SBSGRINCH_Hit* pHitSave = static_cast<SBSGRINCH_Hit*>( next() )) {
-    Int_t I_Position = pHitSave->GetI();
-    Int_t J_Position = pHitSave->GetJ();
+    Int_t I_Position = pHitSave->GetRow();
+    Int_t J_Position = pHitSave->GetCol();
 
     TIter next1( next );
     while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next1() )) {
-      Int_t intdist = TMath::Abs(I_Position - pHit->GetI()) + 
-	TMath::Abs(J_Position - pHit->GetJ());
+      Int_t intdist = TMath::Abs(I_Position - pHit->GetRow()) + 
+	TMath::Abs(J_Position - pHit->GetCol());
       if(intdist == 1) {
 	//set the flag that forbids the Hit to be a local maximum
 	if (pHit->Compare(pHitSave) == -1)
@@ -1148,14 +1148,14 @@ Int_t SBSRICH_Cluster::FindLocalMaximumNumber( )
 	continue;
       }
       if(iteration == i) {
-	I_Position = pHit->GetI();
-	J_Position = pHit->GetJ();
+	I_Position = pHit->GetRow();
+	J_Position = pHit->GetCol();
 	pHitSave = pHit; 
 	iteration++;
 	continue;
       }
-      intdist = TMath::Abs(I_Position - pHit->GetI()) + 
-	TMath::Abs(J_Position - pHit->GetJ());
+      intdist = TMath::Abs(I_Position - pHit->GetRow()) + 
+	TMath::Abs(J_Position - pHit->GetCol());
       if(intdist == 1) {
 	//set the flag that forbids the Hit to be a local maximum
 	if (pHit->Compare(pHitSave) == -1)
@@ -1220,18 +1220,18 @@ Int_t SBSRICH_Cluster::FindResolvedClusterElements
   SBSGRINCH_Hit* newHit = new( (*resolvedHits)[nResolvedHits++] ) 
     SBSGRINCH_Hit( *pHit );
   resolvedCluster->Insert( newHit );
-  fIRef = pHit->GetI();
-  fJRef = pHit->GetJ();
+  fIRef = pHit->GetRow();
+  fJRef = pHit->GetCol();
   ChargeofMaximum = pHit->GetADC();
 
   // take as the elements of the new clusters the elements next to the maximum.
 
   TIter next( fHitList );
   while( (pHit = static_cast<SBSGRINCH_Hit*>( next() ))) {
-    if( ( TMath::Abs(pHit->GetI() - fIRef) + 
-	  TMath::Abs(pHit->GetJ() - fJRef) ) == 1) {
-      Int_t fIofHit = pHit->GetI();
-      Int_t fJofHit = pHit->GetJ();
+    if( ( TMath::Abs(pHit->GetRow() - fIRef) + 
+	  TMath::Abs(pHit->GetCol() - fJRef) ) == 1) {
+      Int_t fIofHit = pHit->GetRow();
+      Int_t fJofHit = pHit->GetCol();
       Float_t SumofCharges = 0;
       TIter next2( fHitList );
       while( SBSGRINCH_Hit* pHit1 = static_cast<SBSGRINCH_Hit*>( next2() )) {
@@ -1239,23 +1239,23 @@ Int_t SBSRICH_Cluster::FindResolvedClusterElements
 	// Make the sum of the charges of the local maximum the Hit
 	// belongs to. 
 	if( (!pHit1->GetVeto()) &&
-	    ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-	      TMath::Abs(pHit1->GetJ() - fJofHit)  == 1) ) {
+	    ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+	      TMath::Abs(pHit1->GetCol() - fJofHit)  == 1) ) {
 	  SumofCharges = SumofCharges + pHit1->GetADC();
 	}
 	if( (!pHit1->GetVeto()) &&
-	    ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-	      TMath::Abs(pHit1->GetJ() - fJofHit)  == 2) ) {
+	    ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+	      TMath::Abs(pHit1->GetCol() - fJofHit)  == 2) ) {
 	  // for the posibility of more distant Hits to belong 
 	  // to a local maximum see below.  
-	  Int_t fItocheck = pHit1->GetI();
-	  Int_t fJtocheck = pHit1->GetJ();
+	  Int_t fItocheck = pHit1->GetRow();
+	  Int_t fJtocheck = pHit1->GetCol();
 	  Int_t BelongingFlag = 1;
 	  TIter next5( fHitList );
 	  while( SBSGRINCH_Hit* pHit2 = 
 		 static_cast<SBSGRINCH_Hit*>( next5() )) {
-	    if(( TMath::Abs(pHit2->GetI() - fItocheck) + 
-		 TMath::Abs(pHit2->GetJ() - fJtocheck)  == 1) 
+	    if(( TMath::Abs(pHit2->GetRow() - fItocheck) + 
+		 TMath::Abs(pHit2->GetCol() - fJtocheck)  == 1) 
 	       && (pHit->GetADC() > pHit2->GetADC()) ) {
 	      BelongingFlag = 0;
 	    }
@@ -1282,10 +1282,10 @@ Int_t SBSRICH_Cluster::FindResolvedClusterElements
   while( (pHit = static_cast<SBSGRINCH_Hit*>( next() ))) {
     if(!pHit->GetVeto()) continue; 
     // do not analyze local maximum 
-    if( ( TMath::Abs(pHit->GetI() - fIRef) 
-	  + TMath::Abs(pHit->GetJ() - fJRef) ) == 2) {
-      Int_t fIofHit = pHit->GetI();
-      Int_t fJofHit = pHit->GetJ();
+    if( ( TMath::Abs(pHit->GetRow() - fIRef) 
+	  + TMath::Abs(pHit->GetCol() - fJRef) ) == 2) {
+      Int_t fIofHit = pHit->GetRow();
+      Int_t fJofHit = pHit->GetCol();
       Float_t CheckedCharge = pHit->GetADC();
       Int_t ClusterFlag = 1;
       for(Int_t icheck = 0; icheck <= isaved; icheck++) {
@@ -1301,21 +1301,21 @@ Int_t SBSRICH_Cluster::FindResolvedClusterElements
 	TIter next4( fHitList );
 	while( SBSGRINCH_Hit* pHit1 = static_cast<SBSGRINCH_Hit*>( next4() )){
 	  if( (!pHit1->GetVeto()) &&
-	      ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-		TMath::Abs(pHit1->GetJ() - fJofHit)  == 1) ){
+	      ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+		TMath::Abs(pHit1->GetCol() - fJofHit)  == 1) ){
 	    SumofCharges = SumofCharges + pHit1->GetADC();
 	  }
 	  if( (!pHit1->GetVeto()) &&
-	      ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-		TMath::Abs(pHit1->GetJ() - fJofHit)  == 2) ) {
-	    Int_t fItocheck = pHit1->GetI();
-	    Int_t fJtocheck = pHit1->GetJ();
+	      ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+		TMath::Abs(pHit1->GetCol() - fJofHit)  == 2) ) {
+	    Int_t fItocheck = pHit1->GetRow();
+	    Int_t fJtocheck = pHit1->GetCol();
 	    Int_t BelongingFlag = 1;
 	    TIter next5( fHitList );
 	    while( SBSGRINCH_Hit* pHit2 = 
 		   static_cast<SBSGRINCH_Hit*>( next5() )) {
-	      if(( TMath::Abs(pHit2->GetI() - fItocheck) + 
-		   TMath::Abs(pHit2->GetJ() - fJtocheck)  == 1) 
+	      if(( TMath::Abs(pHit2->GetRow() - fItocheck) + 
+		   TMath::Abs(pHit2->GetCol() - fJtocheck)  == 1) 
 		 && (CheckedCharge > pHit2->GetADC()) ){
 		BelongingFlag = 0;
 	      }

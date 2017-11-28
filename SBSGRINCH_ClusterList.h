@@ -14,7 +14,7 @@ class TClonesArray;
 #include <iostream>
 #include <stdio.h>
 
-// Data class contains the data of a single pad (of a cluster).
+// Data class contains the data of a single PMT
 // (i,j) coordinate of a pad; (x,y) coordinated of a pad; ADC value
 // and a Veto to point it cannot be a local minimum inside the cluster
 // useful to tell overlapping clusters apart). 
@@ -28,7 +28,7 @@ class SBSGRINCH_Hit : public TObject {
    : fFlag(0), fVeto(0) {}
  SBSGRINCH_Hit( Int_t number, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
 		Float_t x, Float_t y ) :
-  fNumber(number), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), fI(i), fJ(j), fX(x), fY(y), fFlag(0), 
+  fNumber(number), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), fRow(i), fCol(j), fX(x), fY(y), fFlag(0), 
     fVeto(0) {}
   virtual ~SBSGRINCH_Hit() {}
   
@@ -38,8 +38,8 @@ class SBSGRINCH_Hit : public TObject {
   Int_t      GetNumber()   const {return fNumber;}
   Float_t    GetX()        const {return fX;}
   Float_t    GetY()        const {return fY;}
-  Int_t      GetI()        const {return fI;}
-  Int_t      GetJ()        const {return fJ;}
+  Int_t      GetRow()        const {return fRow;}
+  Int_t      GetCol()        const {return fCol;}
   Int_t      GetADC()      const {return fADC;}
   Int_t      GetTDC_r()    const {return fTDC_r;}
   Int_t      GetTDC_f()    const {return fTDC_f;}
@@ -48,8 +48,8 @@ class SBSGRINCH_Hit : public TObject {
   void       SetNumber( Int_t number ) {fNumber = number;}
   void       SetX( Float_t x )         {fX = x;}
   void       SetY( Float_t y )         {fY = y;}
-  void       SetI( Int_t i )           {fI = i;}
-  void       SetJ( Int_t j )           {fJ = j;}
+  void       SetRow( Int_t i )           {fRow = i;}
+  void       SetCol( Int_t j )           {fCol = j;}
   void       SetADC( Int_t ADC )       {fADC = ADC;}
   void       SetTDC_r( Int_t TDC_r )   {fTDC_r = TDC_r;}
   void       SetTDC_f( Int_t TDC_f )   {fTDC_f = TDC_f;}
@@ -64,8 +64,8 @@ private:
   Int_t     fTDC_r;  // Hit rise time TDC
   Int_t     fTDC_f;  // Hit fall time TDC
   Int_t     fADC;    // Hit ADC /!\ deduced from TDC values
-  Int_t     fI;      // Hit row number in PMT matrix
-  Int_t     fJ;      // Hit column number in PMT matrix
+  Int_t     fRow;      // Hit row number in PMT matrix
+  Int_t     fCol;      // Hit column number in PMT matrix
   Float_t   fX;      // Hit X position in PMT matrix
   Float_t   fY;      // Hit Y position in PMT matrix
   Int_t     fFlag;   // ?
@@ -123,7 +123,7 @@ class SBSGRINCH_Cluster : public TObject {
   
   void    SetTrack( THaTrack* track ) { fTrack = track; }
 
-  void MergeCluster( const SBSGRINCH_Cluster& rhs );
+  void    MergeCluster( const SBSGRINCH_Cluster& rhs );
   
  private:
   TList*     fHitList;   //List of hits belonging to this cluster
