@@ -96,7 +96,7 @@ protected:
   Int_t    fNPMTcolsMax;   // max number of PMT columns 
   Double_t fPMTmatrixHext; // horizontal extension, in m, of the PMT matrix (from lower PMT center to higher PMT center)
   Double_t fPMTmatrixVext; // vertical extension, in m, of the PMT matrix (from left PMT center to right PMT center)
-  Double_t fPMTdistX;      // Y distance between the center of 2 PMT tubes in consecutive columns
+  Double_t fPMTdistX;      // X distance between the center of 2 PMT tubes in consecutive rows, in m
   Double_t fPMTdistY;      // Y distance between the center of 2 PMT tubes in consecutive columns, in m
   Double_t fX_TCPMT;       // X position of the top close PMT center in the PMT matrix (transport coord)
   Double_t fY_TCPMT;       // Y position of the top close PMT center in the PMT matrix (transport coord)

@@ -554,15 +554,14 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	//fill fHits !!!
 	theHit = new( (*fHits)[nHit++] ) SBSGRINCH_Hit();
 	theHit->SetNumber(hit);
-	//stupid values...
-	row = chan;
+	row = 2*chan/(2*fNPMTcolsMax-1);
 	col = chan;
-	X = row;
-	Y = col;
-	TDC_r = 0.0;
+	X = row*fPMTdistX-fPMTmatrixVext/2.0;
+	Y = col*fPMTdistX-fPMTmatrixHext/2.0;
+	TDC_r = 0.0;// attt...
 	TDC_f = 1.0;
 	ADC = (TDC_f-TDC_r);
-	//
+	
 	theHit->SetRow(row);
 	theHit->SetCol(col);
 	theHit->SetX(X);
@@ -1082,11 +1081,25 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       theTrack = (THaTrack*)tracks.At(l);
       //Assuming the TClonesArray is indeed a THaTrack TClonesArray
       
-      double x_ckov_in = theTrack->GetX(Z_CkovIn);
-      double y_ckov_in = theTrack->GetY(Z_CkovIn);
+      double Xtrk = theTrack->GetX(Z_CkovIn);
+      double dXtrk = theTrack->GetTheta();
+      double Ytrk = theTrack->GetY(Z_CkovIn);
+      
+      bool xsel_0 = ( (-80.<=Xtrk && Xtrk<=-50.) && fabs( Xclus-(5.24648e+01+1.900617*Xtrk) )<2.73612*5 );
+      bool xsel_1 = ( (-55.<=Xtrk && Xtrk<= 50.) && fabs( Xclus-(7.06597e+00+1.363302*Xtrk) )<2.73612*5 );
+      bool xsel_2 = ( ( 45.<=Xtrk && Xtrk<= 80.) && fabs( Xclus-(-8.07819e+00+1.286995*Xtrk) )<2.73612*5 );
+      bool xsel = xsel_0 || xsel_1 || xsel_2;
+ 
+      
+      bool dxsel_0 = ( (-0.260<=dXtrk && dXtrk<=-0.085) && fabs( (Xclus-Xtrk)-( 1.54112e+01+1.09019e+02*dXtrk) )<1.94818*5 );
+      bool dxsel_1 = ( (-0.180<=dXtrk && dXtrk<= 0.220) && fabs( (Xclus-Xtrk)-( 2.95942e-02+1.23143e+02*dXtrk) )<1.42248*5 );
+      bool dxsel_2 = ( ( 0.020<=dXtrk && dXtrk<= 0.300) && fabs( (Xclus-Xtrk)-(-1.38429e+01+1.00121e+02*dXtrk) )<1.7832*5 );
+      bool dxsel = dxsel_0 || dxsel_1 || dxsel_2;
+      
+      bool ysel = ( fabs( Yclus-(-2.20914e-01-8.9947e-02*Ytrk+8.38220e-03*Ytrk*Ytrk) )<1.072262*5 );
       
       // compare
-      if(x_ckov_in && y_ckov_in){
+      if( ysel && xsel && dxsel ){
 	theCluster->SetTrack(theTrack);
        	Nassociated++;
       }
