@@ -220,6 +220,33 @@ void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit )
 }
 
 //_____________________________________________________________________________
+void SBSGRINCH_Cluster::Remove( SBSGRINCH_Hit* theHit )
+{
+  
+  if( !fHitList ) return;//if list does not exist, nothing to do
+  if(fHitList->IndexOf(theHit)<0) return;//if hit not in list, nothing to do
+    
+  Int_t listnewsize = fHitList->GetSize();
+  fXcenter = (fXcenter*((Double_t)(listnewsize+1))-theHit->GetX())/((Double_t)listnewsize);
+  fYcenter = (fYcenter*((Double_t)(listnewsize+1))-theHit->GetY())/((Double_t)listnewsize);
+  
+  fXcenter_w = fXcenter_w*fCharge;
+  fYcenter_w = fYcenter_w*fCharge;
+  fCharge  -= theHit->GetADC();
+  fXcenter_w -= theHit->GetADC()*theHit->GetX();
+  fYcenter_w -= theHit->GetADC()*theHit->GetY();
+  fXcenter_w = fXcenter_w/fCharge;
+  fYcenter_w = fYcenter_w/fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_r())/((Double_t)listnewsize);
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_f())/((Double_t)listnewsize);
+  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_r(), 2))/
+  			((Double_t)listnewsize));
+  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_f(), 2))/
+  			 ((Double_t)listnewsize));
+}
+
+//_____________________________________________________________________________
 Bool_t SBSGRINCH_Cluster::IsNeighbor(const SBSGRINCH_Hit* theHit, Float_t par)
 {
   Float_t dx,dy,dist;

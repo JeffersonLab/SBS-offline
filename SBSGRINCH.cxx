@@ -1133,8 +1133,16 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
 }
 
 //__________________________________________________________________________
-Int_t SBSGRINCH::CleanClustersWithTime()
+Int_t SBSGRINCH::CleanClustersWithTime()// pass as an option...
 {
+  SBSGRINCH_Cluster* theCluster;
+  Int_t nClust = GetNumClusters();
+
+  for( int k = 0; k < nClust; k++ ) {
+    if( !(theCluster = GetCluster(k))) continue;
+    
+    
+  }
   
   return(1);
 }

@@ -91,6 +91,7 @@ class SBSGRINCH_Cluster : public TObject {
   
   void    Clear( Option_t* opt="" );
   void    Insert( SBSGRINCH_Hit* theHit );
+  void    Remove( SBSGRINCH_Hit* theHit );
   
   Bool_t  IsNeighbor( const SBSGRINCH_Hit* theHit,  Float_t par);
   
@@ -142,7 +143,6 @@ class SBSGRINCH_Cluster : public TObject {
   Bool_t     fTrackMatch;// true if a track can be matched to the cluster
   THaTrack*  fTrack;     // Track best associated with this cluster
   
- 
   ClassDef(SBSGRINCH_Cluster,0)  //A cluster of hits in the GRINCH
 };
 
