@@ -1081,22 +1081,45 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       theTrack = (THaTrack*)tracks.At(l);
       //Assuming the TClonesArray is indeed a THaTrack TClonesArray
       
-      double Xtrk = theTrack->GetX(Z_CkovIn);
-      double dXtrk = theTrack->GetTheta();
-      double Ytrk = theTrack->GetY(Z_CkovIn);
+      double Xclus = theCluster->GetXcenter()*100.0;// in cm...
+      double Yclus = theCluster->GetYcenter()*100.0;// in cm...
       
-      bool xsel_0 = ( (-80.<=Xtrk && Xtrk<=-50.) && fabs( Xclus-(5.24648e+01+1.900617*Xtrk) )<2.73612*5 );
-      bool xsel_1 = ( (-55.<=Xtrk && Xtrk<= 50.) && fabs( Xclus-(7.06597e+00+1.363302*Xtrk) )<2.73612*5 );
-      bool xsel_2 = ( ( 45.<=Xtrk && Xtrk<= 80.) && fabs( Xclus-(-8.07819e+00+1.286995*Xtrk) )<2.73612*5 );
+      double Xtrk = theTrack->GetX(Z_CkovIn)*100.0;// in cm...
+      double dXtrk = theTrack->GetTheta()*100.0;// in cm...
+      double Ytrk = theTrack->GetY(Z_CkovIn)*100.0;// in cm...
+      
+      /* 
+	 // fx0,1,2_min,max (6); fx0,1,2_p0,1_corr (6); fsigma_x (1);
+	 // fdx0,1,2_min,max (6); fdx0,1,2_p0,1_corr (6); fsigma_dx (1);
+	 // fy_p0,1,2_corr (3); f(5?)sigma_y (1);
+	 // fnsigmas
+	 // => 31 parameters... but "only" 9 lines in the DB (if we pass vectors...)
+	 // => still a lot but might be worth it if we use something similar for the RICH
+	 
+	 bool xsel_0 = ( (fx_[0]<=Xtrk && Xtrk<=fx_[1]) && fabs( Xclus-(fx_corr[0]+fx_corr[1]*Xtrk) )<fsigma_x*fnsigmas );
+	 bool xsel_1 = ( (fx_[2]<=Xtrk && Xtrk<=fx_[3]) && fabs( Xclus-(fx_corr[2]+fx_corr[3]*Xtrk) )<fsigma_x*fnsigmas );
+	 bool xsel_2 = ( (fx_[4]<=Xtrk && Xtrk<=fx_[5]) && fabs( Xclus-(fx_corr[4]+fx_corr[5]*Xtrk) )<fsigma_x*fnsigmas );
+	 bool xsel = xsel_0 || xsel_1 || xsel_2;
+	 
+	 bool dxsel_0 = ( (fx_[0]<=dXtrk && dXtrk<=fx_[1]) && fabs( (Xclus-Xtrk)-(fdx_corr[0]+fdx_corr[1]*Xtrk) )<fsigma_dx*fnsigmas );
+	 bool dxsel_1 = ( (fx_[2]<=dXtrk && dXtrk<=fx_[3]) && fabs( (Xclus-Xtrk)-(fdx_corr[2]+fdx_corr[3]*Xtrk) )<fsigma_dx*fnsigmas );
+	 bool dxsel_2 = ( (fx_[4]<=dXtrk && dXtrk<=fx_[5]) && fabs( (Xclus-Xtrk)-(fdx_corr[4]+fdx_corr[5]*Xtrk) )<fsigma_dx*fnsigmas );
+	 bool dxsel = dxsel_0 || dxsel_1 || dxsel_2;
+	 
+	 bool ysel = ( fabs( Yclus-(fy_corr[0]+fy_corr[1]*Ytrk+fy_corr[2]*Ytrk*Ytrk) )<fsigma_y*fnsigmas );
+      */
+      
+      bool xsel_0 = ( (-75.<=Xtrk && Xtrk<=-50.) && fabs( Xclus-(36.91610+1.621343*Xtrk) )<2.541292*5 );
+      bool xsel_1 = ( (-55.<=Xtrk && Xtrk<= 50.) && fabs( Xclus-( 7.05105+1.365355*Xtrk) )<2.541292*5 );
+      bool xsel_2 = ( ( 45.<=Xtrk && Xtrk<= 80.) && fabs( Xclus-(-7.44171+1.277790*Xtrk) )<2.541292*5 );
       bool xsel = xsel_0 || xsel_1 || xsel_2;
  
-      
-      bool dxsel_0 = ( (-0.260<=dXtrk && dXtrk<=-0.085) && fabs( (Xclus-Xtrk)-( 1.54112e+01+1.09019e+02*dXtrk) )<1.94818*5 );
-      bool dxsel_1 = ( (-0.180<=dXtrk && dXtrk<= 0.220) && fabs( (Xclus-Xtrk)-( 2.95942e-02+1.23143e+02*dXtrk) )<1.42248*5 );
-      bool dxsel_2 = ( ( 0.020<=dXtrk && dXtrk<= 0.300) && fabs( (Xclus-Xtrk)-(-1.38429e+01+1.00121e+02*dXtrk) )<1.7832*5 );
+      bool dxsel_0 = ( (-0.260<=dXtrk && dXtrk<=-0.085) && fabs( (Xclus-Xtrk)-( 15.4112   +109.019*dXtrk) )<1.63893*5 );
+      bool dxsel_1 = ( (-0.180<=dXtrk && dXtrk<= 0.220) && fabs( (Xclus-Xtrk)-(  0.0295942+123.143*dXtrk) )<1.63893*5 );
+      bool dxsel_2 = ( ( 0.080<=dXtrk && dXtrk<= 0.300) && fabs( (Xclus-Xtrk)-(-13.8429   +100.121*dXtrk) )<1.63893*5 );
       bool dxsel = dxsel_0 || dxsel_1 || dxsel_2;
       
-      bool ysel = ( fabs( Yclus-(-2.20914e-01-8.9947e-02*Ytrk+8.38220e-03*Ytrk*Ytrk) )<1.072262*5 );
+      bool ysel = ( fabs( Yclus-(-2.20127e-01-0.091446*Ytrk+ 0.00846439 *Ytrk*Ytrk) )<1.04718*5 );
       
       // compare
       if( ysel && xsel && dxsel ){
@@ -1107,6 +1130,13 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
     
   }
   return(Nassociated);
+}
+
+//__________________________________________________________________________
+Int_t SBSGRINCH::CleanClustersWithTime()
+{
+  
+  return(1);
 }
 
 /*
