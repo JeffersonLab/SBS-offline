@@ -5,14 +5,16 @@ SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCl
       SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx SBSTimingHodoscope.cxx\
       SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx \
       SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx SBSScintPlane.cxx \
-      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx
+      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx \
+      SBSSimDecoder.cxx
 
 EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
 	   SBSBBShower.h SBSBBTotalShower.h SBSCDet.h\
 	   SBSScintHit.h SBSScintPMT.h SBSShowerBlock.h SBSTimingHodoscope.h SBSScintBar.h\
            SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h \
 	   SBSGRINCH.h SBSGRINCH_ClusterList.h SBSScintPlane.h \
-           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h
+           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h \
+           SBSSimDecoder.h
 
 CORE = sbs
 CORELIB  = lib$(CORE).so
@@ -171,6 +173,9 @@ $(CORELIB):	$(OBJ)
 		$(LD) $(LDFLAGS) $(SOFLAGS) -o $@ $^
 		@echo "$@ done"
 
+dbconvert_sbs:	dbconvert_sbs.o
+		$(LD) $(LDFLAGS) $(LIBS) -o $@ $^
+
 
 ifeq ($(ARCH),linux)
 $(COREDICT).o:	$(COREDICT).cxx
@@ -197,6 +202,7 @@ srcdist:
 		rm -rf $(PKG)
 		mkdir $(PKG)
 		cp -p $(SRC) $(HDR) $(LINKDEF) db*.dat Makefile $(PKG)
+		cp -p $(SRC) $(HDR) dbconvert_sbs.cxx $(PKG)
 		gtar czvf $(DISTFILE) --ignore-failed-read \
 		 -V $(LOGMSG)" `date -I`" $(PKG)
 		rm -rf $(PKG)

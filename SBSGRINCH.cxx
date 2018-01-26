@@ -115,24 +115,36 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   // Storage and default values for non-Double_t and non-member 
   // data from database. Note: These must be Double_t
-  Double_t debug = 0, do_resolve = false,
-    maxdist, hit_max_number=0, MIP_through_interception = 0;
-
+  // Double_t debug = 0, do_resolve = false,
+  //   maxdist, hit_max_number=0, MIP_through_interception = 0;
+  
   // Set up a table of tags to read and locations to store values.
   const DBRequest tags[] = { 
-    { "l_emission", &l_emission, kDouble, 1, false},
-    { "z_ckovin", &Z_CkovIn, kDouble, 1, false},
-    { "maxdist",    &maxdist, kDouble, 1, true},
-    { "hit_max_number", &hit_max_number, kDouble, 1, true },
-    //{ "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
-    { "fiducial_zone_range", &fiducial_zone_range, kDouble, 1, true },
-    { "cluster_distribution_sigma", &cluster_distribution_sigma, kDouble, 1, true  },
-    { "acceptable_chi2_prob", &acceptable_chi2_prob, kDouble, 1, true  },
-    { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom, kDouble, 1, true  },
-    { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number, kDouble, 1, true },
-    { "epsilon", &epsilon, kDouble, 1, true  },
-    { "do_resolve", &do_resolve, kDouble, 1, true  },
-    { "debug",      &debug, kDouble, 1, true  },
+    {"zckov_in",     &fZCkovIn,      kDouble, 0, 1},
+    {"n_radiator",   &fNradiator,    kDouble, 0, 1},
+    {"l_radiator",   &fLradiator,    kDouble, 0, 1},
+    {"npmts",        &fNPMTs,        kInt,    0, 1},
+    {"npmtrows",     &fNPMTrows,     kInt,    0, 1},
+    {"npmtcolsmax",  &fNPMTcolsMax,  kInt,    0, 1},
+    {"pmtdistx",     &fPMTdistX,     kDouble, 0, 1},
+    {"pmtdisty",     &fPMTdistY,     kDouble, 0, 1},
+    {"x_tcpmt",      &fX_TCPMT,      kDouble, 0, 1},
+    {"y_tcpmt",      &fY_TCPMT,      kDouble, 0, 1},
+    
+    // { "l_emission", &l_emission, kDouble, 1, false},
+    // { "z_ckovin", &Z_CkovIn, kDouble, 1, false},
+    // { "maxdist",    &maxdist, kDouble, 1, true},
+    // { "hit_max_number", &hit_max_number, kDouble, 1, true },
+    // //{ "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
+    // { "fiducial_zone_range", &fiducial_zone_range, kDouble, 1, true },
+    // { "cluster_distribution_sigma", &cluster_distribution_sigma, kDouble, 1, true  },
+    // { "acceptable_chi2_prob", &acceptable_chi2_prob, kDouble, 1, true  },
+    // { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom, kDouble, 1, true  },
+    // { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number, kDouble, 1, true },
+    // { "epsilon", &epsilon, kDouble, 1, true  },
+    // { "do_resolve", &do_resolve, kDouble, 1, true  },
+    { "do_timefilter", &fDoTimeFilter, kInt, 1, true  },
+    { "debug",         &fDebug,        kInt, 1, true  },
     { 0 }
   };
 
@@ -148,7 +160,18 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     fclose(fi);
     return kInitError;
   }
+  
+  //initialize channel map here:
+  int a = -1, b = -1;
+  pair<int, int> dummy_pair(a, b);
+  //dummy_pair = std::make_pair<a, b>;
+  for(int i = 0; i<fNPMTs; i++){
+    map_chan_tdcs.insert(pair<int, pair<int, int > >(i, dummy_pair) );
+  }
+  
 
+  
+  /*
   // Now read the array data.
   TString line, tag;
   Int_t retval = kOK;
@@ -214,8 +237,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   fNelem  = ntotal;
   // fNypads = nypads;
   // All ok - convert to non-Double_t types
-  fDebug  = int(debug+0.5);
-  fDoResolve  = bool(do_resolve);
+  // fDebug  = int(debug+0.5);
+  // fDoResolve  = bool(do_resolve);
   // fMaxdist2   = maxdist*maxdist;
   // fMIP_through_interception = int(MIP_through_interception);
 
@@ -356,15 +379,18 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   }
   if(n>1)
     goto done;
- 
- bad_data:    
-  Error( Here(here), "Problem reading database entry \"%s\". "
-	 "Detector initialization failed.", tag.Data() );
-  retval = kInitError;
-
- done:
+  
+  bad_data:    
+   Error( Here(here), "Problem reading database entry \"%s\". "
+  	 "Detector initialization failed.", tag.Data() );
+   retval = kInitError;
+  
+  done:
   fclose(fi);
   return retval;
+  */
+  fclose(fi);
+  return kOK;
 }
 
 //_____________________________________________________________________________
@@ -517,6 +543,14 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 
   Int_t nHit = 0;
   SBSGRINCH_Hit* theHit;
+  
+  bool edge;
+  short channel;
+  ushort tdctime_raw;
+  bool col0_ismaxsize = false;
+  if(fPMTmatrixHext==fX_TCPMT)col0_ismaxsize = true;
+
+  //int gchannel;
   int row, col;
   double X, Y;
   double TDC_r, TDC_f;
@@ -542,41 +576,73 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
       for (int hit = 0; hit < nhit; hit++) {
 	
 	// Fill hit array
-	UInt_t data = evdata.GetData(d->crate,d->slot,chan,hit);
-	UInt_t rawdata = evdata.GetRawData(d->crate,d->slot,chan,hit);
+	// UInt_t data = evdata.GetData(d->crate,d->slot,chan,hit);
+	// UInt_t rawdata = evdata.GetRawData(d->crate,d->slot,chan,hit);
+	//assuming "data" is the vetroc word... 
+	uint32_t data = evdata.GetData(d->crate,d->slot,chan,hit);
+	uint32_t rawdata = evdata.GetRawData(d->crate,d->slot,chan,hit);
 	// FIX ME next line is for testing and can be removed later on
 	if ( (rawdata & 0xfff) != data ) {
 	  cout<< "Something strange happened, "
 	    "raw data and data are not consistent" 
 	      << endl;
        	}
-
-	//fill fHits !!!
-	theHit = new( (*fHits)[nHit++] ) SBSGRINCH_Hit();
-	theHit->SetNumber(hit);
-	row = 2*chan/(2*fNPMTcolsMax-1);
-	col = chan;
-	X = row*fPMTdistX-fPMTmatrixVext/2.0;
-	Y = col*fPMTdistX-fPMTmatrixHext/2.0;
-	TDC_r = 0.0;// attt...
-	TDC_f = 1.0;
-	ADC = (TDC_f-TDC_r);
 	
-	theHit->SetRow(row);
-	theHit->SetCol(col);
-	theHit->SetX(X);
-	theHit->SetY(Y);
-	theHit->SetADC(ADC);
-	theHit->SetTDC_r(TDC_r);
-	theHit->SetTDC_f(TDC_f);
-	theHit->SetFlag(0);
-	theHit->SetVeto(0);
-      }
+	DecipherVetrocWord(data, edge, channel, tdctime_raw);
 
+	if(channel<0)continue;
+	if(chan!=channel)continue;
+	// a priori, the channel in the vetroc word and the channel must be equal at this point
+	assert(chan==channel);
+	
+	// then I add the slot (VETROC) number * 128 
+	// => unique channel (NB: 4 VETROC for GRINCH, 16 VETROC for RICH ?)
+	channel+= d->slot*128;
+	
+	if(edge==0 && tdctime_raw<map_chan_tdcs[channel].second){
+	  map_chan_tdcs[channel].first = tdctime_raw;
+	}
+	if(edge==1 && tdctime_raw>map_chan_tdcs[channel].first){
+	  map_chan_tdcs[channel].second = tdctime_raw;
+	}
+      }
     }
- 
   }
-    
+  
+  for(int channel = 0; channel<fNPMTs; channel++){
+    //fill fHits !!!
+    //only if both egdes have been initialized and the falling edge is above the rising edge
+    if(map_chan_tdcs[channel].first>=0 && map_chan_tdcs[channel].second>=map_chan_tdcs[channel].first){
+      theHit = new( (*fHits)[nHit++] ) SBSGRINCH_Hit();
+      theHit->SetNumber(nHit-1);
+      col = channel%(2*fNPMTcolsMax-1);
+      row = 2*channel/(2*fNPMTcolsMax-1);
+      if(col>fNPMTcolsMax && col0_ismaxsize){
+	col-=fNPMTcolsMax;
+	row+=1;
+      }
+      if(col>fNPMTcolsMax-1 && !col0_ismaxsize){
+	col-=(fNPMTcolsMax-1);
+	row+=1;
+      }
+      X = row*fPMTdistX-fPMTmatrixVext/2.0;
+      Y = col*fPMTdistX-fPMTmatrixHext/2.0;
+      TDC_r = map_chan_tdcs[channel].first;
+      TDC_f = map_chan_tdcs[channel].second;
+      ADC = (TDC_f-TDC_r);
+      
+      theHit->SetRow(row);
+      theHit->SetCol(col);
+      theHit->SetX(X);
+      theHit->SetY(Y);
+      theHit->SetADC(ADC);
+      theHit->SetTDC_r(TDC_r);
+      theHit->SetTDC_f(TDC_f);
+      theHit->SetFlag(0);
+      theHit->SetVeto(0);
+    }
+  }
+  
   if( fDoBench ) fBench->Stop("Decode");
   return GetNumHits();
 }
@@ -616,10 +682,11 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   //cout<<"stay and stop here!!!"<<endl;
   if( fDoBench ) fBench->Begin("FineProcess");
 
+  if(fDoTimeFilter) CleanClustersWithTime();
+  
   // Clusters matched with tracks here!
   MatchClustersWithTracks(tracks);
-  
-  
+    
   /*
     Double_t central_momentum = 0.;
     Double_t central_e_angle     = 0.;
@@ -973,6 +1040,65 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   if( fDoBench ) fBench->Stop("FineProcess");
   return 0;
 }
+
+//__________________________________________________________________________
+void SBSGRINCH::DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& chan, UShort_t& time)
+{
+  //"strip down" the vetroc word to obtain the information
+
+  // bool header[8]; // = {0, 0, 0, 0, 0, 0, 1, 1};
+  // bool tdc[16];
+  uint8_t header;
+  uint8_t channel;
+  uint16_t tdc_time;
+  
+  for(int i = 0; i<16; i++){
+    if(i<8){
+      header ^= (-(VetrocWord >> (i+24) ) ^ header) & (1 << i);
+      channel ^= (-(VetrocWord >> (i+16) ) ^ channel) & (1 << i);
+    }
+    tdc_time ^= (-(VetrocWord >> (i) ) ^ tdc_time) & (1 << i);
+  }
+  
+  if(header == 192){
+    edge = 0;
+  }else if(header == 196){
+    edge = 1;
+  }else{
+    chan = -1;
+  }
+  
+  /*
+    uint32_t TDCvetrocWord0, TDCvetrocWord1;
+    TDCvetrocWord0 = TDCvetrocWord1 = 0;
+    
+    
+    //cout << "Vetroc words: init: " << TDCvetrocWord0 << " " << TDCvetrocWord1 << endl;
+    for(int i = 0; i<16; i++){
+    if(i<8){
+    TDCvetrocWord0 ^= (-header[i] ^ TDCvetrocWord0) & (1 << (i+24));
+    TDCvetrocWord1 ^= (-header[i] ^ TDCvetrocWord1) & (1 << (i+24));
+    channel[i] = (ipmt >> i) & 1;
+    TDCvetrocWord0 ^= (-channel[i] ^ TDCvetrocWord0) & (1 << (i+16));
+    TDCvetrocWord1 ^= (-channel[i] ^ TDCvetrocWord1) & (1 << (i+16));
+    }
+    tdc[i] = (fTDCArrays.at(idet).first[ipmt] >> i) & 1;
+    TDCvetrocWord0 ^= (-tdc[i] ^ TDCvetrocWord0) & (1 << i);
+    tdc[i] = (fTDCArrays.at(idet).second[ipmt] >> i) & 1;
+    TDCvetrocWord1 ^= (-tdc[i] ^ TDCvetrocWord1) & (1 << i);
+    }
+    
+    TDCvetrocWord1 ^= (-1 ^ TDCvetrocWord1) & (1 << 26);
+    //cout << "Vetroc words: test: " << TDCvetrocWord0 << " " << TDCvetrocWord1 << endl;
+    
+    hit.fTDC[0] = TDCvetrocWord0;
+    hit.fTDC[1] = TDCvetrocWord1;
+  */
+  
+  
+  return;
+}
+
 
 //__________________________________________________________________________
 void SBSGRINCH::DeleteClusters()

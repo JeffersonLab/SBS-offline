@@ -13,6 +13,8 @@
 #include "SBSGRINCH_ClusterList.h"
 #include "TBits.h"
 #include "TClonesArray.h"
+#include <stdint.h>
+#include <map>
 
 class THaTrack;
 class THaBenchmark;
@@ -74,23 +76,28 @@ protected:
   /* TClonesArray*     fResolvedHits;  // Hits of resolved clusters */
   /* TClonesArray*     fResolvedClusters; // Resolved clusters */
 
+
   //RICH parameters from database
-  Double_t Z_CkovIn; // Z of the Cherenkov entrance window in the spectrometer 
+  Double_t Z_CkovIn; // Z of the Cherenkov entrance window in the spectrometer
   Double_t L_RAD,l_quartz,l_gap;    //length of radiator,quartz,proxiity gap
   Double_t l_emission;              //photon emission depth in the radiator.
-  Double_t n_radiator,n_quartz,n_gap; //the refraction indices 
-  Double_t n_quartz_min, n_quartz_max; 
-  // Minimum and maximun refraction index value for the quartz in the range 
+  Double_t n_radiator,n_quartz,n_gap; //the refraction indices
+  Double_t n_quartz_min, n_quartz_max;
+  // Minimum and maximun refraction index value for the quartz in the range
   // of Cherenkov photon energy the PMT are sensible at.
-  Double_t n_radiator_min, n_radiator_max; 
-  // Minimum and maximun refraxion index value for the radiator in the range 
+  Double_t n_radiator_min, n_radiator_max;
+  // Minimum and maximun refraxion index value for the radiator in the range
   // of Cherenkov photon energy the PMT are sensible at.
-  Double_t fiducial_zone_range; 
-  // angular range of the fiducial zone around the expected angle for each 
+  Double_t fiducial_zone_range;
+  // angular range of the fiducial zone around the expected angle for each
   // kind of particle
   Double_t cluster_distribution_sigma;
   // sigma of single cluster angular distribution.
   //Double_t PMTinterdist;// distance between two PMTs in a row, or between 2 rows of PMTs
+
+  Int_t    fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
+  Int_t    fNradiator;     // radiator index of refraction;
+  Int_t    fLradiator;     // radiator length on central ray;
   Int_t    fNPMTs;         // number of PMTs
   Int_t    fNPMTrows;      // number of PMT rows
   Int_t    fNPMTcolsMax;   // max number of PMT columns 
@@ -104,6 +111,7 @@ protected:
   Int_t   fMaxNumHits;
   
   Bool_t  fDoResolve;    // true = resolve overlapping clusters
+  Bool_t  fDoTimeFilter; // true = filter the hits in each cluster with timing
   /* Int_t   fNseg;         // Number of x segments */
   /* Double_t* fXseg;       // Array of x segmentation boudaries and offsets */
   
@@ -113,6 +121,7 @@ protected:
   Bool_t         fDoBench;         //Collect detailed timing statistics
   THaBenchmark*  fBench;           //Counters for timing statistics
 
+  void    DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& chan, UShort_t& time);
   void    DeleteClusters();
   Int_t   FindClusters();
   Int_t   MatchClustersWithTracks( TClonesArray& tracks );
@@ -124,7 +133,9 @@ protected:
   virtual Int_t  DefineVariables( EMode mode = kDefine );
 
 private:
-
+  
+  std::map< int, std::pair< int, int > > map_chan_tdcs;
+  
   // Fix me: to insert in the data base
   Double_t minimum_chi2_degree_of_freedom; // minum number of degree of freedom
                                       // (that is clusters) on desires

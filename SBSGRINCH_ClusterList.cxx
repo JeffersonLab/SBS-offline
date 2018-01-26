@@ -205,9 +205,9 @@ void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit )
   
   fXcenter_w = fXcenter_w*fCharge;
   fYcenter_w = fYcenter_w*fCharge;
-  fCharge  += theHit->GetADC();
-  fXcenter_w += theHit->GetADC()*theHit->GetX();
-  fYcenter_w += theHit->GetADC()*theHit->GetY();
+  fCharge+= theHit->GetADC();
+  fXcenter_w+= theHit->GetADC()*theHit->GetX();
+  fYcenter_w+= theHit->GetADC()*theHit->GetY();
   fXcenter_w = fXcenter_w/fCharge;
   fYcenter_w = fYcenter_w/fCharge;
   
@@ -232,9 +232,9 @@ void SBSGRINCH_Cluster::Remove( SBSGRINCH_Hit* theHit )
   
   fXcenter_w = fXcenter_w*fCharge;
   fYcenter_w = fYcenter_w*fCharge;
-  fCharge  -= theHit->GetADC();
-  fXcenter_w -= theHit->GetADC()*theHit->GetX();
-  fYcenter_w -= theHit->GetADC()*theHit->GetY();
+  fCharge-= theHit->GetADC();
+  fXcenter_w-= theHit->GetADC()*theHit->GetX();
+  fYcenter_w-= theHit->GetADC()*theHit->GetY();
   fXcenter_w = fXcenter_w/fCharge;
   fYcenter_w = fYcenter_w/fCharge;
   
