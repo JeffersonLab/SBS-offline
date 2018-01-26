@@ -104,7 +104,7 @@ void print_req( const DBRequest* req )
 
 //-----------------------------------------------------------------------------
 // Parameters for one GEM chamber (two readout coordinates)
-struct ValueSet_t {
+struct GEMValueSet_t {
   // Values read from source file
   double dmag, d0, xoff, dx, dy, //thetaH, 
     thetaV, depth;
@@ -118,9 +118,9 @@ struct ValueSet_t {
 //-----------------------------------------------------------------------------
 // Helper functors for STL algos
 struct BySectorThenPlane
-  : public std::binary_function< const ValueSet_t&, const ValueSet_t&, bool >
+  : public std::binary_function< const GEMValueSet_t&, const GEMValueSet_t&, bool >
 {
-  bool operator() ( const ValueSet_t& L, const ValueSet_t& R ) const
+  bool operator() ( const GEMValueSet_t& L, const GEMValueSet_t& R ) const
   {
     return (L.isector != R.isector) ?
       (L.isector < R.isector) : (L.iplane < R.iplane);
@@ -132,7 +132,7 @@ void usage()
 {
   // Print usage message and exit
   cerr << "Usage: " << prgname << "[-hdm] [-o outfile] [infile]" << endl;
-  cerr << " Convert libsolgem database <infile> to TreeSearch-SoLID database"
+  cerr << " Convert libsolgem database <infile> to TreeSearch-SBS database"
        << " <outfile>" << endl;
   cerr << " -h: Print this help message" << endl;
   cerr << " -d: Output extensive debug information" << endl;
@@ -260,7 +260,7 @@ int writegemdb()
     "#-----------------------------------------------------------------";
 
 
-  vector<ValueSet_t> values;
+  vector<GEMValueSet_t> values;
 
   //==== Read input ====
   ifstream inp(infile.c_str());
@@ -277,7 +277,7 @@ int writegemdb()
 
   for( int is = 0; is < nsect; ++is ) {
     for( int ip = 0; ip < nplanes_eff; ++ip ) {
-      ValueSet_t vals;
+      GEMValueSet_t vals;
       DBRequest request[] = {
 	{"dmag",        &vals.dmag   },
 	{"d0",          &vals.d0     },
@@ -346,7 +346,7 @@ int writegemdb()
 			 << endl;
 	assert( values.size() >= nplanes*(is+1) );
 	// Use some values from the last GEM plane for the dummy plane as well
-	const ValueSet_t& last_gem = values[(is+1)*nplanes_eff-2];
+	const GEMValueSet_t& last_gem = values[(is+1)*nplanes_eff-2];
 	vals.dmag = last_gem.dmag;
 	vals.d0 = d0_dummy;
 	vals.xoff = last_gem.xoff;
@@ -441,8 +441,8 @@ int writegemdb()
   vector<double> sect_xoff(nsect,-1e10);
   //vector<double> sect_thetaH(nsect,-1e10);
   vector<double> sect_thetaV(nsect,-1e10);
-  for( vector<ValueSet_t>::size_type i = 0; i < values.size(); ++i ) {
-    ValueSet_t& v = values[i];
+  for( vector<GEMValueSet_t>::size_type i = 0; i < values.size(); ++i ) {
+    GEMValueSet_t& v = values[i];
     if( i == 0 ) {
       proj_angle[0] = v.angle[0];
       proj_angle[1] = v.angle[1];
@@ -509,7 +509,7 @@ int writegemdb()
   //TDatime now;
   outp << "# -*- mode: Text -*-" << endl
        << "#" << endl
-       << "# Database for TreeSearch-SoLID" << endl
+       << "# Database for TreeSearch-SBS" << endl
        << "#" << endl
        << "# Converted from " << infile << endl
        // << "# on " << now.AsString() << " by " << basename(argv[0]) << endl
@@ -580,7 +580,7 @@ int writegemdb()
 				   (double)chambers_per_crate );
   for( int ic = crate_offset; ic < crate_offset+maxcrates; ++ ic ) {
     write_module( outp, ic, slot_hi, model, nchan );
-    if( ic+1 != maxcrates or do_dummies ) outp << " \\";
+    if( ic+1 != crate_offset+maxcrates or do_dummies ) outp << " \\";
     outp << endl;
   }
   if( do_dummies ) {
@@ -773,8 +773,8 @@ int writegemdb()
   
   sort( ALL(values), BySectorThenPlane() );
 
-  for( vector<ValueSet_t>::size_type i = 0; i < values.size(); ++i ) {
-    ValueSet_t& v = values[i];
+  for( vector<GEMValueSet_t>::size_type i = 0; i < values.size(); ++i ) {
+    GEMValueSet_t& v = values[i];
     bool dummy = (v.iplane == nplanes+1);
     assert( not dummy or do_dummies );
 
@@ -825,6 +825,189 @@ int writegemdb()
 //-----------------------------------------------------------------------------
 int writecerdb()
 {
+  int crate_offset_v = 0;
+  int chan_per_slot = 128;
+  int slot_per_crate = 16;
+  
+  string prefix_v = "g4sbs_gc.";
+  string out_prefix_v = "sbs_gc.cherenkov.";
+  if(do_debug){
+    cout << "Compare " << infile.c_str() << ": " << endl 
+	 << " - with db_g4sbs_gc.dat : " << strcmp(infile.c_str(), "db_g4sbs_gc.dat") << endl
+	 << " - with db_g4sbs_rich.dat : " << strcmp(infile.c_str(), "db_g4sbs_rich.dat") << endl;
+  }
+  bool validfile = false;
+  if(strcmp(infile.c_str(), "db_g4sbs_gc.dat")==0){
+    crate_offset_v = 0;
+    prefix_v = "g4sbs_gc.";
+    out_prefix_v = "sbs_gc.cherenkov.";
+    validfile = true;
+  }
+  if(strcmp(infile.c_str(), "db_g4sbs_rich.dat")==0){
+    crate_offset_v = 0;
+    prefix_v = "g4sbs_rich.";
+    out_prefix_v = "sbs_rich.cherenkov.";
+    validfile = true;
+  }
+  if(!validfile){
+    cout << "Invalid input file: exit !" << endl;
+    exit(-1);
+  }
+  
+  // Important parameters
+  // const int crate_dummy = 6;
+  const int crate_offset = crate_offset_v;
+  // const int nsect = nsect_v;
+  // const int nplanes = nplanes_v;
+  // const double d0_dummy = d0_dummy_v;
+  // const int nproj = 2;
+  const string prefix = prefix_v;
+  const string out_prefix = out_prefix_v;
+  // const string allsect_prefix = out_prefix + "${allsectors}.";
+  // const char* proj_name[2] = { "x", "y" };
+  const string dashes =
+    "#-----------------------------------------------------------------";
+
+  double zckov_in; //1.3824 #m
+  double n_radiator; //1.00137
+  double l_radiator; //0.66 #m
+  double npmts; //510
+  double npmtrows; //60
+  double npmtcolsmax; //9
+  double pmtdistx; //0.03100 #m
+  double pmtdisty; //0.03100 #m
+  double x_tcpmt; //-0.914500 #m
+  double y_tcpmt; //-0.124000 #m
+  
+  //==== Read input ====
+  ifstream inp(infile.c_str());
+  if( !inp ) {
+    cerr << "Error opening " << infile << endl;
+    exit(1);
+  }
+  
+  ostringstream cher_prefix(prefix, ios_base::ate);
+  
+  // for( int is = 0; is < nsect; ++is ) {
+  //   for( int ip = 0; ip < nplanes_eff; ++ip ) {
+  DBRequest request[] = {
+    {"zckov_in",     &zckov_in,    },
+    {"n_radiator",   &n_radiator,  },
+    {"l_radiator",   &l_radiator,  },
+    {"npmts",        &npmts,       },
+    {"npmtrows",     &npmtrows,    },
+    {"npmtcolsmax",  &npmtcolsmax  },
+    {"pmtdistx",     &pmtdistx,    },
+    {"pmtdisty",     &pmtdisty,    },
+    {"x_tcpmt",      &x_tcpmt,     },
+    {"y_tcpmt",      &y_tcpmt,     },
+    { 0 }
+  };
+	
+  int err = load_db( inp, request, cher_prefix.str() );
+  if( err )
+    exit(2);
+  
+  inp.close();
+ 
+  //==== Write output ====
+  ofstream outp( outfile.c_str(), ios_base::out|ios_base::trunc );
+  if( !outp ) {
+    cerr << " Error opening output file " << outfile << endl;
+    exit(5);
+  }
+  
+  // Header
+  //TDatime now;
+  outp << "# -*- mode: Text -*-" << endl
+       << "#" << endl
+       << "# Database for SBS-offline" << endl
+       << "#" << endl
+       << "# Converted from " << infile << endl
+       // << "# on " << now.AsString() << " by " << basename(argv[0]) << endl
+       << endl;
+
+  // This database is for replay of Monte Carlo data, so say so
+  outp << out_prefix << "MCdata = 1" << endl;
+  outp << endl;
+
+  // Crate map. 
+  int model = 9876;    // Dummy model for virtual VETROC
+  int nchan = 128;    // Number of channels per module 
+  // -> We put the real stuff: 1 MPD = 16*128 = 2048 channels
+  int MAXSLOT = 16;    // Max slots per crate (from THaCrateMap.h)
+  int nslots = npmts/nchan+1;
+  int slot_hi = npmts/nchan;
+  
+  outp << "# \"Crate map\". Specifies the overall DAQ module configuration." << endl;
+  outp << "# The map can be common to all instruments. It's just a lookup table" << endl;
+  outp << "# for (crate,slot) -> (model,nchan)" << endl;
+  outp << "#" << endl;
+  outp << "# Each row is:     crate slot_lo slot_hi model# nchan" << endl;
+  outp << "#" << endl;
+  outp << out_prefix << "cratemap = \\" << endl;
+
+  // Remember that each instrument must have its own virtual hardware.
+  // However, they can share the same crate map - it's just a catalog
+  // of which modules are in which slot, regardless of whether or not we use
+  // the slot.
+  int maxcrates = TMath::CeilNint( npmts /
+				   ((double)nchan*MAXSLOT) );
+  if(do_debug){
+    cout << npmts << "/" << nchan*MAXSLOT << " = " << npmts /((double)nchan*MAXSLOT) 
+	 << " => maxcrates =  " << maxcrates << endl;
+  }
+  for( int ic = crate_offset; ic < crate_offset+maxcrates; ++ ic ) {
+    write_module( outp, ic, slot_hi, model, nchan );
+    if( ic+1 != crate_offset+maxcrates ) outp << " \\";
+    outp << endl;
+  }
+  
+  int crate_g = crate_offset;
+  int slot_g = 0;
+  
+  outp << "# Cherenkov detector map" << endl;
+  //outp << "# " <<  << " sectors * " << nplanes << " planes * "
+  //<< nproj << " readout coordinates = " << nsect*nplanes*nproj
+  //<< " detectors" << endl;
+  outp << "#" << endl;
+  
+  outp << out_prefix << "detmap = \\" << endl;
+  for( int ic = 0; ic < maxcrates; ++ic ) {
+    for( int is = 0; is < nslots; ++is ) {
+      int lo = is*nchan;
+      int hi = min((is+1)*nchan,int(npmts))-1;
+      if(lo<=hi){
+	if( nslots > 1 ) outp << spc;
+	write_cslh( outp, crate_offset+ic, is, lo%nchan, hi%nchan );
+	slot_g++;
+	if(slot_g==MAXSLOT){
+	  crate_g++;
+	  slot_g = 0;
+	}
+      }
+      if( (is+1)*nchan < npmts )
+	outp << " \\";
+      if(lo<=hi)
+	outp << endl;
+    }
+  }
+  outp << endl;
+  
+  // global....
+  
+  // geometry parameters
+  outp << out_prefix << "zckov_in = " << zckov_in << endl;
+  outp << out_prefix << "n_radiator = " << n_radiator << endl;
+  outp << out_prefix << "l_radiator = " << l_radiator << endl;
+  outp << out_prefix << "npmts = " << npmts << endl;
+  outp << out_prefix << "npmtrows = " << npmtrows << endl;
+  outp << out_prefix << "npmtcolsmax = " << npmtcolsmax << endl;
+  outp << out_prefix << "pmtdistx = " << pmtdistx << endl;
+  outp << out_prefix << "pmtdisty = " << pmtdisty << endl;
+  outp << out_prefix << "x_tcpmt = " << x_tcpmt << endl;
+  outp << out_prefix << "y_tcpmt = " << y_tcpmt << endl;
+  
   return 0;
 }
 
@@ -862,15 +1045,15 @@ int main( int argc, const char** argv )
   if(found!=std::string::npos){
     return writegemdb();
   }
-  found = outfile.find("cher");
+  found = outfile.find("cherenkov");
   if(found!=std::string::npos){
     return writecerdb();
   }
-  found = outfile.find("scinti");
+  found = outfile.find("scintillator");
   if(found!=std::string::npos){
     return writescidb();
   }
-  found = outfile.find("calo");
+  found = outfile.find("calorimeter");
   if(found!=std::string::npos){
     return writecaldb();
   }
