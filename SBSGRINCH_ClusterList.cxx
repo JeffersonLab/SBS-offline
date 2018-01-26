@@ -263,7 +263,7 @@ Bool_t SBSGRINCH_Cluster::IsNeighbor(const SBSGRINCH_Hit* theHit, Float_t par)
   return false;
 }
 
-
+/*
 //=============================================================================
 // SBSRICH_Cluster
 //=============================================================================
@@ -1482,10 +1482,12 @@ void SBSRICH_Cluster::ShowElements(FILE * fout)  const
   fprintf(fout,"\n");
   Show(fout);
 }
-
+*/
 
 //_____________________________________________________________________________
 
 ClassImp(SBSGRINCH_Hit)
-ClassImp(SBSRICH_Cluster)
+ClassImp(SBSGRINCH_Cluster)
+//ClassImp(SBSRICH_Cluster)
+
 

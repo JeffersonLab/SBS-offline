@@ -146,6 +146,7 @@ class SBSGRINCH_Cluster : public TObject {
   ClassDef(SBSGRINCH_Cluster,0)  //A cluster of hits in the GRINCH
 };
 
+/*
 // --------------------------------------------------------------
 
 // ClusterElement: class of elements that make up a cluster. They are orderd
@@ -478,7 +479,7 @@ private:
 
   ClassDef(SBSRICH_Cluster,0)  //A cluster of hits in the RICH
 };
-
+*/
 
 // ---------------- inlines -------------------------------------
 /*

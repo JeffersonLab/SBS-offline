@@ -733,3 +733,5 @@ void SBSSimPMTHit::Print( const Option_t* ) const
   // Print SBSSimGEMHit info
 }
 
+ClassImp(SBSSimPMTHit)
+ClassImp(SBSSimCherCluster)

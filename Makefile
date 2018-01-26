@@ -5,7 +5,7 @@ SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCl
       SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx SBSTimingHodoscope.cxx\
       SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx \
       SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx SBSScintPlane.cxx \
-      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx \
+      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx #\
       SBSSimDecoder.cxx
 
 EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
@@ -13,7 +13,7 @@ EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerClust
 	   SBSScintHit.h SBSScintPMT.h SBSShowerBlock.h SBSTimingHodoscope.h SBSScintBar.h\
            SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h \
 	   SBSGRINCH.h SBSGRINCH_ClusterList.h SBSScintPlane.h \
-           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h \
+           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h #\
            SBSSimDecoder.h
 
 CORE = sbs
