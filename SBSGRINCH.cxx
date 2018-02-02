@@ -57,7 +57,7 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
   fClusters         = new TClonesArray("SBSGRINCH_Cluster",100);
   // fResolvedHits     = new TClonesArray("SBSGRINCH_Hit",1000);
   // fResolvedClusters = new TClonesArray("SBSGRINCH_Cluster",100);
-
+  
   Clear();
 
 }
@@ -118,64 +118,123 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   // Double_t debug = 0, do_resolve = false,
   //   maxdist, hit_max_number=0, MIP_through_interception = 0;
   
-  // Set up a table of tags to read and locations to store values.
-  const DBRequest tags[] = { 
-    {"zckov_in",     &fZCkovIn,      kDouble, 0, 1},
-    {"n_radiator",   &fNradiator,    kDouble, 0, 1},
-    {"l_radiator",   &fLradiator,    kDouble, 0, 1},
-    {"npmts",        &fNPMTs,        kInt,    0, 1},
-    {"npmtrows",     &fNPMTrows,     kInt,    0, 1},
-    {"npmtcolsmax",  &fNPMTcolsMax,  kInt,    0, 1},
-    {"pmtdistx",     &fPMTdistX,     kDouble, 0, 1},
-    {"pmtdisty",     &fPMTdistY,     kDouble, 0, 1},
-    {"x_tcpmt",      &fX_TCPMT,      kDouble, 0, 1},
-    {"y_tcpmt",      &fY_TCPMT,      kDouble, 0, 1},
+  vector<Int_t>* detmap = 0;
+  try {
+    // Oddly, putting this container on the stack may cause a stack overflow
+    detmap = new vector<Int_t>;
+    // Set up a table of tags to read and locations to store values.
+    const DBRequest tags[] = {
+      {"detmap",       detmap,         kIntV,   0, 1},
+      {"zckov_in",     &fZCkovIn,      kDouble, 0, 1},
+      {"n_radiator",   &fNradiator,    kDouble, 0, 1},
+      {"l_radiator",   &fLradiator,    kDouble, 0, 1},
+      {"npmts",        &fNPMTs,        kInt,    0, 1},
+      {"npmtrows",     &fNPMTrows,     kInt,    0, 1},
+      {"npmtcolsmax",  &fNPMTcolsMax,  kInt,    0, 1},
+      {"pmtdistx",     &fPMTdistX,     kDouble, 0, 1},
+      {"pmtdisty",     &fPMTdistY,     kDouble, 0, 1},
+      {"x_tcpmt",      &fX_TCPMT,      kDouble, 0, 1},
+      {"y_tcpmt",      &fY_TCPMT,      kDouble, 0, 1},
+	
+      // { "l_emission", &l_emission, kDouble, 1, false},
+      // { "z_ckovin", &Z_CkovIn, kDouble, 1, false},
+      // { "maxdist",    &maxdist, kDouble, 1, true},
+      // { "hit_max_number", &hit_max_number, kDouble, 1, true },
+      // //{ "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
+      // { "fiducial_zone_range", &fiducial_zone_range, kDouble, 1, true },
+      // { "cluster_distribution_sigma", &cluster_distribution_sigma, kDouble, 1, true  },
+      // { "acceptable_chi2_prob", &acceptable_chi2_prob, kDouble, 1, true  },
+      // { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom, kDouble, 1, true  },
+      // { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number, kDouble, 1, true },
+      // { "epsilon", &epsilon, kDouble, 1, true  },
+      // { "do_resolve", &do_resolve, kDouble, 1, true  },
+      { "do_timefilter", &fDoTimeFilter, kInt, 1, true  },
+      { "debug",         &fDebug,        kInt, 1, true  },
+      { 0 }
+    };
+      
+    // Read all the tag/value pairs. 
+    Int_t err = LoadDB( fi, date, tags );
+      
+    // Complain and quit if any required values missing.
+    if( err ) {    
+      if( err>0 )
+	Error( Here(here), "Required tag %s%s missing in the "
+	       "database.\nDetector initialization failed.",
+	       fPrefix, tags[err-1].name );
+      fclose(fi);
+      return kInitError;
+    }
+
+    if(fDebug && detmap){
+      cout << "detmap size = " << detmap->size() << endl;
+      for(int i = 0; i<detmap->size(); i++)
+	cout << "detmap[i] = " << detmap->at(i) << endl;
+    }
     
-    // { "l_emission", &l_emission, kDouble, 1, false},
-    // { "z_ckovin", &Z_CkovIn, kDouble, 1, false},
-    // { "maxdist",    &maxdist, kDouble, 1, true},
-    // { "hit_max_number", &hit_max_number, kDouble, 1, true },
-    // //{ "MIP_through_interception", &MIP_through_interception, kDouble, 1, true },
-    // { "fiducial_zone_range", &fiducial_zone_range, kDouble, 1, true },
-    // { "cluster_distribution_sigma", &cluster_distribution_sigma, kDouble, 1, true  },
-    // { "acceptable_chi2_prob", &acceptable_chi2_prob, kDouble, 1, true  },
-    // { "minimum_chi2_degree_of_freedom", &minimum_chi2_degree_of_freedom, kDouble, 1, true  },
-    // { "clear_noise_trial_maximum_number", &clear_noise_trial_maximum_number, kDouble, 1, true },
-    // { "epsilon", &epsilon, kDouble, 1, true  },
-    // { "do_resolve", &do_resolve, kDouble, 1, true  },
-    { "do_timefilter", &fDoTimeFilter, kInt, 1, true  },
-    { "debug",         &fDebug,        kInt, 1, true  },
-    { 0 }
-  };
-
-  // Read all the tag/value pairs. 
-  Int_t err = LoadDB( fi, date, tags );
-
-  // Complain and quit if any required values missing.
-  if( err ) {    
-    if( err>0 )
-      Error( Here(here), "Required tag %s%s missing in the "
-	     "database.\nDetector initialization failed.",
-	     fPrefix, tags[err-1].name );
+    UInt_t flags = 0;//THaDetMap::kFillPlane;//TestBit(kHaveRefChans) ? THaDetMap::kFillRefChan : 0;
+    cout<<"asd################asda"<<flags<<endl;
+    // Parse the detector map of the data channels
+    if( FillDetMap( *detmap, flags, here ) <= 0 )
+      return kInitError;
+    
+    delete detmap;
+  }
+  // Catch exceptions here so that we can close the file and clean up
+  catch(...) {
+    delete detmap;
     fclose(fi);
-    return kInitError;
+    throw;
   }
   
-  //initialize channel map here:
-  int a = -1, b = -1;
-  pair<int, int> dummy_pair(a, b);
-  //dummy_pair = std::make_pair<a, b>;
-  for(int i = 0; i<fNPMTs; i++){
-    map_chan_tdcs.insert(pair<int, pair<int, int > >(i, dummy_pair) );
-  }
   
+  // //initialize channel map here:
+  // int a = -1, b = -1;
+  // pair<int, int> dummy_pair(a, b);
+  // //dummy_pair = std::make_pair<a, b>;
+  // for(int i = 0; i<fNPMTs; i++){
+  //   map_chan_tdcs.insert(pair<int, pair<int, int > >(i, dummy_pair) );
+  // }
+  
+  // TString line, tag;
+  // Int_t retval = kOK;
+  // int n = 1;
 
+  // fDetMap->Clear();
+  /*
+  int status;
+  while(1) {
+    Int_t crate, slot, lo, hi;
+    //tag = TString(Form("detmap_%02d", n));
+    tag = "detmap";
+    if( status = LoadDBvalue( fi, date, tag, line ) != 0 )
+      break;
+    ISTR inp(line.Data());
+    inp >> crate >> slot >> lo >> hi;
+    if( !inp )
+      goto bad_data;
+    if( fDetMap->AddModule( crate, slot, lo, hi ) < 0 )
+      goto bad_data;
+    n++;
+  }
+  if(n>1)
+    goto done;
+  
+  bad_data:    
+   Error( Here(here), "Problem reading database entry \"%s\". "
+  	 "Detector initialization failed.", tag.Data() );
+   retval = kInitError;
+  
+  done:
+  fclose(fi);
+  return retval;  
+  */
+
+  fIsInit = true;
+  
   
   /*
   // Now read the array data.
-  TString line, tag;
-  Int_t retval = kOK;
-  int n;
   std::vector<double> ctr, xrotv, yrotv, zrotv, rad, quartz, gap;
   std::vector<int> npads;
   std::vector<double> padsize, xmip, ymip, size;
@@ -245,8 +304,6 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   fMaxNumHits = fNelem;
   if (hit_max_number != 0)
   fMaxNumHits = int(hit_max_number);
-
-  fIsInit = true;
 
   L_RAD = rad[0];
   n_radiator = rad[1];
@@ -401,118 +458,35 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
   if( mode == kDefine && fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
 
+  //Hits hits
   RVarDef var1[] = {
-    { "nhit",    "Number of pads with hits",    "GetNumHits()" },
-    //{ "nrhit",   "Number of resolved hits",     "GetNumResolvedHits()" },
-    { "nclust",  "Number of clusters",          "GetNumClusters()" },
-    //{ "nresolv", "Number of resolved clusters", "GetNumResolvedClusters()" },
-    // { "ngood",   "Number of clusters within cone",   "fNClustersGood" },
-    // { "nextra",  "Number of clusters outside cone",  "fNClustersOut" },
-    { "track.x", "Golden Track x in RICH plane (mm)",   "fTrackX" },
-    { "track.y", "Golden Track y in RICH plane (mm)",   "fTrackY" },
+    { "nhits",     " number of PMT hits", "GetNumHits()" },
+    { "hit.num",   " PMT hit num",        "fHits.SBSGRINCH_Hit.GetNumber()" },
+    { "hit.xhit",  " PMT hit X",          "fHits.SBSGRINCH_Hit.GetX()" },
+    { "hit.yhit",  " PMT hit y",          "fHits.SBSGRINCH_Hit.GetY()" },
+    { "hit.row",   " PMT hit row",        "fHits.SBSGRINCH_Hit.GetRow()" },
+    { "hit.col",   " PMT hit column",     "fHits.SBSGRINCH_Hit.GetCol()" },
+    { "hit.adc",   " PMT hit ADC",        "fHits.SBSGRINCH_Hit.GetADC()" },
+    { "hit.tdc_r", " PMT hit TDC rise",   "fHits.SBSGRINCH_Hit.GetTDC_r()" },
+    { "hit.tdc_f", " PMT hit TDC fall",   "fHits.SBSGRINCH_Hit.GetTDC_f()" },
     { 0 }
   };
-  DefineVarsFromList( var1, mode );
+  DefineVarsFromList( var1, mode, "" );// (re)define path here...
   
+  /*
   RVarDef var2[] = {
-    { "hit.i",   "Hit i index (along x_rich)",       "fI" },
-    { "hit.j",   "Hit j index (along y_rich)",       "fJ" },
-    { "hit.x",   "Hit x position (mm)",              "fX" },
-    { "hit.y",   "Hit y position (mm)",              "fY" },
-    { "hit.adc", "Hit charge (ADC value)",           "fADC" },
-    { "hit.tdc_r", "Hit rise time (TDC value)",      "fTDC_r" },
-    { "hit.tdc_f", "Hit fall time (TDC value)",      "fTDC_f" },
-    { "hit.flag","Hit status flag",                  "fFlag" },
-    { "hit.veto","Hit local maximum veto flag",      "fVeto" },
+    { "nclus",     " number of PMT clusters", "GetNumClusters()" },
+    { "hit.num",   " PMT hit num",        "fHits.SBSGRINCH_Hit.GetNumber()" },
+    { "hit.xhit",  " PMT hit X",          "fHits.SBSGRINCH_Hit.GetX()" },
+    { "hit.yhit",  " PMT hit y",          "fHits.SBSGRINCH_Hit.GetY()" },
+    { "hit.row",   " PMT hit row",        "fHits.SBSGRINCH_Hit.GetRow()" },
+    { "hit.col",   " PMT hit column",     "fHits.SBSGRINCH_Hit.GetCol()" },
+    { "hit.adc",   " PMT hit ADC",        "fHits.SBSGRINCH_Hit.GetADC()" },
+    { "hit.tdc_r", " PMT hit TDC rise",   "fHits.SBSGRINCH_Hit.GetTDC_r()" },
+    { "hit.tdc_f", " PMT hit TDC fall",   "fHits.SBSGRINCH_Hit.GetTDC_f()" },
     { 0 }
   };
-  DefineVarsFromList( var2, mode, "fHits.SBSGRINCH_Hit." );
-  /*
-  RVarDef var3[] = {
-    { "rhit.i",   "Resolved hit i index (along x_rich)",  "fI" },
-    { "rhit.j",   "Resolved hit j index (along y_rich)",  "fJ" },
-    { "rhit.x",   "Resolved hit x position (mm)",         "fX" },
-    { "rhit.y",   "Resolved hit y position (mm)",         "fY" },
-    { "rhit.adc", "Resolved hit charge (ADC value)",      "fADC" },
-    { "rhit.flag","Resolved hit status flag",             "fFlag" },
-    { 0 }
-  };
-  DefineVarsFromList( var3, mode, "fResolvedHits.SBSGRINCH_Hit." );
-  */
-  RVarDef var4[] = {
-    { "clus.x",     "Cluster x position (mm)",        "fXcenter" },
-    { "clus.y",     "Cluster y position (mm)",        "fYcenter" },
-    { "clus.chrg",  "Cluster charge (ADC sum)",       "fCharge"  },
-    { "clus.size",  "Cluster size (no. of hits)",     "GetNHits()"},
-    { "clus.angle", "Cluster Cherenkov angle (rad)",  "fAngle"   },
-    { "clus.theta", "Cluster Theta photon",           "GetTheta_photon()" },
-    { "clus.phi",   "Cluster Phi photon",             "GetPhi_photon()" },
-    { "clus.mip",   "Cluster is MIP flag",            "fMIPflag" },
-    { "clus.pionchi2",  "cluster chi square values according to the hypothesis the MIP is a pion","Getchi2_pi()"},
-    { "clus.kaonchi2",  "cluster chi square values according to the hypothesis the MIP is a kaon","Getchi2_k()"},
-    { "clus.protonchi2",  "cluster chi square values according to the hypothesis the MIP is a proton","Getchi2_p()"},
-    { "clus.PionChi2AnalysisFlag",  "cluster involved in chi2 test for the pion hypothesis flag","GetPionChi2AnalysisFlag()"},
-    { "clus.KaonChi2AnalysisFlag",  "cluster involved in chi2 test for the kaon hypothesis flag","GetKaonChi2AnalysisFlag()"},
-    { "clus.ProtonChi2AnalysisFlag",  "cluster involved in chi2 test for the proton hypothesis flag","GetProtonChi2AnalysisFlag()"},
-    { 0 }
-  };
-  DefineVarsFromList( var4, mode, "fClusters.SBSGRINCH_Cluster." );
-  /*
-  RVarDef var5[] = {
-    { "rclus.x",     "Resolved cluster x position (mm)",    "fXcenter" },
-    { "rclus.y",     "Resolved cluster y position (mm)",    "fYcenter" },
-    { "rclus.chrg",  "Resolved cluster charge (ADC sum)",   "fCharge"  },
-    { "rclus.size",  "Resolved cluster size (no. of hits)", "GetNHits()"},
-    { "rclus.angle", "Resolved cluster Cherenkov angle (rad)", "fAngle"   },
-    { "rclus.theta", "Resolved cluster Theta photon",   "GetTheta_photon()" },
-    { "rclus.phi",   "Resolved cluster Phi photon",     "GetPhi_photon()" },
-    { "rclus.mip",   "Resolved cluster is MIP flag",    "fMIPflag" },
-    { "rclus.pionchi2",  "Resolved cluster chi square values according to the hypothesis the MIP is a pion","Getchi2_pi()"},
-    { "rclus.kaonchi2",  "Resolved Cluster chi square values according to the hypothesis the MIP is a kaon","Getchi2_k()"},
-    { "rclus.protonchi2",  "Resolved cluster chi square values according to the hypothesis the MIP is a proton","Getchi2_p()"},
-    { "rclus.PionChi2AnalysisFlag",  "Resolved cluster involved in chi2 test for the pion hypothesis flag","GetPionChi2AnalysisFlag()"},
-    { "rclus.KaonChi2AnalysisFlag",  "Resolved cluster involved in chi2 test for the kaon hypothesis flag","GetKaonChi2AnalysisFlag()"},
-    { "rclus.ProtonChi2AnalysisFlag",  "Resolved cluster involved in chi2 test for the proton hypothesis flag","GetProtonChi2AnalysisFlag()"},
-    { 0 }
-  };
-  DefineVarsFromList( var5, mode, "fResolvedClusters.SBSGRINCH_Cluster." );
-  */
-  /*
-  RVarDef var6[] = {
-    { "mip.size",  "Golden Track MIP size",                 "GetNHits()" },
-    { "mip.x",     "Golden Track MIP x (mm)",               "fXcenter" },
-    { "mip.y",     "Golden Track MIP y (mm)",               "fYcenter" },
-    { "mip.chrg",  "Golden Track MIP charge (ADC sum)",     "fCharge"  },
-    { "mip.theta", "Theta MIP",   "GetTheta_photon()" },
-    { "mip.phi",   "Phi MIP",     "GetPhi_photon()" },
-    { "mip.fictious_flag",   "greater than 0 when the MIP is the interception between the track and the pad plane (equal to the MIP_through_interception value in the data base ",     " GetFictious_Mip_Flag()" },
-    { "mip.nphot",  "Clusters in pi/K/p region of this MIP","N_Photon"  },
-    { "mip.angles", "Avg. Cherenkov angle of clusters in pi/K/p regions (rad)", "angle"  },
-    { "mip.angles_corrected", "Avg. Cherenkov angle of clusters in pi/K/p regions (rad) - (expected Cherenkov angle) + (HRS right arm central momentum corresponding cherenkov angle)", "angle_corrected"  },
-    { "mip.n_chi2_phot",  "Clusters employed in  the chi2 test for pi/K/p hypothesis for this MIP","N_chi2_Photon"  },
-    { "mip.chi2", " chi square values according to the hypothesis the MIP is a pi/k/p","chi2"},
-    { "mip.chi2_prob", " chi square probability according to the hypothesis the MIP is a pi/k/p","chi2_prob"},
-    { "mip.n_chi2_corrected_phot",  "Clusters employed in the $Corrected$ (that is after getting rid of the niose chi2 test for pi/K/p hypothesis for this MIP","N_chi2_corrected_Photon"  },
-    { "mip.chi2_corrected", " chi square probability according to the hypothesis the MIP is a pi/k/p and after noise has been cut away","chi2_corrected"},
-    { "mip.chi2_corrected_prob", " chi square probability according to the hypothesis the MIP is a pi/k/p","chi2_corrected_prob"},
-   { "mip.noise_cut_success", "equal to 1 when the noise was succesfully thrown away","Getunresolved_noise_cut_success()"},
-   { "mip.n_Maximum_Likelihood_phot", "Cluster employed in the Maximum Likelihood calculation according to the hypothesis the MIP is a pi/k/p", "N_MaximumLikelihood_Photon"}, 
-   { "mip.Maximum_Likelihood", "Makimum Likelihood values according to the hypothesis the MIP is a pi/k/p", "MaximumLikelihood"}, 
-    { "mip.rnphot",  "Resolved Clusters in pi/K/p region of this MIP","ResolvedN_Photon"  },
-    { "mip.rangles", "Avg. Cherenkov angle of resolved clusters in pi/K/p regions (rad)", "Resolvedangle"  },
-    { "mip.rangles_corrected", "Avg. Cherenkov angle of resolved clusters in pi/K/p regions (rad) - (expected Cherenkov angle) + (HRS right arm central momentum corresponding cherenkov angle)", "Resolvedangle_corrected"  },
-   { "mip.rn_chi2_phot",  "Resolved clusters employed in  the chi2 test for pi/K/p hypothesis for this MIP","ResolvedN_chi2_Photon"  },
-    { "mip.rchi2", " Resolved cluster chi square values according to the hypothesis the MIP is a pi/k/p","Resolvedchi2"},
-    { "mip.rchi2_prob", " Resolved cluster chi square probability according to the hypothesis the MIP is a pi/k/p","Resolvedchi2_prob"},
-    { "mip.rn_chi2_corrected_phot",  "Resolved clusters employed in the $Corrected$ (that is after getting rid of the niose chi2 test for pi/K/p hypothesis for this MIP","ResolvedN_chi2_corrected_Photon"  },
-    { "mip.rchi2_corrected", " Resolved cluster chi square values according to the hypothesis the MIP is a pi/k/p and after noise has been cut away","Resolvedchi2_corrected"},
-    { "mip.rchi2_corrected_prob", " Resolved cluster chi square probability according to the hypothesis the MIP is a pi/k/p","Resolvedchi2_corrected_prob"},
-   { "mip.rnoise_cut_success", "equal to 1 when the noise was succesfully thrown away from resolved clusters","Getresolved_noise_cut_success()"},
-   { "mip.rn_Maximum_Likelihood_phot", "Resoved cluster employed in the Maximum Likelihood calculation according to the hypothesis the MIP is a pi/k/p", "N_MaximumLikelihood_Photon"}, 
-   { "mip.rMaximum_Likelihood", "Resolved Cluster Makimum Likelihood values according to the hypothesis the MIP is a pi/k/p", "ResolvedMaximumLikelihood"},  
-    { 0 }
-  };
-  DefineVarsFromList( var6, mode, "fMIP." );
+  DefineVarsFromList( var1, mode, "" );// (re)define path here...
   */
   
   return kOK;
@@ -534,6 +508,10 @@ Double_t SBSGRINCH::Cherenkov_Angle(double mass, double momentum)  const
 Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 {
   //Decode RICH data and fill hit array
+  if(fDebug){
+    cout << "SBSGRINCH::Decode " << endl;
+    cout << " Is Init ? " << fIsInit << " Is Physics Trigger ? " << evdata.IsPhysicsTrigger() << endl;
+  }
   if( !fIsInit ) return -255;
   if( !evdata.IsPhysicsTrigger() ) return -1;
 
@@ -555,16 +533,19 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   double X, Y;
   double TDC_r, TDC_f;
   double ADC;
-
+  
+  if(fDebug)cout << fDetMap->GetSize() << endl;
   for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
     THaDetMap::Module* d = fDetMap->GetModule( i );
-  
     for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+
       if( chan > d->hi || chan < d->lo ) continue; // Not one of my channels
       
       // Get the data.
       Int_t nhit = evdata.GetNumHits( d->crate, d->slot, chan );
+      cout << "Number of hits ? " << nhit << endl;
+      
       if( GetNumHits()+nhit > fMaxNumHits ) {
 	//  Warning("Decode", "Too many hits! Should never ever happen! "
 	//	  "Event skipped.");
