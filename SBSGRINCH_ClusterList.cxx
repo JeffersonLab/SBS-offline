@@ -35,6 +35,8 @@ void SBSGRINCH_Hit::Show(FILE * fout1, FILE* fout2)
 {
   // FIXME comment on fprintf(fout1...) should be changed accordingly 
   // when ntuple will be created 
+  fprintf(fout2," PMT num ");
+  fprintf(fout2,"%4d",fPMTNum);
   fprintf(fout2," Row, Col ");
   fprintf(fout2,"%4d,%4d",fRow,fCol);
   fprintf(fout2," ; X, Y ");
@@ -51,6 +53,7 @@ void SBSGRINCH_Hit::Show(FILE * fout1)
 {
   // FIXME comment on fprintf(fout1...) should be changed accordingly 
   // when ntuple will be created
+  fprintf(fout1," %4d",fPMTNum);
   fprintf(fout1," %4d %4d",fRow,fCol);
   fprintf(fout1,"% 4f %4f",fX,fY);
   fprintf(fout1," %4d \n",fADC);

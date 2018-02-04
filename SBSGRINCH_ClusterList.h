@@ -26,30 +26,30 @@ class SBSGRINCH_Hit : public TObject {
  public:
  SBSGRINCH_Hit() 
    : fFlag(0), fVeto(0) {}
- SBSGRINCH_Hit( Int_t number, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
+ SBSGRINCH_Hit( Int_t pmtnum, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
 		Float_t x, Float_t y ) :
-  fNumber(number), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), fRow(i), fCol(j), fX(x), fY(y), fFlag(0), 
+  fPMTNum(pmtnum), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), fRow(i), fCol(j), fX(x), fY(y), fFlag(0), 
     fVeto(0) {}
   virtual ~SBSGRINCH_Hit() {}
   
   void       Show(FILE * fout1);
   void       Show(FILE * fout1, FILE * fout2);
   
-  Int_t      GetNumber()   const {return fNumber;}
+  Int_t      GetPMTNum()   const {return fPMTNum;}
   Float_t    GetX()        const {return fX;}
   Float_t    GetY()        const {return fY;}
-  Int_t      GetRow()        const {return fRow;}
-  Int_t      GetCol()        const {return fCol;}
+  Int_t      GetRow()      const {return fRow;}
+  Int_t      GetCol()      const {return fCol;}
   Int_t      GetADC()      const {return fADC;}
   Int_t      GetTDC_r()    const {return fTDC_r;}
   Int_t      GetTDC_f()    const {return fTDC_f;}
   Int_t      GetFlag()     const {return fFlag;}
   Int_t      GetVeto()     const {return fVeto;} 
-  void       SetNumber( Int_t number ) {fNumber = number;}
+  void       SetPMTNum( Int_t pmtnum ) {fPMTNum = pmtnum;}
   void       SetX( Float_t x )         {fX = x;}
   void       SetY( Float_t y )         {fY = y;}
-  void       SetRow( Int_t i )           {fRow = i;}
-  void       SetCol( Int_t j )           {fCol = j;}
+  void       SetRow( Int_t i )         {fRow = i;}
+  void       SetCol( Int_t j )         {fCol = j;}
   void       SetADC( Int_t ADC )       {fADC = ADC;}
   void       SetTDC_r( Int_t TDC_r )   {fTDC_r = TDC_r;}
   void       SetTDC_f( Int_t TDC_f )   {fTDC_f = TDC_f;}
@@ -60,7 +60,7 @@ class SBSGRINCH_Hit : public TObject {
   virtual Bool_t  IsSortable() const { return kTRUE; }
 
 private:
-  Int_t     fNumber; // Hit number
+  Int_t     fPMTNum; // Hit PMT number
   Int_t     fTDC_r;  // Hit rise time TDC
   Int_t     fTDC_f;  // Hit fall time TDC
   Int_t     fADC;    // Hit ADC /!\ deduced from TDC values

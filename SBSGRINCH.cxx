@@ -112,7 +112,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   acceptable_chi2_prob = 0.01;
   clear_noise_trial_maximum_number = 5;
   epsilon = 1.;
-
+    
   // Storage and default values for non-Double_t and non-member 
   // data from database. Note: These must be Double_t
   // Double_t debug = 0, do_resolve = false,
@@ -187,14 +187,15 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     throw;
   }
   
+  fMaxNumHits = fNPMTs*10;
   
-  // //initialize channel map here:
-  // int a = -1, b = -1;
-  // pair<int, int> dummy_pair(a, b);
-  // //dummy_pair = std::make_pair<a, b>;
-  // for(int i = 0; i<fNPMTs; i++){
-  //   map_chan_tdcs.insert(pair<int, pair<int, int > >(i, dummy_pair) );
-  // }
+  //initialize channel map here:
+  int a = pow(2, 31), b = a-1;
+  pair<int, int> dummy_pair(a, b);
+  //dummy_pair = std::make_pair<a, b>;
+  for(int i = 0; i<fNPMTs; i++){
+    map_chan_tdcs.insert(pair<int, pair<int, int > >(i, dummy_pair) );
+  }
   
   // TString line, tag;
   // Int_t retval = kOK;
@@ -460,15 +461,15 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
 
   //Hits hits
   RVarDef var1[] = {
-    { "nhits",     " number of PMT hits", "GetNumHits()" },
-    { "hit.num",   " PMT hit num",        "fHits.SBSGRINCH_Hit.GetNumber()" },
-    { "hit.xhit",  " PMT hit X",          "fHits.SBSGRINCH_Hit.GetX()" },
-    { "hit.yhit",  " PMT hit y",          "fHits.SBSGRINCH_Hit.GetY()" },
-    { "hit.row",   " PMT hit row",        "fHits.SBSGRINCH_Hit.GetRow()" },
-    { "hit.col",   " PMT hit column",     "fHits.SBSGRINCH_Hit.GetCol()" },
-    { "hit.adc",   " PMT hit ADC",        "fHits.SBSGRINCH_Hit.GetADC()" },
-    { "hit.tdc_r", " PMT hit TDC rise",   "fHits.SBSGRINCH_Hit.GetTDC_r()" },
-    { "hit.tdc_f", " PMT hit TDC fall",   "fHits.SBSGRINCH_Hit.GetTDC_f()" },
+    { "nhits",      " number of PMT hits", "GetNumHits()"                    },
+    { "hit.pmtnum", " Hit PMT num",        "fHits.SBSGRINCH_Hit.GetPMTNum()" },
+    { "hit.xhit",   " PMT hit X",          "fHits.SBSGRINCH_Hit.GetX()"      },
+    { "hit.yhit",   " PMT hit y",          "fHits.SBSGRINCH_Hit.GetY()"      },
+    { "hit.row",    " PMT hit row",        "fHits.SBSGRINCH_Hit.GetRow()"    },
+    { "hit.col",    " PMT hit column",     "fHits.SBSGRINCH_Hit.GetCol()"    },
+    { "hit.adc",    " PMT hit ADC",        "fHits.SBSGRINCH_Hit.GetADC()"    },
+    { "hit.tdc_r",  " PMT hit TDC rise",   "fHits.SBSGRINCH_Hit.GetTDC_r()"  },
+    { "hit.tdc_f",  " PMT hit TDC fall",   "fHits.SBSGRINCH_Hit.GetTDC_f()"  },
     { 0 }
   };
   DefineVarsFromList( var1, mode, "" );// (re)define path here...
@@ -537,48 +538,67 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   if(fDebug)cout << fDetMap->GetSize() << endl;
   for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
     THaDetMap::Module* d = fDetMap->GetModule( i );
+    
+    if(fDebug)
+      cout << "crate " << d->crate << " slot " << d->slot 
+	   << " num chans " << evdata.GetNumChan(d->crate, d->slot) << endl;
+    
     for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
-
+      
       if( chan > d->hi || chan < d->lo ) continue; // Not one of my channels
       
       // Get the data.
       Int_t nhit = evdata.GetNumHits( d->crate, d->slot, chan );
-      cout << "Number of hits ? " << nhit << endl;
       
       if( GetNumHits()+nhit > fMaxNumHits ) {
-	//  Warning("Decode", "Too many hits! Should never ever happen! "
-	//	  "Event skipped.");
+	Warning("Decode", "Too many hits! Should never ever happen! "
+		"Event skipped.");
 	fHits->Clear();
 	if( fDoBench ) fBench->Stop("Decode");
 	return -2;
       }
+      
+      if(fDebug)
+	cout << "chan " << chan << " nhits = " << nhit << endl;
       
       for (int hit = 0; hit < nhit; hit++) {
 	
 	// Fill hit array
 	// UInt_t data = evdata.GetData(d->crate,d->slot,chan,hit);
 	// UInt_t rawdata = evdata.GetRawData(d->crate,d->slot,chan,hit);
-	//assuming "data" is the vetroc word... 
+	//assuming "data" is the vetroc word...     
 	uint32_t data = evdata.GetData(d->crate,d->slot,chan,hit);
-	uint32_t rawdata = evdata.GetRawData(d->crate,d->slot,chan,hit);
+	// NB: the VETROC words are re-added 2^31 to convert them back from int to Uint... 
+	// This *should be temporary* !!!
+	data+=pow(2, 31);
+	/*
+	uint32_t rawdata = evdata.GetRawData(d->crate,d->slot,chan,hit)+pow(2, 31);
 	// FIX ME next line is for testing and can be removed later on
 	if ( (rawdata & 0xfff) != data ) {
 	  cout<< "Something strange happened, "
 	    "raw data and data are not consistent" 
 	      << endl;
        	}
+	*/
+	//cout << data << endl;
 	
 	DecipherVetrocWord(data, edge, channel, tdctime_raw);
-
+	
+	//cout << edge << " " << channel << " " << tdctime_raw << endl;
+	
 	if(channel<0)continue;
-	if(chan!=channel)continue;
 	// a priori, the channel in the vetroc word and the channel must be equal at this point
 	assert(chan==channel);
 	
 	// then I add the slot (VETROC) number * 128 
 	// => unique channel (NB: 4 VETROC for GRINCH, 16 VETROC for RICH ?)
 	channel+= d->slot*128;
+
+	if(fDebug)
+	  cout << "hit " << hit << ": channel " << channel << " edge " << edge 
+	       << ":  => " << map_chan_tdcs[channel].first << " <=? time " << tdctime_raw 
+	       << " <=? " << map_chan_tdcs[channel].second << endl;
 	
 	if(edge==0 && tdctime_raw<map_chan_tdcs[channel].second){
 	  map_chan_tdcs[channel].first = tdctime_raw;
@@ -594,8 +614,14 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
     //fill fHits !!!
     //only if both egdes have been initialized and the falling edge is above the rising edge
     if(map_chan_tdcs[channel].first>=0 && map_chan_tdcs[channel].second>=map_chan_tdcs[channel].first){
+      //if(fDebug)
+      cout << " building PMT hits: channel " << channel 
+	   << " tdc 0 " <<  map_chan_tdcs[channel].first
+	   << " tdc 1 " <<  map_chan_tdcs[channel].second
+	   << endl;
+      
       theHit = new( (*fHits)[nHit++] ) SBSGRINCH_Hit();
-      theHit->SetNumber(nHit-1);
+      theHit->SetPMTNum(channel);
       col = channel%(2*fNPMTcolsMax-1);
       row = 2*channel/(2*fNPMTcolsMax-1);
       if(col>fNPMTcolsMax && col0_ismaxsize){
@@ -665,9 +691,10 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
 
   if(fDoTimeFilter) CleanClustersWithTime();
   
-  // Clusters matched with tracks here!
-  MatchClustersWithTracks(tracks);
-    
+  // Clusters matched with tracks here (obviously if there are any tracks to match)
+  if(tracks.GetLast()>0){
+    MatchClustersWithTracks(tracks);
+  }
   /*
     Double_t central_momentum = 0.;
     Double_t central_e_angle     = 0.;
@@ -1029,24 +1056,41 @@ void SBSGRINCH::DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& c
 
   // bool header[8]; // = {0, 0, 0, 0, 0, 0, 1, 1};
   // bool tdc[16];
-  uint8_t header;
-  uint8_t channel;
-  uint16_t tdc_time;
+  uint16_t header = 0;
+  uint16_t channel = 0;
+  uint16_t tdc_time = 0;
+
+  bool ibit;
   
   for(int i = 0; i<16; i++){
     if(i<8){
-      header ^= (-(VetrocWord >> (i+24) ) ^ header) & (1 << i);
-      channel ^= (-(VetrocWord >> (i+16) ) ^ channel) & (1 << i);
+      ibit = (VetrocWord >> (i+24) ) &1UL;
+      header ^= (-ibit ^ header) & (1U << i);
+      // cout << "vetroc word bit " << i+24 << " = " << ((VetrocWord >> (i+24) ) &1UL) 
+      // 	   << ", header bit " << i << " = " << ((header >> (i) ) & 1)<< endl;
+      ibit = (VetrocWord >> (i+16) ) &1UL;
+      channel ^= (-ibit ^ channel) & (1U << i);
+      // cout << "vetroc word bit " << i+16 << " = " << ((VetrocWord >> (i+16) ) &1UL) 
+      // 	   << ", channel bit " << i << " = " << ((channel >> (i) ) & 1)<< endl;
     }
-    tdc_time ^= (-(VetrocWord >> (i) ) ^ tdc_time) & (1 << i);
+    ibit = (VetrocWord >> (i) ) &1UL;
+    tdc_time ^= (-ibit ^ tdc_time) & (1U << i);
+    // cout << "vetroc word bit " << i << " = " << ((VetrocWord >> (i) ) & 1UL) 
+    // 	 << ", time bit " << i << " = " << ((tdc_time >> (i) ) & 1U)<< endl;
   }
+  
+  //cout << header << " " << channel << " " << tdc_time << endl;
+  
+  chan = channel;
+  time = tdc_time;
   
   if(header == 192){
     edge = 0;
   }else if(header == 196){
     edge = 1;
   }else{
-    chan = -1;
+    chan = -kBig;
+    time = -kBig;
   }
   
   /*
