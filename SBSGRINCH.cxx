@@ -166,10 +166,29 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
       return kInitError;
     }
 
-    if(fDebug && detmap){
-      cout << "detmap size = " << detmap->size() << endl;
-      for(int i = 0; i<detmap->size(); i++)
-	cout << "detmap[i] = " << detmap->at(i) << endl;
+    fPMTmatrixHext = (fNPMTcolsMax-1)*fPMTdistY;
+    fPMTmatrixVext = (fNPMTrows-1)*fPMTdistX;
+    
+    if(fDebug){
+      cout << "GRINCH params: " << endl;
+      cout << "zckov_in " << fZCkovIn 
+	   << " n_radiator " << fNradiator 
+	   << " l_radiator " << fLradiator << endl;
+      cout << "npmts " << fNPMTs 
+	   << " npmtrows " << fNPMTrows
+	   << " npmtcolsmax " << fNPMTcolsMax << endl;
+      cout << "pmtdistx " << fPMTdistX
+	   << " pmtdisty " << fPMTdistY
+	   << " x_tcpmt " << fX_TCPMT
+	   << " y_tcpmt " << fY_TCPMT << endl;
+      cout << "fPMTmatrixHext " << fPMTmatrixHext
+	   << " fPMTmatrixVext " << fPMTmatrixVext << endl;
+	
+      if(detmap){
+	cout << "detmap size = " << detmap->size() << endl;
+	for(int i = 0; i<detmap->size(); i++)
+	  cout << "detmap[i] = " << detmap->at(i) << endl;
+      }
     }
     
     UInt_t flags = 0;//THaDetMap::kFillPlane;//TestBit(kHaveRefChans) ? THaDetMap::kFillRefChan : 0;
@@ -638,6 +657,11 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
       TDC_f = map_chan_tdcs[channel].second;
       ADC = (TDC_f-TDC_r);
       
+      //if(fDebug) {}
+      cout << "PMT row " << row << " (X = " << X 
+	   << " m); col " << col << " (Y = " << Y << " m)" << endl;
+      cout << "TDC_r " << TDC_r << ", TDC_f " << TDC_f << endl;
+
       theHit->SetRow(row);
       theHit->SetCol(col);
       theHit->SetX(X);

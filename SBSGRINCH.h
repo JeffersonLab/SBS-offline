@@ -96,9 +96,9 @@ protected:
   // sigma of single cluster angular distribution.
   //Double_t PMTinterdist;// distance between two PMTs in a row, or between 2 rows of PMTs
 
-  Int_t    fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
-  Int_t    fNradiator;     // radiator index of refraction;
-  Int_t    fLradiator;     // radiator length on central ray;
+  Double_t fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
+  Double_t fNradiator;     // radiator index of refraction;
+  Double_t fLradiator;     // radiator length on central ray;
   Int_t    fNPMTs;         // number of PMTs
   Int_t    fNPMTrows;      // number of PMT rows
   Int_t    fNPMTcolsMax;   // max number of PMT columns 
