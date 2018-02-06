@@ -89,6 +89,16 @@ void SBSGRINCH::Clear( Option_t* opt )
   //fResolvedHits->Clear();
   DeleteClusters();
   if( fDoBench ) fBench->Stop("Clear");
+  
+  // reinitialize the map_chan_tdcs
+  map_chan_tdcs.clear();
+  int a = pow(2, 31), b = a-1;
+  pair<int, int> dummy_pair(a, b);
+  //dummy_pair = std::make_pair<a, b>;
+  for(int i = 0; i<fNPMTs; i++){
+    map_chan_tdcs.insert(pair<int, pair<int, int > >(i, dummy_pair) );
+  }
+
 }
 
 //_____________________________________________________________________________
@@ -546,7 +556,9 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   short channel;
   ushort tdctime_raw;
   bool col0_ismaxsize = false;
-  if(fPMTmatrixHext==fX_TCPMT)col0_ismaxsize = true;
+  
+  if(fabs((-fPMTmatrixHext/2.0-fY_TCPMT)/fY_TCPMT)<1.0e-4)col0_ismaxsize = true;
+  bool col_ismaxsize;
 
   //int gchannel;
   int row, col;
@@ -633,35 +645,52 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
     //fill fHits !!!
     //only if both egdes have been initialized and the falling edge is above the rising edge
     if(map_chan_tdcs[channel].first>=0 && map_chan_tdcs[channel].second>=map_chan_tdcs[channel].first){
-      //if(fDebug)
-      cout << " building PMT hits: channel " << channel 
-	   << " tdc 0 " <<  map_chan_tdcs[channel].first
-	   << " tdc 1 " <<  map_chan_tdcs[channel].second
-	   << endl;
+      if(col0_ismaxsize){
+	col_ismaxsize = true;
+      }else{
+      	col_ismaxsize = false;
+      }
       
       theHit = new( (*fHits)[nHit++] ) SBSGRINCH_Hit();
       theHit->SetPMTNum(channel);
-      col = channel%(2*fNPMTcolsMax-1);
-      row = 2*channel/(2*fNPMTcolsMax-1);
-      if(col>fNPMTcolsMax && col0_ismaxsize){
+      
+      div_t d = div(channel, (2*fNPMTcolsMax-1));
+      
+      //cout << d.quot << " " << d.rem << endl;
+      row = 2*d.quot;
+      col = d.rem;
+      if(d.rem>fNPMTcolsMax-1 && col0_ismaxsize){
+	row+=1;
 	col-=fNPMTcolsMax;
-	row+=1;
+	col_ismaxsize = false;
       }
-      if(col>fNPMTcolsMax-1 && !col0_ismaxsize){
-	col-=(fNPMTcolsMax-1);
+      if(d.rem>fNPMTcolsMax-2 && !col0_ismaxsize){
 	row+=1;
+	col-=fNPMTcolsMax-1;
+	col_ismaxsize = true;
       }
+      
       X = row*fPMTdistX-fPMTmatrixVext/2.0;
-      Y = col*fPMTdistX-fPMTmatrixHext/2.0;
+      if(col_ismaxsize){
+	Y = col*fPMTdistX-fPMTmatrixHext/2.0;
+      }else{
+	Y = col*fPMTdistX-(fPMTmatrixHext-fPMTdistX)/2.0;
+      }
       TDC_r = map_chan_tdcs[channel].first;
       TDC_f = map_chan_tdcs[channel].second;
       ADC = (TDC_f-TDC_r);
       
-      //if(fDebug) {}
-      cout << "PMT row " << row << " (X = " << X 
-	   << " m); col " << col << " (Y = " << Y << " m)" << endl;
-      cout << "TDC_r " << TDC_r << ", TDC_f " << TDC_f << endl;
-
+      if(fDebug) {
+	cout << " building PMT hits: channel " << channel 
+	     << " tdc 0 " <<  map_chan_tdcs[channel].first
+	     << " tdc 1 " <<  map_chan_tdcs[channel].second
+	     << endl;
+	
+	cout << "PMT row " << row << " (X = " << X 
+	     << " m); col " << col << " (Y = " << Y << " m)" << endl;
+	cout << "TDC_r " << TDC_r << ", TDC_f " << TDC_f << endl;
+      }
+      
       theHit->SetRow(row);
       theHit->SetCol(col);
       theHit->SetX(X);
@@ -704,9 +733,9 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   }  
   
   // Clusters reconstructed here
-  if( FindClusters() == 0 ) { 
-    return -1;
-  }
+  // if( FindClusters() == 0 ) { 
+  //   return -1;
+  // }
   
   // if( fDoResolve )
   //   ResolveClusters();
