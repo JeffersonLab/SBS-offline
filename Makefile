@@ -5,14 +5,16 @@ SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCl
       SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx SBSTimingHodoscope.cxx\
       SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx \
       SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx SBSScintPlane.cxx \
-      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx
+      SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx \
+      SBSSimFadc250Module.cxx # SBSHCalModule.cxx
 
 EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
 	   SBSBBShower.h SBSBBTotalShower.h SBSCDet.h\
 	   SBSScintHit.h SBSScintPMT.h SBSShowerBlock.h SBSTimingHodoscope.h SBSScintBar.h\
            SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h \
 	   SBSGRINCH.h SBSGRINCH_ClusterList.h SBSScintPlane.h \
-           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h
+           SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h \
+     SBSSimFadc250Module.h # SBSHCalModule.h
 
 CORE = sbs
 CORELIB  = lib$(CORE).so
@@ -179,7 +181,8 @@ endif
 
 $(COREDICT).cxx: $(HDR) $(LINKDEF)
 	@echo "Generating dictionary $(COREDICT)..."
-	$(ROOTDICT_CMD) -f $@ -c $(INCLUDES) $(DEFINES) $^ ; \
+	#$(ROOTDICT_CMD) -f $@ -c $(INCLUDES) $(DEFINES) $^ ;
+	$(ROOTDICT_CMD) -f $@ -rmf $(COREDICT).rootmap -c $(INCLUDES) $(DEFINES) $^ ;
 
 install:	all
 		$(error Please define install yourself)
