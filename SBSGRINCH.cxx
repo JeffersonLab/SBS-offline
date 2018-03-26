@@ -503,22 +503,19 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
   };
   DefineVarsFromList( var1, mode, "" );// (re)define path here...
   
-  /*
+  
   RVarDef var2[] = {
-    { "nclus",     " number of PMT clusters", "GetNumClusters()" },
-    { "hit.num",   " PMT hit num",        "fHits.SBSGRINCH_Hit.GetNumber()" },
-    { "hit.xhit",  " PMT hit X",          "fHits.SBSGRINCH_Hit.GetX()" },
-    { "hit.yhit",  " PMT hit y",          "fHits.SBSGRINCH_Hit.GetY()" },
-    { "hit.row",   " PMT hit row",        "fHits.SBSGRINCH_Hit.GetRow()" },
-    { "hit.col",   " PMT hit column",     "fHits.SBSGRINCH_Hit.GetCol()" },
-    { "hit.adc",   " PMT hit ADC",        "fHits.SBSGRINCH_Hit.GetADC()" },
-    { "hit.tdc_r", " PMT hit TDC rise",   "fHits.SBSGRINCH_Hit.GetTDC_r()" },
-    { "hit.tdc_f", " PMT hit TDC fall",   "fHits.SBSGRINCH_Hit.GetTDC_f()" },
+    { "nclus",        " number of GRINCH PMT clusters",  "GetNumClusters()"                                 },
+    { "clus.size",    " GRINCH cluster size",            "fClusters.SBSGRINCH_Cluster.GetNHits()"           },
+    { "clus.x_mean",  " GRINCH cluster X center",        "fClusters.SBSGRINCH_Cluster.GetXcenter()"         },
+    { "clus.y_mean",  " GRINCH cluster Y center",        "fClusters.SBSGRINCH_Cluster.GetYcenter()"         },
+    { "clus.tr_mean", " GRINCH cluster mean lead time",  "fClusters.SBSGRINCH_Cluster.GetMeanRisingTime()"  },
+    { "clus.tf_mean", " GRINCH cluster mean trail time", "fClusters.SBSGRINCH_Cluster.GetMeanFallingTime()" },
+    { "clus.adc",     " GRINCH cluster total charge",    "fClusters.SBSGRINCH_Cluster.GetCharge()"          },
     { 0 }
   };
-  DefineVarsFromList( var1, mode, "" );// (re)define path here...
-  */
-  
+  DefineVarsFromList( var2, mode, "" );// (re)define path here...
+    
   return kOK;
 }
 
@@ -681,6 +678,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
       ADC = (TDC_f-TDC_r);
       
       if(fDebug) {
+	cout << "Event number " << evdata.GetEvNum() << endl;
 	cout << " building PMT hits: channel " << channel 
 	     << " tdc 0 " <<  map_chan_tdcs[channel].first
 	     << " tdc 1 " <<  map_chan_tdcs[channel].second
@@ -733,9 +731,9 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   }  
   
   // Clusters reconstructed here
-  // if( FindClusters() == 0 ) { 
-  //   return -1;
-  // }
+  if( FindClusters() == 0 ) { 
+    return -1;
+  }
   
   // if( fDoResolve )
   //   ResolveClusters();
@@ -748,6 +746,7 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   if(tracks.GetLast()>0){
     MatchClustersWithTracks(tracks);
   }
+  
   /*
     Double_t central_momentum = 0.;
     Double_t central_e_angle     = 0.;
