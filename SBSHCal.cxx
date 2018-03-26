@@ -196,9 +196,9 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
       // We'll resize the vector now to make sure the data are contained
       // in a contigous part of memory (needed by THaOutput when writing
       // to the ROOT file)
-      fASamples[i].resize(MAX_FADC_SAMPLES);
-      fASamplesPed[i].resize(MAX_FADC_SAMPLES);
-      fASamplesCal[i].resize(MAX_FADC_SAMPLES);
+      //fASamples[i].resize(MAX_FADC_SAMPLES);
+      //fASamplesPed[i].resize(MAX_FADC_SAMPLES);
+      //fASamplesCal[i].resize(MAX_FADC_SAMPLES);
     }
     // Yup, hard-coded in because it's only a test
     // TODO: Fix me, don't hard code it in
@@ -268,27 +268,32 @@ Int_t SBSHCal::DefineVariables( EMode mode )
     char *name   =  new char[128];
     char *name_p = new char[128];
     char *name_c = new char[128];
-    sprintf(name,"a.m%d",m);
-    sprintf(name_p,"a_p.m%d",m);
-    sprintf(name_c,"a_c.m%d",m);
+    sprintf(name,"a.m%03d",m);
+    sprintf(name_p,"a_p.m%03d",m);
+    sprintf(name_c,"a_c.m%03d",m);
     char *desc = new char[256];
     sprintf(desc,"Raw ADC samples for Module %d",m);
     v.name = name;
     v.desc = "Raw ADC samples";
-    v.type = kDouble;
-    v.size = MAX_FADC_SAMPLES;
-    v.loc  = &(fASamples[m].data()[0]);
-    v.count = &fNumSamples[m];
+    v.type = kDoubleV;
+    //v.size = MAX_FADC_SAMPLES;
+    //v.loc  = &(fASamples[m].data()[0]);
+    v.loc  = &(fASamples[m]);
+    //v.count = &fNumSamples[m];
+    v.count = 0;
     vars2.push_back(v);
     v.name = name_p;
     v.desc = "Pedestal subtracted ADC samples";
-    v.loc = &(fASamplesPed[m].data()[0]);
+    //v.loc = &(fASamplesPed[m].data()[0]);
+    v.loc = &(fASamplesPed[m]);
     vars2.push_back(v);
     v.name = name_c;
     v.desc = "Pedestal subtracted calibrated ADC samples";
-    v.loc = &(fASamplesCal[m].data()[0]);
+    //v.loc = &(fASamplesCal[m].data()[0]);
+    v.loc = &(fASamplesCal[m]);
     vars2.push_back(v);
   }
+  // Have to push back a null variable otherwise it will fail
   vars2.push_back(VarDef());
   return DefineVarsFromList( vars2.data(), mode );
 }
@@ -345,9 +350,12 @@ void SBSHCal::ClearEvent()
 {
   // Reset all local data to prepare for next event.
   ResetVector(fNumSamples,0);
-  ResetVector(fASamples,0.0);
-  ResetVector(fASamplesPed,0.0);
-  ResetVector(fASamplesCal,0.0);
+  //ResetVector(fASamples,0.0);
+  for(size_t i = 0; i < fASamples.size(); i++) {
+    fASamples[i].clear();
+    fASamplesPed[i].clear();
+    fASamplesCal[i].clear();
+  }
 
     fCoarseProcessed = 0;
     fFineProcessed = 0;
