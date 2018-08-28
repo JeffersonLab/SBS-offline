@@ -507,6 +507,21 @@ Int_t SBSCalorimeter::CoarseProcess(TClonesArray& tracks)
         blk_tdc_samps = dynamic_cast<SBSCalorimeterBlockSamplesTDC*>(blk);
         fDataOut.fTDC.push_back(blk_tdc_samps->GetTDCDataRaw());
         fDataOut.fTDC_c.push_back(blk_tdc_samps->GetTDCDataCal());
+        std::vector<Float_t> &s_r = blk_tdc_samps->GetSamplesDataRaw();
+        std::vector<Float_t> &s_p = blk_tdc_samps->GetSamplesDataPed();
+        std::vector<Float_t> &s_c = blk_tdc_samps->GetSamplesDataCal();
+        nsamples = s_r.size();
+        idx = fDataOut.fSamps.size();
+        fDataOut.fSampsIdx.push_back(idx);
+        fDataOut.fNSamps.push_back(nsamples);
+        fDataOut.fSamps.resize(idx+nsamples);
+        fDataOut.fSamps_p.resize(idx+nsamples);
+        fDataOut.fSamps_c.resize(idx+nsamples);
+        for(size_t s = 0; s < nsamples; s++) {
+          fDataOut.fSamps[idx+s]   = s_r[s];
+          fDataOut.fSamps_p[idx+s] = s_p[s];
+          fDataOut.fSamps_c[idx+s] = s_c[s];
+        }
       }
     } else if (fWithADCSamples) {
       blk_samps = dynamic_cast<SBSCalorimeterBlockSamples*>(blk);
