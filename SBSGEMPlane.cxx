@@ -164,12 +164,17 @@ void    SBSGEMPlane::Clear( Option_t* opt){
 Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 //    std::cout << "[SBSGEMPlane::Decode " << fName << "]" << std::endl;
 
+    int i;
+
     fNch = 0;
     for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
         Int_t effChan = it->mpd_id << 8 | it->adc_id;
         // Find channel for this crate/slot
 
         Int_t nchan = evdata.GetNumChan( it->crate, it->slot );
+
+//        printf("nchan = %d\n", nchan );
+
         for( Int_t ichan = 0; ichan < nchan; ++ichan ) {
             Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
             if( chan != effChan ) continue; // not part of this detector
@@ -177,10 +182,8 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 
             Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
 
-            /*
             std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
             std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
-            */
 
             assert( nsamp == N_APV25_CHAN*N_MPD_TIME_SAMP );
 
