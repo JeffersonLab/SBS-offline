@@ -182,8 +182,8 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 
             Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
 
-            std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
-            std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
+            //std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
+            //std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
 
             assert( nsamp == N_APV25_CHAN*N_MPD_TIME_SAMP );
 
