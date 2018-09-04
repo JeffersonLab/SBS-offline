@@ -6,7 +6,7 @@ SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCl
       SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx \
       SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx SBSScintPlane.cxx \
       SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx \
-      TstF1TDCModule.cxx \
+      SBSDecodeF1TDCModule.cxx \
       SBSCalorimeter.cxx SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
 
 EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
@@ -15,7 +15,7 @@ EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerClust
            SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h \
 	   SBSGRINCH.h SBSGRINCH_ClusterList.h SBSScintPlane.h \
            SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h \
-     TstF1TDCModule.h \
+     SBSDecodeF1TDCModule.h \
      SBSCalorimeter.h SBSCalorimeterBlock.h SBSCalorimeterBlockData.h
 
 CORE = sbs
