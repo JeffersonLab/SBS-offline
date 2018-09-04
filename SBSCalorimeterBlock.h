@@ -43,6 +43,9 @@ public:
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();
 
+  // Check if this block has any data
+  virtual Bool_t HasData() { return HasADCData(); };
+
 protected:
   Float_t fX;       ///< relative x position of the center
   Float_t fY;       ///< relative y position of the center
@@ -71,6 +74,10 @@ public:
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();
 
+
+  // Check if this block has any data
+  virtual Bool_t HasData() { return HasTDCData(); };
+
   ClassDef(SBSCalorimeterBlockTDC,1) ///< Single-valued ADC with TDC
 };
 
@@ -88,6 +95,10 @@ public:
 
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();
+
+  // Check if this block has any data
+  virtual Bool_t HasData() { return (SBSCalorimeterBlock::HasData()
+      ||HasSamplesData()); };
 
   ClassDef(SBSCalorimeterBlockSamples,1) ///< Single-valued ADC with 
 };
@@ -107,6 +118,9 @@ public:
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();
 
+  // Check if this block has any data
+  virtual Bool_t HasData() { return (SBSCalorimeterBlockSamples::HasData()
+      ||HasTDCData()); };
   ClassDef(SBSCalorimeterBlockSamplesTDC,1) ///< Multi-valued ADC with TDC
 };
 

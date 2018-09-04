@@ -483,6 +483,8 @@ void SBSCalorimeter::ClearEvent()
 
 Int_t SBSCalorimeter::CoarseProcess(TClonesArray& tracks)
 {
+  // Make sure to clear old data out
+  fDataOut.ClearEvent();
   // Pack data for output to the tree
   SBSCalorimeterBlock *blk = 0;
   SBSCalorimeterBlockTDC *blk_tdc = 0;
@@ -492,6 +494,11 @@ Int_t SBSCalorimeter::CoarseProcess(TClonesArray& tracks)
   size_t idx;
   for(Int_t k = 0; k < fNelem; k++) {
     blk = fBlocks[k];
+
+    // Skip blocks that have no new data
+    if(!blk->HasData())
+      continue;
+
     fDataOut.fRow.push_back(blk->GetRow());
     fDataOut.fCol.push_back(blk->GetCol());
     fDataOut.fLayer.push_back(blk->GetLayer());

@@ -49,11 +49,15 @@ namespace SBSCalorimeterBlockData {
       // Process data sets raw value, ped-subtracted and calibrated data
       virtual void ProcessADC(Float_t var);
 
+      // Do we have ADC data for this event?
+      Bool_t HasADCData() { return fHasADCData; }
+
       // Clear event
       virtual void ClearADC();
 
     protected:
       SingleData fADC; ///< ADC single-value data
+      Bool_t fHasADCData;
   };
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -77,11 +81,15 @@ namespace SBSCalorimeterBlockData {
       // Process data sets raw value, ped-subtracted and calibrated data
       virtual void ProcessTDC(Float_t var);
 
+      // Do we have TDC data for this event?
+      Bool_t HasTDCData() { return fHasTDCData; }
+
       // Clear event
       virtual void ClearTDC();
 
     protected:
       SingleData fTDC; ///< TDC single-value data
+      Bool_t fHasTDCData;
   };
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -105,10 +113,14 @@ namespace SBSCalorimeterBlockData {
       // Process data sets raw value, ped-subtracted and calibrated data
       virtual void ProcessADCSamples(std::vector<Float_t> &var);
 
+      // Do we have samples data for this event?
+      Bool_t HasSamplesData() { return fHasSamplesData; }
+
       // Clear event
       virtual void ClearSamples();
     protected:
       MultiData fSamples; ///< Samples single-value data
+      Bool_t fHasSamplesData;
   };
 
 
