@@ -27,9 +27,6 @@
 #pragma link C++ class SBSCalorimeterBlockSamples+;
 #pragma link C++ class SBSCalorimeterBlockSamplesTDC+;
 #pragma link C++ class SBSCalorimeterBlockData+;
-#pragma link C++ class SBSHCalModule+;
-#pragma link C++ class SBSHCalModuleSamplesData+;
-#pragma link C++ class SBSBaseHCalModuleData+;
 #pragma link C++ class SBSCDet+;
 #pragma link C++ class SBSTimingHodoscope+;
 #pragma link C++ class SBSBBShower+;

@@ -6,7 +6,8 @@ SRC = MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx SBSBBShowerCl
       SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx SBSScintPartialHit.cxx \
       SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx SBSScintPlane.cxx \
       SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx  SBSHCal.cxx \
-      SBSSimFadc250Module.cxx # SBSHCalModule.cxx
+      TstF1TDCModule.cxx \
+      SBSCalorimeter.cxx SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
 
 EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerCluster.h\
 	   SBSBBShower.h SBSBBTotalShower.h SBSCDet.h\
@@ -14,7 +15,8 @@ EXTRAHDR = MPDModule.h SBSBigBite.h SBSGEMStand.h SBSGEMPlane.h SBSBBShowerClust
            SBSTdcHit.h SBSAdcHit.h SBSScintPartialHit.h \
 	   SBSGRINCH.h SBSGRINCH_ClusterList.h SBSScintPlane.h \
            SBSECal.h SBSECalCluster.h SBSEArm.h SBSHCal.h \
-     SBSSimFadc250Module.h # SBSHCalModule.h
+     TstF1TDCModule.h \
+     SBSCalorimeter.h SBSCalorimeterBlock.h SBSCalorimeterBlockData.h
 
 CORE = sbs
 CORELIB  = lib$(CORE).so
