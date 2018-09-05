@@ -77,9 +77,11 @@ LD           := $(shell root-config --ld)
 ## ROOT5 and under used rootcint to make dictionaries
 ifeq ($(ROOTVERMAJOR),5)
 	ROOTDICT_CMD = $(ROOTBIN)/rootcint
+	ROOTDICT_CMD_FLAGS = 
 else
 	## ROOT6 uses rootcling
 	ROOTDICT_CMD = $(ROOTBIN)/rootcling
+	ROOTDICT_CMD_FLAGS = -rmf $(COREDICT).rootmap
 endif
 
 PKGINCLUDES  = $(addprefix -I, $(INCDIRS) ) -I$(shell pwd)
@@ -184,7 +186,7 @@ endif
 $(COREDICT).cxx: $(HDR) $(LINKDEF)
 	@echo "Generating dictionary $(COREDICT)..."
 	#$(ROOTDICT_CMD) -f $@ -c $(INCLUDES) $(DEFINES) $^ ;
-	$(ROOTDICT_CMD) -f $@ -rmf $(COREDICT).rootmap -c $(INCLUDES) $(DEFINES) $^ ;
+	$(ROOTDICT_CMD) -f $@ $(ROOTDICT_CMD_FLAGS) -c $(INCLUDES) $(DEFINES) $^ ;
 
 install:	all
 		$(error Please define install yourself)
