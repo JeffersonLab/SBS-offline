@@ -23,7 +23,9 @@
 
 //#define LIKEV792x 0
 
-#define NTDCCHAN   32
+// (jc2) What was this used for? Seems to conflict with a value defined
+// in Caen775. So I've commented out.
+//#define NTDCCHAN   32
 #define MAXHIT    2048
 
 #include "VmeModule.h"
