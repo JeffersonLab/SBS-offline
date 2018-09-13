@@ -98,6 +98,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   Double_t adc_ped_mult = 1;
 
   // Read mapping/geometry/configuration parameters
+  fChanMapStart = 0;
   DBRequest config_request[] = {
     { "detmap",       &detmap,  kIntV }, ///< Detector map
     { "chanmap",      &chanmap, kIntV,    0, true }, ///< Optional channel map
@@ -205,7 +206,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
         fChanMap[i].resize(nchan);
         // To simplify finding out which channels are ADCs and which are TDCs
         // we'll just require that the user make the first fNelem channels
-        // correspond to the TDCs, and the other fNelem to the TDCs (if in use).
+        // correspond to the ADCs, and the other fNelem to the TDCs (if in use).
         if(makeADC) {
           d->MakeADC();
         } else {
