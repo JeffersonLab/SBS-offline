@@ -1,5 +1,5 @@
 # Sample run database
---------[ 2017-07-26 17:50:14 ]
+#--------[ 2017-07-26 17:50:14 ]
 
 ebeam = 11.0
 
@@ -11,3 +11,5 @@ sbs.off_x = 0
 sbs.off_y = 0
 sbs.off_z = 0
 
+bb.theta    = 33.0                                                              
+bb.pcentral = 2.0 
