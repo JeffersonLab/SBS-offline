@@ -11,7 +11,7 @@
 
 #include "SBSCalorimeter.h"
 
-class SBSHCal : protected SBSCalorimeter {
+class SBSHCal : public SBSCalorimeter {
 public:
   SBSHCal( const char* name, const char* description = "",
       THaApparatus* a = NULL);
