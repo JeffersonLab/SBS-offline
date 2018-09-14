@@ -1,0 +1,31 @@
+## Detector map, format:
+## crate slot start_channel end_channel
+bb.sh.detmap = ##
+   4     1     0     63 # One Lecroy 1881M
+   4     2     0     63 # One Lecroy 1881M 
+   4     3     0     60 # One Lecroy 1881M 
+#  4     5     0     95 # (Optional) One Lecroy 1877 TDC
+#  4     6     0     92 # (Optional) One Lecroy 1877 TDC
+
+## Optional channel map
+##bb.sh.chanmap =  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+##               21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40
+##               41 42 43 44 45 46 47 48 49 50 51 52 53 54
+##bb.sh.chanmap_start = 1 # Since the map above starts with channel 1 being first
+
+
+## Positions in [m] where +z is roated by bb.theta
+bb.sh.position = 0 0 2.5319 ## Need to re-check this number
+
+## Size
+bb.sh.size   =  0.595 2.295 0.37 # in meters
+
+## Number of rows and columns
+bb.sh.ncols =  7
+bb.sh.nrows = 27
+
+## Position of first module
+bb.sh.xyz    = -1.105  0.255  0.000
+## Space between modules
+bb.sh.dxdydz =  0.000  0.000  0.000
+

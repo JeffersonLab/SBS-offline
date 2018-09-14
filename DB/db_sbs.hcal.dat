@@ -1,38 +1,33 @@
 ## Detector map, format:
 ## crate slot start_channel end_channel
-sbs.hcal.detmap =
-## FADC modules        #     Module number that starts at channel 0
-## This map is for the 12 fADC modules used for testing
 ## as described in https://logbooks.jlab.org/entry/3480927
-   2     4     0     15 #      0
-   2     5     0     15 #     16
-   2     6     0     15 #     32
-   2     7     0     15 #     48
-   2     8     0     15 #     64
-   2     9     0     15 #     80
-   2    10     0     15 #     96
-   2    13     0     15 #     112
-   2    14     0     15 #     128
-   2    15     0     15 #     144
-   2    16     0     15 #     160
-   2    17     0     15 #     176
-   3     4     0     15 #     192
-   3     5     0     15 #     208
-   3     6     0     15 #     224
-   3     7     0     15 #     240
-   3     8     0     15 #     256
-   3     9     0     15 #     272
-## TDCs, totally made up!!
-   4     4     0     31 #      0
-   4     5     0     31 #     32
-   4     6     0     31 #     64
-   4     7     0     31 #     96
-   4     8     0     31 #     128
-   4     9     0     31 #     160
-   4    10     0     31 #     192
-   4    13     0     31 #     224
-   4    14     0     31 #     256
-
+## Proposed mapping for HCAL
+sbs.hcal.detmap =
+## FADCs (x16)
+  16     4     0     15 #      0
+  16     5     0     15 #     16
+  16     6     0     15 #     32
+  16     7     0     15 #     48
+  16     8     0     15 #     64
+  16     9     0     15 #     80
+  16    10     0     15 #     96
+  16    13     0     15 #     112
+  16    14     0     15 #     128
+  16    15     0     15 #     144
+  16    16     0     15 #     160
+  16    17     0     15 #     176
+  17     4     0     15 #     192
+  17     5     0     15 #     208
+  17     6     0     15 #     224
+  17     7     0     15 #     240
+  17     8     0     15 #     256
+  17     9     0     15 #     272
+## TDCs (x5)
+  17    10     0     63 #      0-63
+  17    13     0     63 #     64-127
+  17    14     0     63 #     128-191
+  17    15     0     63 #     192-255
+  17    16     0     31 #     256-287
 
 ## Channel map from logical channel to module-number
 sbs.hcal.chanmap =  ## The number entered here is the module-number (1-288)
@@ -75,7 +70,6 @@ sbs.hcal.chanmap =  ## The number entered here is the module-number (1-288)
   267 270 273 276 277 280 283 286 278 281 284 287 279 282 285 288  # C:04,S:14
 
 sbs.hcal.chanmap_start = 1
-
 
 ## Positions in [m] where +z is roated by sbs.theta
 sbs.hcal.position = 0 0 0

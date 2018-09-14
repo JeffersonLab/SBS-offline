@@ -1,0 +1,7 @@
+## Detector map, format:
+## crate slot start_channel end_channel
+bb.grinch.detmap =
+  7     1     0     127 #
+  5     2     0     127 #
+  5     3     0     127 #
+  5     4     0     125 #

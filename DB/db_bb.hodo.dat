@@ -1,0 +1,5 @@
+## Detector map, format:
+## crate slot start_channel end_channel
+bb.hodo.detmap =
+  5     1     0     89 #
+  5     2     0     89 #

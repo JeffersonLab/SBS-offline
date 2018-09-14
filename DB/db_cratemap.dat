@@ -1,4 +1,5 @@
 # Date/Time = Tue Aug  23 11:00:00 2005
+## (jc2) What are these reserved for?
 ==== Crate 3 type fastbus
 # slot  model   clear   header  mask    nchan   ndata
   3     1877    1       0x0     0x0     96      672
@@ -20,14 +21,31 @@
   23    1881    1       0x0     0x0     64      64
   24    1881    1       0x0     0x0     64      64
   25    1881    1       0x0     0x0     64      64
+
 ==== Crate 4 type fastbus
+# ADCs (And optional TDCs) for BBPS, BBSH
 # slot  model   clear   header  mask    nchan   ndata
-   9    1877    1       0x0     0x0     96      672
-  13    1877    1       0x0     0x0     96      672
+   1    1881    1       0x0     0x0     64      672 # BB SH
+   2    1881    1       0x0     0x0     64      672 # BB SH
+   3    1881    1       0x0     0x0     64      672 # BB SH
+   4    1881    1       0x0     0x0     64      672 # BB PS (only 54 channels)
+   5    1877    1       0x0     0x0     96      672 # BB SH
+   6    1877    1       0x0     0x0     96      672 # BB SH
+   7    1877    1       0x0     0x0     96      672 # BB PS (only 54 channels)
+
+## (jc2) What are these two for?
   18    1875    1       0x0     0x0     64      512
   21    1881    1       0x0     0x0     64      64
+
 ==== Crate 5 type vme
-# slot  model   clear   header  mask    nchan   ndata
+# slot model clear header mask       nchan ndata
+# TDCs for BBTH (+ADCs for )
+  1    1190  1 0x00000000 0x00000000 128 12800
+  2    1190  1 0x00000000 0x00000000 128 12800
+  3     792  1 0x00000000 0x00000000  32    32
+  4     792  1 0x00000000 0x00000000  32    32 
+## Need QDC for GRINCH/Hodoscope ADC/TOT calibration
+## (jc2) Not sure what these were reserved for
   5     3201    1       0x28000000      0xf8000000      32      1024
   6     3201    1       0x30000000      0xf8000000      32      1024
   8     3201    1       0x40000000      0xf8000000      32      1024
@@ -39,6 +57,15 @@
  17     792     1       0xda00adc1      0xffffffff      32      2048
  18     792     1       0xda00adc2      0xffffffff      32      2048
  #19     792     1       0xda00adc3      0xffffffff      32      2048
+
+==== Crate 7 type vme
+# TDCs for GRINCH (VETROC) - still stuck with something that is not VETROC
+# slot model clear header mask     nchan ndata
+  1    1190  1 0x00000000 0x00000000 128 12800
+  2    1190  1 0x00000000 0x00000000 128 12800
+  3    1190  1 0x00000000 0x00000000 128 12800
+  4    1190  1 0x00000000 0x00000000 128 12800
+
 ==== Crate 8 type fastbus
 # slot	model	clear	header	mask	nchan	ndata
   1     1881    1	0x0	0x0	64	64
@@ -167,3 +194,63 @@
   19	550	1	0xcd120000	0xffff0000	512	1024
   20	550	1	0xcd130000	0xffff0000	512	1024
 
+
+## Proposed crates (16-17) for SBS side (HCal + CDet + Hadron arm GEMs, etc...)
+# Date/Time = Fri Sep  14 09:33:00 2018
+==== Crate 16 type vme
+# slot  model  bank
+   4    250     3  # HCal FADC
+   5    250     3  # HCal FADC
+   6    250     3  # HCal FADC
+   7    250     3  # HCal FADC
+   8    250     3  # HCal FADC
+   9    250     3  # HCal FADC
+  10    250     3  # HCal FADC
+  13    250     3  # HCal FADC
+  14    250     3  # HCal FADC
+  15    250     3  # HCal FADC
+  16    250     3  # HCal FADC
+  17    250     3  # HCal FADC
+# Date/Time = Fri Sep  14 09:33:00 2018
+==== Crate 17 type vme
+# slot  model  bank
+   4    250     3  # HCal FADC
+   5    250     3  # HCal FADC
+   6    250     3  # HCal FADC
+   7    250     3  # HCal FADC
+   8    250     3  # HCal FADC
+   9    250     3  # HCal FADC
+## If operated in "low resolution" (~120 ps) mode we get 64 channels on each
+## F1 TDC --> Only 5 VME modules needed for HCal
+  10   3204    64  # HCal F1 TDC
+  13   3204    64  # HCal F1 TDC
+  14   3204    64  # HCal F1 TDC
+  15   3204    64  # HCal F1 TDC
+  16   3204    64  # HCal F1 TDC
+#  17   3204     3
+
+# Date/Time = Fri Sep  14 09:33:00 2018
+## 2352 channels needed for CDET, so that's 25 modules, so may fit in 1 crate
+==== Crate 18 type fastbus
+  1  1877  1  0x0  0x0  96  672
+  2  1877  1  0x0  0x0  96  672
+  3  1877  1  0x0  0x0  96  672
+  4  1877  1  0x0  0x0  96  672
+  5  1877  1  0x0  0x0  96  672
+  6  1877  1  0x0  0x0  96  672
+  7  1877  1  0x0  0x0  96  672
+  8  1877  1  0x0  0x0  96  672
+  9  1877  1  0x0  0x0  96  672
+ 10  1877  1  0x0  0x0  96  672
+ 14  1877  1  0x0  0x0  96  672
+ 15  1877  1  0x0  0x0  96  672
+ 16  1877  1  0x0  0x0  96  672
+ 17  1877  1  0x0  0x0  96  672
+ 18  1877  1  0x0  0x0  96  672
+ 19  1877  1  0x0  0x0  96  672
+ 20  1877  1  0x0  0x0  96  672
+ 21  1877  1  0x0  0x0  96  672
+ 23  1877  1  0x0  0x0  96  672
+ 24  1877  1  0x0  0x0  96  672
+ 25  1877  1  0x0  0x0  96  672
+### How about GEMs on Hadron arm side?? (TODO: add them later!)
