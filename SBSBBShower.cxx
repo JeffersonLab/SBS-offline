@@ -152,7 +152,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     fscanf ( fi, "%f%f%f", &x, &y, &z );               // Detector's X,Y,Z coord
     fOrigin.SetXYZ( x, y, z );
     fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%f%f%f", fSize, fSize+1, fSize+2 );  // Sizes of det in X,Y,Z
+    fscanf ( fi, "%lf%lf%lf", fSize, fSize+1, fSize+2 );  // Sizes of det in X,Y,Z
     fdZ = TMath::Abs(fSize[2]);
     fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
 
@@ -200,7 +200,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     // the best matching tag if any are found. If none found, but we have a configuration
     // string, search for it.
     if( SeekDBdate( fi, date ) == 0 && fConfig.Length() > 0 && 
-        SeekDBconfig( fi, fConfig.Data() ));
+        SeekDBconfig( fi, fConfig.Data() )) {}
 
     fgets ( buf, LEN, fi );  
     // Crude protection against a missed date/config tag

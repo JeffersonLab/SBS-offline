@@ -28,11 +28,9 @@
 #include <iostream>
 #if defined(HAS_SSTREAM) || (defined(__GNUC__)&&(__GNUC__ >= 3))
 #include <sstream>
-#define HAS_SSTREAM
 #define ISTR istringstream
 #else
 #include <strstream>
-#undef HAS_SSTREAM
 #define ISTR istrstream
 #endif
 #include "THaBenchmark.h"
@@ -343,7 +341,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   while(1) {
     Int_t crate, slot, lo, hi;
     tag = TString(Form("detmap_%02d", n));
-    if( status = LoadDBvalue( fi, date, tag, line ) != 0 )
+    if( (status = LoadDBvalue(fi, date, tag, line)) != 0 )
       break;
     ISTR inp(line.Data());
     inp >> crate >> slot >> lo >> hi;

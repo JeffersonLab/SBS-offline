@@ -1792,7 +1792,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 					<<evdata.GetEvNum()
 					<<"; NO Hits for Reference Channel, ignore this event"
 					<<i<<" of detector"<<fPrefix<<endl;
-				Warning(Here(here),(s.str().data()));
+				Warning(Here(here),"%s",s.str().c_str());
 			}
 #endif//#if DEBUG_LEVEL>=2
 			data = 2^31 ;//new error value to 
@@ -1808,7 +1808,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 						<<"; Multiple Hits for Reference Channel "<<i
 						<<" of detector"<<fPrefix
 						<<"Using first one"<<endl;
-					Warning(Here(here),s.str().data());
+					Warning(Here(here),"%s",s.str().c_str());
 				}
 #endif//#if DEBUG_LEVEL>=3
 			}
