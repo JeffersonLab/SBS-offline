@@ -1,0 +1,215 @@
+950101
+
+
+###############Plane 0#####################
+bb.gem.plane0.module0.dmag = 1.875000
+bb.gem.plane0.module0.d0 = 0.850000
+bb.gem.plane0.module0.xoffset = -0.512000
+bb.gem.plane0.module0.dx = 0.512000
+bb.gem.plane0.module0.dy = 0.409600
+#bb.gem.plane0.module0.thetaH = -33.000000
+bb.gem.plane0.module0.thetaV = 10.000000
+bb.gem.plane0.module0.depth = 0.015955
+bb.gem.plane0.module0.x.stripangle = 0.0
+bb.gem.plane0.module0.x.pitch = 0.000400
+bb.gem.plane0.module0.y.stripangle = 90.0
+bb.gem.plane0.module0.y.pitch = 0.000400
+
+bb.gem.plane0.module1.dmag = 1.875000
+bb.gem.plane0.module1.d0 = 0.850000
+bb.gem.plane0.module1.xoffset = 0.000000
+bb.gem.plane0.module1.dx = 0.512000
+bb.gem.plane0.module1.dy = 0.409600
+#bb.gem.plane0.module1.thetaH = -33.000000
+bb.gem.plane0.module1.thetaV = 10.000000
+bb.gem.plane0.module1.depth = 0.015955
+bb.gem.plane0.module1.x.stripangle = 0.0
+bb.gem.plane0.module1.x.pitch = 0.000400
+bb.gem.plane0.module1.y.stripangle = 90.0
+bb.gem.plane0.module1.y.pitch = 0.000400
+
+bb.gem.plane0.module2.dmag = 1.875000
+bb.gem.plane0.module2.d0 = 0.850000
+bb.gem.plane0.module2.xoffset = 0.512000
+bb.gem.plane0.module2.dx = 0.512000
+bb.gem.plane0.module2.dy = 0.409600
+#bb.gem.plane0.module2.thetaH = -33.000000
+bb.gem.plane0.module2.thetaV = 10.000000
+bb.gem.plane0.module2.depth = 0.015955
+bb.gem.plane0.module2.x.stripangle = 0.0
+bb.gem.plane0.module2.x.pitch = 0.000400
+bb.gem.plane0.module2.y.stripangle = 90.0
+bb.gem.plane0.module2.y.pitch = 0.000400
+
+###############Plane 1#####################
+bb.gem.plane1.module0.dmag = 1.875000
+bb.gem.plane1.module0.d0 = 1.000000
+bb.gem.plane1.module0.xoffset = -0.512000
+bb.gem.plane1.module0.dx = 0.512000
+bb.gem.plane1.module0.dy = 0.409600
+#bb.gem.plane1.module0.thetaH = -33.000000
+bb.gem.plane1.module0.thetaV = 10.000000
+bb.gem.plane1.module0.depth = 0.015955
+bb.gem.plane1.module0.x.stripangle = 0.0
+bb.gem.plane1.module0.x.pitch = 0.000400
+bb.gem.plane1.module0.y.stripangle = 90.0
+bb.gem.plane1.module0.y.pitch = 0.000400
+
+bb.gem.plane1.module1.dmag = 1.875000
+bb.gem.plane1.module1.d0 = 1.000000
+bb.gem.plane1.module1.xoffset = 0.000000
+bb.gem.plane1.module1.dx = 0.512000
+bb.gem.plane1.module1.dy = 0.409600
+#bb.gem.plane1.module1.thetaH = -33.000000
+bb.gem.plane1.module1.thetaV = 10.000000
+bb.gem.plane1.module1.depth = 0.015955
+bb.gem.plane1.module1.x.stripangle = 0.0
+bb.gem.plane1.module1.x.pitch = 0.000400
+bb.gem.plane1.module1.y.stripangle = 90.0
+bb.gem.plane1.module1.y.pitch = 0.000400
+
+bb.gem.plane1.module2.dmag = 1.875000
+bb.gem.plane1.module2.d0 = 1.000000
+bb.gem.plane1.module2.xoffset = 0.512000
+bb.gem.plane1.module2.dx = 0.512000
+bb.gem.plane1.module2.dy = 0.409600
+bb.gem.plane1.module2.thetaH = -33.000000
+bb.gem.plane1.module2.thetaV = 10.000000
+bb.gem.plane1.module2.depth = 0.015955
+bb.gem.plane1.module2.x.stripangle = 0.0
+bb.gem.plane1.module2.x.pitch = 0.000400
+bb.gem.plane1.module2.y.stripangle = 90.0
+bb.gem.plane1.module2.y.pitch = 0.000400
+
+###############Plane 2#####################
+bb.gem.plane2.module0.dmag = 1.875000
+bb.gem.plane2.module0.d0 = 1.150000
+bb.gem.plane2.module0.xoffset = -0.512000
+bb.gem.plane2.module0.dx = 0.512000
+bb.gem.plane2.module0.dy = 0.409600
+#bb.gem.plane2.module0.thetaH = -33.000000
+bb.gem.plane2.module0.thetaV = 10.000000
+bb.gem.plane2.module0.depth = 0.015955
+bb.gem.plane2.module0.x.stripangle = 0.0
+bb.gem.plane2.module0.x.pitch = 0.000400
+bb.gem.plane2.module0.y.stripangle = 90.0
+bb.gem.plane2.module0.y.pitch = 0.000400
+
+bb.gem.plane2.module1.dmag = 1.875000
+bb.gem.plane2.module1.d0 = 1.150000
+bb.gem.plane2.module1.xoffset = 0.000000
+bb.gem.plane2.module1.dx = 0.512000
+bb.gem.plane2.module1.dy = 0.409600
+#bb.gem.plane2.module1.thetaH = -33.000000
+bb.gem.plane2.module1.thetaV = 10.000000
+bb.gem.plane2.module1.depth = 0.015955
+bb.gem.plane2.module1.x.stripangle = 0.0
+bb.gem.plane2.module1.x.pitch = 0.000400
+bb.gem.plane2.module1.y.stripangle = 90.0
+bb.gem.plane2.module1.y.pitch = 0.000400
+
+bb.gem.plane2.module2.dmag = 1.875000
+bb.gem.plane2.module2.d0 = 1.150000
+bb.gem.plane2.module2.xoffset = 0.512000
+bb.gem.plane2.module2.dx = 0.512000
+bb.gem.plane2.module2.dy = 0.409600
+#bb.gem.plane2.module2.thetaH = -33.000000
+bb.gem.plane2.module2.thetaV = 10.000000
+bb.gem.plane2.module2.depth = 0.015955
+bb.gem.plane2.module2.x.stripangle = 0.0
+bb.gem.plane2.module2.x.pitch = 0.000400
+bb.gem.plane2.module2.y.stripangle = 90.0
+bb.gem.plane2.module2.y.pitch = 0.000400
+
+###############Plane 3#####################
+bb.gem.plane3.module0.dmag = 1.875000
+bb.gem.plane3.module0.d0 = 1.300000
+bb.gem.plane3.module0.xoffset = -0.512000
+bb.gem.plane3.module0.dx = 0.512000
+bb.gem.plane3.module0.dy = 0.409600
+#bb.gem.plane3.module0.thetaH = -33.000000
+bb.gem.plane3.module0.thetaV = 10.000000
+bb.gem.plane3.module0.depth = 0.015955
+bb.gem.plane3.module0.x.stripangle = 0.0
+bb.gem.plane3.module0.x.pitch = 0.000400
+bb.gem.plane3.module0.y.stripangle = 90.0
+bb.gem.plane3.module0.y.pitch = 0.000400
+
+bb.gem.plane3.module1.dmag = 1.875000
+bb.gem.plane3.module1.d0 = 1.300000
+bb.gem.plane3.module1.xoffset = 0.000000
+bb.gem.plane3.module1.dx = 0.512000
+bb.gem.plane3.module1.dy = 0.409600
+#bb.gem.plane3.module1.thetaH = -33.000000
+bb.gem.plane3.module1.thetaV = 10.000000
+bb.gem.plane3.module1.depth = 0.015955
+bb.gem.plane3.module1.x.stripangle = 0.0
+bb.gem.plane3.module1.x.pitch = 0.000400
+bb.gem.plane3.module1.y.stripangle = 90.0
+bb.gem.plane3.module1.y.pitch = 0.000400
+
+bb.gem.plane3.module2.dmag = 1.875000
+bb.gem.plane3.module2.d0 = 1.300000
+bb.gem.plane3.module2.xoffset = 0.512000
+bb.gem.plane3.module2.dx = 0.512000
+bb.gem.plane3.module2.dy = 0.409600
+#bb.gem.plane3.module2.thetaH = -33.000000
+bb.gem.plane3.module2.thetaV = 10.000000
+bb.gem.plane3.module2.depth = 0.015955
+bb.gem.plane3.module2.x.stripangle = 0.0
+bb.gem.plane3.module2.x.pitch = 0.000400
+bb.gem.plane3.module2.y.stripangle = 90.0
+bb.gem.plane3.module2.y.pitch = 0.000400
+
+###############Plane 4#####################
+bb.gem.plane4.module0.dmag = 1.875000
+bb.gem.plane4.module0.d0 = 2.32935
+bb.gem.plane4.module0.xoffset = -0.76800
+bb.gem.plane4.module0.dx = 0.512000
+bb.gem.plane4.module0.dy = 0.614400
+#bb.gem.plane4.module0.thetaH = -33.000000
+bb.gem.plane4.module0.thetaV = 10.000000
+bb.gem.plane4.module0.depth = 0.015955
+bb.gem.plane4.module0.x.stripangle = 0.0
+bb.gem.plane4.module0.x.pitch = 0.000400
+bb.gem.plane4.module0.y.stripangle = 90.0
+bb.gem.plane4.module0.y.pitch = 0.000400
+
+bb.gem.plane4.module1.dmag = 1.875000
+bb.gem.plane4.module1.d0 = 2.32935
+bb.gem.plane4.module1.xoffset = -0.25600
+bb.gem.plane4.module1.dx = 0.512000
+bb.gem.plane4.module1.dy = 0.614400
+#bb.gem.plane4.module1.thetaH = -33.000000
+bb.gem.plane4.module1.thetaV = 10.000000
+bb.gem.plane4.module1.depth = 0.015955
+bb.gem.plane4.module1.x.stripangle = 0.0
+bb.gem.plane4.module1.x.pitch = 0.000400
+bb.gem.plane4.module1.y.stripangle = 90.0
+bb.gem.plane4.module1.y.pitch = 0.000400
+
+bb.gem.plane4.module2.dmag = 1.875000
+bb.gem.plane4.module2.d0 = 2.32935
+bb.gem.plane4.module2.xoffset = 0.25600
+bb.gem.plane4.module2.dx = 0.512000
+bb.gem.plane4.module2.dy = 0.614400
+#bb.gem.plane4.module2.thetaH = -33.000000
+bb.gem.plane4.module2.thetaV = 10.000000
+bb.gem.plane4.module2.depth = 0.015955
+bb.gem.plane4.module2.x.stripangle = 0.0
+bb.gem.plane4.module2.x.pitch = 0.000400
+bb.gem.plane4.module2.y.stripangle = 90.0
+bb.gem.plane4.module2.y.pitch = 0.000400
+
+bb.gem.plane4.module3.dmag = 1.875000
+bb.gem.plane4.module3.d0 = 2.32935
+bb.gem.plane4.module3.xoffset = 0.76800
+bb.gem.plane4.module3.dx = 0.512000
+bb.gem.plane4.module3.dy = 0.614400
+#bb.gem.plane4.module3.thetaH = -33.000000
+bb.gem.plane4.module3.thetaV = 10.000000
+bb.gem.plane4.module3.depth = 0.015955
+bb.gem.plane4.module3.x.stripangle = 0.0
+bb.gem.plane4.module3.x.pitch = 0.000400
+bb.gem.plane4.module3.y.stripangle = 90.0
+bb.gem.plane4.module3.y.pitch = 0.000400
