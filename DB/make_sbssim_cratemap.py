@@ -3,6 +3,7 @@ import re ## Regular expressions
 
 known_adcs = [ '250',  '792', '1881' ]
 known_tdcs = ['1190', '1877', '3204', '1875', '3201', '775']
+known_mpds = ['3561']
 known_scalers = [ '1151', '3800', '3801', '560' ]
 
 def getSimEncoder(val):
@@ -12,6 +13,9 @@ def getSimEncoder(val):
     for tdc in known_tdcs:
         if val == tdc:
             return '53240'
+    for mpd in known_mpds:
+        if val == mpd:
+            return '53561'
     return val ## encoder not found, good luck!
 
 def makeSimMap():

@@ -1,215 +1,630 @@
 950101
 
+## A chamber is a "Tracker-Plane" composed of vertically stacked modules
+bb.gem.chambers = ft0 ft1 ft2 ft3 bt0
 
-###############Plane 0#####################
-bb.gem.plane0.module0.dmag = 1.875000
-bb.gem.plane0.module0.d0 = 0.850000
-bb.gem.plane0.module0.xoffset = -0.512000
-bb.gem.plane0.module0.dx = 0.512000
-bb.gem.plane0.module0.dy = 0.409600
-#bb.gem.plane0.module0.thetaH = -33.000000
-bb.gem.plane0.module0.thetaV = 10.000000
-bb.gem.plane0.module0.depth = 0.015955
-bb.gem.plane0.module0.x.stripangle = 0.0
-bb.gem.plane0.module0.x.pitch = 0.000400
-bb.gem.plane0.module0.y.stripangle = 90.0
-bb.gem.plane0.module0.y.pitch = 0.000400
+## A module is a pair of 2 GEMs (x and y)
+bb.gem.ft0.modules = m0 m1 m2
+bb.gem.ft1.modules = m0 m1 m2
+bb.gem.ft2.modules = m0 m1 m2
+bb.gem.ft3.modules = m0 m1 m2
+bb.gem.bt0.modules = m0 m1 m2 m3
 
-bb.gem.plane0.module1.dmag = 1.875000
-bb.gem.plane0.module1.d0 = 0.850000
-bb.gem.plane0.module1.xoffset = 0.000000
-bb.gem.plane0.module1.dx = 0.512000
-bb.gem.plane0.module1.dy = 0.409600
-#bb.gem.plane0.module1.thetaH = -33.000000
-bb.gem.plane0.module1.thetaV = 10.000000
-bb.gem.plane0.module1.depth = 0.015955
-bb.gem.plane0.module1.x.stripangle = 0.0
-bb.gem.plane0.module1.x.pitch = 0.000400
-bb.gem.plane0.module1.y.stripangle = 90.0
-bb.gem.plane0.module1.y.pitch = 0.000400
+## Configure the planes in each module
+bb.gem.ft0.m0.planeconfig = x y
+bb.gem.ft0.m1.planeconfig = x y
+bb.gem.ft0.m2.planeconfig = x y
+bb.gem.ft1.m0.planeconfig = x y
+bb.gem.ft1.m1.planeconfig = x y
+bb.gem.ft1.m2.planeconfig = x y
+bb.gem.ft2.m0.planeconfig = x y
+bb.gem.ft2.m1.planeconfig = x y
+bb.gem.ft2.m2.planeconfig = x y
+bb.gem.bt0.m0.planeconfig = x y
+bb.gem.bt0.m1.planeconfig = x y
+bb.gem.bt0.m2.planeconfig = x y
+bb.gem.bt0.m3.planeconfig = x y
 
-bb.gem.plane0.module2.dmag = 1.875000
-bb.gem.plane0.module2.d0 = 0.850000
-bb.gem.plane0.module2.xoffset = 0.512000
-bb.gem.plane0.module2.dx = 0.512000
-bb.gem.plane0.module2.dy = 0.409600
-#bb.gem.plane0.module2.thetaH = -33.000000
-bb.gem.plane0.module2.thetaV = 10.000000
-bb.gem.plane0.module2.depth = 0.015955
-bb.gem.plane0.module2.x.stripangle = 0.0
-bb.gem.plane0.module2.x.pitch = 0.000400
-bb.gem.plane0.module2.y.stripangle = 90.0
-bb.gem.plane0.module2.y.pitch = 0.000400
+## It does something similar to the lines above that are used
+## in the simulation
+bb.gem.planeconfig =
+  ft0.m0.x ft0.m0.y
+  ft0.m1.x ft0.m1.y
+  ft0.m2.x ft0.m2.y
+  ft1.m0.x ft1.m0.y
+  ft1.m1.x ft1.m1.y
+  ft1.m2.x ft1.m2.y
+  ft2.m0.x ft2.m0.y
+  ft2.m1.x ft2.m1.y
+  ft2.m2.x ft2.m2.y
+  bt0.m0.x bt0.m0.y
+  bt0.m1.x bt0.m1.y
+  bt0.m2.x bt0.m2.y
+  bt0.m3.x bt0.m3.y
 
-###############Plane 1#####################
-bb.gem.plane1.module0.dmag = 1.875000
-bb.gem.plane1.module0.d0 = 1.000000
-bb.gem.plane1.module0.xoffset = -0.512000
-bb.gem.plane1.module0.dx = 0.512000
-bb.gem.plane1.module0.dy = 0.409600
-#bb.gem.plane1.module0.thetaH = -33.000000
-bb.gem.plane1.module0.thetaV = 10.000000
-bb.gem.plane1.module0.depth = 0.015955
-bb.gem.plane1.module0.x.stripangle = 0.0
-bb.gem.plane1.module0.x.pitch = 0.000400
-bb.gem.plane1.module0.y.stripangle = 90.0
-bb.gem.plane1.module0.y.pitch = 0.000400
 
-bb.gem.plane1.module1.dmag = 1.875000
-bb.gem.plane1.module1.d0 = 1.000000
-bb.gem.plane1.module1.xoffset = 0.000000
-bb.gem.plane1.module1.dx = 0.512000
-bb.gem.plane1.module1.dy = 0.409600
-#bb.gem.plane1.module1.thetaH = -33.000000
-bb.gem.plane1.module1.thetaV = 10.000000
-bb.gem.plane1.module1.depth = 0.015955
-bb.gem.plane1.module1.x.stripangle = 0.0
-bb.gem.plane1.module1.x.pitch = 0.000400
-bb.gem.plane1.module1.y.stripangle = 90.0
-bb.gem.plane1.module1.y.pitch = 0.000400
+###############Chamber 0#####################
+bb.gem.ft0.m0.dmag = 1.875000
+bb.gem.ft0.m0.d0 = 0.850000
+bb.gem.ft0.m0.xoffset = -0.512000
+bb.gem.ft0.m0.dx = 0.512000
+bb.gem.ft0.m0.dy = 0.409600
+#bb.gem.ft0.m0.thetaH = -33.000000
+bb.gem.ft0.m0.thetaV = 10.000000
+bb.gem.ft0.m0.depth = 0.015955
+bb.gem.ft0.m0.x.stripangle = 0.0
+bb.gem.ft0.m0.x.pitch = 0.000400
+bb.gem.ft0.m0.y.stripangle = 90.0
+bb.gem.ft0.m0.y.pitch = 0.000400
 
-bb.gem.plane1.module2.dmag = 1.875000
-bb.gem.plane1.module2.d0 = 1.000000
-bb.gem.plane1.module2.xoffset = 0.512000
-bb.gem.plane1.module2.dx = 0.512000
-bb.gem.plane1.module2.dy = 0.409600
-bb.gem.plane1.module2.thetaH = -33.000000
-bb.gem.plane1.module2.thetaV = 10.000000
-bb.gem.plane1.module2.depth = 0.015955
-bb.gem.plane1.module2.x.stripangle = 0.0
-bb.gem.plane1.module2.x.pitch = 0.000400
-bb.gem.plane1.module2.y.stripangle = 90.0
-bb.gem.plane1.module2.y.pitch = 0.000400
+bb.gem.ft0.m1.dmag = 1.875000
+bb.gem.ft0.m1.d0 = 0.850000
+bb.gem.ft0.m1.xoffset = 0.000000
+bb.gem.ft0.m1.dx = 0.512000
+bb.gem.ft0.m1.dy = 0.409600
+#bb.gem.ft0.m1.thetaH = -33.000000
+bb.gem.ft0.m1.thetaV = 10.000000
+bb.gem.ft0.m1.depth = 0.015955
+bb.gem.ft0.m1.x.stripangle = 0.0
+bb.gem.ft0.m1.x.pitch = 0.000400
+bb.gem.ft0.m1.y.stripangle = 90.0
+bb.gem.ft0.m1.y.pitch = 0.000400
 
-###############Plane 2#####################
-bb.gem.plane2.module0.dmag = 1.875000
-bb.gem.plane2.module0.d0 = 1.150000
-bb.gem.plane2.module0.xoffset = -0.512000
-bb.gem.plane2.module0.dx = 0.512000
-bb.gem.plane2.module0.dy = 0.409600
-#bb.gem.plane2.module0.thetaH = -33.000000
-bb.gem.plane2.module0.thetaV = 10.000000
-bb.gem.plane2.module0.depth = 0.015955
-bb.gem.plane2.module0.x.stripangle = 0.0
-bb.gem.plane2.module0.x.pitch = 0.000400
-bb.gem.plane2.module0.y.stripangle = 90.0
-bb.gem.plane2.module0.y.pitch = 0.000400
 
-bb.gem.plane2.module1.dmag = 1.875000
-bb.gem.plane2.module1.d0 = 1.150000
-bb.gem.plane2.module1.xoffset = 0.000000
-bb.gem.plane2.module1.dx = 0.512000
-bb.gem.plane2.module1.dy = 0.409600
-#bb.gem.plane2.module1.thetaH = -33.000000
-bb.gem.plane2.module1.thetaV = 10.000000
-bb.gem.plane2.module1.depth = 0.015955
-bb.gem.plane2.module1.x.stripangle = 0.0
-bb.gem.plane2.module1.x.pitch = 0.000400
-bb.gem.plane2.module1.y.stripangle = 90.0
-bb.gem.plane2.module1.y.pitch = 0.000400
+bb.gem.ft0.m2.dmag = 1.875000
+bb.gem.ft0.m2.d0 = 0.850000
+bb.gem.ft0.m2.xoffset = 0.512000
+bb.gem.ft0.m2.dx = 0.512000
+bb.gem.ft0.m2.dy = 0.409600
+#bb.gem.ft0.m2.thetaH = -33.000000
+bb.gem.ft0.m2.thetaV = 10.000000
+bb.gem.ft0.m2.depth = 0.015955
+bb.gem.ft0.m2.x.stripangle = 0.0
+bb.gem.ft0.m2.x.pitch = 0.000400
+bb.gem.ft0.m2.y.stripangle = 90.0
+bb.gem.ft0.m2.y.pitch = 0.000400
 
-bb.gem.plane2.module2.dmag = 1.875000
-bb.gem.plane2.module2.d0 = 1.150000
-bb.gem.plane2.module2.xoffset = 0.512000
-bb.gem.plane2.module2.dx = 0.512000
-bb.gem.plane2.module2.dy = 0.409600
-#bb.gem.plane2.module2.thetaH = -33.000000
-bb.gem.plane2.module2.thetaV = 10.000000
-bb.gem.plane2.module2.depth = 0.015955
-bb.gem.plane2.module2.x.stripangle = 0.0
-bb.gem.plane2.module2.x.pitch = 0.000400
-bb.gem.plane2.module2.y.stripangle = 90.0
-bb.gem.plane2.module2.y.pitch = 0.000400
 
-###############Plane 3#####################
-bb.gem.plane3.module0.dmag = 1.875000
-bb.gem.plane3.module0.d0 = 1.300000
-bb.gem.plane3.module0.xoffset = -0.512000
-bb.gem.plane3.module0.dx = 0.512000
-bb.gem.plane3.module0.dy = 0.409600
-#bb.gem.plane3.module0.thetaH = -33.000000
-bb.gem.plane3.module0.thetaV = 10.000000
-bb.gem.plane3.module0.depth = 0.015955
-bb.gem.plane3.module0.x.stripangle = 0.0
-bb.gem.plane3.module0.x.pitch = 0.000400
-bb.gem.plane3.module0.y.stripangle = 90.0
-bb.gem.plane3.module0.y.pitch = 0.000400
+###############Chamber 1#####################
+bb.gem.ft1.m0.dmag = 1.875000
+bb.gem.ft1.m0.d0 = 1.000000
+bb.gem.ft1.m0.xoffset = -0.512000
+bb.gem.ft1.m0.dx = 0.512000
+bb.gem.ft1.m0.dy = 0.409600
+#bb.gem.ft1.m0.thetaH = -33.000000
+bb.gem.ft1.m0.thetaV = 10.000000
+bb.gem.ft1.m0.depth = 0.015955
+bb.gem.ft1.m0.x.stripangle = 0.0
+bb.gem.ft1.m0.x.pitch = 0.000400
+bb.gem.ft1.m0.y.stripangle = 90.0
+bb.gem.ft1.m0.y.pitch = 0.000400
 
-bb.gem.plane3.module1.dmag = 1.875000
-bb.gem.plane3.module1.d0 = 1.300000
-bb.gem.plane3.module1.xoffset = 0.000000
-bb.gem.plane3.module1.dx = 0.512000
-bb.gem.plane3.module1.dy = 0.409600
-#bb.gem.plane3.module1.thetaH = -33.000000
-bb.gem.plane3.module1.thetaV = 10.000000
-bb.gem.plane3.module1.depth = 0.015955
-bb.gem.plane3.module1.x.stripangle = 0.0
-bb.gem.plane3.module1.x.pitch = 0.000400
-bb.gem.plane3.module1.y.stripangle = 90.0
-bb.gem.plane3.module1.y.pitch = 0.000400
 
-bb.gem.plane3.module2.dmag = 1.875000
-bb.gem.plane3.module2.d0 = 1.300000
-bb.gem.plane3.module2.xoffset = 0.512000
-bb.gem.plane3.module2.dx = 0.512000
-bb.gem.plane3.module2.dy = 0.409600
-#bb.gem.plane3.module2.thetaH = -33.000000
-bb.gem.plane3.module2.thetaV = 10.000000
-bb.gem.plane3.module2.depth = 0.015955
-bb.gem.plane3.module2.x.stripangle = 0.0
-bb.gem.plane3.module2.x.pitch = 0.000400
-bb.gem.plane3.module2.y.stripangle = 90.0
-bb.gem.plane3.module2.y.pitch = 0.000400
+bb.gem.ft1.m1.dmag = 1.875000
+bb.gem.ft1.m1.d0 = 1.000000
+bb.gem.ft1.m1.xoffset = 0.000000
+bb.gem.ft1.m1.dx = 0.512000
+bb.gem.ft1.m1.dy = 0.409600
+#bb.gem.ft1.m1.thetaH = -33.000000
+bb.gem.ft1.m1.thetaV = 10.000000
+bb.gem.ft1.m1.depth = 0.015955
+bb.gem.ft1.m1.x.stripangle = 0.0
+bb.gem.ft1.m1.x.pitch = 0.000400
+bb.gem.ft1.m1.y.stripangle = 90.0
+bb.gem.ft1.m1.y.pitch = 0.000400
 
-###############Plane 4#####################
-bb.gem.plane4.module0.dmag = 1.875000
-bb.gem.plane4.module0.d0 = 2.32935
-bb.gem.plane4.module0.xoffset = -0.76800
-bb.gem.plane4.module0.dx = 0.512000
-bb.gem.plane4.module0.dy = 0.614400
-#bb.gem.plane4.module0.thetaH = -33.000000
-bb.gem.plane4.module0.thetaV = 10.000000
-bb.gem.plane4.module0.depth = 0.015955
-bb.gem.plane4.module0.x.stripangle = 0.0
-bb.gem.plane4.module0.x.pitch = 0.000400
-bb.gem.plane4.module0.y.stripangle = 90.0
-bb.gem.plane4.module0.y.pitch = 0.000400
+bb.gem.ft1.m2.dmag = 1.875000
+bb.gem.ft1.m2.d0 = 1.000000
+bb.gem.ft1.m2.xoffset = 0.512000
+bb.gem.ft1.m2.dx = 0.512000
+bb.gem.ft1.m2.dy = 0.409600
+bb.gem.ft1.m2.thetaH = -33.000000
+bb.gem.ft1.m2.thetaV = 10.000000
+bb.gem.ft1.m2.depth = 0.015955
+bb.gem.ft1.m2.x.stripangle = 0.0
+bb.gem.ft1.m2.x.pitch = 0.000400
+bb.gem.ft1.m2.y.stripangle = 90.0
+bb.gem.ft1.m2.y.pitch = 0.000400
 
-bb.gem.plane4.module1.dmag = 1.875000
-bb.gem.plane4.module1.d0 = 2.32935
-bb.gem.plane4.module1.xoffset = -0.25600
-bb.gem.plane4.module1.dx = 0.512000
-bb.gem.plane4.module1.dy = 0.614400
-#bb.gem.plane4.module1.thetaH = -33.000000
-bb.gem.plane4.module1.thetaV = 10.000000
-bb.gem.plane4.module1.depth = 0.015955
-bb.gem.plane4.module1.x.stripangle = 0.0
-bb.gem.plane4.module1.x.pitch = 0.000400
-bb.gem.plane4.module1.y.stripangle = 90.0
-bb.gem.plane4.module1.y.pitch = 0.000400
+###############Chamber 2#####################
+bb.gem.ft2.m0.dmag = 1.875000
+bb.gem.ft2.m0.d0 = 1.150000
+bb.gem.ft2.m0.xoffset = -0.512000
+bb.gem.ft2.m0.dx = 0.512000
+bb.gem.ft2.m0.dy = 0.409600
+#bb.gem.ft2.m0.thetaH = -33.000000
+bb.gem.ft2.m0.thetaV = 10.000000
+bb.gem.ft2.m0.depth = 0.015955
+bb.gem.ft2.m0.x.stripangle = 0.0
+bb.gem.ft2.m0.x.pitch = 0.000400
+bb.gem.ft2.m0.y.stripangle = 90.0
+bb.gem.ft2.m0.y.pitch = 0.000400
 
-bb.gem.plane4.module2.dmag = 1.875000
-bb.gem.plane4.module2.d0 = 2.32935
-bb.gem.plane4.module2.xoffset = 0.25600
-bb.gem.plane4.module2.dx = 0.512000
-bb.gem.plane4.module2.dy = 0.614400
-#bb.gem.plane4.module2.thetaH = -33.000000
-bb.gem.plane4.module2.thetaV = 10.000000
-bb.gem.plane4.module2.depth = 0.015955
-bb.gem.plane4.module2.x.stripangle = 0.0
-bb.gem.plane4.module2.x.pitch = 0.000400
-bb.gem.plane4.module2.y.stripangle = 90.0
-bb.gem.plane4.module2.y.pitch = 0.000400
+bb.gem.ft2.m1.dmag = 1.875000
+bb.gem.ft2.m1.d0 = 1.150000
+bb.gem.ft2.m1.xoffset = 0.000000
+bb.gem.ft2.m1.dx = 0.512000
+bb.gem.ft2.m1.dy = 0.409600
+#bb.gem.ft2.m1.thetaH = -33.000000
+bb.gem.ft2.m1.thetaV = 10.000000
+bb.gem.ft2.m1.depth = 0.015955
+bb.gem.ft2.m1.x.stripangle = 0.0
+bb.gem.ft2.m1.x.pitch = 0.000400
+bb.gem.ft2.m1.y.stripangle = 90.0
+bb.gem.ft2.m1.y.pitch = 0.000400
 
-bb.gem.plane4.module3.dmag = 1.875000
-bb.gem.plane4.module3.d0 = 2.32935
-bb.gem.plane4.module3.xoffset = 0.76800
-bb.gem.plane4.module3.dx = 0.512000
-bb.gem.plane4.module3.dy = 0.614400
-#bb.gem.plane4.module3.thetaH = -33.000000
-bb.gem.plane4.module3.thetaV = 10.000000
-bb.gem.plane4.module3.depth = 0.015955
-bb.gem.plane4.module3.x.stripangle = 0.0
-bb.gem.plane4.module3.x.pitch = 0.000400
-bb.gem.plane4.module3.y.stripangle = 90.0
-bb.gem.plane4.module3.y.pitch = 0.000400
+bb.gem.ft2.m2.dmag = 1.875000
+bb.gem.ft2.m2.d0 = 1.150000
+bb.gem.ft2.m2.xoffset = 0.512000
+bb.gem.ft2.m2.dx = 0.512000
+bb.gem.ft2.m2.dy = 0.409600
+#bb.gem.ft2.m2.thetaH = -33.000000
+bb.gem.ft2.m2.thetaV = 10.000000
+bb.gem.ft2.m2.depth = 0.015955
+bb.gem.ft2.m2.x.stripangle = 0.0
+bb.gem.ft2.m2.x.pitch = 0.000400
+bb.gem.ft2.m2.y.stripangle = 90.0
+bb.gem.ft2.m2.y.pitch = 0.000400
+
+###############Chamber 3#####################
+bb.gem.ft3.m0.dmag = 1.875000
+bb.gem.ft3.m0.d0 = 1.300000
+bb.gem.ft3.m0.xoffset = -0.512000
+bb.gem.ft3.m0.dx = 0.512000
+bb.gem.ft3.m0.dy = 0.409600
+#bb.gem.ft3.m0.thetaH = -33.000000
+bb.gem.ft3.m0.thetaV = 10.000000
+bb.gem.ft3.m0.depth = 0.015955
+bb.gem.ft3.m0.x.stripangle = 0.0
+bb.gem.ft3.m0.x.pitch = 0.000400
+bb.gem.ft3.m0.y.stripangle = 90.0
+bb.gem.ft3.m0.y.pitch = 0.000400
+
+bb.gem.ft3.m1.dmag = 1.875000
+bb.gem.ft3.m1.d0 = 1.300000
+bb.gem.ft3.m1.xoffset = 0.000000
+bb.gem.ft3.m1.dx = 0.512000
+bb.gem.ft3.m1.dy = 0.409600
+#bb.gem.ft3.m1.thetaH = -33.000000
+bb.gem.ft3.m1.thetaV = 10.000000
+bb.gem.ft3.m1.depth = 0.015955
+bb.gem.ft3.m1.x.stripangle = 0.0
+bb.gem.ft3.m1.x.pitch = 0.000400
+bb.gem.ft3.m1.y.stripangle = 90.0
+bb.gem.ft3.m1.y.pitch = 0.000400
+
+bb.gem.ft3.m2.dmag = 1.875000
+bb.gem.ft3.m2.d0 = 1.300000
+bb.gem.ft3.m2.xoffset = 0.512000
+bb.gem.ft3.m2.dx = 0.512000
+bb.gem.ft3.m2.dy = 0.409600
+#bb.gem.ft3.m2.thetaH = -33.000000
+bb.gem.ft3.m2.thetaV = 10.000000
+bb.gem.ft3.m2.depth = 0.015955
+bb.gem.ft3.m2.x.stripangle = 0.0
+bb.gem.ft3.m2.x.pitch = 0.000400
+bb.gem.ft3.m2.y.stripangle = 90.0
+bb.gem.ft3.m2.y.pitch = 0.000400
+
+###############Chamber 4#####################
+bb.gem.bt0.m0.dmag = 1.875000
+bb.gem.bt0.m0.d0 = 2.32935
+bb.gem.bt0.m0.xoffset = -0.76800
+bb.gem.bt0.m0.dx = 0.512000
+bb.gem.bt0.m0.dy = 0.614400
+#bb.gem.bt0.m0.thetaH = -33.000000
+bb.gem.bt0.m0.thetaV = 10.000000
+bb.gem.bt0.m0.depth = 0.015955
+bb.gem.bt0.m0.x.stripangle = 0.0
+bb.gem.bt0.m0.x.pitch = 0.000400
+bb.gem.bt0.m0.y.stripangle = 90.0
+bb.gem.bt0.m0.y.pitch = 0.000400
+
+bb.gem.bt0.m1.dmag = 1.875000
+bb.gem.bt0.m1.d0 = 2.32935
+bb.gem.bt0.m1.xoffset = -0.25600
+bb.gem.bt0.m1.dx = 0.512000
+bb.gem.bt0.m1.dy = 0.614400
+#bb.gem.bt0.m1.thetaH = -33.000000
+bb.gem.bt0.m1.thetaV = 10.000000
+bb.gem.bt0.m1.depth = 0.015955
+bb.gem.bt0.m1.x.stripangle = 0.0
+bb.gem.bt0.m1.x.pitch = 0.000400
+bb.gem.bt0.m1.y.stripangle = 90.0
+bb.gem.bt0.m1.y.pitch = 0.000400
+
+bb.gem.bt0.m2.dmag = 1.875000
+bb.gem.bt0.m2.d0 = 2.32935
+bb.gem.bt0.m2.xoffset = 0.25600
+bb.gem.bt0.m2.dx = 0.512000
+bb.gem.bt0.m2.dy = 0.614400
+#bb.gem.bt0.m2.thetaH = -33.000000
+bb.gem.bt0.m2.thetaV = 10.000000
+bb.gem.bt0.m2.depth = 0.015955
+bb.gem.bt0.m2.x.stripangle = 0.0
+bb.gem.bt0.m2.x.pitch = 0.000400
+bb.gem.bt0.m2.y.stripangle = 90.0
+bb.gem.bt0.m2.y.pitch = 0.000400
+
+bb.gem.bt0.m3.dmag = 1.875000
+bb.gem.bt0.m3.d0 = 2.32935
+bb.gem.bt0.m3.xoffset = 0.76800
+bb.gem.bt0.m3.dx = 0.512000
+bb.gem.bt0.m3.dy = 0.614400
+#bb.gem.bt0.m3.thetaH = -33.000000
+bb.gem.bt0.m3.thetaV = 10.000000
+bb.gem.bt0.m3.depth = 0.015955
+bb.gem.bt0.m3.x.stripangle = 0.0
+bb.gem.bt0.m3.x.pitch = 0.000400
+bb.gem.bt0.m3.y.stripangle = 90.0
+bb.gem.bt0.m3.y.pitch = 0.000400
+
+## Channel maps
+bb.gem.ft0.m0.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    0   0   0   0   0   0   0 # Strip    0- 127
+      19    0   0   0   1   0   1   0 # Strip  128- 255
+      19    0   0   0   2   0   2   0 # Strip  256- 383
+      19    0   0   0   3   0   3   0 # Strip  384- 511
+      19    0   0   0   4   0   4   0 # Strip  512- 639
+      19    0   0   0   5   0   5   0 # Strip  640- 767
+      19    0   0   0   6   0   6   0 # Strip  768- 895
+      19    0   0   0   7   0   7   0 # Strip  896-1023
+      19    0   0   0   8   0   8   0 # Strip 1024-1151
+      19    0   0   0   9   0   9   0 # Strip 1152-1279
+bb.gem.ft0.m0.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    0   0   0  10   0   0   0 # Strip    0- 127
+      19    0   0   0  11   0   1   0 # Strip  128- 255
+      19    0   0   0  12   0   2   0 # Strip  256- 383
+      19    0   0   0  13   0   3   0 # Strip  384- 511
+      19    0   0   0  14   0   4   0 # Strip  512- 639
+      19    0   0   0  15   0   5   0 # Strip  640- 767
+      19    1   1   0   0   0   6   0 # Strip  768- 895
+      19    1   1   0   1   0   7   0 # Strip  896-1023
+bb.gem.ft0.m1.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    1   1   0   2   0   0   0 # Strip    0- 127
+      19    1   1   0   3   0   1   0 # Strip  128- 255
+      19    1   1   0   4   0   2   0 # Strip  256- 383
+      19    1   1   0   5   0   3   0 # Strip  384- 511
+      19    1   1   0   6   0   4   0 # Strip  512- 639
+      19    1   1   0   7   0   5   0 # Strip  640- 767
+      19    1   1   0   8   0   6   0 # Strip  768- 895
+      19    1   1   0   9   0   7   0 # Strip  896-1023
+      19    1   1   0  10   0   8   0 # Strip 1024-1151
+      19    1   1   0  11   0   9   0 # Strip 1152-1279
+bb.gem.ft0.m1.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    1   1   0  12   0   0   0 # Strip    0- 127
+      19    1   1   0  13   0   1   0 # Strip  128- 255
+      19    1   1   0  14   0   2   0 # Strip  256- 383
+      19    1   1   0  15   0   3   0 # Strip  384- 511
+      19    2   2   0   0   0   4   0 # Strip  512- 639
+      19    2   2   0   1   0   5   0 # Strip  640- 767
+      19    2   2   0   2   0   6   0 # Strip  768- 895
+      19    2   2   0   3   0   7   0 # Strip  896-1023
+bb.gem.ft0.m2.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    2   2   0   4   0   0   0 # Strip    0- 127
+      19    2   2   0   5   0   1   0 # Strip  128- 255
+      19    2   2   0   6   0   2   0 # Strip  256- 383
+      19    2   2   0   7   0   3   0 # Strip  384- 511
+      19    2   2   0   8   0   4   0 # Strip  512- 639
+      19    2   2   0   9   0   5   0 # Strip  640- 767
+      19    2   2   0  10   0   6   0 # Strip  768- 895
+      19    2   2   0  11   0   7   0 # Strip  896-1023
+      19    2   2   0  12   0   8   0 # Strip 1024-1151
+      19    2   2   0  13   0   9   0 # Strip 1152-1279
+bb.gem.ft0.m2.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    2   2   0  14   0   0   0 # Strip    0- 127
+      19    2   2   0  15   0   1   0 # Strip  128- 255
+      19    3   3   0   0   0   2   0 # Strip  256- 383
+      19    3   3   0   1   0   3   0 # Strip  384- 511
+      19    3   3   0   2   0   4   0 # Strip  512- 639
+      19    3   3   0   3   0   5   0 # Strip  640- 767
+      19    3   3   0   4   0   6   0 # Strip  768- 895
+      19    3   3   0   5   0   7   0 # Strip  896-1023
+bb.gem.ft1.m0.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    3   3   0   6   0   0   0 # Strip    0- 127
+      19    3   3   0   7   0   1   0 # Strip  128- 255
+      19    3   3   0   8   0   2   0 # Strip  256- 383
+      19    3   3   0   9   0   3   0 # Strip  384- 511
+      19    3   3   0  10   0   4   0 # Strip  512- 639
+      19    3   3   0  11   0   5   0 # Strip  640- 767
+      19    3   3   0  12   0   6   0 # Strip  768- 895
+      19    3   3   0  13   0   7   0 # Strip  896-1023
+      19    3   3   0  14   0   8   0 # Strip 1024-1151
+      19    3   3   0  15   0   9   0 # Strip 1152-1279
+bb.gem.ft1.m0.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    4   4   0   0   0   0   0 # Strip    0- 127
+      19    4   4   0   1   0   1   0 # Strip  128- 255
+      19    4   4   0   2   0   2   0 # Strip  256- 383
+      19    4   4   0   3   0   3   0 # Strip  384- 511
+      19    4   4   0   4   0   4   0 # Strip  512- 639
+      19    4   4   0   5   0   5   0 # Strip  640- 767
+      19    4   4   0   6   0   6   0 # Strip  768- 895
+      19    4   4   0   7   0   7   0 # Strip  896-1023
+bb.gem.ft1.m1.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    4   4   0   8   0   0   0 # Strip    0- 127
+      19    4   4   0   9   0   1   0 # Strip  128- 255
+      19    4   4   0  10   0   2   0 # Strip  256- 383
+      19    4   4   0  11   0   3   0 # Strip  384- 511
+      19    4   4   0  12   0   4   0 # Strip  512- 639
+      19    4   4   0  13   0   5   0 # Strip  640- 767
+      19    4   4   0  14   0   6   0 # Strip  768- 895
+      19    4   4   0  15   0   7   0 # Strip  896-1023
+      19    5   5   0   0   0   8   0 # Strip 1024-1151
+      19    5   5   0   1   0   9   0 # Strip 1152-1279
+bb.gem.ft1.m1.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    5   5   0   2   0   0   0 # Strip    0- 127
+      19    5   5   0   3   0   1   0 # Strip  128- 255
+      19    5   5   0   4   0   2   0 # Strip  256- 383
+      19    5   5   0   5   0   3   0 # Strip  384- 511
+      19    5   5   0   6   0   4   0 # Strip  512- 639
+      19    5   5   0   7   0   5   0 # Strip  640- 767
+      19    5   5   0   8   0   6   0 # Strip  768- 895
+      19    5   5   0   9   0   7   0 # Strip  896-1023
+bb.gem.ft1.m2.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    5   5   0  10   0   0   0 # Strip    0- 127
+      19    5   5   0  11   0   1   0 # Strip  128- 255
+      19    5   5   0  12   0   2   0 # Strip  256- 383
+      19    5   5   0  13   0   3   0 # Strip  384- 511
+      19    5   5   0  14   0   4   0 # Strip  512- 639
+      19    5   5   0  15   0   5   0 # Strip  640- 767
+      19    6   6   0   0   0   6   0 # Strip  768- 895
+      19    6   6   0   1   0   7   0 # Strip  896-1023
+      19    6   6   0   2   0   8   0 # Strip 1024-1151
+      19    6   6   0   3   0   9   0 # Strip 1152-1279
+bb.gem.ft1.m2.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    6   6   0   4   0   0   0 # Strip    0- 127
+      19    6   6   0   5   0   1   0 # Strip  128- 255
+      19    6   6   0   6   0   2   0 # Strip  256- 383
+      19    6   6   0   7   0   3   0 # Strip  384- 511
+      19    6   6   0   8   0   4   0 # Strip  512- 639
+      19    6   6   0   9   0   5   0 # Strip  640- 767
+      19    6   6   0  10   0   6   0 # Strip  768- 895
+      19    6   6   0  11   0   7   0 # Strip  896-1023
+bb.gem.ft2.m0.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    6   6   0  12   0   0   0 # Strip    0- 127
+      19    6   6   0  13   0   1   0 # Strip  128- 255
+      19    6   6   0  14   0   2   0 # Strip  256- 383
+      19    6   6   0  15   0   3   0 # Strip  384- 511
+      19    7   7   0   0   0   4   0 # Strip  512- 639
+      19    7   7   0   1   0   5   0 # Strip  640- 767
+      19    7   7   0   2   0   6   0 # Strip  768- 895
+      19    7   7   0   3   0   7   0 # Strip  896-1023
+      19    7   7   0   4   0   8   0 # Strip 1024-1151
+      19    7   7   0   5   0   9   0 # Strip 1152-1279
+bb.gem.ft2.m0.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    7   7   0   6   0   0   0 # Strip    0- 127
+      19    7   7   0   7   0   1   0 # Strip  128- 255
+      19    7   7   0   8   0   2   0 # Strip  256- 383
+      19    7   7   0   9   0   3   0 # Strip  384- 511
+      19    7   7   0  10   0   4   0 # Strip  512- 639
+      19    7   7   0  11   0   5   0 # Strip  640- 767
+      19    7   7   0  12   0   6   0 # Strip  768- 895
+      19    7   7   0  13   0   7   0 # Strip  896-1023
+bb.gem.ft2.m1.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    7   7   0  14   0   0   0 # Strip    0- 127
+      19    7   7   0  15   0   1   0 # Strip  128- 255
+      19    8   8   0   0   0   2   0 # Strip  256- 383
+      19    8   8   0   1   0   3   0 # Strip  384- 511
+      19    8   8   0   2   0   4   0 # Strip  512- 639
+      19    8   8   0   3   0   5   0 # Strip  640- 767
+      19    8   8   0   4   0   6   0 # Strip  768- 895
+      19    8   8   0   5   0   7   0 # Strip  896-1023
+      19    8   8   0   6   0   8   0 # Strip 1024-1151
+      19    8   8   0   7   0   9   0 # Strip 1152-1279
+bb.gem.ft2.m1.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    8   8   0   8   0   0   0 # Strip    0- 127
+      19    8   8   0   9   0   1   0 # Strip  128- 255
+      19    8   8   0  10   0   2   0 # Strip  256- 383
+      19    8   8   0  11   0   3   0 # Strip  384- 511
+      19    8   8   0  12   0   4   0 # Strip  512- 639
+      19    8   8   0  13   0   5   0 # Strip  640- 767
+      19    8   8   0  14   0   6   0 # Strip  768- 895
+      19    8   8   0  15   0   7   0 # Strip  896-1023
+bb.gem.ft2.m2.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19    9   9   0   0   0   0   0 # Strip    0- 127
+      19    9   9   0   1   0   1   0 # Strip  128- 255
+      19    9   9   0   2   0   2   0 # Strip  256- 383
+      19    9   9   0   3   0   3   0 # Strip  384- 511
+      19    9   9   0   4   0   4   0 # Strip  512- 639
+      19    9   9   0   5   0   5   0 # Strip  640- 767
+      19    9   9   0   6   0   6   0 # Strip  768- 895
+      19    9   9   0   7   0   7   0 # Strip  896-1023
+      19    9   9   0   8   0   8   0 # Strip 1024-1151
+      19    9   9   0   9   0   9   0 # Strip 1152-1279
+bb.gem.ft2.m2.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19    9   9   0  10   0   0   0 # Strip    0- 127
+      19    9   9   0  11   0   1   0 # Strip  128- 255
+      19    9   9   0  12   0   2   0 # Strip  256- 383
+      19    9   9   0  13   0   3   0 # Strip  384- 511
+      19    9   9   0  14   0   4   0 # Strip  512- 639
+      19    9   9   0  15   0   5   0 # Strip  640- 767
+      19   10  10   0   0   0   6   0 # Strip  768- 895
+      19   10  10   0   1   0   7   0 # Strip  896-1023
+bb.gem.ft3.m0.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19   10  10   0   2   0   0   0 # Strip    0- 127
+      19   10  10   0   3   0   1   0 # Strip  128- 255
+      19   10  10   0   4   0   2   0 # Strip  256- 383
+      19   10  10   0   5   0   3   0 # Strip  384- 511
+      19   10  10   0   6   0   4   0 # Strip  512- 639
+      19   10  10   0   7   0   5   0 # Strip  640- 767
+      19   10  10   0   8   0   6   0 # Strip  768- 895
+      19   10  10   0   9   0   7   0 # Strip  896-1023
+      19   10  10   0  10   0   8   0 # Strip 1024-1151
+      19   10  10   0  11   0   9   0 # Strip 1152-1279
+bb.gem.ft3.m0.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19   10  10   0  12   0   0   0 # Strip    0- 127
+      19   10  10   0  13   0   1   0 # Strip  128- 255
+      19   10  10   0  14   0   2   0 # Strip  256- 383
+      19   10  10   0  15   0   3   0 # Strip  384- 511
+      19   11  11   0   0   0   4   0 # Strip  512- 639
+      19   11  11   0   1   0   5   0 # Strip  640- 767
+      19   11  11   0   2   0   6   0 # Strip  768- 895
+      19   11  11   0   3   0   7   0 # Strip  896-1023
+bb.gem.ft3.m1.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19   11  11   0   4   0   0   0 # Strip    0- 127
+      19   11  11   0   5   0   1   0 # Strip  128- 255
+      19   11  11   0   6   0   2   0 # Strip  256- 383
+      19   11  11   0   7   0   3   0 # Strip  384- 511
+      19   11  11   0   8   0   4   0 # Strip  512- 639
+      19   11  11   0   9   0   5   0 # Strip  640- 767
+      19   11  11   0  10   0   6   0 # Strip  768- 895
+      19   11  11   0  11   0   7   0 # Strip  896-1023
+      19   11  11   0  12   0   8   0 # Strip 1024-1151
+      19   11  11   0  13   0   9   0 # Strip 1152-1279
+bb.gem.ft3.m1.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19   11  11   0  14   0   0   0 # Strip    0- 127
+      19   11  11   0  15   0   1   0 # Strip  128- 255
+      19   12  12   0   0   0   2   0 # Strip  256- 383
+      19   12  12   0   1   0   3   0 # Strip  384- 511
+      19   12  12   0   2   0   4   0 # Strip  512- 639
+      19   12  12   0   3   0   5   0 # Strip  640- 767
+      19   12  12   0   4   0   6   0 # Strip  768- 895
+      19   12  12   0   5   0   7   0 # Strip  896-1023
+bb.gem.ft3.m2.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19   12  12   0   6   0   0   0 # Strip    0- 127
+      19   12  12   0   7   0   1   0 # Strip  128- 255
+      19   12  12   0   8   0   2   0 # Strip  256- 383
+      19   12  12   0   9   0   3   0 # Strip  384- 511
+      19   12  12   0  10   0   4   0 # Strip  512- 639
+      19   12  12   0  11   0   5   0 # Strip  640- 767
+      19   12  12   0  12   0   6   0 # Strip  768- 895
+      19   12  12   0  13   0   7   0 # Strip  896-1023
+      19   12  12   0  14   0   8   0 # Strip 1024-1151
+      19   12  12   0  15   0   9   0 # Strip 1152-1279
+bb.gem.ft3.m2.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1024 y-strips)
+      19   13  13   0   0   0   0   0 # Strip    0- 127
+      19   13  13   0   1   0   1   0 # Strip  128- 255
+      19   13  13   0   2   0   2   0 # Strip  256- 383
+      19   13  13   0   3   0   3   0 # Strip  384- 511
+      19   13  13   0   4   0   4   0 # Strip  512- 639
+      19   13  13   0   5   0   5   0 # Strip  640- 767
+      19   13  13   0   6   0   6   0 # Strip  768- 895
+      19   13  13   0   7   0   7   0 # Strip  896-1023
+bb.gem.bt0.m0.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19   13  13   0   8   0   0   0 # Strip    0- 127
+      19   13  13   0   9   0   1   0 # Strip  128- 255
+      19   13  13   0  10   0   2   0 # Strip  256- 383
+      19   13  13   0  11   0   3   0 # Strip  384- 511
+      19   13  13   0  12   0   4   0 # Strip  512- 639
+      19   13  13   0  13   0   5   0 # Strip  640- 767
+      19   13  13   0  14   0   6   0 # Strip  768- 895
+      19   13  13   0  15   0   7   0 # Strip  896-1023
+      19   14  14   0   0   0   8   0 # Strip 1024-1151
+      19   14  14   0   1   0   9   0 # Strip 1152-1279
+bb.gem.bt0.m0.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1536 y-strips)
+      19   14  14   0   2   0   0   0 # Strip    0- 127
+      19   14  14   0   3   0   1   0 # Strip  128- 255
+      19   14  14   0   4   0   2   0 # Strip  256- 383
+      19   14  14   0   5   0   3   0 # Strip  384- 511
+      19   14  14   0   6   0   4   0 # Strip  512- 639
+      19   14  14   0   7   0   5   0 # Strip  640- 767
+      19   14  14   0   8   0   6   0 # Strip  768- 895
+      19   14  14   0   9   0   7   0 # Strip  896-1023
+      19   14  14   0  10   0   8   0 # Strip 1024-1151
+      19   14  14   0  11   0   9   0 # Strip 1152-1279
+      19   14  14   0  12   0  10   0 # Strip 1280-1407
+      19   14  14   0  13   0  11   0 # Strip 1408-1535
+bb.gem.bt0.m1.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19   14  14   0  14   0   0   0 # Strip    0- 127
+      19   14  14   0  15   0   1   0 # Strip  128- 255
+      19   15  15   0   0   0   2   0 # Strip  256- 383
+      19   15  15   0   1   0   3   0 # Strip  384- 511
+      19   15  15   0   2   0   4   0 # Strip  512- 639
+      19   15  15   0   3   0   5   0 # Strip  640- 767
+      19   15  15   0   4   0   6   0 # Strip  768- 895
+      19   15  15   0   5   0   7   0 # Strip  896-1023
+      19   15  15   0   6   0   8   0 # Strip 1024-1151
+      19   15  15   0   7   0   9   0 # Strip 1152-1279
+bb.gem.bt0.m1.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1536 y-strips)
+      19   15  15   0   8   0   0   0 # Strip    0- 127
+      19   15  15   0   9   0   1   0 # Strip  128- 255
+      19   15  15   0  10   0   2   0 # Strip  256- 383
+      19   15  15   0  11   0   3   0 # Strip  384- 511
+      19   15  15   0  12   0   4   0 # Strip  512- 639
+      19   15  15   0  13   0   5   0 # Strip  640- 767
+      19   15  15   0  14   0   6   0 # Strip  768- 895
+      19   15  15   0  15   0   7   0 # Strip  896-1023
+      19   16  16   0   0   0   8   0 # Strip 1024-1151
+      19   16  16   0   1   0   9   0 # Strip 1152-1279
+      19   16  16   0   2   0  10   0 # Strip 1280-1407
+      19   16  16   0   3   0  11   0 # Strip 1408-1535
+bb.gem.bt0.m2.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19   16  16   0   4   0   0   0 # Strip    0- 127
+      19   16  16   0   5   0   1   0 # Strip  128- 255
+      19   16  16   0   6   0   2   0 # Strip  256- 383
+      19   16  16   0   7   0   3   0 # Strip  384- 511
+      19   16  16   0   8   0   4   0 # Strip  512- 639
+      19   16  16   0   9   0   5   0 # Strip  640- 767
+      19   16  16   0  10   0   6   0 # Strip  768- 895
+      19   16  16   0  11   0   7   0 # Strip  896-1023
+      19   16  16   0  12   0   8   0 # Strip 1024-1151
+      19   16  16   0  13   0   9   0 # Strip 1152-1279
+bb.gem.bt0.m2.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1536 y-strips)
+      19   16  16   0  14   0   0   0 # Strip    0- 127
+      19   16  16   0  15   0   1   0 # Strip  128- 255
+      19   17  17   0   0   0   2   0 # Strip  256- 383
+      19   17  17   0   1   0   3   0 # Strip  384- 511
+      19   17  17   0   2   0   4   0 # Strip  512- 639
+      19   17  17   0   3   0   5   0 # Strip  640- 767
+      19   17  17   0   4   0   6   0 # Strip  768- 895
+      19   17  17   0   5   0   7   0 # Strip  896-1023
+      19   17  17   0   6   0   8   0 # Strip 1024-1151
+      19   17  17   0   7   0   9   0 # Strip 1152-1279
+      19   17  17   0   8   0  10   0 # Strip 1280-1407
+      19   17  17   0   9   0  11   0 # Strip 1408-1535
+bb.gem.bt0.m3.x.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1280 x-strips)
+      19   17  17   0  10   0   0   0 # Strip    0- 127
+      19   17  17   0  11   0   1   0 # Strip  128- 255
+      19   17  17   0  12   0   2   0 # Strip  256- 383
+      19   17  17   0  13   0   3   0 # Strip  384- 511
+      19   17  17   0  14   0   4   0 # Strip  512- 639
+      19   17  17   0  15   0   5   0 # Strip  640- 767
+      19   18  18   0   0   0   6   0 # Strip  768- 895
+      19   18  18   0   1   0   7   0 # Strip  896-1023
+      19   18  18   0   2   0   8   0 # Strip 1024-1151
+      19   18  18   0   3   0   9   0 # Strip 1152-1279
+bb.gem.bt0.m3.y.chanmap =
+## Crate Slot mpd gem adc i2c pos inv # (1536 y-strips)
+      19   18  18   0   4   0   0   0 # Strip    0- 127
+      19   18  18   0   5   0   1   0 # Strip  128- 255
+      19   18  18   0   6   0   2   0 # Strip  256- 383
+      19   18  18   0   7   0   3   0 # Strip  384- 511
+      19   18  18   0   8   0   4   0 # Strip  512- 639
+      19   18  18   0   9   0   5   0 # Strip  640- 767
+      19   18  18   0  10   0   6   0 # Strip  768- 895
+      19   18  18   0  11   0   7   0 # Strip  896-1023
+      19   18  18   0  12   0   8   0 # Strip 1024-1151
+      19   18  18   0  13   0   9   0 # Strip 1152-1279
+      19   18  18   0  14   0  10   0 # Strip 1280-1407
+      19   18  18   0  15   0  11   0 # Strip 1408-1535

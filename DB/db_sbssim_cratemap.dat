@@ -199,6 +199,7 @@
 # Date/Time = Fri Sep  14 09:33:00 2018
 ==== Crate 16 type vme
 # slot  model  bank
+     3  50250      3  # HCal FADC
      4  50250      3  # HCal FADC
      5  50250      3  # HCal FADC
      6  50250      3  # HCal FADC
@@ -211,23 +212,21 @@
     15  50250      3  # HCal FADC
     16  50250      3  # HCal FADC
     17  50250      3  # HCal FADC
+    18  50250      3  # HCal FADC
+    19  50250      3  # HCal FADC
+    20  50250      3  # HCal FADC
 # Date/Time = Fri Sep  14 09:33:00 2018
 ==== Crate 17 type vme
 # slot  model  bank
+     3  50250      3  # HCal FADC
      4  50250      3  # HCal FADC
-     5  50250      3  # HCal FADC
-     6  50250      3  # HCal FADC
-     7  50250      3  # HCal FADC
-     8  50250      3  # HCal FADC
-     9  50250      3  # HCal FADC
 ## If operated in "low resolution" (~120 ps) mode we get 64 channels on each
 ## F1 TDC --> Only 5 VME modules needed for HCal
-    10  53240     64  # HCal F1 TDC
-    13  53240     64  # HCal F1 TDC
-    14  53240     64  # HCal F1 TDC
-    15  53240     64  # HCal F1 TDC
-    16  53240     64  # HCal F1 TDC
-#  17   3204     3
+     5  53240     64  # HCal F1 TDC
+     6  53240     64  # HCal F1 TDC
+     7  53240     64  # HCal F1 TDC
+     8  53240     64  # HCal F1 TDC
+     9  53240     64  # HCal F1 TDC
 
 # Date/Time = Fri Sep  14 09:33:00 2018
 ## 2352 channels needed for CDET, so that's 25 modules, so may fit in 1 crate
@@ -253,4 +252,29 @@
     23  53240      1    0x0    0x0     96    672 
     24  53240      1    0x0    0x0     96    672 
     25  53240      1    0x0    0x0     96    672 
+
+## Now for the GEMs (just choose arbritrary crate number so it doesn't
+## interfere with the other ones
+## For BBGEMs
+==== Crate 19 type vme
+     0  53561      1    0x0    0x0  65535  65535 
+     1  53561      1    0x0    0x0  65535  65535 
+     2  53561      1    0x0    0x0  65535  65535 
+     3  53561      1    0x0    0x0  65535  65535 
+     4  53561      1    0x0    0x0  65535  65535 
+     5  53561      1    0x0    0x0  65535  65535 
+     6  53561      1    0x0    0x0  65535  65535 
+     6  53561      1    0x0    0x0  65535  65535 
+     8  53561      1    0x0    0x0  65535  65535 
+     9  53561      1    0x0    0x0  65535  65535 
+    10  53561      1    0x0    0x0  65535  65535 
+    11  53561      1    0x0    0x0  65535  65535 
+    12  53561      1    0x0    0x0  65535  65530 
+    13  53561      1    0x0    0x0  65535  65535 
+    14  53561      1    0x0    0x0  65535  65535 
+    15  53561      1    0x0    0x0  65535  65535 
+    16  53561      1    0x0    0x0  65535  65535 
+    17  53561      1    0x0    0x0  65535  65535 
+    18  53561      1    0x0    0x0  65535  65535 
+
 ### How about GEMs on Hadron arm side?? (TODO: add them later!)
