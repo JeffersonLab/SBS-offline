@@ -46,6 +46,7 @@ set(EXTRAWARN ON CACHE BOOL "g++ Wextra warn options if supported")
 set(VERBOSE ON CACHE BOOL "Compile extra code for printing verbose messages")
 set(TESTCODE ON CACHE BOOL "Compile extra diagnostic code (extra computations and global variables")
 set(MCDATA ON CACHE BOOL "Compile support code for MC input data")
+set(CXXMAXERRORS 0 CACHE INT "Maximum number of allowed errors before cxx stops")
 list(APPEND SBSEXTRADEF_LIST VERBOSE TESTCODE MCDATA)
 
 #----------------------------------------------------------------------------
@@ -82,6 +83,9 @@ if(UNIX) ## Can be anything from Linux to Mac OS X
     if(EXTRAWARN AND CMAKE_COMPILER_IS_GNUCXX AND NOT
         CMAKE_CXX_COMPILER_VERSION LESS 4)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-field-initializers")
+    endif()
+    if(CXXMAXERRORS GREATER 0)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmax-errors=${CXXMAXERRORS}")
     endif()
   endif()
 endif() ## I guess no Windows support?
@@ -125,5 +129,4 @@ foreach(_def ${SBSEXTRADEF_LIST})
 endforeach()
 
 message(AUTHOR_WARNING ${DEV_WARNING})
-message(AUTHOR_WARNING "CXX FLAGS: ${CMAKE_CXX_FLAGS}")
 
