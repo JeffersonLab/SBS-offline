@@ -4,6 +4,8 @@
 #include "TDatime.h"
 #include "THaEvData.h"
 
+const int APVMAP[128] = {1, 33, 65, 97, 9, 41, 73, 105, 17, 49, 81, 113, 25, 57, 89, 121, 3, 35, 67, 99, 11, 43, 75, 107, 19, 51, 83, 115, 27, 59, 91, 123, 5, 37, 69, 101, 13, 45, 77, 109, 21, 53, 85, 117, 29, 61, 93, 125, 7, 39, 71, 103, 15, 47, 79, 111, 23, 55, 87, 119, 31, 63, 95, 127, 0, 32, 64, 96, 8, 40, 72, 104, 16, 48, 80, 112, 24, 56, 88, 120, 2, 34, 66, 98, 10, 42, 74, 106, 18, 50, 82, 114, 26, 58, 90, 122, 4, 36, 68, 100, 12, 44, 76, 108, 20, 52, 84, 116, 28, 60, 92, 124, 6, 38, 70, 102, 14, 46, 78, 110, 22, 54, 86, 118, 30, 62, 94, 126};
+
 
 SBSGEMPlane::SBSGEMPlane( const char *name, const char *description,
     THaDetectorBase* parent ):
@@ -181,50 +183,42 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 
 
             Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
+            assert(nsamp%N_MPD_TIME_SAMP==0);
+            Int_t nstrips = nsamp/N_MPD_TIME_SAMP;
 
-            //std::cout << fName << " MPD " << it->mpd_id << " ADC " << it->adc_id << " found " << nsamp << std::endl;
-            //std::cout << nsamp << " samples detected (" << nsamp/N_APV25_CHAN <<  ")" << std::endl;
+            // Loop over all the strips and samples in the data
+            Int_t isamp = 0;
+            for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
+              assert(isamp<nsamp);
+              Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, isamp);
+              assert(strip>=0&&strip<128);
+              // Madness....   copy pasted from stand alone decoder
+              // I bet there's a more elegant way to express this
+              //Int_t RstripNb= 32*(strip%4)+ 8*(int)(strip/4)- 31*(int)(strip/16);
+              //RstripNb=RstripNb+1+RstripNb%4-5*(((int)(RstripNb/4))%2);
+              // New: Use a pre-computed array from Danning to skip the above
+              // two steps.
+              Int_t RstripNb = APVMAP[strip];
+              RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
+              Int_t RstripPos = RstripNb + 128*it->pos;
+              strip = RstripPos;
 
-            assert( nsamp == N_APV25_CHAN*N_MPD_TIME_SAMP );
+              fStrip[fNch] = strip;
+              for(Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++) {
 
-            for( Int_t strip = 0; strip < N_APV25_CHAN; ++strip ) {
-                // data is packed like this
-                // [ts1 of 128 chan] [ts2 of 128chan] ... [ts6 of 128chan]
-                
-                // Madness....   copy pasted from stand alone decoder
-                // I bet there's a more elegant way to express this
-                Int_t RstripNb= 32*(strip%4)+ 8*(int)(strip/4)- 31*(int)(strip/16);
-                RstripNb=RstripNb+1+RstripNb%4-5*(((int)(RstripNb/4))%2);
-                RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
+                fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot,
+                    chan, isamp++) - fPedestal[strip];
 
-                Int_t RstripPos = RstripNb + 128*it->pos;
+                assert( ((UInt_t) fNch) < fMPDmap.size()*N_APV25_CHAN );
+              }
+              assert(strip>=0); // Make sure we don't end up with negative strip numbers!
 
-/*
-                if( it->adc_id == 10 ){
-                std::cout << "ADC " << it->adc_id << " final strip pos: " << RstripPos << std::endl;
-                }
-*/
-
-                fStrip[fNch] = RstripPos;
-
-
-
-                for( Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++ ){
-                    int isamp = adc_samp*N_APV25_CHAN + strip;
-
-                    assert(isamp < nsamp);
-
-                    fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot, chan, isamp) -
-                                            fPedestal[RstripPos];
-
-                    assert( ((UInt_t) fNch) < fMPDmap.size()*N_APV25_CHAN );
-                }
-
-                // Zero suppression
-                if( !fZeroSuppress ||  
-                      ( fRMS[RstripPos] > 0.0 && fabs(fadc[2][fNch])/fRMS[RstripPos] > fZeroSuppressRMS ) ){
-                    fNch++;
-                }
+              // Zero suppression
+              if(!fZeroSuppress ||
+                  ( fRMS[strip] > 0.0 && fabs(fadc[2][fNch])/
+                    fRMS[strip] > fZeroSuppressRMS ) ){
+                fNch++;
+              }
             }
         }
 

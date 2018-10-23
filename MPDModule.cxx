@@ -12,6 +12,9 @@
 //   sriordan@anl.gov
 //   Aug 31, 2018
 //
+//   v5 Version with online SSP zero supression, based on documentation
+//   from Ben (DAQ group) which I got from Danning Di.
+//   Juan Carlos Cornejo <cornejo@jlab.org> - 2018/10/23
 //
 /////////////////////////////////////////////////////////////////////
 
@@ -25,6 +28,8 @@
 #define MPD_TRAILER_TAG 0x50000000
 */
 
+#define SSP_DATADEF(b) ((b&0x80000000)>>31)
+#define SSP_TAG(b)     ((b&0x78000000)>>27)
 
 #include "MPDModule.h"
 #include "THaSlotData.h"
@@ -57,20 +62,197 @@ namespace Decoder {
   
   Int_t MPDModule::LoadSlot(THaSlotData *sldat, const UInt_t* evbuffer, Int_t pos, Int_t len) {
       const UInt_t *p = &evbuffer[pos];
-      UInt_t data;
+      //UInt_t data;
       fWordsSeen = 0;
 
       // From stand alone decoder
       // We declare an effective channel from the MPD ID 
       // and ADC channel
-      Int_t tag, header, trailer, ch, status;
+      Int_t ch, status;
       Int_t mpdID = -1;
       Int_t adcCh = -1;
       Int_t effCh = 0;
 
       UInt_t data_count = 0;
 
-      //  v5 decoder
+      //  v5 decoder (with SSP online zero suppression)
+      int ii,jj,kk,ll,mm; // loop indices: ii (event), jj(word), kk(mpd), mm (block)
+      int thesewords;
+      UInt_t hit[3] = {0};
+      UInt_t sample_dat[6] = {0};
+
+      jj =  0;
+      while( jj < len ){
+        mm = jj;
+        thesewords = p[jj++];
+        //printf("===============================================================================\n");
+        //printf("=    CRATE   %d   ======    SLOT   %d   =======================================\n", fCrate, fSlot);
+        //printf("BLOCK HEADER       0x%08x\n", thesewords);
+        //printf("Data defining? (1) %d\n", (thesewords & 0x80000000) >> 31);
+        //printf("Type (0)           %d\n", (thesewords & 0x78000000) >> 27);
+        //printf("BLOCK NUMBER       %d\n", (thesewords & 0x0003FF00) >> 8 );
+        //printf("EVENT_PER_BLOCK    %d\n", (thesewords & 0x000000FF) >> 0 );
+        //printf("\n");
+
+        if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 0 )) {
+          fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] "
+              "BLOCK HEADER NOT FOUND\n", __LINE__);
+          return -1;
+        }
+
+        int nevent = (thesewords&0xFF);
+        // Ensure we have enough data
+        // (need at least 4 per event: 1 event header + 2 trigger words +
+        // 1 event trailer
+        if( nevent > 0 && jj + (nevent*4) >= len) {
+          fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] "
+              "NOT ENOUGH WORDS TO DECODE THIS EVENT!\n", __LINE__);
+          return -1;
+        }
+
+        for( ii = 0; ii < nevent; ii++ ){
+          thesewords = p[jj++];
+          //printf("EVENT HEADER       0x%08x\n", thesewords);
+          //printf("Data defining? (1) %d\n", (thesewords & 0x80000000) >> 31);
+          //printf("Type (2)           %d\n", (thesewords & 0x78000000) >> 27);
+          //printf("EVENT COUNT        %d\n", (thesewords & 0x3FFFFF) >> 0);
+          //printf("\n");
+          if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 2 )) {
+            fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] EVENT HEADER NOT FOUND\n", __LINE__);
+            return -1;
+          }
+
+          thesewords = p[jj++] & 0xFFFFFFFF;
+          //printf("TRIGGER TIME 1     0x%08x\n", thesewords);
+          //printf("Data defining? (1) %d\n", (thesewords & 0x80000000) >> 31);
+          //printf("Type (3)           %d\n", (thesewords & 0x78000000) >> 27);
+          //printf("COURSE TIME        %d\n", (thesewords & 0xFFFFFF) >> 0);
+          //printf("\n");
+          if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 3 )) {
+            fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] TRIGGER TIME 1 WORD NOT FOUND\n", __LINE__);
+            return -1;
+          }
+
+          thesewords = p[jj++] & 0xFFFFFFFF;
+          //printf("TRIGGER TIME 2     %08x\n", thesewords);
+          //printf("Data defining? (0) %d\n", (thesewords & 0x80000000) >> 31);
+          //printf("COURSE TIME        %d\n", (thesewords & 0xFFFFFF) >> 0);
+          //printf("\n");
+          if( (SSP_DATADEF(thesewords) != 0) ) {
+            fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] TRIGGER TIME 2 WORD NOT FOUND\n", __LINE__);
+            return -1;
+          }
+
+          // Loop through all MPD fiber headers
+          while( (p[jj]&0xF8000000)>>27 == 0x15 ) {
+            // First word defines the tag type 5, and the MPD ID (fiber number)
+            kk = 0;
+            //printf("\n[Starting sample %d]\n", kk);
+
+            thesewords = p[jj++];
+
+            //printf("MPD HEADER        0x%08x\n", thesewords);
+            //printf("Data defining? (1) %d\n", (thesewords & 0x80000000) >> 31);
+            //printf("Type (5)           %d\n", (thesewords & 0x78000000) >> 27);
+            //printf("MPD Fiber Number   %d\n", (thesewords & 0x0000001F) >> 0 );
+            //printf("\n");
+
+            mpdID = thesewords & 0x1F;
+
+            // Now loop through each of the APV hits in this MPD
+            while( SSP_DATADEF(p[jj]) != 1) {
+              // For each one of these, we must have at least 3 more
+              // words preceeding
+              if(jj+2>=len) {
+                fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] NOT ENOUGH"
+                    " WORDS TO DECODE APV HITS for MPD %d\n", __LINE__,
+                    mpdID);
+                return -1;
+              }
+              //printf("samples: ");
+              for(int h = 0; h < 3; h++) {
+                hit[h] = p[jj++];
+                // These mask 13 bits, but, I thought the ADC was only 12 bits.
+                // TODO: Check with Ben to confirm that this is correct.
+                sample_dat[h*2]   = (hit[h]&0x1FFF);
+                sample_dat[h*2+1] = (hit[h] & 0x3FFE000) >> 13;
+                if(SSP_DATADEF(hit[h]) != 0) {
+                  fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] MISSING"
+                      " APV_HIT_WORD%d for APV_HIT%d of MPD=%d, word=0x%x\n", __LINE__,
+                      h,kk,mpdID,hit[h]);
+                  return -1;
+                }
+                //printf(" %d %d", sample_dat[h*3], sample_dat[h*3+1]);
+              }
+              //printf("APV HIT0           0x%08x\n", hit[0]);
+              //printf("Data defining? (0) %d\n",   (hit[0] & 0x80000000) >> 31);
+              //printf("APV_CH(b4:b0)      0x%x\n", (hit[0] & 0x7C000000) >> 26 );
+              //printf("ADC_SAMP_T1        %d\n",   (hit[0] & 0x3FFE000) >> 13 );
+              //printf("ADC_SAMP_T0        %d\n",   (hit[0] & 0x1FFF) >> 0 );
+              //printf("APV HIT1           0x%08x\n", hit[1]);
+              //printf("Data defining? (0) %d\n",   (hit[1] & 0x80000000) >> 31);
+              //printf("APV_CH(b6:b5)      0x%x\n", (hit[1] & 0xC000000) >> 26 );
+              //printf("ADC_SAMP_T3        %d\n",   (hit[1] & 0x3FFE000) >> 13 );
+              //printf("ADC_SAMP_T2        %d\n",   (hit[1] & 0x1FFF) >> 0 );
+              //printf("APV HIT2           0x%08x\n", hit[2]);
+              //printf("Data defining? (0) %d\n",   (hit[2] & 0x80000000) >> 31);
+              //printf("APV ID             %d\n",   (hit[2] & 0x7C000000) >> 26 );
+              //printf("ADC_SAMP_T5        %d\n",   (hit[2] & 0x3FFE000) >> 13 );
+              //printf("ADC_SAMP_T4        %d\n",   (hit[2] & 0x1FFF) >> 0 );
+              //printf("\n");
+
+              // Now decode the hit info
+
+              // Strip number (APV25 channel number)
+              adcCh = (hit[2]&0x7C000000)>>26;
+              ch = ((hit[0]&0x7C000000)>>26) | ((hit[1]&0xC000000)>>21);
+              effCh = (mpdID) << 8 | adcCh;
+              for(int s = 0; s < 6; s++) {
+                // the raw data will be the strip number
+                status = sldat->loadData("adc",effCh, sample_dat[s], ch);
+                if( status != SD_OK ) return -1;
+
+                fWordsSeen++;
+                data_count++;
+              }
+
+              kk++;
+            } // apv_hit loop
+          } // mpd loop
+        } //event loop
+
+        // Loop over the filler words
+        while(p[jj] == 0xF8000000) {
+          //printf("FILLER WORD: 0x%08x\n",p[jj]);
+          jj++;
+        }
+
+        // Finally, we should have the BLOCK trailer
+        thesewords = p[jj++];
+        //printf("BLOCK TRAILER       0x%08x\n", thesewords);
+        //printf("Data defining? (1) %d\n", (thesewords & 0x80000000) >> 31);
+        //printf("Type (1)           %d\n", (thesewords & 0x78000000) >> 27);
+        //printf("NUMBER_OF_WORDS    %d\n", (thesewords & 0x003FFFFF) >> 0 );
+        //printf("\n");
+        if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 1 )) {
+          fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] "
+              "BLOCK TRAILER NOT FOUND\n", __LINE__);
+          return -1;
+        }
+
+        //printf("Read number of words %d expected %d\n",jj-mm,thesewords&0x3FFFFF);
+        if((thesewords&0x3FFFFF) != (jj-mm) ) {
+            fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] NUMBER OF "
+                "WORDS READ %d DOES NOT MATCH NUMBER EXPECTED %d\n", __LINE__,
+                jj-mm,thesewords&0x3FFFFF);
+            return -1;
+        };
+
+      } // block loop
+
+
+      /*
+      //  v5 decoder (with no SSP zero suppression)
       
       int ii,jj,kk,ll;
       int thesewords;
@@ -220,6 +402,7 @@ namespace Decoder {
               return -1;
           }
       }
+      */
 
       //printf("=================  END !!! =================================\n");
 
