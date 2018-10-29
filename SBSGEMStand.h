@@ -1,3 +1,5 @@
+#ifndef SBSGEMSTAND_H
+#define SBSGEMSTAND_H
 #include <vector>
 #include <THaTrackingDetector.h>
 
@@ -35,3 +37,5 @@ class SBSGEMStand : public THaTrackingDetector {
         THaCrateMap *fCrateMap;
         ClassDef(SBSGEMStand ,0)
 };
+
+#endif
