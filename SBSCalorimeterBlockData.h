@@ -25,6 +25,9 @@ namespace SBSCalorimeterBlockData {
     std::vector<Float_t> data_raw;
     std::vector<Float_t> data_ped;
     std::vector<Float_t> data_cal;
+    Float_t data_raw_sum;
+    Float_t data_ped_sum;
+    Float_t data_cal_sum;
   };
 
 
@@ -38,26 +41,26 @@ namespace SBSCalorimeterBlockData {
       // Getters
       Float_t GetPed()  const { return fADC.ped;     }
       Float_t GetGain() const { return fADC.cal;    }
-      Float_t GetADCDataRaw()  const { return fADC.data_raw; }
-      Float_t GetADCDataPed()  const { return fADC.data_ped; }
-      Float_t GetADCDataCal()  const { return fADC.data_cal; }
+      Float_t GetDataRaw()  const { return fADC.data_raw; }
+      Float_t GetDataPed()  const { return fADC.data_ped; }
+      Float_t GetDataCal()  const { return fADC.data_cal; }
 
       // Setters
       void SetPed(Float_t var)  { fADC.ped = var; }
       void SetGain(Float_t var) { fADC.cal = var; }
 
       // Process data sets raw value, ped-subtracted and calibrated data
-      virtual void ProcessADC(Float_t var);
+      virtual void Process(Float_t var);
 
       // Do we have ADC data for this event?
-      Bool_t HasADCData() { return fHasADCData; }
+      Bool_t HasData() { return fHasData; }
 
       // Clear event
-      virtual void ClearADC();
+      virtual void Clear();
 
     protected:
       SingleData fADC; ///< ADC single-value data
-      Bool_t fHasADCData;
+      Bool_t fHasData;
   };
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -68,28 +71,28 @@ namespace SBSCalorimeterBlockData {
       virtual ~TDC() {};
 
       // Getters
-      Float_t GetTDCOffset()  const { return fTDC.ped;     }
-      Float_t GetTDCCal() const { return fTDC.cal;    }
-      Float_t GetTDCDataRaw()  const { return fTDC.data_raw; }
-      Float_t GetTDCDataPed()  const { return fTDC.data_ped; }
-      Float_t GetTDCDataCal()  const { return fTDC.data_cal; }
+      Float_t GetOffset()   const { return fTDC.ped;      }
+      Float_t GetCal()      const { return fTDC.cal;      }
+      Float_t GetDataRaw()  const { return fTDC.data_raw; }
+      Float_t GetDataPed()  const { return fTDC.data_ped; }
+      Float_t GetDataCal()  const { return fTDC.data_cal; }
 
       // Setters
-      void SetTDCOffset(Float_t var)  { fTDC.ped = var; }
-      void SetTDCCal(Float_t var) { fTDC.cal = var; }
+      void SetOffset(Float_t var)  { fTDC.ped = var; }
+      void SetCal(Float_t var) { fTDC.cal = var; }
 
       // Process data sets raw value, ped-subtracted and calibrated data
-      virtual void ProcessTDC(Float_t var);
+      virtual void Process(Float_t var);
 
       // Do we have TDC data for this event?
-      Bool_t HasTDCData() { return fHasTDCData; }
+      Bool_t HasData() { return fHasData; }
 
       // Clear event
-      virtual void ClearTDC();
+      virtual void Clear();
 
     protected:
       SingleData fTDC; ///< TDC single-value data
-      Bool_t fHasTDCData;
+      Bool_t fHasData;
   };
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -100,27 +103,30 @@ namespace SBSCalorimeterBlockData {
       virtual ~Samples() {};
 
       // Getters
-      Float_t GetSamplesPed()  const { return fSamples.ped; }
-      Float_t GetSamplesGain() const { return fSamples.cal; }
-      std::vector<Float_t>& GetSamplesDataRaw() { return fSamples.data_raw; }
-      std::vector<Float_t>& GetSamplesDataPed() { return fSamples.data_ped; }
-      std::vector<Float_t>& GetSamplesDataCal() { return fSamples.data_cal; }
+      Float_t GetPed()  const { return fSamples.ped; }
+      Float_t GetGain() const { return fSamples.cal; }
+      std::vector<Float_t>& GetDataRaw() { return fSamples.data_raw; }
+      std::vector<Float_t>& GetDataPed() { return fSamples.data_ped; }
+      std::vector<Float_t>& GetDataCal() { return fSamples.data_cal; }
+      Float_t GetDataSumRaw() { return fSamples.data_raw_sum; }
+      Float_t GetDataSumPed() { return fSamples.data_ped_sum; }
+      Float_t GetDataSumCal() { return fSamples.data_cal_sum; }
 
       // Setters
-      void SetSamplesPed(Float_t var)  { fSamples.ped = var; }
-      void SetSamplesGain(Float_t var) { fSamples.cal = var; }
+      void SetPed(Float_t var)  { fSamples.ped = var; }
+      void SetGain(Float_t var) { fSamples.cal = var; }
 
       // Process data sets raw value, ped-subtracted and calibrated data
-      virtual void ProcessADCSamples(std::vector<Float_t> &var);
+      virtual void Process(std::vector<Float_t> &var);
 
       // Do we have samples data for this event?
-      Bool_t HasSamplesData() { return fHasSamplesData; }
+      Bool_t HasData() { return fHasData; }
 
       // Clear event
-      virtual void ClearSamples();
+      virtual void Clear();
     protected:
       MultiData fSamples; ///< Samples single-value data
-      Bool_t fHasSamplesData;
+      Bool_t fHasData;
   };
 
 

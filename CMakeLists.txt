@@ -28,6 +28,7 @@ set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
   SBSScintPlane.cxx SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx
   SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx
   SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
+  SBSCalorimeterCluster.cxx
   )
 
 ## Make corresponding header files

@@ -8,14 +8,14 @@
 // A generic calorimeter class which could contain the following types       //
 // of data:                                                                  //
 //  - Single-valued ADC                                                      //
-//  - Single-valued ADC + TDC                                                //
+//  - Single-valued TDC                                                      //
 //  - Multi-valued ADC                                                       //
-//  - Multi-valued ADC + TDC                                                 //
+//  - Multi-valued ADC + Single-valued TDC                                   //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "THaNonTrackingDetector.h"
-//#include "SBSCalorimeterCluster.h"
+#include "SBSCalorimeterCluster.h"
 #include "SBSCalorimeterBlock.h"
 #include "TRotation.h"
 #include "TVector3.h"
@@ -29,8 +29,12 @@ public:
       THaApparatus* a = NULL);
   virtual ~SBSCalorimeter();
 
-  void           ClearEvent();
-  void SetWithADCSamples(Bool_t var) { fWithADCSamples = var; }
+  void ClearEvent();
+  void ClearOutputVariables();
+
+  //  Note: we can either have single-valued ADC or multi-valued ADC, not both
+  void SetWithADC(Bool_t var);
+  void SetWithADCSamples(Bool_t var);
   void SetWithTDC(Bool_t var)        { fWithTDC = var; }
 
   // Standard apparatus re-implemented functions
@@ -42,27 +46,6 @@ public:
       THaDetMap::Module *d, Int_t chan);
   virtual Int_t      DecodeTDC( const THaEvData&, SBSCalorimeterBlock *blk,
       THaDetMap::Module *d, Int_t chan);
-
-  // A structure to hold the output that will go to the tree
-  struct OutputData {
-    std::vector<Int_t> fRow;
-    std::vector<Int_t> fCol;
-    std::vector<Int_t> fLayer;
-    // ADC Integral
-    std::vector<Double_t> fA;
-    std::vector<Double_t> fA_p;
-    std::vector<Double_t> fA_c;
-    // ADC Samples
-    std::vector<Int_t> fSampsIdx;
-    std::vector<Int_t> fNSamps;
-    std::vector<Double_t> fSamps;
-    std::vector<Double_t> fSamps_p;
-    std::vector<Double_t> fSamps_c;
-    // TDC values
-    std::vector<Double_t> fTDC;
-    std::vector<Double_t> fTDC_c;
-    void ClearEvent();
-  };
 
   // Utility functions
   // Get index of block
@@ -77,28 +60,83 @@ protected:
 
   // Configuration
   Int_t  fNclublk;      ///< Max number of blocks composing a cluster
+  Int_t  fNclubr;       ///< Max number of row-blocks composing a cluster
+  Int_t  fNclubc;       ///< Max number of col-blocks composing a cluster
   Int_t  fNrows;        ///< Number of rows
   Int_t  fNcols;        ///< Number of columns
   Int_t  fNlayers;      ///< Number of layers (in z-direction)
   Bool_t fWithTDC;      ///< Does this calorimeter have TDC readout?
   Bool_t fWithADCSamples; ///< Does this calorimeter have multi-valued ADC readout?
+  Bool_t fWithADC;      ///< Does this calorimeter have single-valued ADC readout?
 
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
   std::vector<std::vector<UShort_t> > fChanMap;
   //std::map<UShort_t,std::map<UShort_t,std::vector<UShort_t> > > fChanMap;
 
-  // Output vectors
-  OutputData fDataOut;
+  // Output variables
+  // Note [] means it is a vector with variable width
+  std::vector<Int_t> fRow;        //< [] row number for given block
+  std::vector<Int_t> fCol;        //< [] col number for given block
+  std::vector<Int_t> fLayer;      //< [] layer number for given block
+  // ADC Integral
+  std::vector<Float_t> fA;        //< [] ADC amplitudes of blocks
+  std::vector<Float_t> fA_p;      //< [] ADC minus pedestal values of blocks
+  std::vector<Float_t> fA_c;      //< [] ADC corrected amplidues of blocks
+  // ADC Samples
+  std::vector<Int_t> fNsamps;     //< [] Number of samples for each block
+  std::vector<Int_t> fSampsIdx;   //< []*fNsamps Index of the corresponding block
+  std::vector<Float_t> fSamps;    //< []*fNsamps ADC samples for each block
+  std::vector<Float_t> fSamps_p;  //< []*fNsamps ADC samples minus pedestal for each block
 
-  // Blocks
+  std::vector<Float_t> fSamps_c;  //< []*fNsamps ADC corrected samples for each block
+  // TDC values
+  std::vector<Float_t> fTDC;      //< [] TDC values for each block
+  std::vector<Float_t> fTDC_c;    //< [] TDC corrected values for each block
+  // Cluster output
+  std::vector<Float_t> fEclus;    //< [] Energy (MeV) of clusters
+  std::vector<Float_t> fEclus_c;  //< [] Corrected energy (MeV) of clusters
+  std::vector<Float_t> fEclusBlk; //< [] Energy (MeV) of block with highest E in clusters
+  std::vector<Float_t> fEclusBlk_c;//< [] Corrected energy (MeV) of block with highest E in clusters
+  std::vector<Float_t> fXclus;    //< [] x position (m) of clusters
+  std::vector<Float_t> fYclus;    //< [] y position (m) of clusters
+  std::vector<Float_t> fNblkclus; //< [] number of blocks in clusters
+  std::vector<Int_t> fRowblkclus; //< [] row of blocks in clusters
+  std::vector<Int_t> fColblkclus; //< [] col of blocks in clusters
+  // Single valued variables for the cluster with highest energy
+  Float_t fE;                     //< Energy (MeV) of cluster with highest energy
+  Float_t fE_c;                   //< Corrected energy (MeV) of cluster with highest energy
+  Float_t fEblk;                  //< Energy (MeV) of largest block in cluster with highest energy
+  Float_t fEblk_c;                //< Corrected energy (MeV) of largest block in cluster with highest energy
+  Float_t fX;                     //< x position (m) of cluster with highest energy
+  Float_t fY;                     //< y position (m) of cluster with highest energy
+  Float_t fNblk;                  //< number of blocks in cluster with highest energy
+  // If only storing highest energy cluster, info on other clusters may be useful
+  Float_t fNclus;                 //< Number of clusters meeting threshold
+  Int_t   fRowblk;                //< row of block with highest energy in highest E cluster
+  Int_t   fColblk;                //< col of block with highest energy in highest E cluster
+
+  // Blocks, where the grid is just for easy axis to the blocks by row,col,layer
   std::vector<SBSCalorimeterBlock*> fBlocks;
+  std::vector<std::vector<std::vector<SBSCalorimeterBlock*> > > fBlocksGrid;
+  // Clusters for this event
+  std::vector<SBSCalorimeterCluster*> fClusters; //[] Cluster
 
+  // Other parameters
+  Float_t    fEmin;         //< Minimum energy for a cluster center
+  Int_t fMaxNclus;          //< Maximum number of clusters to store
+  Bool_t fCoarseProcessed;  //< Was CourseProcessed already called?
+  Bool_t fFineProcessed;    //< Was fine processed already called
+
+  //Gain correction 
+  Float_t   fConst;     // const from gain correction 
+  Float_t   fSlope;     // slope for gain correction
+  Float_t   fAccCharge; // accumulated charge
 
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
 
-  /*
+/*
      Int_t      GetNclust() const { return fNclust; }
      Int_t      GetNhits() const  { return fNhits; }
      Float_t    GetE(int i) const { return fE[i]; }
@@ -132,64 +170,19 @@ protected:
 
   protected:
 
-  Bool_t fCoarseProcessed;
-  Bool_t fFineProcessed;
-
-  // Maximum number of clusters
-  Int_t fMaxNClust;
-
-  // Mapping (see also fDetMap)
-  UShort_t*  fNChan;     // Number of channels for each module
-  UShort_t** fChanMap;   // Logical channel numbers 
-
-  // Configuration
-  Int_t      fNclublk;   // Max. number of blocks composing a cluster
-  Int_t      fNrows;     // Number of rows
-  Int_t      fNcols;     // Number of columns
-
-  // Geometry
-  Float_t*   fBlockX;    // [fNelem] x positions (cm) of block centers
-  Float_t*   fBlockY;    // [fNelem] y positions (cm) of block centers
-
-  // Calibration
-  Float_t*   fPed;       // [fNelem] Pedestals for each block
-  Float_t*   fGain;      // [fNelem] Gains for each block
-
-  //Gain correction 
-  Float_t   gconst;     // const from gain correction 
-  Float_t   gslope;     // slope for gain correction
-  Float_t   acc_charge; // accumulated charge
-
-  // Other parameters
-  Float_t    fEmin;      // Minimum energy for a cluster center
-
   // Per-event data
-  Float_t*   fA;         // [fNelem] Array of ADC amplitudes of blocks
-  Float_t*   fA_p;       // [fNelem] Array of ADC minus pedestal values of blocks
-  Float_t*   fA_c;       // [fNelem] Array of corrected ADC amplitudes of blocks
-  Float_t    fAsum_p;    // Sum of blocks ADC minus pedestal values
-  Float_t    fAsum_c;    // Sum of blocks corrected ADC amplitudes
-  Int_t      fNclust;    // Number of clusters
-  Float_t*   fE;        // [fNClust] Energy (MeV) of clusters
-  Float_t*   fX;        // [fNClust] x position (m) of clusters
-  Float_t*   fY;        // [fNClust] y position (m) of clusters 
   //Float_t*   fXtarg;     // [fNClust] x position (m) of clusters in target coords
   //Float_t*   fYtarg;     // [fNClust] y position (m) of clusters in target coords
   //Float_t*   fZtarg;     // [fNClust] z position (m) of clusters in target coords
-  Int_t*     fMult;      // [fNClust]  Number of blocks in main cluster
-  Int_t*     fNblk;      // [fNclublk] Numbers of blocks composing main cluster
-  Float_t*   fEblk;      // [fNclublk] Energies of blocks composing main cluster
   Float_t    fTRX;       // x position of track cross point
   Float_t    fTRY;       // y position of track cross point
 
-  Float_t*   fE_c;        // [fNClust] Corrected Energy (MeV) of clusters
 
   Double_t   fdX;
   Double_t   fdY;
   Double_t   fdZ;
 
   SBSShowerBlock** fBlocks; //[fNelem] Array of blocks
-  SBSCalorimeterCluster** fClusters; //[fMaxNClust] 
   SBSShowerBlock*** fBlkGrid; //[fNrows]
 
   //TRotation  fDetToTarg;
@@ -254,5 +247,6 @@ inline void SBSCalorimeter::blkrcl(Int_t index, Int_t &row, Int_t &col,
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Specify some default sub-classes available to the user
 
 #endif // SBSCalorimeter_h

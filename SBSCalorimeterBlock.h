@@ -12,116 +12,66 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Calorimeter Blocks by default have only single-valued ADC data
-class SBSCalorimeterBlock : public SBSCalorimeterBlockData::ADC,
-  public TObject {
+// Generic Calorimeter Block
+class SBSCalorimeterBlock : public TObject {
 
 public:
-  SBSCalorimeterBlock() {};
+  SBSCalorimeterBlock() : fADC(0), fTDC(0), fSamples(0) {};
   SBSCalorimeterBlock(Float_t x, Float_t y, Float_t z,
-      Int_t row, Int_t col, Int_t layer, Float_t adc_ped, Float_t adc_gain);
+      Int_t row, Int_t col, Int_t layer);
   virtual ~SBSCalorimeterBlock() {}
 
   // Getters
   Float_t GetX()     const { return fX; }
   Float_t GetY()     const { return fY; }
   Float_t GetZ()     const { return fZ; }
+  Float_t GetE()     const { return fE; }
   Int_t   GetRow()   const { return fRow; }
   Int_t   GetCol()   const { return fCol; }
   Int_t   GetLayer() const { return fLayer; }
   Int_t   GetStat()  const { return fStat; }
+  virtual SBSCalorimeterBlockData::ADC* ADC()         { return fADC; }
+  virtual SBSCalorimeterBlockData::TDC* TDC()         { return fTDC; }
+  virtual SBSCalorimeterBlockData::Samples* Samples() { return fSamples; }
 
   // Setters
   void SetX(Float_t var)    { fX = var; }
   void SetY(Float_t var)    { fY = var; }
   void SetZ(Float_t var)    { fZ = var; }
+  void SetE(Float_t var)    { fE = var; }
   void SetRow(Int_t var)    { fRow = var; }
   void SetCol(Int_t var)    { fCol = var; }
   void SetLayer(Int_t var)  { fLayer = var; }
   void SetStat(Int_t var)   { fStat = var; }
+  void SetADC(Float_t ped, Float_t gain);
+  void SetTDC(Float_t offset, Float_t cal);
+  void SetSamples(Float_t ped, Float_t gain);
 
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();
 
+  // Coarse process this event for this block
+  virtual void CoarseProcess();
+
   // Check if this block has any data
-  virtual Bool_t HasData() { return HasADCData(); };
+  virtual Bool_t HasData();
 
 protected:
   Float_t fX;       ///< relative x position of the center
   Float_t fY;       ///< relative y position of the center
   Float_t fZ;       ///< relative z position of the center
+  Float_t fE;       ///< calibrated energy of event in this block
 
   Int_t   fRow;     ///< Row of the block
   Int_t   fCol;     ///< Column of the block
   Int_t   fLayer;   ///< Layer of the block
   Int_t   fStat;    ///< Status: 0: not seen, 1: seen, 2: local max
 
-  ClassDef(SBSCalorimeterBlock,1) ///< Generic shower block class single-valued
-};
+  SBSCalorimeterBlockData::ADC *fADC;
+  SBSCalorimeterBlockData::TDC *fTDC;
+  SBSCalorimeterBlockData::Samples *fSamples;
 
-///////////////////////////////////////////////////////////////////////////////
-// A calorimeter block with single-value and TDC data
-class SBSCalorimeterBlockTDC : public SBSCalorimeterBlock,
-  public SBSCalorimeterBlockData::TDC {
-
-public:
-  SBSCalorimeterBlockTDC() {};
-  SBSCalorimeterBlockTDC(Float_t x, Float_t y, Float_t z,
-      Int_t row, Int_t col, Int_t layer, Float_t adc_ped, Float_t adc_gain,
-      Float_t tdc_offset, Float_t tdc_cal);
-  virtual ~SBSCalorimeterBlockTDC() {}
-
-  // Sub-classes may want a more comprehensive clear
-  virtual void ClearEvent();
-
-
-  // Check if this block has any data
-  virtual Bool_t HasData() { return HasTDCData(); };
-
-  ClassDef(SBSCalorimeterBlockTDC,1) ///< Single-valued ADC with TDC
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// A calorimeter block with multivalued-adc (i.e. with samples)
-class SBSCalorimeterBlockSamples : public SBSCalorimeterBlock,
-  public SBSCalorimeterBlockData::Samples {
-
-public:
-  SBSCalorimeterBlockSamples() {};
-  SBSCalorimeterBlockSamples(Float_t x, Float_t y, Float_t z,
-      Int_t row, Int_t col, Int_t layer, Float_t adc_ped, Float_t adc_gain,
-      Float_t adc_ped_mult);
-  virtual ~SBSCalorimeterBlockSamples() {}
-
-  // Sub-classes may want a more comprehensive clear
-  virtual void ClearEvent();
-
-  // Check if this block has any data
-  virtual Bool_t HasData() { return (SBSCalorimeterBlock::HasData()
-      ||HasSamplesData()); };
-
-  ClassDef(SBSCalorimeterBlockSamples,1) ///< Single-valued ADC with 
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// A calorimeter block with multivalued-adc (i.e. with samples) and TDC data
-class SBSCalorimeterBlockSamplesTDC : public SBSCalorimeterBlockSamples,
-  public SBSCalorimeterBlockData::TDC {
-
-public:
-  SBSCalorimeterBlockSamplesTDC() {};
-  SBSCalorimeterBlockSamplesTDC(Float_t x, Float_t y, Float_t z,
-      Int_t row, Int_t col, Int_t layer, Float_t adc_ped, Float_t adc_gain,
-      Float_t adc_ped_mult, Float_t tdc_offset, Float_t tdc_cal);
-  virtual ~SBSCalorimeterBlockSamplesTDC() {}
-
-  // Sub-classes may want a more comprehensive clear
-  virtual void ClearEvent();
-
-  // Check if this block has any data
-  virtual Bool_t HasData() { return (SBSCalorimeterBlockSamples::HasData()
-      ||HasTDCData()); };
-  ClassDef(SBSCalorimeterBlockSamplesTDC,1) ///< Multi-valued ADC with TDC
+  ClassDef(SBSCalorimeterBlock,1) ///< Generic shower block class (no data)
 };
 
 #endif

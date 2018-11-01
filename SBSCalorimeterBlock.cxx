@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// SBSCalorimeterBlock                                                          //
+// SBSCalorimeterBlock                                                       //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -10,78 +10,76 @@
 //const double SBSCalorimeterBlock::kBig = 1.e15;
 
 ClassImp(SBSCalorimeterBlock);
-ClassImp(SBSCalorimeterBlockTDC);
-ClassImp(SBSCalorimeterBlockSamples);
-ClassImp(SBSCalorimeterBlockSamplesTDC);
 
 ///////////////////////////////////////////////////////////////////////////////
-// Constructor for single-value ADC
+// Constructor for generic CalorimeterBlock (no-data)
 SBSCalorimeterBlock::SBSCalorimeterBlock(Float_t x, Float_t y,
-    Float_t z, Int_t row, Int_t col, Int_t layer,Float_t adc_ped,
-    Float_t adc_gain) : SBSCalorimeterBlockData::ADC(adc_ped,adc_gain),
-  fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0)
+    Float_t z, Int_t row, Int_t col, Int_t layer) :
+  fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0),
+  fADC(0), fTDC(0), fSamples(0)
 {
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
-// Constructor for single-value ADC + TDC
-SBSCalorimeterBlockTDC::SBSCalorimeterBlockTDC(Float_t x, Float_t y, Float_t z,
-    Int_t row, Int_t col, Int_t layer, Float_t adc_ped, Float_t adc_gain,
-    Float_t tdc_offset, Float_t tdc_cal) :
-  SBSCalorimeterBlock(x,y,z,row,col,layer,adc_ped,adc_gain),
-  SBSCalorimeterBlockData::TDC(tdc_offset,tdc_cal)
+// Check if this block has any data
+Bool_t SBSCalorimeterBlock::HasData()
 {
+  return ( ( fADC && fADC->HasData() ) || ( fTDC && fTDC->HasData() ) ||
+      ( fSamples && fSamples->HasData() ) );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Constructor for multi-valued ADC
-SBSCalorimeterBlockSamples::SBSCalorimeterBlockSamples(Float_t x,
-    Float_t y, Float_t z, Int_t row, Int_t col, Int_t layer, Float_t adc_ped,
-    Float_t adc_gain, Float_t adc_ped_mult) :
-  SBSCalorimeterBlock(x,y,z,row,col,layer,adc_ped,adc_gain),
-  SBSCalorimeterBlockData::Samples(adc_ped*adc_ped_mult,adc_gain)
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Constructor for multi-valued ADC + TDC
-SBSCalorimeterBlockSamplesTDC::SBSCalorimeterBlockSamplesTDC(Float_t x,
-    Float_t y, Float_t z, Int_t row, Int_t col, Int_t layer, Float_t adc_ped,
-    Float_t adc_gain, Float_t adc_ped_mult, Float_t tdc_offset,
-    Float_t tdc_cal) :
-  SBSCalorimeterBlockSamples(x,y,z,row,col,layer,adc_ped,adc_gain,adc_ped_mult),
-  SBSCalorimeterBlockData::TDC(tdc_offset,tdc_cal)
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Clear event from single-valued ADC
+// Clear event from generic CalorimeterBlock (with no data)
 void SBSCalorimeterBlock::ClearEvent()
 {
-  ClearADC();
+  fE = 0; // Reset calibrated energy for given event
   fStat = 0; // Reset status to 0, unseen
+  if(fADC)
+    fADC->Clear();
+  if(fTDC)
+    fTDC->Clear();
+  if(fSamples)
+    fSamples->Clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Clear event from single-valued ADC + TDC
-void SBSCalorimeterBlockTDC::ClearEvent()
+// Create a single-valued ADC data structure
+void SBSCalorimeterBlock::SetADC(Float_t ped, Float_t gain)
 {
-  SBSCalorimeterBlock::ClearEvent();
-  ClearTDC();
+  if(fADC)
+    delete fADC;
+  fADC = new SBSCalorimeterBlockData::ADC(ped,gain);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Clear event from multi-valued ADC
-void SBSCalorimeterBlockSamples::ClearEvent()
+// Create a TDC data structure
+void SBSCalorimeterBlock::SetTDC(Float_t offset, Float_t cal)
 {
-  SBSCalorimeterBlock::ClearEvent();
-  ClearSamples();
+  if(fTDC)
+    delete fTDC;
+  fTDC = new SBSCalorimeterBlockData::TDC(offset,cal);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Clear event from multi-valued ADC + TDC
-void SBSCalorimeterBlockSamplesTDC::ClearEvent()
+// Create a multi-valued ADC data structure
+void SBSCalorimeterBlock::SetSamples(Float_t ped, Float_t gain)
 {
-  SBSCalorimeterBlockSamples::ClearEvent();
-  ClearTDC();
+  if(fSamples)
+    delete fSamples;
+  fSamples = new SBSCalorimeterBlockData::Samples(ped,gain);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Coarse process this event
+void SBSCalorimeterBlock::CoarseProcess()
+{
+  // Compute the energy
+  if(fSamples) {
+    fE = fSamples->GetDataSumCal();
+  } else if ( fADC) {
+    fE = fADC->GetDataCal();
+  } else {
+    fE = 0;
+  }
 }

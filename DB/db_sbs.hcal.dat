@@ -75,9 +75,7 @@ sbs.hcal.chanmap_start = 1
 sbs.hcal.position = 0 0 0
 
 ## HCal is composed of 4 sub-assemblies each of 6x12 (row,col) modules
-
-## Test settings for one sub-assembly
-sbs.hcal.size  =  1.8567  0.9461  1.0000
+sbs.hcal.size  =  1.85674  3.80365  1.0000
 
 ## HCal is a matrix with nrows and ncols
 ## Numbers below are just a test so that it maches the number of used fADC's
@@ -86,13 +84,18 @@ sbs.hcal.nrows = 24
 #sbs.hcal.ncols = 1
 #sbs.hcal.nrows = 1
 
-## Position of first module
-sbs.hcal.xyz    =  0.92835  0.47305 0.0
-## Space between modules
-sbs.hcal.dxdydz  =  0.00254  0.00254 0.0
+## Position of first module (m)
+#sbs.hcal.xyz    =  0.92837  0.47305 0.0
+sbs.hcal.xyz    =  0.85217 1.82563 0.0
+## Distance between center of one module and next module
+#sbs.hcal.dxdydz  =  0.00254  0.00254 0.0
+sbs.hcal.dxdydz  =  0.15494 0.15875 0.00000
 
-## Mininum energy  for a cluster center (not really used right now)
-sbs.hcal.emin  = 0.0
+## Cluster information
+## Mininum energy  for a cluster
+sbs.hcal.emin  = 1.0
+sbs.hcal.cluster_dim = 4 ## 4x4 cluster
+
 
 ## Set the default pedestals
 sbs.hcal.pedestal =                               # Row-[ColRange]
