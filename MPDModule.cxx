@@ -30,9 +30,11 @@
 
 #define SSP_DATADEF(b) ((b&0x80000000)>>31)
 #define SSP_TAG(b)     ((b&0x78000000)>>27)
+#define SSP_SAMPLE(b,c) ((b>>c)&0xFFF)|(((b>>c)&0x1000)?0xFFFFF000:0x0)
 
 #include "MPDModule.h"
 #include "THaSlotData.h"
+#include <limits>
 
 using namespace std;
 
@@ -174,8 +176,8 @@ namespace Decoder {
                 hit[h] = p[jj++];
                 // The samples are stored as 13-bit signed int
                 // This needs to be converted back to typical 32-bit signed int
-                sample_dat[h*2]   = (hit[h]&0xFFF)*(hit[h]&0x1000?-1:1);
-                sample_dat[h*2+1] = ((hit[h] & 0x1FFE000)>>13)*(hit[h]&0x2000000?-1:1);
+                sample_dat[h*2]   = SSP_SAMPLE(hit[h],0);
+                sample_dat[h*2+1] = SSP_SAMPLE(hit[h],13);
                 if(SSP_DATADEF(hit[h]) != 0) {
                   fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] MISSING"
                       " APV_HIT_WORD%d for APV_HIT%d of MPD=%d, word=0x%x\n", __LINE__,
