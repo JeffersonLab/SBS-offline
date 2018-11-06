@@ -91,7 +91,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   std::vector<Float_t> xyz, dxyz;
   Int_t ncols = 1, nrows = 1, nlayers = 1;
   Float_t angle = 0.0;
-  Int_t cluster_dim = 3; // Default is 3x3 if none specified
+  std::vector<Int_t> cluster_dim; // Default is 3x3 if none specified
 
   // Read mapping/geometry/configuration parameters
   fChanMapStart = 0;
@@ -106,7 +106,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     { "xyz",           &xyz,      kFloatV, 3 },  ///< center pos of block 1
     { "dxdydz",         &dxyz,     kFloatV, 3 },  ///< block spacing (dx,dy,dz)
     { "emin",         &fEmin,   kFloat, 0, false }, ///< minimum energy threshold
-    { "cluster_dim",   &cluster_dim,   kInt, 0, true }, ///< cluster dimensions (2D)
+    { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kFloat, 0, true }, ///< const from gain correction 
     { "slope", &fConst, kFloat, 0, true }, ///< slope for gain correction 
@@ -140,8 +140,18 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
 
       // Also compute the max possible cluster size (which at most should be
       // cluster_dim x cluster_dim)
-      fNclubr = TMath::Min( cluster_dim, nrows );
-      fNclubc = TMath::Min( cluster_dim, ncols );
+      if(cluster_dim.size() == 0) {
+        cluster_dim.push_back(3);
+        cluster_dim.push_back(3);
+      } else if (cluster_dim.size() < 2) {
+        cluster_dim.push_back(cluster_dim[0]);
+      }
+      if(cluster_dim[0] < 1)
+        cluster_dim[0] = 3;
+      if(cluster_dim[1] < 1)
+        cluster_dim[1] = 3;
+      fNclubr = TMath::Min( cluster_dim[0], nrows );
+      fNclubc = TMath::Min( cluster_dim[1], ncols );
       fNclublk = fNclubr*fNclubc;
     }
   }
@@ -565,8 +575,8 @@ Int_t SBSCalorimeter::CoarseProcess(TClonesArray& )// tracks)
   }
 
   // Now, find as many clusters as meet the minimum energy
-  for(Int_t r = 0; r < fNrows-fNclubr; r++) {
-    for(Int_t c = 0; c < fNcols-fNclubc; c++) {
+  for(Int_t r = 0; r <= fNrows-fNclubr; r++) {
+    for(Int_t c = 0; c <= fNcols-fNclubc; c++) {
       for(Int_t l = 0; l < fNlayers; l++) {
 
         // Now perform the sum
