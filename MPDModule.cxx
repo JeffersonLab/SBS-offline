@@ -79,7 +79,7 @@ namespace Decoder {
       int ii,jj,kk,ll,mm; // loop indices: ii (event), jj(word), kk(mpd), mm (block)
       int thesewords;
       UInt_t hit[3] = {0};
-      UInt_t sample_dat[6] = {0};
+      int sample_dat[6] = {0}; // loadData in PODD/Analyzer uses int
 
       jj =  0;
       while( jj < len ){
@@ -172,10 +172,10 @@ namespace Decoder {
               //printf("samples: ");
               for(int h = 0; h < 3; h++) {
                 hit[h] = p[jj++];
-                // These mask 13 bits, but, I thought the ADC was only 12 bits.
-                // TODO: Check with Ben to confirm that this is correct.
-                sample_dat[h*2]   = (hit[h]&0x1FFF);
-                sample_dat[h*2+1] = (hit[h] & 0x3FFE000) >> 13;
+                // The samples are stored as 13-bit signed int
+                // This needs to be converted back to typical 32-bit signed int
+                sample_dat[h*2]   = (hit[h]&0xFFF)*(hit[h]&0x1000?-1:1);
+                sample_dat[h*2+1] = ((hit[h] & 0x1FFE000)>>13)*(hit[h]&0x2000000?-1:1);
                 if(SSP_DATADEF(hit[h]) != 0) {
                   fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] MISSING"
                       " APV_HIT_WORD%d for APV_HIT%d of MPD=%d, word=0x%x\n", __LINE__,
