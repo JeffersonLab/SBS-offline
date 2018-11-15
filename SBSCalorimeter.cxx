@@ -279,6 +279,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   // Before finishing, prepare vectors that will hold variable output data
   if( !fIsInit ) {
     fBlocks.clear();
+    fBlocks.resize(fNelem);
     Float_t x = 0;
     Float_t y = 0;
     Float_t z = 0;
@@ -311,7 +312,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
           if(fWithADCSamples) {
             blk->SetSamples(adc_ped[k],adc_gain[k]);
           }
-          fBlocks.push_back(blk);
+          fBlocks[k] = blk;
           fBlocksGrid[r][c][l] = blk;
         }
       }
@@ -631,6 +632,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray&)//tracks)
   fYclus.reserve(nres);
   fNblkclus.reserve(nres);
   fEclusBlk.reserve(nres);
+  fEclusBlk_c.reserve(nres);
   fRowblkclus.reserve(nres);
   fColblkclus.reserve(nres);
   for(size_t i = 0; i < fClusters.size(); i++) {
@@ -672,6 +674,7 @@ void SBSCalorimeter::ClearOutputVariables()
 {
   fRow.clear();
   fCol.clear();
+  fLayer.clear();
   fA.clear();
   fA_p.clear();
   fA_c.clear();
@@ -687,6 +690,10 @@ void SBSCalorimeter::ClearOutputVariables()
   fXclus.clear();
   fYclus.clear();
   fNblkclus.clear();
+  fEclusBlk.clear();
+  fEclusBlk_c.clear();
+  fRowblkclus.clear();
+  fColblkclus.clear();
   fE = fE_c = fX = fY = fNblk = fNclus = 0;
 }
 

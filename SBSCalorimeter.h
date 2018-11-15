@@ -29,8 +29,8 @@ public:
       THaApparatus* a = NULL);
   virtual ~SBSCalorimeter();
 
-  void ClearEvent();
-  void ClearOutputVariables();
+  virtual void ClearEvent();
+  virtual void ClearOutputVariables();
 
   //  Note: we can either have single-valued ADC or multi-valued ADC, not both
   void SetWithADC(Bool_t var);
