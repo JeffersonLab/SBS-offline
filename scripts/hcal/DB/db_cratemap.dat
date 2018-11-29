@@ -1,0 +1,18 @@
+==== Crate 12 type vme Bank Decoding
+# slot  model   bank
+  0     3561    10
+==== Crate 2 type vme
+# slot  model  bank
+   4    250     3
+   5    250     3
+   6    250     3
+   7    250     3
+   8    250     3
+   9    250     3
+  10    250     3
+  13    250     3
+  14    250     3
+  15    250     3
+  16    250     3
+  17    250     3
+  30    4450    6
