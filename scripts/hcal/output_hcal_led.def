@@ -1,0 +1,9 @@
+#block sbs.hcal.*
+variable sbs.hcal.a
+variable sbs.hcal.row
+variable sbs.hcal.col
+variable sbs.hcal.samps
+variable sbs.hcal.nsamps
+variable sbs.hcal.samps_idx
+variable sbs.hcal.ledbit
+variable sbs.hcal.ledcount

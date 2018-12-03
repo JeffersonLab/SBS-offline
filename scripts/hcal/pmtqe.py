@@ -18,10 +18,13 @@ def printPMTVal(pmt,sv,run):
 
 if len(sys.argv) == 2:
     #run = next((r for r in runs if sv.row == row and sv.col == col and sv.led==32),None)
-    for run,l in runs.items():
-        pmt=next((ll for ll in l if ll[2] == sys.argv[1]),None)
-        if pmt != None:
-            printPMTVal(sys.argv[1],pmt[3],run)
+    #for run,l in pmts.items():
+    #pmt=next((ll for ll in pmts if ll[2] == sys.argv[1]),None)
+        #print("Did we find: %s"%sys.argv[1])
+    #if pmt != None:
+    if sys.argv[1] in pmts:
+        pmt=pmts[sys.argv[1]]
+        printPMTVal(sys.argv[1],pmt[3],pmt[2])
 else:
     for pmt,l in pmts.items():
         printPMTVal(pmt,l[3],l[2])
