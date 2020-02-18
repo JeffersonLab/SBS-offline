@@ -71,7 +71,7 @@ protected:
   //  TDetInfo& detinfo, TSBSSimEvent::DetectorData detdata);
   Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map ); 
   //  TDetInfo& detinfo, TSBSSimEvent::DetectorData detdata);
-
+  
   bool fCheckedForEnabledDetectors;
   //std::vector<TDetInfo> fDetectors;
   void CheckForEnabledDetectors();
