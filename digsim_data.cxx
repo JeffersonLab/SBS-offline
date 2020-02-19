@@ -1,43 +1,103 @@
-#define data_digtree_cxx
-#include "data_digtree.h"
-#include <TH2.h>
-#include <TStyle.h>
-#include <TCanvas.h>
+#include "digsim_data.h"
+#include <TTree.h>
+#include <iostream>
 
-void data_digtree::Loop()
-{
-//   In a ROOT session, you can do:
-//      root> .L data_digtree.C
-//      root> data_digtree t
-//      root> t.GetEntry(12); // Fill t data members with entry number 12
-//      root> t.Show();       // Show values of entry 12
-//      root> t.Show(16);     // Read and show values of entry 16
-//      root> t.Loop();       // Loop on all entries
-//
+namespace SBSDigSim {
+ 
+  template<typename T>
+  int VDetData_t::SetupBranch(TTree *tree, const char* prefix,
+			      const char* varname, T &var)
+  {
+    TString branchname = TString::Format("%s.%s",prefix,varname);
+    if(!tree)
+      return 1;
+    var = 0;
+    int ret = tree->SetBranchAddress(branchname.Data(),&var);
+    if( ret != 0 ) {
+      std::cerr << "Unable to set branch '" << branchname
+		<< "' failed with error code: " << ret << std::endl;
+      return 1;
+    }
+    
+    return 0;
+  }
+  
+  bool PMTSimHit_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"nsimhits", nsimhits);
+    ret += SetupBranch(tree,prefix,"src", src);
+    ret += SetupBranch(tree,prefix,"trid", trid);
+    ret += SetupBranch(tree,prefix,"pid", pid);
+    ret += SetupBranch(tree,prefix,"chan", chan);
+    ret += SetupBranch(tree,prefix,"edep", edep);
+    ret += SetupBranch(tree,prefix,"npe", npe);
+    ret += SetupBranch(tree,prefix,"time", time);
+    ret += SetupBranch(tree,prefix,"t_lead", t_lead);
+    ret += SetupBranch(tree,prefix,"t_trail", t_trail);
+    return (ret ==0);
+  }
 
-//     This is the loop skeleton where:
-//    jentry is the global entry number in the chain
-//    ientry is the entry number in the current Tree
-//  Note that the argument to GetEntry must be:
-//    jentry for TChain::GetEntry
-//    ientry for TTree::GetEntry and TBranch::GetEntry
-//
-//       To read only selected branches, Insert statements like:
-// METHOD1:
-//    fChain->SetBranchStatus("*",0);  // disable all branches
-//    fChain->SetBranchStatus("branchname",1);  // activate branchname
-// METHOD2: replace line
-//    fChain->GetEntry(jentry);       //read all branches
-//by  b_branchname->GetEntry(ientry); //read only this branch
-   if (fChain == 0) return;
-
-   Long64_t nentries = fChain->GetEntriesFast();
-
-   Long64_t nbytes = 0, nb = 0;
-   for (Long64_t jentry=0; jentry<nentries;jentry++) {
-      Long64_t ientry = LoadTree(jentry);
-      if (ientry < 0) break;
-      nb = fChain->GetEntry(jentry);   nbytes += nb;
-      // if (Cut(ientry) < 0) continue;
-   }
+  bool GEMSimHit_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"nsimhits", nsimhits);
+    ret += SetupBranch(tree,prefix,"src", src);
+    ret += SetupBranch(tree,prefix,"trid", trid);
+    ret += SetupBranch(tree,prefix,"plane", plane);
+    ret += SetupBranch(tree,prefix,"module", module);
+    ret += SetupBranch(tree,prefix,"edep", edep);
+    ret += SetupBranch(tree,prefix,"time", time);
+    ret += SetupBranch(tree,prefix,"xpos", xpos);
+    ret += SetupBranch(tree,prefix,"ypos", ypos);
+    ret += SetupBranch(tree,prefix,"px", px);
+    ret += SetupBranch(tree,prefix,"py", py);
+    ret += SetupBranch(tree,prefix,"pz", pz);
+    ret += SetupBranch(tree,prefix,"sizex", sizex);
+    ret += SetupBranch(tree,prefix,"sizey", sizey);
+    ret += SetupBranch(tree,prefix,"startx", startx);
+    ret += SetupBranch(tree,prefix,"starty", starty);
+    return (ret ==0);
+  }
+  
+  bool PMTData_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"nhits", nhits);
+    ret += SetupBranch(tree,prefix,"chan", chan);
+    ret += SetupBranch(tree,prefix,"dataword", dataword);
+    ret += SetupBranch(tree,prefix,"adc", adc);
+    ret += SetupBranch(tree,prefix,"tdc", tdc);
+    return (ret ==0);
+  }
+  
+  bool SampPMTData_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"nhits", nhits);
+    ret += SetupBranch(tree,prefix,"chan", chan);
+    ret += SetupBranch(tree,prefix,"nwords", dataword);
+    ret += SetupBranch(tree,prefix,"adcsum", adc);
+    ret += SetupBranch(tree,prefix,"tdc", tdc);
+    ret += SetupBranch(tree,prefix,"samps_adc", samps_adc);
+    ret += SetupBranch(tree,prefix,"samps_datawords", samps_datawords);
+    return (ret ==0);
+  }
+  
+  bool GEMData_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"nhits", nhits);
+    ret += SetupBranch(tree,prefix,"plane", plane);
+    ret += SetupBranch(tree,prefix,"module", module);
+    ret += SetupBranch(tree,prefix,"proj", proj);
+    ret += SetupBranch(tree,prefix,"nwords", nwords);
+    ret += SetupBranch(tree,prefix,"strip", strip);
+    ret += SetupBranch(tree,prefix,"samp", samp);
+    ret += SetupBranch(tree,prefix,"samps_adc", samps_adc);
+    return (ret ==0);
+  }
+  
+  
+  
 }

@@ -1,14 +1,14 @@
-#define data_digtree_cxx
-#include "data_digtree.h"
+#define digsim_tree_cxx
+#include "digsim_tree.h"
 #include <TH2.h>
 #include <TStyle.h>
 #include <TCanvas.h>
 
-void data_digtree::Loop()
+void digsim_tree::Loop()
 {
 //   In a ROOT session, you can do:
-//      root> .L data_digtree.C
-//      root> data_digtree t
+//      root> .L digsim_tree.C
+//      root> digsim_tree t
 //      root> t.GetEntry(12); // Fill t data members with entry number 12
 //      root> t.Show();       // Show values of entry 12
 //      root> t.Show(16);     // Read and show values of entry 16
