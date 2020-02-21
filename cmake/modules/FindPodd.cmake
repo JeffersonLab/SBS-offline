@@ -17,24 +17,27 @@ set(Podd_find_library_name "HallA")
 #  set(Podd_find_library_name ${Podd_find_library_name}.${Podd_FIND_VERSION})
 #endif()
 
+#Modifying the CMake build of SBS-offline : It is hereafter assumed that the ${ANALYZER} environment variable points to the
+# top-level install directory of Podd, with parallel subdirectories bin, include, and lib
+
 ## Find the compiled shared library
 find_library(Podd_LIBRARY
   NAMES ${Podd_find_library_name}
-  PATHS $ENV{ANALYZER}
+  PATHS $ENV{ANALYZER}/lib
   )
 if(Podd_LIBRARY)
-  ## Get the path to the library
+  ## Get the path to the library: under the new cmake build system for Podd,
+  ## the include directory is parallel to the "lib" directory, under which the library is found
   get_filename_component(Podd_path ${Podd_LIBRARY} PATH)
   set(Podd_find_filenames VmeModule.h THaAnalysisObject.h)
 
+  
   ## Ensure that we have the appropriate include directories
   foreach(Podd_filename ${Podd_find_filenames})
     find_path(_Podd_include_${Podd_filename}
-      NAMES ${Podd_filename}
-      PATHS ${Podd_path}
-      PATH_SUFFIXES hana_decode src
-      NO_DEFAULT_PATH
-      )
+      NAMES ${Podd_filename}	
+      PATHS $ENV{ANALYZER}/include
+      )	    
     if(_Podd_include_${Podd_filename})
       list(APPEND Podd_INCLUDE_DIR ${_Podd_include_${Podd_filename}})
     else()
