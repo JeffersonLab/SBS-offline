@@ -10,6 +10,9 @@
 #include "SimDecoder.h"
 //#include "TSBSSimEvent.h"
 #include "ha_compiledata.h"
+#include "TTree.h"
+#include "digsim_tree.h"
+
 #include <cassert>
 #include <map>
 #include <stdint.h>
@@ -37,6 +40,11 @@ class SBSSimDecoder : public Podd::SimDecoder {
   virtual Int_t DefineVariables( THaAnalysisObject::EMode mode =
 				 THaAnalysisObject::kDefine );
   
+  // a bit dumb, I know, but I don't know another way
+  void SetTree(TTree *t);
+  void AddDetector(std::string detname);
+  
+  void SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc);
   /*
   // Workaround for fubar THaEvData
 #if ANALYZER_VERSION_CODE >= 67072  // ANALYZER_VERSION(1,6,0)
@@ -69,20 +77,33 @@ protected:
   //    const char *detname, TSBSSimEvent::DetectorData detdata, const int detid);
   //Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map,
   //  TDetInfo& detinfo, TSBSSimEvent::DetectorData detdata);
-  Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map ); 
+  Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map,
+		      std::string detname, digsim_tree* tree); 
   //  TDetInfo& detinfo, TSBSSimEvent::DetectorData detdata);
   
   bool fCheckedForEnabledDetectors;
-  //std::vector<TDetInfo> fDetectors;
+  std::vector<std::string> fDetectors;
   void CheckForEnabledDetectors();
   void CheckForDetector(const char *detname, short id);
 
   //TSBSSimMPDEncoder *fEncoderMPD;
+  
+  bool fTreeIsSet;
+  digsim_tree* fTree;
+  
+  // again, probably dumb...
+  std::map<std::string, int> fChansPerSlotDetMap;
+  std::map<std::string, int> fSlotsPerCrateDetMap;
+  std::map<std::string, int> fFirstSlotDetMap;
+  std::map<std::string, int> fFirstCrateDetMap;
 
+  Int_t ChanToROC( const std::string detname, Int_t h_chan, 
+		   Int_t &crate, Int_t &slot, Int_t &chan ) const;
+  //Int_t ChanFromROC( std::string detname, Int_t crate, Int_t slot, Int_t chan ) const;
+  
   /*
   // void  PMTtoROC( Int_t s_plane, Int_t s_sector, Int_t s_proj, Int_t s_chan,
   //		    Int_t& crate, Int_t& slot, Int_t& chan ) const;
-  Int_t PMTfromROC( Int_t crate, Int_t slot, Int_t chan ) const;
   // Int_t MakeROCKey( Int_t crate, Int_t slot, Int_t chan ) const;
   */
   ClassDef(SBSSimDecoder,1) // Decoder for simulated SoLID spectrometer data

@@ -50,10 +50,13 @@ enum EProjType { kUPlane = 0, kVPlane =1, kXPlane = 2, kYPlane = 3};
 typedef vector<int>::size_type vsiz_t;
 
 //-----------------------------------------------------------------------------
-SBSSimDecoder::SBSSimDecoder() : fCheckedForEnabledDetectors(false)
+SBSSimDecoder::SBSSimDecoder() : fCheckedForEnabledDetectors(false), fTreeIsSet(false)
 {
   // Constructor
   DefineVariables();
+
+  fDetectors.clear();
+  fTree = 0;
 
   gSystem->Load("libEG.so");  // for TDatabasePDG
   // Get MPD encoder for GEMs
@@ -119,29 +122,33 @@ int SBSSimDecoder::LoadEvent(const Int_t* evbuffer )
   return ret;
 }
 
-/*
+
 //-----------------------------------------------------------------------------
-static inline
-void PMTtoROC( Int_t h_chan,
-	       Int_t& crate, Int_t& slot, Int_t& chan )
+//static inline
+Int_t SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
+			       Int_t& crate, Int_t& slot, Int_t& chan )const 
 {
-  // Convert location parameters (row, col, chan) of the given PMT
+  // Convert location parameters (row, col, chan) of the given Channel
   // to hardware channel (crate,slot,chan)
   // The (crate,slot,chan) assignment must match the detmap definition in
   // the database!  See TreeSearch/dbconvert.cxx
   // In the case of GRINCH/RICH: 
   // crate = GTP; slot = VETROC; chan = PMT. (NINOs are "transparent", in a similar way to the MPDs)
+  int CPS = fChansPerSlotDetMap.at(detname);
+  int SPC = fSlotsPerCrateDetMap.at(detname);
+  int FS = fFirstSlotDetMap.at(detname);
+  int FC = fFirstCrateDetMap.at(detname);
   
   //div_t d = div( h_chan, fManager->GetChanPerSlot() );
-  div_t d = div( h_chan, 1 );
+  div_t d = div( h_chan, CPS );
   slot = d.quot;
   chan = d.rem;
 
-  d = div( slot, 1 );
-  crate = d.quot;
-  slot  = d.rem;
+  d = div( slot, SPC );
+  crate = d.quot+FC;
+  slot  = d.rem+FS;
 }
-
+/*
 //-----------------------------------------------------------------------------
 static inline
 Int_t MakeROCKey( Int_t crate, Int_t slot, Int_t chan )
@@ -151,7 +158,7 @@ Int_t MakeROCKey( Int_t crate, Int_t slot, Int_t chan )
 }
 
 //-----------------------------------------------------------------------------
-Int_t SBSSimDecoder::PMTfromROC( Int_t crate, Int_t slot, Int_t chan ) const
+Int_t SBSSimDecoder::ChanFromROC( Int_t crate, Int_t slot, Int_t chan ) const
 {
   // Return index of digitized strip correspomding to hardware channel
   // (crate,slot,chan)
@@ -246,7 +253,9 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 
   std::vector<std::map<Decoder::THaSlotData*, std::vector<UInt_t> > > detmaps;
   //detmaps.resize(fDetectors.size());
-
+  
+  
+  
   /*
   // Loop through the TSBSSimEvent vector and load the data onto
   // all declared detectors.
@@ -328,8 +337,17 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
 }
 */
 
+void SBSSimDecoder::SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc)
+{
+  fChansPerSlotDetMap[detname] = cps;
+  fSlotsPerCrateDetMap[detname] = spc;
+  fFirstSlotDetMap[detname] = fs;
+  fFirstCrateDetMap[detname] = fc;
+}
+
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
-				   std::vector<UInt_t> > &map)
+				   std::vector<UInt_t> > &map,
+				   const std::string detname, digsim_tree* tree)
 //, TDetInfo &detinfo, TSBSSimEvent::DetectorData detdata)
       //const char *detname, TSBSSimEvent::DetectorData detdata, const int detid)
 {
@@ -347,6 +365,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   unsigned short data_type = 0, chan = 0, chan_mult = 0;
   int lchan;
   //SimEncoder::mpd_data tmp_mpd;
+  
+  //
+  //tree
+  
   
   /*
   if(detdata.fDetID == detid && detdata.fData.size() > 1) { // Data to process
@@ -416,14 +438,24 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 
 void SBSSimDecoder::CheckForEnabledDetectors()
 {
-  /*
-  fDetectors = fManager->GetAllDetInfo();
+  //fDetectors = fManager->GetAllDetInfo();
   if(fDebug>0) {
     for(size_t i = 0; i < fDetectors.size(); i++) {
-      std::cout << "Found detector: " << fDetectors[i].DetFullName() << ", ID: "
-        << fDetectors[i].DetUniqueId() << std::endl;
+      std::cout << "Found detector: " << fDetectors[i].c_str() << endl;
+      //<< ", ID: " << fDetectors[i].DetUniqueId() << std::endl;
     }
   }
-  */
   fCheckedForEnabledDetectors = true;
+}
+
+
+void SBSSimDecoder::SetTree(TTree *t)
+{
+  fTree = new digsim_tree(t);
+  fTreeIsSet = true;
+}
+
+void SBSSimDecoder::AddDetector(std::string detname)
+{
+  fDetectors.push_back(detname);
 }
