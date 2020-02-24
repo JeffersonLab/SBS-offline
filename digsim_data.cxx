@@ -30,11 +30,13 @@ namespace SBSDigSim {
     ret += SetupBranch(tree,prefix,"trid", trid);
     ret += SetupBranch(tree,prefix,"pid", pid);
     ret += SetupBranch(tree,prefix,"chan", chan);
-    ret += SetupBranch(tree,prefix,"edep", edep);
+    if(fReadEdep){ret += SetupBranch(tree,prefix,"edep", edep);
     ret += SetupBranch(tree,prefix,"npe", npe);
     ret += SetupBranch(tree,prefix,"time", time);
-    ret += SetupBranch(tree,prefix,"t_lead", t_lead);
-    ret += SetupBranch(tree,prefix,"t_trail", t_trail);
+    if(fReadTimes){
+      ret += SetupBranch(tree,prefix,"t_lead", t_lead);
+      ret += SetupBranch(tree,prefix,"t_trail", t_trail);
+    }
     return (ret ==0);
   }
 
@@ -60,25 +62,25 @@ namespace SBSDigSim {
     return (ret ==0);
   }
   
-  bool PMTData_t::SetupBranches(TTree *tree, const char* prefix)
+  bool HitData_t::SetupBranches(TTree *tree, const char* prefix)
   {
     int ret = 0;
     ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"chan", chan);
     ret += SetupBranch(tree,prefix,"dataword", dataword);
-    ret += SetupBranch(tree,prefix,"adc", adc);
-    ret += SetupBranch(tree,prefix,"tdc", tdc);
+    if(fReadADC)ret += SetupBranch(tree,prefix,"adc", adc);
+    if(fReadTDC)ret += SetupBranch(tree,prefix,"tdc", tdc);
     return (ret ==0);
   }
   
-  bool SampPMTData_t::SetupBranches(TTree *tree, const char* prefix)
+  bool SampHitData_t::SetupBranches(TTree *tree, const char* prefix)
   {
     int ret = 0;
     ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"chan", chan);
     ret += SetupBranch(tree,prefix,"nwords", dataword);
     ret += SetupBranch(tree,prefix,"adcsum", adc);
-    ret += SetupBranch(tree,prefix,"tdc", tdc);
+    if(fReadTDC)ret += SetupBranch(tree,prefix,"tdc", tdc);
     ret += SetupBranch(tree,prefix,"samps_adc", samps_adc);
     ret += SetupBranch(tree,prefix,"samps_datawords", samps_datawords);
     return (ret ==0);

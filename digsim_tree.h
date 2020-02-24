@@ -11,6 +11,7 @@
 #include <TROOT.h>
 #include <TChain.h>
 #include <TFile.h>
+#include <digsim_data.h>
 
 // Header file for the classes stored in the TTree if any.
 
@@ -26,6 +27,20 @@ public :
    Int_t           EvtID;
    Double_t        Weight;
    Int_t           NSignal;
+   
+   //just GMn...
+   PMTSimHit_t *sbs_hcal_simhits;
+   PMTSimHit_t *bb_sh_simhits;
+   PMTSimHit_t *bb_ps_simhits;
+   PMTSimHit_t *bb_hodo_simhits;
+   PMTSimHit_t *bb_grinch_simhits;
+   GEMSimHit_t *bb_gem_simhits;
+   
+   HitData_t *sbs_hcal_hits;
+   HitData_t *bb_sh_hits;
+   HitData_t *bb_ps_hits;
+   HitData_t *bb_hodo_hits;
+   
    UInt_t          sbs_hcal_simhit_nhits;
    std::vector<short>   *sbs_hcal_simhit_src;
    std::vector<short>   *sbs_hcal_simhit_trid;
