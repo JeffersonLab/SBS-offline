@@ -2,8 +2,8 @@
 #include <TTree.h>
 #include <iostream>
 
-namespace SBSDigSim {
- 
+namespace SBSDigSim{
+  
   template<typename T>
   int VDetData_t::SetupBranch(TTree *tree, const char* prefix,
 			      const char* varname, T &var)
@@ -30,7 +30,7 @@ namespace SBSDigSim {
     ret += SetupBranch(tree,prefix,"trid", trid);
     ret += SetupBranch(tree,prefix,"pid", pid);
     ret += SetupBranch(tree,prefix,"chan", chan);
-    if(fReadEdep){ret += SetupBranch(tree,prefix,"edep", edep);
+    if(fReadEdep)ret += SetupBranch(tree,prefix,"edep", edep);
     ret += SetupBranch(tree,prefix,"npe", npe);
     ret += SetupBranch(tree,prefix,"time", time);
     if(fReadTimes){
@@ -69,7 +69,10 @@ namespace SBSDigSim {
     ret += SetupBranch(tree,prefix,"chan", chan);
     ret += SetupBranch(tree,prefix,"dataword", dataword);
     if(fReadADC)ret += SetupBranch(tree,prefix,"adc", adc);
-    if(fReadTDC)ret += SetupBranch(tree,prefix,"tdc", tdc);
+    if(fReadTDC){
+      ret += SetupBranch(tree,prefix,"tdc_l", tdc_l);
+      ret += SetupBranch(tree,prefix,"tdc_t", tdc_t);
+    }
     return (ret ==0);
   }
   
@@ -80,7 +83,10 @@ namespace SBSDigSim {
     ret += SetupBranch(tree,prefix,"chan", chan);
     ret += SetupBranch(tree,prefix,"nwords", dataword);
     ret += SetupBranch(tree,prefix,"adcsum", adc);
-    if(fReadTDC)ret += SetupBranch(tree,prefix,"tdc", tdc);
+    if(fReadTDC){
+      ret += SetupBranch(tree,prefix,"tdc_l", tdc_l);
+      ret += SetupBranch(tree,prefix,"tdc_t", tdc_t);
+    }
     ret += SetupBranch(tree,prefix,"samps_adc", samps_adc);
     ret += SetupBranch(tree,prefix,"samps_datawords", samps_datawords);
     return (ret ==0);

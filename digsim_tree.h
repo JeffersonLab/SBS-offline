@@ -14,6 +14,7 @@
 #include <digsim_data.h>
 
 // Header file for the classes stored in the TTree if any.
+using namespace SBSDigSim;
 
 class digsim_tree {
 public :
@@ -27,8 +28,14 @@ public :
    Int_t           EvtID;
    Double_t        Weight;
    Int_t           NSignal;
+   // List of branches
+   TBranch        *b_RunID;   //!
+   TBranch        *b_EvtID;   //!
+   TBranch        *b_Weight;   //!
+   TBranch        *b_NSignal;   //!
    
-   //just GMn...
+   //just GMn... 
+   // we'll see later to make it configurable
    PMTSimHit_t *sbs_hcal_simhits;
    PMTSimHit_t *bb_sh_simhits;
    PMTSimHit_t *bb_ps_simhits;
@@ -36,210 +43,13 @@ public :
    PMTSimHit_t *bb_grinch_simhits;
    GEMSimHit_t *bb_gem_simhits;
    
-   HitData_t *sbs_hcal_hits;
+   SampHitData_t *sbs_hcal_hits;
    HitData_t *bb_sh_hits;
    HitData_t *bb_ps_hits;
    HitData_t *bb_hodo_hits;
+   HitData_t *bb_grinch_hits;
+   GEMData_t *bb_gem_hits;
    
-   UInt_t          sbs_hcal_simhit_nhits;
-   std::vector<short>   *sbs_hcal_simhit_src;
-   std::vector<short>   *sbs_hcal_simhit_trid;
-   std::vector<int>     *sbs_hcal_simhit_pid;
-   std::vector<short>   *sbs_hcal_simhit_chan;
-   std::vector<double>  *sbs_hcal_simhit_edep;
-   std::vector<int>     *sbs_hcal_simhit_npe;
-   std::vector<double>  *sbs_hcal_simhit_time;
-   std::vector<double>  *sbs_hcal_simhit_t_lead;
-   std::vector<double>  *sbs_hcal_simhit_t_trail;
-   UInt_t          sbs_hcal_hit_nhits;
-   std::vector<short>   *sbs_hcal_hit_chan;
-   std::vector<unsigned int> *sbs_hcal_hit_nwords;
-   std::vector<int>     *sbs_hcal_hit_adcsum;
-   std::vector<std::vector<int> > *sbs_hcal_hit_samps_adc;
-   std::vector<std::vector<unsigned int> > *sbs_hcal_hit_samps_datawords;
-   std::vector<int>     *sbs_hcal_hit_tdc_l;
-   std::vector<int>     *sbs_hcal_hit_tdc_t;
-   UInt_t          bb_sh_simhit_nhits;
-   std::vector<short>   *bb_sh_simhit_src;
-   std::vector<short>   *bb_sh_simhit_trid;
-   std::vector<int>     *bb_sh_simhit_pid;
-   std::vector<short>   *bb_sh_simhit_chan;
-   std::vector<double>  *bb_sh_simhit_edep;
-   std::vector<int>     *bb_sh_simhit_npe;
-   std::vector<double>  *bb_sh_simhit_time;
-   UInt_t          bb_sh_hit_nhits;
-   std::vector<short>   *bb_sh_hit_chan;
-   std::vector<unsigned int> *bb_sh_hit_dataword;
-   std::vector<int>     *bb_sh_hit_adc;
-   UInt_t          bb_ps_simhit_nhits;
-   std::vector<short>   *bb_ps_simhit_src;
-   std::vector<short>   *bb_ps_simhit_trid;
-   std::vector<int>     *bb_ps_simhit_pid;
-   std::vector<short>   *bb_ps_simhit_chan;
-   std::vector<double>  *bb_ps_simhit_edep;
-   std::vector<int>     *bb_ps_simhit_npe;
-   std::vector<double>  *bb_ps_simhit_time;
-   UInt_t          bb_ps_hit_nhits;
-   std::vector<short>   *bb_ps_hit_chan;
-   std::vector<unsigned int> *bb_ps_hit_dataword;
-   std::vector<int>     *bb_ps_hit_adc;
-   UInt_t          bb_hodo_simhit_nhits;
-   std::vector<short>   *bb_hodo_simhit_src;
-   std::vector<short>   *bb_hodo_simhit_trid;
-   std::vector<int>     *bb_hodo_simhit_pid;
-   std::vector<short>   *bb_hodo_simhit_chan;
-   std::vector<double>  *bb_hodo_simhit_edep;
-   std::vector<int>     *bb_hodo_simhit_npe;
-   std::vector<double>  *bb_hodo_simhit_time;
-   std::vector<double>  *bb_hodo_simhit_t_lead;
-   std::vector<double>  *bb_hodo_simhit_t_trail;
-   UInt_t          bb_hodo_hit_nhits;
-   std::vector<short>   *bb_hodo_hit_chan;
-   std::vector<unsigned int> *bb_hodo_hit_dataword;
-   std::vector<int>     *bb_hodo_hit_tdc_l;
-   std::vector<int>     *bb_hodo_hit_tdc_t;
-   UInt_t          bb_grinch_simhit_nhits;
-   std::vector<short>   *bb_grinch_simhit_src;
-   std::vector<short>   *bb_grinch_simhit_trid;
-   std::vector<int>     *bb_grinch_simhit_pid;
-   std::vector<short>   *bb_grinch_simhit_chan;
-   std::vector<int>     *bb_grinch_simhit_npe;
-   std::vector<double>  *bb_grinch_simhit_time;
-   std::vector<double>  *bb_grinch_simhit_t_lead;
-   std::vector<double>  *bb_grinch_simhit_t_trail;
-   UInt_t          bb_grinch_hit_nhits;
-   std::vector<short>   *bb_grinch_hit_chan;
-   std::vector<unsigned int> *bb_grinch_hit_dataword;
-   std::vector<int>     *bb_grinch_hit_tdc_l;
-   std::vector<int>     *bb_grinch_hit_tdc_t;
-   UInt_t          bb_gem_simhit_nhits;
-   std::vector<short>   *bb_gem_simhit_src;
-   std::vector<short>   *bb_gem_simhit_trid;
-   std::vector<int>     *bb_gem_simhit_pid;
-   std::vector<short>   *bb_gem_simhit_plane;
-   std::vector<short>   *bb_gem_simhit_module;
-   std::vector<double>  *bb_gem_simhit_edep;
-   std::vector<double>  *bb_gem_simhit_time;
-   std::vector<double>  *bb_gem_simhit_xpos;
-   std::vector<double>  *bb_gem_simhit_ypos;
-   std::vector<double>  *bb_gem_simhit_px;
-   std::vector<double>  *bb_gem_simhit_py;
-   std::vector<double>  *bb_gem_simhit_pz;
-   std::vector<short>   *bb_gem_simhit_sizex;
-   std::vector<short>   *bb_gem_simhit_sizey;
-   std::vector<short>   *bb_gem_simhit_startx;
-   std::vector<short>   *bb_gem_simhit_starty;
-   UInt_t          bb_gem_hit_nhits;
-   std::vector<short>   *bb_gem_hit_plane;
-   std::vector<short>   *bb_gem_hit_module;
-   std::vector<short>   *bb_gem_hit_proj;
-   std::vector<unsigned int> *bb_gem_hit_nwords;
-   std::vector<std::vector<short> > *bb_gem_hit_strip;
-   std::vector<std::vector<short> > *bb_gem_hit_samp;
-   std::vector<std::vector<int> > *bb_gem_hit_samps_adc;
-
-   // List of branches
-   TBranch        *b_RunID;   //!
-   TBranch        *b_EvtID;   //!
-   TBranch        *b_Weight;   //!
-   TBranch        *b_NSignal;   //!
-   TBranch        *b_sbs_hcal_simhit_nhits;   //!
-   TBranch        *b_sbs_hcal_simhit_src;   //!
-   TBranch        *b_sbs_hcal_simhit_trid;   //!
-   TBranch        *b_sbs_hcal_simhit_pid;   //!
-   TBranch        *b_sbs_hcal_simhit_chan;   //!
-   TBranch        *b_sbs_hcal_simhit_edep;   //!
-   TBranch        *b_sbs_hcal_simhit_npe;   //!
-   TBranch        *b_sbs_hcal_simhit_time;   //!
-   TBranch        *b_sbs_hcal_simhit_t_lead;   //!
-   TBranch        *b_sbs_hcal_simhit_t_trail;   //!
-   TBranch        *b_sbs_hcal_hit_nhits;   //!
-   TBranch        *b_sbs_hcal_hit_chan;   //!
-   TBranch        *b_sbs_hcal_hit_nwords;   //!
-   TBranch        *b_sbs_hcal_hit_adcsum;   //!
-   TBranch        *b_sbs_hcal_hit_samps_adc;   //!
-   TBranch        *b_sbs_hcal_hit_samps_datawords;   //!
-   TBranch        *b_sbs_hcal_hit_tdc_l;   //!
-   TBranch        *b_sbs_hcal_hit_tdc_t;   //!
-   TBranch        *b_bb_sh_simhit_nhits;   //!
-   TBranch        *b_bb_sh_simhit_src;   //!
-   TBranch        *b_bb_sh_simhit_trid;   //!
-   TBranch        *b_bb_sh_simhit_pid;   //!
-   TBranch        *b_bb_sh_simhit_chan;   //!
-   TBranch        *b_bb_sh_simhit_edep;   //!
-   TBranch        *b_bb_sh_simhit_npe;   //!
-   TBranch        *b_bb_sh_simhit_time;   //!
-   TBranch        *b_bb_sh_hit_nhits;   //!
-   TBranch        *b_bb_sh_hit_chan;   //!
-   TBranch        *b_bb_sh_hit_dataword;   //!
-   TBranch        *b_bb_sh_hit_adc;   //!
-   TBranch        *b_bb_ps_simhit_nhits;   //!
-   TBranch        *b_bb_ps_simhit_src;   //!
-   TBranch        *b_bb_ps_simhit_trid;   //!
-   TBranch        *b_bb_ps_simhit_pid;   //!
-   TBranch        *b_bb_ps_simhit_chan;   //!
-   TBranch        *b_bb_ps_simhit_edep;   //!
-   TBranch        *b_bb_ps_simhit_npe;   //!
-   TBranch        *b_bb_ps_simhit_time;   //!
-   TBranch        *b_bb_ps_hit_nhits;   //!
-   TBranch        *b_bb_ps_hit_chan;   //!
-   TBranch        *b_bb_ps_hit_dataword;   //!
-   TBranch        *b_bb_ps_hit_adc;   //!
-   TBranch        *b_bb_hodo_simhit_nhits;   //!
-   TBranch        *b_bb_hodo_simhit_src;   //!
-   TBranch        *b_bb_hodo_simhit_trid;   //!
-   TBranch        *b_bb_hodo_simhit_pid;   //!
-   TBranch        *b_bb_hodo_simhit_chan;   //!
-   TBranch        *b_bb_hodo_simhit_edep;   //!
-   TBranch        *b_bb_hodo_simhit_npe;   //!
-   TBranch        *b_bb_hodo_simhit_time;   //!
-   TBranch        *b_bb_hodo_simhit_t_lead;   //!
-   TBranch        *b_bb_hodo_simhit_t_trail;   //!
-   TBranch        *b_bb_hodo_hit_nhits;   //!
-   TBranch        *b_bb_hodo_hit_chan;   //!
-   TBranch        *b_bb_hodo_hit_dataword;   //!
-   TBranch        *b_bb_hodo_hit_tdc_l;   //!
-   TBranch        *b_bb_hodo_hit_tdc_t;   //!
-   TBranch        *b_bb_grinch_simhit_nhits;   //!
-   TBranch        *b_bb_grinch_simhit_src;   //!
-   TBranch        *b_bb_grinch_simhit_trid;   //!
-   TBranch        *b_bb_grinch_simhit_pid;   //!
-   TBranch        *b_bb_grinch_simhit_chan;   //!
-   TBranch        *b_bb_grinch_simhit_npe;   //!
-   TBranch        *b_bb_grinch_simhit_time;   //!
-   TBranch        *b_bb_grinch_simhit_t_lead;   //!
-   TBranch        *b_bb_grinch_simhit_t_trail;   //!
-   TBranch        *b_bb_grinch_hit_nhits;   //!
-   TBranch        *b_bb_grinch_hit_chan;   //!
-   TBranch        *b_bb_grinch_hit_dataword;   //!
-   TBranch        *b_bb_grinch_hit_tdc_l;   //!
-   TBranch        *b_bb_grinch_hit_tdc_t;   //!
-   TBranch        *b_bb_gem_simhit_nhits;   //!
-   TBranch        *b_bb_gem_simhit_src;   //!
-   TBranch        *b_bb_gem_simhit_trid;   //!
-   TBranch        *b_bb_gem_simhit_pid;   //!
-   TBranch        *b_bb_gem_simhit_plane;   //!
-   TBranch        *b_bb_gem_simhit_module;   //!
-   TBranch        *b_bb_gem_simhit_edep;   //!
-   TBranch        *b_bb_gem_simhit_time;   //!
-   TBranch        *b_bb_gem_simhit_xpos;   //!
-   TBranch        *b_bb_gem_simhit_ypos;   //!
-   TBranch        *b_bb_gem_simhit_px;   //!
-   TBranch        *b_bb_gem_simhit_py;   //!
-   TBranch        *b_bb_gem_simhit_pz;   //!
-   TBranch        *b_bb_gem_simhit_sizex;   //!
-   TBranch        *b_bb_gem_simhit_sizey;   //!
-   TBranch        *b_bb_gem_simhit_startx;   //!
-   TBranch        *b_bb_gem_simhit_starty;   //!
-   TBranch        *b_bb_gem_hit_nhits;   //!
-   TBranch        *b_bb_gem_hit_plane;   //!
-   TBranch        *b_bb_gem_hit_module;   //!
-   TBranch        *b_bb_gem_hit_proj;   //!
-   TBranch        *b_bb_gem_hit_nwords;   //!
-   TBranch        *b_bb_gem_hit_strip;   //!
-   TBranch        *b_bb_gem_hit_samp;   //!
-   TBranch        *b_bb_gem_hit_samps_adc;   //!
-
    digsim_tree(TTree *tree=0);
    virtual ~digsim_tree();
    virtual Int_t    Cut(Long64_t entry);
@@ -249,9 +59,15 @@ public :
    virtual void     Loop();
    virtual Bool_t   Notify();
    virtual void     Show(Long64_t entry = -1);
+
+protected:
+   //void SetupDetBranch(SBSDigSim::VDetData_t &det, const char* prefix);
+   void SetupDetBranch(SBSDigSim::VDetData_t* det, const char* prefix);
 };
 
 #endif
+
+/*
 
 #ifdef digsim_tree_cxx
 digsim_tree::digsim_tree(TTree *tree) : fChain(0) 
@@ -524,3 +340,205 @@ Int_t digsim_tree::Cut(Long64_t entry)
    return 1;
 }
 #endif // #ifdef digsim_tree_cxx
+*/
+
+   /*
+   UInt_t          sbs_hcal_simhit_nhits;
+   std::vector<short>   *sbs_hcal_simhit_src;
+   std::vector<short>   *sbs_hcal_simhit_trid;
+   std::vector<int>     *sbs_hcal_simhit_pid;
+   std::vector<short>   *sbs_hcal_simhit_chan;
+   std::vector<double>  *sbs_hcal_simhit_edep;
+   std::vector<int>     *sbs_hcal_simhit_npe;
+   std::vector<double>  *sbs_hcal_simhit_time;
+   std::vector<double>  *sbs_hcal_simhit_t_lead;
+   std::vector<double>  *sbs_hcal_simhit_t_trail;
+   UInt_t          sbs_hcal_hit_nhits;
+   std::vector<short>   *sbs_hcal_hit_chan;
+   std::vector<unsigned int> *sbs_hcal_hit_nwords;
+   std::vector<int>     *sbs_hcal_hit_adcsum;
+   std::vector<std::vector<int> > *sbs_hcal_hit_samps_adc;
+   std::vector<std::vector<unsigned int> > *sbs_hcal_hit_samps_datawords;
+   std::vector<int>     *sbs_hcal_hit_tdc_l;
+   std::vector<int>     *sbs_hcal_hit_tdc_t;
+   UInt_t          bb_sh_simhit_nhits;
+   std::vector<short>   *bb_sh_simhit_src;
+   std::vector<short>   *bb_sh_simhit_trid;
+   std::vector<int>     *bb_sh_simhit_pid;
+   std::vector<short>   *bb_sh_simhit_chan;
+   std::vector<double>  *bb_sh_simhit_edep;
+   std::vector<int>     *bb_sh_simhit_npe;
+   std::vector<double>  *bb_sh_simhit_time;
+   UInt_t          bb_sh_hit_nhits;
+   std::vector<short>   *bb_sh_hit_chan;
+   std::vector<unsigned int> *bb_sh_hit_dataword;
+   std::vector<int>     *bb_sh_hit_adc;
+   UInt_t          bb_ps_simhit_nhits;
+   std::vector<short>   *bb_ps_simhit_src;
+   std::vector<short>   *bb_ps_simhit_trid;
+   std::vector<int>     *bb_ps_simhit_pid;
+   std::vector<short>   *bb_ps_simhit_chan;
+   std::vector<double>  *bb_ps_simhit_edep;
+   std::vector<int>     *bb_ps_simhit_npe;
+   std::vector<double>  *bb_ps_simhit_time;
+   UInt_t          bb_ps_hit_nhits;
+   std::vector<short>   *bb_ps_hit_chan;
+   std::vector<unsigned int> *bb_ps_hit_dataword;
+   std::vector<int>     *bb_ps_hit_adc;
+   UInt_t          bb_hodo_simhit_nhits;
+   std::vector<short>   *bb_hodo_simhit_src;
+   std::vector<short>   *bb_hodo_simhit_trid;
+   std::vector<int>     *bb_hodo_simhit_pid;
+   std::vector<short>   *bb_hodo_simhit_chan;
+   std::vector<double>  *bb_hodo_simhit_edep;
+   std::vector<int>     *bb_hodo_simhit_npe;
+   std::vector<double>  *bb_hodo_simhit_time;
+   std::vector<double>  *bb_hodo_simhit_t_lead;
+   std::vector<double>  *bb_hodo_simhit_t_trail;
+   UInt_t          bb_hodo_hit_nhits;
+   std::vector<short>   *bb_hodo_hit_chan;
+   std::vector<unsigned int> *bb_hodo_hit_dataword;
+   std::vector<int>     *bb_hodo_hit_tdc_l;
+   std::vector<int>     *bb_hodo_hit_tdc_t;
+   UInt_t          bb_grinch_simhit_nhits;
+   std::vector<short>   *bb_grinch_simhit_src;
+   std::vector<short>   *bb_grinch_simhit_trid;
+   std::vector<int>     *bb_grinch_simhit_pid;
+   std::vector<short>   *bb_grinch_simhit_chan;
+   std::vector<int>     *bb_grinch_simhit_npe;
+   std::vector<double>  *bb_grinch_simhit_time;
+   std::vector<double>  *bb_grinch_simhit_t_lead;
+   std::vector<double>  *bb_grinch_simhit_t_trail;
+   UInt_t          bb_grinch_hit_nhits;
+   std::vector<short>   *bb_grinch_hit_chan;
+   std::vector<unsigned int> *bb_grinch_hit_dataword;
+   std::vector<int>     *bb_grinch_hit_tdc_l;
+   std::vector<int>     *bb_grinch_hit_tdc_t;
+   UInt_t          bb_gem_simhit_nhits;
+   std::vector<short>   *bb_gem_simhit_src;
+   std::vector<short>   *bb_gem_simhit_trid;
+   std::vector<int>     *bb_gem_simhit_pid;
+   std::vector<short>   *bb_gem_simhit_plane;
+   std::vector<short>   *bb_gem_simhit_module;
+   std::vector<double>  *bb_gem_simhit_edep;
+   std::vector<double>  *bb_gem_simhit_time;
+   std::vector<double>  *bb_gem_simhit_xpos;
+   std::vector<double>  *bb_gem_simhit_ypos;
+   std::vector<double>  *bb_gem_simhit_px;
+   std::vector<double>  *bb_gem_simhit_py;
+   std::vector<double>  *bb_gem_simhit_pz;
+   std::vector<short>   *bb_gem_simhit_sizex;
+   std::vector<short>   *bb_gem_simhit_sizey;
+   std::vector<short>   *bb_gem_simhit_startx;
+   std::vector<short>   *bb_gem_simhit_starty;
+   UInt_t          bb_gem_hit_nhits;
+   std::vector<short>   *bb_gem_hit_plane;
+   std::vector<short>   *bb_gem_hit_module;
+   std::vector<short>   *bb_gem_hit_proj;
+   std::vector<unsigned int> *bb_gem_hit_nwords;
+   std::vector<std::vector<short> > *bb_gem_hit_strip;
+   std::vector<std::vector<short> > *bb_gem_hit_samp;
+   std::vector<std::vector<int> > *bb_gem_hit_samps_adc;
+
+   // List of branches
+   TBranch        *b_RunID;   //!
+   TBranch        *b_EvtID;   //!
+   TBranch        *b_Weight;   //!
+   TBranch        *b_NSignal;   //!
+   TBranch        *b_sbs_hcal_simhit_nhits;   //!
+   TBranch        *b_sbs_hcal_simhit_src;   //!
+   TBranch        *b_sbs_hcal_simhit_trid;   //!
+   TBranch        *b_sbs_hcal_simhit_pid;   //!
+   TBranch        *b_sbs_hcal_simhit_chan;   //!
+   TBranch        *b_sbs_hcal_simhit_edep;   //!
+   TBranch        *b_sbs_hcal_simhit_npe;   //!
+   TBranch        *b_sbs_hcal_simhit_time;   //!
+   TBranch        *b_sbs_hcal_simhit_t_lead;   //!
+   TBranch        *b_sbs_hcal_simhit_t_trail;   //!
+   TBranch        *b_sbs_hcal_hit_nhits;   //!
+   TBranch        *b_sbs_hcal_hit_chan;   //!
+   TBranch        *b_sbs_hcal_hit_nwords;   //!
+   TBranch        *b_sbs_hcal_hit_adcsum;   //!
+   TBranch        *b_sbs_hcal_hit_samps_adc;   //!
+   TBranch        *b_sbs_hcal_hit_samps_datawords;   //!
+   TBranch        *b_sbs_hcal_hit_tdc_l;   //!
+   TBranch        *b_sbs_hcal_hit_tdc_t;   //!
+   TBranch        *b_bb_sh_simhit_nhits;   //!
+   TBranch        *b_bb_sh_simhit_src;   //!
+   TBranch        *b_bb_sh_simhit_trid;   //!
+   TBranch        *b_bb_sh_simhit_pid;   //!
+   TBranch        *b_bb_sh_simhit_chan;   //!
+   TBranch        *b_bb_sh_simhit_edep;   //!
+   TBranch        *b_bb_sh_simhit_npe;   //!
+   TBranch        *b_bb_sh_simhit_time;   //!
+   TBranch        *b_bb_sh_hit_nhits;   //!
+   TBranch        *b_bb_sh_hit_chan;   //!
+   TBranch        *b_bb_sh_hit_dataword;   //!
+   TBranch        *b_bb_sh_hit_adc;   //!
+   TBranch        *b_bb_ps_simhit_nhits;   //!
+   TBranch        *b_bb_ps_simhit_src;   //!
+   TBranch        *b_bb_ps_simhit_trid;   //!
+   TBranch        *b_bb_ps_simhit_pid;   //!
+   TBranch        *b_bb_ps_simhit_chan;   //!
+   TBranch        *b_bb_ps_simhit_edep;   //!
+   TBranch        *b_bb_ps_simhit_npe;   //!
+   TBranch        *b_bb_ps_simhit_time;   //!
+   TBranch        *b_bb_ps_hit_nhits;   //!
+   TBranch        *b_bb_ps_hit_chan;   //!
+   TBranch        *b_bb_ps_hit_dataword;   //!
+   TBranch        *b_bb_ps_hit_adc;   //!
+   TBranch        *b_bb_hodo_simhit_nhits;   //!
+   TBranch        *b_bb_hodo_simhit_src;   //!
+   TBranch        *b_bb_hodo_simhit_trid;   //!
+   TBranch        *b_bb_hodo_simhit_pid;   //!
+   TBranch        *b_bb_hodo_simhit_chan;   //!
+   TBranch        *b_bb_hodo_simhit_edep;   //!
+   TBranch        *b_bb_hodo_simhit_npe;   //!
+   TBranch        *b_bb_hodo_simhit_time;   //!
+   TBranch        *b_bb_hodo_simhit_t_lead;   //!
+   TBranch        *b_bb_hodo_simhit_t_trail;   //!
+   TBranch        *b_bb_hodo_hit_nhits;   //!
+   TBranch        *b_bb_hodo_hit_chan;   //!
+   TBranch        *b_bb_hodo_hit_dataword;   //!
+   TBranch        *b_bb_hodo_hit_tdc_l;   //!
+   TBranch        *b_bb_hodo_hit_tdc_t;   //!
+   TBranch        *b_bb_grinch_simhit_nhits;   //!
+   TBranch        *b_bb_grinch_simhit_src;   //!
+   TBranch        *b_bb_grinch_simhit_trid;   //!
+   TBranch        *b_bb_grinch_simhit_pid;   //!
+   TBranch        *b_bb_grinch_simhit_chan;   //!
+   TBranch        *b_bb_grinch_simhit_npe;   //!
+   TBranch        *b_bb_grinch_simhit_time;   //!
+   TBranch        *b_bb_grinch_simhit_t_lead;   //!
+   TBranch        *b_bb_grinch_simhit_t_trail;   //!
+   TBranch        *b_bb_grinch_hit_nhits;   //!
+   TBranch        *b_bb_grinch_hit_chan;   //!
+   TBranch        *b_bb_grinch_hit_dataword;   //!
+   TBranch        *b_bb_grinch_hit_tdc_l;   //!
+   TBranch        *b_bb_grinch_hit_tdc_t;   //!
+   TBranch        *b_bb_gem_simhit_nhits;   //!
+   TBranch        *b_bb_gem_simhit_src;   //!
+   TBranch        *b_bb_gem_simhit_trid;   //!
+   TBranch        *b_bb_gem_simhit_pid;   //!
+   TBranch        *b_bb_gem_simhit_plane;   //!
+   TBranch        *b_bb_gem_simhit_module;   //!
+   TBranch        *b_bb_gem_simhit_edep;   //!
+   TBranch        *b_bb_gem_simhit_time;   //!
+   TBranch        *b_bb_gem_simhit_xpos;   //!
+   TBranch        *b_bb_gem_simhit_ypos;   //!
+   TBranch        *b_bb_gem_simhit_px;   //!
+   TBranch        *b_bb_gem_simhit_py;   //!
+   TBranch        *b_bb_gem_simhit_pz;   //!
+   TBranch        *b_bb_gem_simhit_sizex;   //!
+   TBranch        *b_bb_gem_simhit_sizey;   //!
+   TBranch        *b_bb_gem_simhit_startx;   //!
+   TBranch        *b_bb_gem_simhit_starty;   //!
+   TBranch        *b_bb_gem_hit_nhits;   //!
+   TBranch        *b_bb_gem_hit_plane;   //!
+   TBranch        *b_bb_gem_hit_module;   //!
+   TBranch        *b_bb_gem_hit_proj;   //!
+   TBranch        *b_bb_gem_hit_nwords;   //!
+   TBranch        *b_bb_gem_hit_strip;   //!
+   TBranch        *b_bb_gem_hit_samp;   //!
+   TBranch        *b_bb_gem_hit_samps_adc;   //!
+   */

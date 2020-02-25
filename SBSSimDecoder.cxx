@@ -254,7 +254,11 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   std::vector<std::map<Decoder::THaSlotData*, std::vector<UInt_t> > > detmaps;
   //detmaps.resize(fDetectors.size());
   
+  for(std::vector<std::string>::const_iterator it =
+      fDetectors.begin(); it != fDetectors.end();
+      ++it){
   
+  }
   
   /*
   // Loop through the TSBSSimEvent vector and load the data onto

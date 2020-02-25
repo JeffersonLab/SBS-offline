@@ -36,14 +36,14 @@ namespace SBSDigSim {
     bool fReadEdep;                // flag to read edep. Set to true by default
     bool fReadTimes;               // flag to read times. Set to true by default
     // these flags are set in constructor - just below
-  PMTSimHit_t(bool readTimes = true, bool readEdep = true) : nsimhits(0),
+    PMTSimHit_t(bool readTimes = true, bool readEdep = true) : nsimhits(0),
       src(0), trid(0), pid(0), 
       chan(0), edep(0), npe(0), 
       time(0), t_lead(0), t_trail(0), 
       fReadEdep(readEdep), fReadTimes(readTimes)
       {}
     virtual ~PMTSimHit_t(){};
-    virtual bool SetupBranches(TTree *t, const char* prefix, bool times);
+    virtual bool SetupBranches(TTree *t, const char* prefix);
   };
   
   //To read the "MC truth" info for hits from PMT detectors
@@ -68,7 +68,7 @@ namespace SBSDigSim {
     // hit extension (in number of strips) in both projections
     std::vector<short>   *startx;
     std::vector<short>   *starty;
-  GEMSimHit_t() : nsimhits(0),
+    GEMSimHit_t() : nsimhits(0),
       src(0), trid(0), pid(0),
       plane(0), module(0), 
       edep(0), time(0), xpos(0), ypos(0), 
@@ -84,12 +84,13 @@ namespace SBSDigSim {
     std::vector<short>   *chan;           // channel (PMT)
     std::vector<unsigned int> *dataword;  // data word (encoded ADC/TDC value)
     std::vector<int>     *adc;            // ped sub ADC value
-    std::vector<int>     *tdc;            // TDC (centered on t = 0)
+    std::vector<int>     *tdc_l;          // lead TDC (centered on t = 0)
+    std::vector<int>     *tdc_t;          // trail TDC (centered on t = 0)
     bool fReadADC;                        // bool to read pedsub ADC branch
     bool fReadTDC;                        // bool to read zero centered TDC branch
     // these flags are set in constructor - just below
-  HitData_t(bool readADC = true, bool readTDC = true) : nhits(0),
-      chan(0), dataword(0), adc(0), tdc(0),
+    HitData_t(bool readADC = true, bool readTDC = true) : nhits(0),
+      chan(0), dataword(0), adc(0), tdc_l(0), tdc_t(0),
       fReadADC(readADC), fReadTDC(readTDC)
       {}
     virtual ~HitData_t(){};
@@ -101,8 +102,8 @@ namespace SBSDigSim {
     //std::vector<int>     *adcsum; => takes "adc branch"
     std::vector< std::vector<int> > *samps_adc; // decoded ADC samples
     std::vector< std::vector<unsigned int> > *samps_datawords; // encoded ADC samples
-  SampHitData_t(bool readTDC = true) : 
-    HitData_t(true, readTDC),
+    SampHitData_t(bool readTDC = true) : 
+      HitData_t(true, readTDC),
       samps_adc(0), samps_datawords(0)
       {}
     virtual ~SampHitData_t(){};
@@ -119,16 +120,16 @@ namespace SBSDigSim {
     std::vector< std::vector<short> > *strip;
     std::vector< std::vector<short> > *samp;
     std::vector< std::vector<int> > *samps_adc;
-  GEMData_t() : nhits(0),
-       plane(0), module(0), proj(0), 
-       nwords(0), strip(0), samp(0), samps_adc(0) 
-       {}
-     virtual ~GEMData_t(){};
-     virtual bool SetupBranches(TTree *t, const char* prefix);
+    GEMData_t() : nhits(0),
+      plane(0), module(0), proj(0), 
+      nwords(0), strip(0), samp(0), samps_adc(0) 
+      {}
+    virtual ~GEMData_t(){};
+    virtual bool SetupBranches(TTree *t, const char* prefix);
   };
   
   
   
-}
+}//end of namespace
 
 #endif // #ifdef digsim_data_cxx
