@@ -7,8 +7,39 @@ set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Set build type (Debug is default)")
 
 set(DEV_WARNING "cmake build of SBS-Offline is still in development. Please test and report issues")
 
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 project(sbs)
+
+# Setup GNUInstallDirs for installation:
+#----------------------------------------------------------------------------
+include(GNUInstallDirs)
+#----------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+# The following lines are required so that the executable can dynamically locate the library dependencies independent of 
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_LIBDIR}")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+
+# the RPATH to be used when installing, but only if it's not a system directory
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_FULL_LIBDIR}" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_FULL_LIBDIR}")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+#----------------------------------------------------------------------------
 
 ## Disable in-source builds!
 if("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}")
@@ -28,16 +59,16 @@ set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
   SBSScintPlane.cxx SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx
   SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx
   SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
-  SBSCalorimeterCluster.cxx
+  SBSCalorimeterCluster.cxx 
+  digsim_data.cxx digsim_tree.cxx
   )
+#SBSSimDecoder.cxx
 
 ## Make corresponding header files
 string(REGEX REPLACE .cxx .h headers "${sources}")
 ## Append a few extra header files in the repository.  (But do not append the
 ## sbs_LinkDef.h header here, that is further down this cmake config.
 list(APPEND headers "DebugDef.h")
-
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 ## Setup default variables (copied from Makefile)
 #FIXME: should be configure'd:
@@ -51,10 +82,20 @@ set(CXXMAXERRORS 0 CACHE INT "Maximum number of allowed errors before cxx stops"
 list(APPEND SBSEXTRADEF_LIST VERBOSE TESTCODE MCDATA)
 
 #----------------------------------------------------------------------------
-# Find ROOT (using custom FindROOT.cmake taken from G4SBS)
-set(minimum_root_version 5.10)
+# Find ROOT 
+#ROOT path
+# commented out the following line so that this procedure will evolve with ROOT:
+# set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+# You need to tell CMake where to find the ROOT installation. This can be done in a number of ways:
+#   - ROOT built with classic configure/make use the provided $ROOTSYS/etc/cmake/FindROOT.cmake
+#   - ROOT built with CMake. Add in CMAKE_PREFIX_PATH the installation prefix for ROOT
+list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package(ROOT REQUIRED)
 
+#---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
+include(${ROOT_USE_FILE})
+
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 ##----------------------------------------------------------------------------
 ## Setup the PODD Analyzer
 find_package(Podd 1.6 REQUIRED)
@@ -103,19 +144,19 @@ endif()
 if(DEFINED ENV{EVIO_INCDIR})
   set(EVIO_INCLUDE_DIR $ENV{EVIO_INCDIR})
   message(STATUS "Found EVIO at ${EVIO_INCLUDE_DIR}")
-else()
-  message(WARNING "No EVIO directory found. Specify with $EVIO_INCDIR.")
+else() # assuming that if the user has not specified EVIO_INCDIR, then user is using Podd's self-built EVIO installation:
+  set(EVIO_INCLUDE_DIR $ENV{ANALYZER}/include)
+  message(WARNING "No EVIO directory found. Defaulting to $ENV{ANALYZER}/include, assuming use of Podd's built-in EVIO verison...")
 endif()
 
 
 
-include_directories(${ROOT_INCLUDE_DIR} ${Podd_INCLUDE_DIR} ${EVIO_INCLUDE_DIR})
+include_directories(${ROOT_INCLUDE_DIR} ${Podd_INCLUDE_DIR} ${EVIO_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ROOT_CXX_FLAGS}")
 
 ## Generate the ROOT dictionary
 set(PROJECT_DICTIONARY ${PROJECT_NAME}Dict)
-ROOT_GENERATE_DICTIONARY( ${PROJECT_DICTIONARY} ${headers}
-  LINKDEF ${PROJECT_NAME}_LinkDef.h)
+ROOT_GENERATE_DICTIONARY( ${PROJECT_DICTIONARY} ${headers} OPTIONS -I${PROJECT_SOURCE_DIR} MODULE ${PROJECT_NAME} LINKDEF ${PROJECT_NAME}_LinkDef.h )
 
 ## Create the library
 add_library(${PROJECT_NAME} SHARED ${sources} ${headers} ${PROJECT_DICTIONARY}.cxx )
@@ -129,5 +170,21 @@ foreach(_def ${SBSEXTRADEF_LIST})
   endif()
 endforeach()
 
+configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.csh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.csh @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.sh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.sh)
+
 message(AUTHOR_WARNING ${DEV_WARNING})
 
+#install the library under ${CMAKE_INSTALL_PREFIX}/lib
+INSTALL(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+#install the relevant directories: DB, replay, scripts in the top-level installation folder:
+INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB DESTINATION ${CMAKE_INSTALL_PREFIX})
+INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/replay DESTINATION ${CMAKE_INSTALL_PREFIX})
+INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/scripts DESTINATION ${CMAKE_INSTALL_PREFIX})
+INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.sh DESTINATION ${CMAKE_INSTALL_BINDIR})
+INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.csh DESTINATION ${CMAKE_INSTALL_BINDIR})
+#install all headers under cmake_install_prefix/include
+INSTALL(FILES ${headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+# install the ROOT dictionary files: eventually we should learn how to do this in a smarter way. Put the .cxx file under "include"
+# and put the _rdict.pcm and .rootmap files under "lib". This seems to work. Don't ask me why
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_DICTIONARY}.cxx DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

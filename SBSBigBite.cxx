@@ -17,6 +17,11 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   THaSpectrometer( name, description )
 {
   // Constructor. Defines standard detectors
+  //The standard BigBite detector package in the 12 GeV/SBS era will include:
+  // pre-shower + shower calorimeters (inherit from THaNonTrackingDetector OR THaPidDetector)
+  // Timing hodoscope (inherit from THaNonTrackingDetector)
+  // GRINCH (inherit from THaPidDetector)
+  // GEMs (five-layer) (inherit from THaTrackingDetector)
 
 }
 
