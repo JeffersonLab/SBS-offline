@@ -528,8 +528,8 @@ SBSBBShower::~SBSBBShower()
 void SBSBBShower::DeleteArrays()
 {
     // Delete member arrays. Internal function used by destructor.
-  cout << "SBSBBShower::DeleteArrays() " << endl;
-  cout << 0 << endl;
+  //cout << "SBSBBShower::DeleteArrays() " << endl;
+  //cout << 0 << endl;
   // ? THaShower::DeleteArrays()
   //delete [] fNChan; fNChan = 0;
     //UShort_t mapsize = fDetMap->GetSize();
@@ -996,3 +996,4 @@ void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
     fMult_cl[fNclust] = fClusters[fNclust]->GetMult();
     fNclust++;
 }
+
