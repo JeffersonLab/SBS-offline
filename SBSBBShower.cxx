@@ -78,8 +78,8 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     return err;
   }
 
-  vector<Int_tdetmap, chanmap;
-  vector<Double_txy, dxy;
+  vector<Int_t> detmap, chanmap;
+  vector<Double_t> xy, dxy;
   Int_t ncols, nrows;
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
@@ -153,13 +153,13 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 //cout << "Set up the new channel map" << endl;
       Int_t nmodules = fDetMap->GetSize();
 cout << "Set up the new channel map" << nmodules << endl;
-      assert( nmodules 0 );
+      assert( nmodules > 0 );
 fChanMap.resize(nmodules);
       for( Int_t i=0, k=0; i < nmodules && !err; i++ ) {
 	THaDetMap::Module* module = fDetMap->GetModule(i);
 	Int_t nchan = module->hi - module->lo + 1;
         cout << " nchan = " << nchan << endl;
-	if( nchan 0 ) {
+	if( nchan > 0 ) {
 	  fChanMap.at(i).resize(nchan);
 	  for( Int_t j=0; j<nchan; ++j ) {
 	    cout << " k = " << k << " " << nchan*nmodules << endl;
@@ -646,9 +646,9 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
     // Loop over all channels that have a hit.
     for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
-       if( chan d->hi || chan < d->lo ) continue;    // Not one of my channels.
+       if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
       Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
-      if( nhit 1 || nhit == 0 ) {
+      if( nhit > 1 || nhit == 0 ) {
 	OSSTREAM msg;
 	msg << nhit << " hits on " << "ADC channel "
 	    << d->crate << "/" << d->slot << "/" << chan;
@@ -692,9 +692,9 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       fA[k]   = data;                   // ADC value
       fA_p[k] = data - fPed[k];         // ADC minus ped
       fA_c[k] = fA_p[k] * fGain[k];     // ADC corrected
-      if( fA_p[k] 0.0 )
+      if( fA_p[k] > 0.0 )
 	fAsum_p += fA_p[k];             // Sum of ADC minus ped
-      if( fA_c[k] 0.0 )
+      if( fA_c[k] > 0.0 )
 	fAsum_c += fA_c[k];             // Sum of ADC corrected
       fNhits++;
     }
