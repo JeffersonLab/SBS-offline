@@ -32,6 +32,13 @@ public:
     void SetMult(Int_t var) {fMult=var;}
 
     SBSShowerBlock** GetBlocks() {return fBlocks;}
+    SBSShowerBlock* GetBlock(int i) {
+      if(i<fMult){
+	return fBlocks[i];
+      }else{
+	return 0;
+      }
+    }
 
     Int_t GetSize() {return fMult;}
 

@@ -28,6 +28,14 @@
 #include <iostream>
 #include <iomanip>
 #define CLUSTER_BLOCK_RADIUS 1
+#include <cassert>
+#ifdef HAS_SSTREAM
+ #include <sstream>
+ #define OSSTREAM ostringstream
+#else
+ #include <strstream>
+ #define OSSTREAM ostrstream
+#endif
 
 using namespace std;
 
@@ -36,12 +44,16 @@ ClassImp(SBSBBShower)
 //_____________________________________________________________________________
 SBSBBShower::SBSBBShower( const char* name, const char* description,
                          THaApparatus* apparatus ) :
-THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
+//THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
+THaShower(name,description,apparatus), //fNChan(NULL), fChanMap(NULL)
+  fE_cl(0), fX_cl(0), fY_cl(0), fMult_cl(0), fNblk_cl(0), fEblk_cl(0), fE_cl_corr(0), 
+  fBlocks(0), fClusters(0) //, fBlkGrid(0)
 {
     // Constructor.
     fCoarseProcessed = 0;
     fFineProcessed = 0;
 }
+
 
 //_____________________________________________________________________________
 Int_t SBSBBShower::ReadDatabase( const TDatime& date )
@@ -50,8 +62,207 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     // This function is called by THaDetectorBase::Init() once at the
     // beginning of the analysis.
     // 'date' contains the date/time of the run being analyzed.
+  
+  //cout << "******readdatabase *******" << endl;
 
-    static const char* const here = "ReadDatabase()";
+  static const char* const here = "ReadDatabase()";
+  
+  FILE* file = OpenFile( date );
+  if( !file ) return kFileError;
+
+  // Read fOrigin and fSize (required!)
+  Int_t err = ReadGeometry( file, date, true );
+  if( err ) {
+//cout << " readgeo err" << endl;
+    fclose(file);
+    return err;
+  }
+
+  vector<Int_tdetmap, chanmap;
+  vector<Double_txy, dxy;
+  Int_t ncols, nrows;
+  // Read mapping/geometry/configuration parameters
+  DBRequest config_request[] = {
+    { "detmap",       &detmap,  kIntV },
+    { "chanmap",      &chanmap, kIntV,    0, 1 },
+    { "ncols",        &ncols,   kInt },
+    { "nrows",        &nrows,   kInt },
+    { "xy",           &xy,      kDoubleV, 2 },  // center pos of block 1
+    { "dxdy",         &dxy,     kDoubleV, 2 },  // dx and dy block spacings
+    { "emin",         &fEmin,   kDouble },
+    { 0 }
+  };
+//cout << " call Loaddb" << endl;
+  err = LoadDB( file, date, config_request, fPrefix );
+
+
+//cout << " (nrows ' " << nrows << " " <<  ncols << endl;
+  // Sanity checks
+  if( !err && (nrows <= 0 || ncols <= 0) ) {
+    Error( Here(here), "Illegal number of rows or columns: %d %d. Must be 0. "
+	   "Fix database.", nrows, ncols );
+    err = kInitError;
+  }
+
+  Int_t nelem = ncols * nrows; 
+  Int_t nclbl = TMath::Min( 3, nrows ) * TMath::Min( 3, ncols );
+
+
+//cout << " nelem= " << nelem << " " << nclbl << " " << fNelem << endl;
+
+  // Reinitialization only possible for same basic configuration
+  if( !err ) {
+    if( fIsInit && nelem != fNelem ) {
+      Error( Here(here), "Cannot re-initalize with different number of blocks or "
+	     "blocks per cluster (was: %d, now: %d). Detector not re-initialized.",
+	     fNelem, nelem );
+      err = kInitError;
+    } else {
+      fNelem = nelem;
+      fNrows = nrows;
+      fNcols = ncols;
+      fNclublk = nclbl;
+    }
+  }
+
+  if( !err ) {
+    // Clear out the old channel map before reading a new one
+//cout << " clea map " << endl;
+    fChanMap.clear();
+    if( FillDetMap(detmap, 0, here) <= 0 ) {
+      err = kInitError;  // Error already printed by FillDetMap
+      //    } else if( (nelem = fDetMap->GetTotNumChan()) != fNelem ) {
+      //Error( Here(here), "Number of detector map channels (%d) "
+      //	     "inconsistent with number of blocks (%d)", nelem, fNelem );
+      //err = kInitError;
+    }
+  }
+//cout << " filled map" << endl;
+  if( !err ) {
+    if( !chanmap.empty() ) {
+      // If a map is found in the database, ensure it has the correct size
+      //Int_t cmapsize = chanmap.size();
+      //if( cmapsize != fNelem ) {
+      //	Error( Here(here), "Channel map size (%d) and number of detector "
+      //	       "channels (%d) must be equal. Fix database.", cmapsize, fNelem );
+      //	err = kInitError;
+      //}
+    }
+    if( !err ) {
+      // Set up the new channel map
+//cout << "Set up the new channel map" << endl;
+      Int_t nmodules = fDetMap->GetSize();
+cout << "Set up the new channel map" << nmodules << endl;
+      assert( nmodules 0 );
+fChanMap.resize(nmodules);
+      for( Int_t i=0, k=0; i < nmodules && !err; i++ ) {
+	THaDetMap::Module* module = fDetMap->GetModule(i);
+	Int_t nchan = module->hi - module->lo + 1;
+        cout << " nchan = " << nchan << endl;
+	if( nchan 0 ) {
+	  fChanMap.at(i).resize(nchan);
+	  for( Int_t j=0; j<nchan; ++j ) {
+	    cout << " k = " << k << " " << nchan*nmodules << endl;
+	    assert( k < nmodules*nchan );
+	    fChanMap.at(i).at(j) = chanmap.empty() ? k : chanmap[k]-1;
+	  	    cout << " k = " << k << " " << nchan*nmodules << " " << chanmap[k] << " " << fChanMap.at(i).at(j)<< endl;
+	    ++k;
+	  }
+	} else {
+	  Error( Here(here), "No channels defined for module %d.", i);
+	  fChanMap.clear();
+	  err = kInitError;
+	}
+      }
+    }
+  }
+
+//cout << " close file" << file << endl;
+  if( err ) {
+    fclose(file);
+    return err;
+  }
+
+  // Dimension arrays
+  //FIXME: use a structure!
+  UInt_t nval = fNelem;
+  if( !fIsInit ) {
+    // Geometry
+    fBlockX = new Float_t[ nval ];
+    fBlockY = new Float_t[ nval ];
+
+    // Calibrations
+    fPed    = new Float_t[ nval ];
+    fGain   = new Float_t[ nval ];
+
+    // Per-event data
+    fA    = new Float_t[ nval ];
+    fA_p  = new Float_t[ nval ];
+    fA_c  = new Float_t[ nval ];
+    fNblk = new Int_t[ fNclublk ];
+    fEblk = new Float_t[ fNclublk ];
+
+    fIsInit = true;
+  }
+
+//cout << " define geometry" << endl;
+  // Compute block positions
+  for( int c=0; c<ncols; c++ ) {
+    for( int r=0; r<nrows; r++ ) {
+      int k = nrows*c + r;
+      // Units are meters
+      fBlockX[k] = xy[0] + r*dxy[0];
+      fBlockY[k] = xy[1] + c*dxy[1];
+    }
+  }
+
+  // Read calibration parameters
+
+  // Set DEFAULT values here
+  // Default ADC pedestals (0) and ADC gains (1)
+//cout << " set ped memory " << endl;
+  memset( fPed, 0, nval*sizeof(fPed[0]) );
+//cout << " set gain" << endl;
+  for( UInt_t i=0; i<nval; ++i ) { fGain[i] = 1.0; }
+
+  // Read ADC pedestals and gains (in order of logical channel number)
+  DBRequest calib_request[] = {
+    { "pedestals",    fPed,   kFloat, nval, 1 },
+    { "gains",        fGain,  kFloat, nval, 1 },
+    { 0 }
+  };
+  err = LoadDB( file, date, calib_request, fPrefix );
+  fclose(file);
+  if( err )
+    return err;
+
+#ifdef WITH_DEBUG
+  // Debug printout
+  if ( fDebug 2 ) {
+    const UInt_t N = static_cast<UInt_t>(fNelem);
+    Double_t pos[3]; fOrigin.GetXYZ(pos);
+    DBRequest list[] = {
+      { "Number of blocks",       &fNelem,     kInt        },
+      { "Detector center",        pos,         kDouble, 3  },
+      { "Detector size",          fSize,       kDouble, 3  },
+      { "Channel map",            &chanmap,    kIntV       },
+      { "Position of block 1",    &xy,         kDoubleV    },
+      { "Block x/y spacings",     &dxy,        kDoubleV    },
+      { "Minimum cluster energy", &fEmin,      kFloat,  1  },
+      { "ADC pedestals",          fPed,        kFloat,  N  },
+      { "ADC pedestals",          fPed,        kFloat,  N  },
+      { "ADC gains",              fGain,       kFloat,  N  },
+      { 0 }
+    };
+    DebugPrint( list );
+  }
+#endif
+fMaxNClust=10;
+  fClusters = new SBSBBShowerCluster*[fMaxNClust];
+  fBlocks = new SBSShowerBlock*[fNelem];
+//cout << " retruning" << endl;
+  return kOK;
+  /*
     const int LEN = 100;
     char buf[LEN];
     Int_t nelem, ncols, nrows, nclbl;
@@ -233,7 +444,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 
 
     fE = new Float_t[fMaxNClust];
-    fE_c = new Float_t[fMaxNClust];
+    fE_cl_corr = new Float_t[fMaxNClust];
     fX = new Float_t[fMaxNClust];
     fY = new Float_t[fMaxNClust]; 
     //fXtarg = new Float_t[fMaxNClust];
@@ -263,7 +474,9 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     //}
 
     return kOK;
+    */
 }
+
 
 //_____________________________________________________________________________
 Int_t SBSBBShower::DefineVariables( EMode mode )
@@ -284,7 +497,7 @@ Int_t SBSBBShower::DefineVariables( EMode mode )
         { "asum_c", "Sum of calibrated ADCs",             "fAsum_c" },
         { "nclust", "Number of clusters",                 "fNclust" },
         { "e",      "Energy (MeV) of largest cluster",    "fE" },
-        { "e_c",    "Corrected Energy (MeV) of largest cluster",    "fE_c" },
+        { "e_c",    "Corrected Energy (MeV) of largest cluster",    "fE_cl_corr" },
         { "x",      "x-position (m) of largest cluster", "fX" },
         { "y",      "y-position (m) of largest cluster", "fY" },
         //{ "targ.x", "x-position (m) of largest cluster in target coords", "fXtarg" },
@@ -315,14 +528,17 @@ SBSBBShower::~SBSBBShower()
 void SBSBBShower::DeleteArrays()
 {
     // Delete member arrays. Internal function used by destructor.
-
-    delete [] fNChan; fNChan = 0;
-    UShort_t mapsize = fDetMap->GetSize();
-    if( fChanMap ) {
-        for( UShort_t i = 0; i<mapsize; i++ )
-            delete [] fChanMap[i];
-    }
-    delete [] fChanMap; fChanMap = 0;
+  cout << "SBSBBShower::DeleteArrays() " << endl;
+  cout << 0 << endl;
+  // ? THaShower::DeleteArrays()
+  //delete [] fNChan; fNChan = 0;
+    //UShort_t mapsize = fDetMap->GetSize();
+    // if( fChanMap ) {
+    //     for( UShort_t i = 0; i<mapsize; i++ )
+    //         delete [] fChanMap[i];
+    // }
+    //delete [] fChanMap; fChanMap = 0;
+    fChanMap.clear();
     delete [] fBlockX;  fBlockX  = 0;
     delete [] fBlockY;  fBlockY  = 0;
     delete [] fPed;     fPed     = 0;
@@ -330,22 +546,28 @@ void SBSBBShower::DeleteArrays()
     delete [] fA;       fA       = 0;
     delete [] fA_p;     fA_p     = 0;
     delete [] fA_c;     fA_c     = 0;
-    delete [] fNblk;    fNblk    = 0;
-    delete [] fEblk;    fEblk    = 0;
     delete [] fBlocks;  fBlocks  = 0;
-    for (int i=0;i<fNrows;i++) {
-        delete [] fBlkGrid[i]; fBlkGrid[i] = 0;
-    }
-    delete [] fBlkGrid; fBlkGrid = 0;
+    //for (int i=0;i<fNrows;i++) {
+    //    delete [] fBlkGrid[i]; fBlkGrid[i] = 0;
+    //}
+    //delete [] fBlkGrid; fBlkGrid = 0;
     delete [] fClusters; fClusters = 0;
-    delete [] fX; fX = 0;
-    delete [] fY; fY = 0;
     //delete [] fXtarg; fXtarg = 0;
     //delete [] fYtarg; fYtarg = 0;
     //delete [] fZtarg; fZtarg = 0;
-    delete [] fE; fE = 0;
-    delete [] fE_c; fE_c = 0;
-    delete [] fMult; fMult = 0;
+    
+    delete [] fE_cl; fE_cl = 0;
+    delete [] fX_cl; fX_cl = 0;
+    delete [] fY_cl; fY_cl = 0;
+    delete [] fMult_cl; fMult_cl = 0;
+    for(int i = 0; i<fNclusters; i++){
+      delete [] fNblk_cl[i]; fNblk_cl = 0;
+      delete [] fEblk_cl[i]; fEblk_cl = 0;
+    }
+    delete [] fNblk_cl;
+    delete [] fEblk_cl;
+    delete [] fE_cl_corr; fE_cl_corr = 0;
+    
 }
 
 //_____________________________________________________________________________
@@ -367,24 +589,36 @@ void SBSBBShower::ClearEvent()
     memset( fA, 0, lsh );
     memset( fA_p, 0, lsh );
     memset( fA_c, 0, lsh );
-    memset( fE, 0, lshh );
-    memset( fE_c, 0, lshh );
-    memset( fX, 0, lshh );
-    memset( fY, 0, lshh );
+    memset( fE_cl, 0, lshh );
+    memset( fE_cl_corr, 0, lshh );
+    memset( fX_cl, 0, lshh );
+    memset( fY_cl, 0, lshh );
     //memset( fXtarg, 0, lshh );
     //memset( fYtarg, 0, lshh );
     //memset( fZtarg, 0, lshh );
-    memset( fMult, 0, lsj );
     fAsum_p = 0.0;
     fAsum_c = 0.0;
     fNclust = 0;
     memset( fNblk, 0, lsi );
     memset( fEblk, 0, lsc );
+    memset( fNblk_cl, 0, lsi*fMaxNClust );
+    memset( fEblk_cl, 0, lsc*fMaxNClust );
+    memset( fMult_cl, 0, lsj );
+    fE = 0.0;
+    fX = 0.0;
+    fY = 0.0;
+    fMult = 0.0;
     fTRX = 0.0;
     fTRY = 0.0;
   
     for (int i=0;i<fNelem;i++) 
-        fBlocks[i]->ClearEvent();
+      fBlocks[i]->ClearEvent();
+    for (int i=0;i<fMaxNClust;i++) 
+      fBlocks[i]->ClearEvent();
+     
+    for (int i=0;i<fNrows;i++)
+      for (int j=0;j<fNcols;j++)  
+	fBlkGrid[i][j]->ClearEvent();
 
 
 }
@@ -392,77 +626,109 @@ void SBSBBShower::ClearEvent()
 //_____________________________________________________________________________
 Int_t SBSBBShower::Decode( const THaEvData& evdata )
 {
-    // Decode shower data, scale the data to energy deposition
-    // ( in MeV ), and copy the data into the following local data structure:
-    //
-    // fNhits           -  Number of hits on shower;
-    // fA[]             -  Array of ADC values of shower blocks;
-    // fA_p[]           -  Array of ADC minus ped values of shower blocks;
-    // fA_c[]           -  Array of corrected ADC values of shower blocks;
-    // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
-    // fAsum_c          -  Sum of shower blocks corrected ADC values;
+  // Decode shower data, scale the data to energy deposition
+  // ( in MeV ), and copy the data into the following local data structure:
+  //
+  // fNhits           -  Number of hits on shower;
+  // fA[]             -  Array of ADC values of shower blocks;
+  // fA_p[]           -  Array of ADC minus ped values of shower blocks;
+  // fA_c[]           -  Array of corrected ADC values of shower blocks;
+  // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
+  // fAsum_c          -  Sum of shower blocks corrected ADC values;
 
-    ClearEvent();
+  const char* const here = "Decode";
+  // Loop over all modules defined for shower detector
+  bool has_warning = false;
+  Int_t nmodules = fDetMap->GetSize();
+  for( Int_t i = 0; i < nmodules; i++ ) {
+    THaDetMap::Module* d = fDetMap->GetModule( i );
 
-    // Loop over all modules defined for shower detector
-    for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
-        THaDetMap::Module* d = fDetMap->GetModule( i );
-
-        // Loop over all channels that have a hit.
-        for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
-
-            Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
-            if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
-
-            // Get the data. shower blocks are assumed to have only single hit (hit=0)
-            Int_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
-
-            // Copy the data to the local variables.
-            Int_t k = *(*(fChanMap+i)+(chan-d->lo)) - 1;
+    // Loop over all channels that have a hit.
+    for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+      Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+       if( chan d->hi || chan < d->lo ) continue;    // Not one of my channels.
+      Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
+      if( nhit 1 || nhit == 0 ) {
+	OSSTREAM msg;
+	msg << nhit << " hits on " << "ADC channel "
+	    << d->crate << "/" << d->slot << "/" << chan;
+	++fMessages[msg.str()];
+	has_warning = true;
+	if( nhit == 0 ) {
+	  msg << ". Should never happen. Decoder bug. Call expert.";
+	  Warning( Here(here), "Event %d: %s", evdata.GetEvNum(),
+		   msg.str().c_str() );
+	  continue;
+	}
 #ifdef WITH_DEBUG
-            if( k<0 || k>=fNelem ) 
-                Warning( Here("Decode()"), "Bad array index: %d. Your channel map is "
-                "invalid. Data skipped.", k );
-            else
+	if( fDebug>0 ) {
+	  Warning( Here(here), "Event %d: %s", evdata.GetEvNum(),
+		   msg.str().c_str() );
+	}
 #endif
-            {
-                fA[k]   = (Float_t)data;                   // ADC value
-                fA_p[k] = data - fPed[k];         // ADC minus ped
-                fA_c[k] = fA_p[k] * fGain[k];     // ADC corrected
-                if( fA_p[k] > 0.0 )
-                    fAsum_p += fA_p[k];             // Sum of ADC minus ped
-                if( fA_c[k] > 0.0 )
-                    fAsum_c += fA_c[k];             // Sum of ADC corrected
-                fNhits++;
-            }
-        }
+      }
+      // Get the data. If multiple hits on a channel, take the first (ADC)
+      Int_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
+      Int_t jchan = (d->reverse) ? d->hi - chan : chan-d->lo;
+      //cout << " jchan = " <<  jchan << " " << chan << " " << d->hi << " chanmap = " << fChanMap[i][jchan]<< endl;
+       if( jchan<0 || jchan>d->hi ) {
+	Error( Here(here), "Illegal detector channel: %d", jchan );
+	continue;
+      }
+#ifdef NDEBUG
+      Int_t k = fChanMap[i][jchan];
+#else
+      Int_t k = fChanMap.at(i).at(jchan);
+#endif
+      //      cout << " k = " << k << " " << i << " " << jchan << endl;
+      if (k+1==999) continue; // 999 means channel is not used
+      if( k<0 || k>fNelem ) {
+	Error( Here(here), "Bad array index: %d. Your channel map is "
+	       "invalid. Data skipped.", k );
+	continue;
+      }
+      
+      // Copy the data and apply calibrations
+      fA[k]   = data;                   // ADC value
+      fA_p[k] = data - fPed[k];         // ADC minus ped
+      fA_c[k] = fA_p[k] * fGain[k];     // ADC corrected
+      if( fA_p[k] 0.0 )
+	fAsum_p += fA_p[k];             // Sum of ADC minus ped
+      if( fA_c[k] 0.0 )
+	fAsum_c += fA_c[k];             // Sum of ADC corrected
+      fNhits++;
     }
+  }
+  if( has_warning )
+    ++fNEventsWithWarnings;
 
-
-    if ( fDebug > 3 ) {
-        printf("\nShower Detector %s:\n",GetPrefix());
-        int ncol=3;
-        for (int i=0; i<ncol; i++) {
-            printf("  Block  ADC  ADC_p  ");
-        }
-        printf("\n");
-
-        for (int i=0; i<(fNelem+ncol-1)/ncol; i++ ) {
-            for (int c=0; c<ncol; c++) {
-                int ind = c*fNelem/ncol+i;
-                if (ind < fNelem) {
-                    printf("  %3d  %5.0f  %5.0f  ",ind+1,fA[ind],fA_p[ind]);
-                } else {
-                    //	  printf("\n");
-                    break;
-                }
-            }
-            printf("\n");
-        }
+#ifdef WITH_DEBUG
+  if ( fDebug 3 ) {
+    cout << endl << "Shower Detector " << GetPrefix() << ":" << endl;
+    int ncol=3;
+    for (int i=0; i<ncol; i++) {
+      cout << "  Block  ADC  ADC_p  ";
     }
+    cout << endl;
 
-       
-    return fNhits;
+    for (int i=0; i<(fNelem+ncol-1)/ncol; i++ ) {
+      for (int c=0; c<ncol; c++) {
+	int ind = c*fNelem/ncol+i;
+	if (ind < fNelem) {
+	  cout << "  " << setw(3) << ind+1;
+	  cout << "  "; WriteValue(fA[ind]);
+	  cout << "  "; WriteValue(fA_p[ind]);
+	  cout << "  ";
+	} else {
+	  //	  cout << endl;
+	  break;
+	}
+      }
+      cout << endl;
+    }
+  }
+#endif
+  return fNhits;
 }
 
 //_____________________________________________________________________________
@@ -481,7 +747,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     // fTRX;          -  X-coordinate of track cross point with shower plane
     // fTRY;          -  Y-coordinate of track cross point with shower plane
     //
-
+    return 0;
     if( fCoarseProcessed ) return 0;
 
     Int_t col, row;
@@ -633,7 +899,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 //_____________________________________________________________________________
 Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
 {
-
+     return 0;
     if( fFineProcessed ) return 0;
 
     // Fine Shower processing.
@@ -647,15 +913,33 @@ Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
     //   }
 
     TVector3 clusterpoint;
-
+    Double_t Emax = -10.0;
     for (int i=0;i<fNclust;i++) {
         //    cout << fClusters[i]->GetE() << " " << fClusters[i]->GetX() << " " << fClusters[i]->GetY() <<fClusters[i]->GetMult()  << endl; 
-        fE[i] = fClusters[i]->GetE();
-        fE_c[i] = fClusters[i]->GetE()*(gconst + gslope*acc_charge);
-        fX[i] = fClusters[i]->GetX();
-        fY[i] = fClusters[i]->GetY();
-        fMult[i] = fClusters[i]->GetMult();
-
+      fE_cl[i] = fClusters[i]->GetE();
+      fE_cl_corr[i] = fClusters[i]->GetE()*(gconst + gslope*acc_charge);
+      fX_cl[i] = fClusters[i]->GetX();
+      fY_cl[i] = fClusters[i]->GetY();
+      fMult_cl[i] = fClusters[i]->GetMult();
+      for(int j = 0; j<fMult_cl[i]; j++){
+	if(fClusters[i]->GetBlock(j)){
+	  fNblk_cl[i][j] = BlockColRowToNumber(fClusters[i]->GetBlock(j)->GetCol(), fClusters[i]->GetBlock(j)->GetRow());
+	  fEblk_cl[i][j] = fClusters[i]->GetBlock(j)->GetE();
+	}
+      }
+      
+      if(fClusters[i]->GetE()>Emax){
+	fE = fE_cl[i];
+	fX = fX_cl[i];
+	fY = fY_cl[i];
+	fMult = fMult_cl[i];
+	for(int j = 0; j<fMult; j++){
+	  if(fClusters[i]->GetBlock(j)){
+	   fNblk[j] = fNblk_cl[i][j];
+	   fEblk[j] = fEblk_cl[i][j];
+	  }
+	}
+      }
         //clusterpoint.SetXYZ( fX[i], fY[i], fOrigin.Z() );
         //clusterpoint.Transform(fDetToTarg);
         //clusterpoint = clusterpoint + fDetOffset;
@@ -706,9 +990,9 @@ void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
     fClusters[fNclust]->SetY(y);
     fClusters[fNclust]->SetMult(0);   
 
-    fE[fNclust] = fClusters[fNclust]->GetE();
-    fX[fNclust] = fClusters[fNclust]->GetX();
-    fY[fNclust] = fClusters[fNclust]->GetY();
-    fMult[fNclust] = fClusters[fNclust]->GetMult();
+    fE_cl[fNclust] = fClusters[fNclust]->GetE();
+    fX_cl[fNclust] = fClusters[fNclust]->GetX();
+    fY_cl[fNclust] = fClusters[fNclust]->GetY();
+    fMult_cl[fNclust] = fClusters[fNclust]->GetMult();
     fNclust++;
 }
