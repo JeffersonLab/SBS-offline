@@ -12,6 +12,7 @@
 #include <TChain.h>
 #include <TFile.h>
 #include <digsim_data.h>
+#include <map>
 
 // Header file for the classes stored in the TTree if any.
 using namespace SBSDigSim;
@@ -35,6 +36,7 @@ public :
    TBranch        *b_NSignal;   //!
    
    //just GMn... 
+   /*
    // we'll see later to make it configurable
    PMTSimHit_t *sbs_hcal_simhits;
    PMTSimHit_t *bb_sh_simhits;
@@ -49,7 +51,18 @@ public :
    HitData_t *bb_hodo_hits;
    HitData_t *bb_grinch_hits;
    GEMData_t *bb_gem_hits;
+   */
    
+   std::map<std::string, PMTSimHit_t*> PMTSimHitDet;
+   std::map<std::string, HitData_t*> HitDataDet;
+   std::map<std::string, SampHitData_t*> SampHitDataDet;
+
+   std::map<std::string, GEMSimHit_t*> GEMSimHitDet;
+   std::map<std::string, GEMData_t*> GEMDataDet;
+   
+   //Need to declare and fill standard containers
+   //std::map<string, vector<> >
+
    digsim_tree(TTree *tree=0);
    virtual ~digsim_tree();
    virtual Int_t    Cut(Long64_t entry);

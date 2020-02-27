@@ -40,17 +40,14 @@ using namespace std;
 
 ClassImp(SBSSimDecoder) // Implements SBSSimDecoder
 
-//EFuchey: 2016/12/10: it is necessary to declare the TSBSDBManager as a static instance here 
-// (and not make it a member) because it is used by functions whic are defined as "static inline".
-//static TSBSDBManager* fManager = TSBSDBManager::GetInstance();
-static const Int_t kPrimaryType = 1, kPrimarySource = 0;
-// Projection types must match the definitions in TreeSearch
-enum EProjType { kUPlane = 0, kVPlane =1, kXPlane = 2, kYPlane = 3};
 
-typedef vector<int>::size_type vsiz_t;
+//static const Int_t kPrimaryType = 1, kPrimarySource = 0;
+// Projection types must match the definitions in SBS-offline
+//enum EProjType { kUPlane = 0, kVPlane =1, kXPlane = 2, kYPlane = 3};
+//typedef vector<int>::size_type vsiz_t;
 
 //-----------------------------------------------------------------------------
-SBSSimDecoder::SBSSimDecoder() : fCheckedForEnabledDetectors(false), fTreeIsSet(false)
+SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSet(false)
 {
   // Constructor
   DefineVariables();
@@ -102,7 +99,7 @@ void SBSSimDecoder::Clear( Option_t* opt )
 
   SimDecoder::Clear(opt);   // clears fMCCherHits, fMCCherClus
   
-  fPMTMap.clear(); 
+  //fPMTMap.clear(); 
 }
 
 //-----------------------------------------------------------------------------
@@ -115,74 +112,11 @@ int SBSSimDecoder::LoadEvent(const Int_t* evbuffer )
   // Wrapper around DoLoadEvent so we can conveniently stop the benchmark
   // counter in case of errors
 
-  int ret = DoLoadEvent( evbuffer );
+  int ret = HED_OK;//DoLoadEvent( evbuffer );
 
   if( fDoBench ) fBench->Stop("physics_decode");
 
   return ret;
-}
-
-
-//-----------------------------------------------------------------------------
-//static inline
-Int_t SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
-			       Int_t& crate, Int_t& slot, Int_t& chan )const 
-{
-  // Convert location parameters (row, col, chan) of the given Channel
-  // to hardware channel (crate,slot,chan)
-  // The (crate,slot,chan) assignment must match the detmap definition in
-  // the database!  See TreeSearch/dbconvert.cxx
-  // In the case of GRINCH/RICH: 
-  // crate = GTP; slot = VETROC; chan = PMT. (NINOs are "transparent", in a similar way to the MPDs)
-  int CPS = fChansPerSlotDetMap.at(detname);
-  int SPC = fSlotsPerCrateDetMap.at(detname);
-  int FS = fFirstSlotDetMap.at(detname);
-  int FC = fFirstCrateDetMap.at(detname);
-  
-  //div_t d = div( h_chan, fManager->GetChanPerSlot() );
-  div_t d = div( h_chan, CPS );
-  slot = d.quot;
-  chan = d.rem;
-
-  d = div( slot, SPC );
-  crate = d.quot+FC;
-  slot  = d.rem+FS;
-}
-/*
-//-----------------------------------------------------------------------------
-static inline
-Int_t MakeROCKey( Int_t crate, Int_t slot, Int_t chan )
-{
-  return chan;// +
-  //fManager->GetChanPerSlot()*( slot + fManager->GetSlotPerCrate()*crate );
-}
-
-//-----------------------------------------------------------------------------
-Int_t SBSSimDecoder::ChanFromROC( Int_t crate, Int_t slot, Int_t chan ) const
-{
-  // Return index of digitized strip correspomding to hardware channel
-  // (crate,slot,chan)
-
-  if( fPMTMap.empty() )
-    return -1;
-
-  PMTMap_t::const_iterator found = fPMTMap.find( MakeROCKey(crate,slot,chan) );
-  if( found == fPMTMap.end() )
-    return -1;
-
-  return found->second;
-}
-*/
-
-//-----------------------------------------------------------------------------
-static inline Int_t NumberOfSetBits( UInt_t v )
-{
-  // Count number of bits set in 32-bit integer. From
-  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-
-  v = v - ((v >> 1) & 0x55555555);
-  v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-  return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 }
 
 //-----------------------------------------------------------------------------
@@ -204,10 +138,17 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   // Local copy of evbuffer pointer, used in GetMCHitInfo
   buffer = evbuffer;
 
+  /*EF
+  if(!fTreeIsSet){
+    std::cerr << "SBSSimDecoder Tree not initialized correctly - exiting" << std::endl;
+    return HED_FATAL;
+  }
   // Cast the evbuffer pointer back to exactly the event type that is present
   // in the input file (in TSBSSimFile). The pointer-to-unsigned integer is
   // needed compatibility with the standard decoder.
   //const TSBSSimEvent* simEvent = reinterpret_cast<const TSBSSimEvent*>(buffer);
+  fTree->GetEntry(GetEvNum());
+  */
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
@@ -248,19 +189,19 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   // We must check at least once which detectors are enabled
   // before we try to load up data for that detector
+  /*
   if(!fCheckedForEnabledDetectors)
     CheckForEnabledDetectors();
 
   std::vector<std::map<Decoder::THaSlotData*, std::vector<UInt_t> > > detmaps;
   //detmaps.resize(fDetectors.size());
   
-  for(std::vector<std::string>::const_iterator it =
-      fDetectors.begin(); it != fDetectors.end();
-      ++it){
+  // for(std::vector<std::string>::const_iterator it =
+  //     fDetectors.begin(); it != fDetectors.end();
+  //     ++it){
+    
+  // }
   
-  }
-  
-  /*
   // Loop through the TSBSSimEvent vector and load the data onto
   // all declared detectors.
   for(std::vector<TSBSSimEvent::DetectorData>::const_iterator it =
@@ -324,6 +265,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   return HED_OK;
 }
 
+
+//Utilities
 /*
 Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname, 
 					  int& chanperslot, int& slotpercrate, 
@@ -340,14 +283,6 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
   firstcrate = detinfo.FirstCrate();
 }
 */
-
-void SBSSimDecoder::SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc)
-{
-  fChansPerSlotDetMap[detname] = cps;
-  fSlotsPerCrateDetMap[detname] = spc;
-  fFirstSlotDetMap[detname] = fs;
-  fFirstCrateDetMap[detname] = fc;
-}
 
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   std::vector<UInt_t> > &map,
@@ -372,7 +307,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   
   //
   //tree
-  
+  //if(detname)
   
   /*
   if(detdata.fDetID == detid && detdata.fData.size() > 1) { // Data to process
@@ -439,6 +374,13 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   return HED_OK;
 }
 
+void SBSSimDecoder::SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc)
+{
+  fChansPerSlotDetMap[detname] = cps;
+  fSlotsPerCrateDetMap[detname] = spc;
+  fFirstSlotDetMap[detname] = fs;
+  fFirstCrateDetMap[detname] = fc;
+}
 
 void SBSSimDecoder::CheckForEnabledDetectors()
 {
@@ -452,14 +394,78 @@ void SBSSimDecoder::CheckForEnabledDetectors()
   fCheckedForEnabledDetectors = true;
 }
 
-
 void SBSSimDecoder::SetTree(TTree *t)
 {
+  if(t==0)return;
   fTree = new digsim_tree(t);
+  if(fTree==0)return;
   fTreeIsSet = true;
 }
 
 void SBSSimDecoder::AddDetector(std::string detname)
 {
   fDetectors.push_back(detname);
+}
+
+//-----------------------------------------------------------------------------
+//static inline
+void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
+			       Int_t& crate, Int_t& slot, Int_t& chan )const 
+{
+  // Convert location parameters (row, col, chan) of the given Channel
+  // to hardware channel (crate,slot,chan)
+  // The (crate,slot,chan) assignment must match the detmap definition in
+  // the database!  See TreeSearch/dbconvert.cxx
+  // In the case of GRINCH/RICH: 
+  // crate = GTP; slot = VETROC; chan = PMT. (NINOs are "transparent", in a similar way to the MPDs)
+  int CPS = fChansPerSlotDetMap.at(detname);
+  int SPC = fSlotsPerCrateDetMap.at(detname);
+  int FS = fFirstSlotDetMap.at(detname);
+  int FC = fFirstCrateDetMap.at(detname);
+  
+  //div_t d = div( h_chan, fManager->GetChanPerSlot() );
+  div_t d = div( h_chan, CPS );
+  slot = d.quot;
+  chan = d.rem;
+
+  d = div( slot, SPC );
+  crate = d.quot+FC;
+  slot  = d.rem+FS;
+}
+
+/*
+//-----------------------------------------------------------------------------
+static inline
+Int_t MakeROCKey( Int_t crate, Int_t slot, Int_t chan )
+{
+  return chan;// +
+  //fManager->GetChanPerSlot()*( slot + fManager->GetSlotPerCrate()*crate );
+}
+
+//-----------------------------------------------------------------------------
+Int_t SBSSimDecoder::ChanFromROC( Int_t crate, Int_t slot, Int_t chan ) const
+{
+  // Return index of digitized strip correspomding to hardware channel
+  // (crate,slot,chan)
+
+  if( fPMTMap.empty() )
+    return -1;
+
+  PMTMap_t::const_iterator found = fPMTMap.find( MakeROCKey(crate,slot,chan) );
+  if( found == fPMTMap.end() )
+    return -1;
+
+  return found->second;
+}
+*/
+
+//-----------------------------------------------------------------------------
+static inline Int_t NumberOfSetBits( UInt_t v )
+{
+  // Count number of bits set in 32-bit integer. From
+  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+
+  v = v - ((v >> 1) & 0x55555555);
+  v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+  return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 }
