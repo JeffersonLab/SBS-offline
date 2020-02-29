@@ -98,8 +98,8 @@ namespace SBSDigSim {
   };
   
   struct SampHitData_t : public HitData_t {
-    //std::vector<unsigned int> *nwords; => takes "dataword" branch
-    //std::vector<int>     *adcsum; => takes "adc branch"
+    std::vector<unsigned int> *nwords;// => takes "dataword" branch // yes but confusion with dataword shall be avoided
+    //std::vector<int>     *adcsum;// => "adc branch"// fine
     std::vector< std::vector<int> > *samps_adc; // decoded ADC samples
     std::vector< std::vector<unsigned int> > *samps_datawords; // encoded ADC samples
     SampHitData_t(bool readTDC = true) : 
@@ -110,26 +110,7 @@ namespace SBSDigSim {
     virtual bool SetupBranches(TTree *t, const char* prefix);
   };
   
-  // not documented: hoping to deprecate this...
-  struct GEMData_t : public VDetData_t {
-    UInt_t          nhits;
-    std::vector<short>   *plane;
-    std::vector<short>   *module;
-    std::vector<short>   *proj;
-    std::vector<unsigned int> *nwords;
-    std::vector< std::vector<short> > *strip;
-    std::vector< std::vector<short> > *samp;
-    std::vector< std::vector<int> > *samps_adc;
-    GEMData_t() : nhits(0),
-      plane(0), module(0), proj(0), 
-      nwords(0), strip(0), samp(0), samps_adc(0) 
-      {}
-    virtual ~GEMData_t(){};
-    virtual bool SetupBranches(TTree *t, const char* prefix);
-  };
-  
-  
-  
+  const std::string kProj_str[2] = {"x", "y"};
 }//end of namespace
 
 #endif // #ifdef digsim_data_cxx

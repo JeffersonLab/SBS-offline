@@ -36,29 +36,13 @@ public :
    TBranch        *b_NSignal;   //!
    
    //just GMn... 
-   /*
    // we'll see later to make it configurable
-   PMTSimHit_t *sbs_hcal_simhits;
-   PMTSimHit_t *bb_sh_simhits;
-   PMTSimHit_t *bb_ps_simhits;
-   PMTSimHit_t *bb_hodo_simhits;
-   PMTSimHit_t *bb_grinch_simhits;
-   GEMSimHit_t *bb_gem_simhits;
-   
-   SampHitData_t *sbs_hcal_hits;
-   HitData_t *bb_sh_hits;
-   HitData_t *bb_ps_hits;
-   HitData_t *bb_hodo_hits;
-   HitData_t *bb_grinch_hits;
-   GEMData_t *bb_gem_hits;
-   */
-   
    std::map<std::string, PMTSimHit_t*> PMTSimHitDet;
+   std::map<std::string, GEMSimHit_t*> GEMSimHitDet;
+   
    std::map<std::string, HitData_t*> HitDataDet;
    std::map<std::string, SampHitData_t*> SampHitDataDet;
 
-   std::map<std::string, GEMSimHit_t*> GEMSimHitDet;
-   std::map<std::string, GEMData_t*> GEMDataDet;
    
    //Need to declare and fill standard containers
    //std::map<string, vector<> >

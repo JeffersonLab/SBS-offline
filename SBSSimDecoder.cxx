@@ -13,11 +13,9 @@
 /////////////////////////////////////////////////////////////////////
 
 #include "SBSSimDecoder.h"
-//#include "TSBSSimDataEncoder.h"
 #include "THaCrateMap.h"
 #include "THaBenchmark.h"
 #include "VarDef.h"
-//#include "TSBSDBManager.h"
 #include "THaSlotData.h"
 
 #include "TError.h"
@@ -112,7 +110,7 @@ int SBSSimDecoder::LoadEvent(const Int_t* evbuffer )
   // Wrapper around DoLoadEvent so we can conveniently stop the benchmark
   // counter in case of errors
 
-  int ret = HED_OK;//DoLoadEvent( evbuffer );
+  int ret = DoLoadEvent( evbuffer );
 
   if( fDoBench ) fBench->Stop("physics_decode");
 
@@ -138,7 +136,6 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   // Local copy of evbuffer pointer, used in GetMCHitInfo
   buffer = evbuffer;
 
-  /*EF
   if(!fTreeIsSet){
     std::cerr << "SBSSimDecoder Tree not initialized correctly - exiting" << std::endl;
     return HED_FATAL;
@@ -148,7 +145,6 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   // needed compatibility with the standard decoder.
   //const TSBSSimEvent* simEvent = reinterpret_cast<const TSBSSimEvent*>(buffer);
   fTree->GetEntry(GetEvNum());
-  */
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
@@ -287,90 +283,105 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   std::vector<UInt_t> > &map,
 				   const std::string detname, digsim_tree* tree)
-//, TDetInfo &detinfo, TSBSSimEvent::DetectorData detdata)
-      //const char *detname, TSBSSimEvent::DetectorData detdata, const int detid)
 {
-  //TDetInfo detinfo = fManager->GetDetInfo(detname);
-
-//Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > map,
-//				    TSBSSimEvent::DetectorData detdata, 
-//				    const int detid, 
-//				    const int chanperslot, const int slotpercrate, 
-//				    const int firstcrate, const int firstslot)
-//{
   //int detid = detinfo.DetUniqueId();
-  Int_t crate, slot;
-  unsigned int nwords = 0;
-  unsigned short data_type = 0, chan = 0, chan_mult = 0;
+  Int_t crate, slot, chan;
+  //unsigned short data_type = 0, chan = 0, chan_mult = 0;
   int lchan;
-  //SimEncoder::mpd_data tmp_mpd;
   
-  //
-  //tree
-  //if(detname)
-  
-  /*
-  if(detdata.fDetID == detid && detdata.fData.size() > 1) { // Data to process
-    int mod =  detdata.fChannel;
-    //This should be *general* and work for *every* subsystem
-    // Loop over all raw data in this event
-    UInt_t j = 0;
-    while(j < detdata.fData.size() ) {
-      // Identify the "logical" channel number for this event
-      TSBSSimDataEncoder::DecodeHeader(detdata.fData[j++],data_type,chan_mult,
-          nwords);
-      // The channel mapping works different for GEMs vs all other detectors
-      lchan = 0;
-      if(detinfo.DetType() != kGEM) {
-        lchan = mod + chan_mult*detinfo.NChan();
-        // Get information about this logical channel from TDetInfo
-        TDigChannelInfo chinfo = detinfo.FindLogicalChannelSlot(lchan);
-        crate = chinfo.crate;
-        slot = chinfo.slot;
-        chan = chinfo.ch; // Now this is the channel in the simulated VME module
-      } else {
-        fEncoderMPD->DecodeMPDHeader(&(detdata.fData[j]),tmp_mpd);
-        // First, decode the header information
-        TDigGEMSlot gemslot = detinfo.GetGEMSlot(chan_mult);
-        crate = gemslot.GetCrate();
-        slot  = gemslot.GetSlot();
-        tmp_mpd.mpd_id = gemslot.GetMPDId();
-        tmp_mpd.gem_id = gemslot.GetGEMId();
-        tmp_mpd.adc_id = gemslot.GetADCId();
-        tmp_mpd.i2c = gemslot.GetI2C();
-        tmp_mpd.pos = gemslot.GetPos();
-        tmp_mpd.invert = gemslot.GetInvert();
-        // And now, re-encode the MPD header
-        fEncoderMPD->EncodeMPDHeader(tmp_mpd,&(detdata.fData[j]),chan);
-      }
+  //This should be *general* and work for *every* subsystem
+  // Loop over all raw data in this event
+  UInt_t j = 0;
+  //FIXME: we don't want that, I just set it up this way for the sake of going forward
+  if(strcmp(detname.c_str(), "sbs.hcal")==0){
+    while(j<fTree->SampHitDataDet[detname]->nhits){
+      lchan = (int)fTree->SampHitDataDet[detname]->chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
       Decoder::THaSlotData *sldat = 0;
       if( crate >= 0 || slot >=  0 ) {
-        sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)];
       }
-      // Now get the corresponding THaSlotData based on crate and slot
-      // and load it with the data
-      // First, check that the module is defined in the cratemap, and
-      // that we have at least sufficient amount of data to match that defined
-      // in the header.
-      if(sldat && j+nwords-1 < detdata.fData.size()) {
+      
+      if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
+	if(fTree->SampHitDataDet[detname]->adc->at(j)>-1.e5){//these are a bunch of ADC samples
+	  for(uint i = 0; i<fTree->SampHitDataDet[detname]->nwords->at(j); i++){
+	    myev->push_back((fTree->SampHitDataDet[detname]->samps_datawords->at(j)).at(i));
+	  }
+	}else{//this is a TDC word
+	  myev->push_back(fTree->HitDataDet[detname]->dataword->at(j));
+	}
         // First, re-encode the proper channel info into the header
-        myev->push_back(TSBSSimDataEncoder::EncodeHeader(
-              data_type,chan,nwords));
-        for(unsigned int k = 0; k < nwords; k++) {
-          myev->push_back(detdata.fData[j++]);
-        }
+	//if()
+        //myev->push_back(fTree->SampHitDataDet[detname]->dataword->at(j));
+	//TSBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
+        //for(unsigned int k = 0; k < nwords; k++) {
+	//myev->push_back(detdata.fData[j++]);
+        //}
       } else {
-        std::cerr << "Yikes!! No data for " << detinfo.DetName()
-          << " (mod=" << mod << ") in c: "
-          << crate << " s: " << slot << " c: " << chan
-          << ", lchan: " << lchan << ", mult: " << chan_mult
-          << " size: " << detdata.fData.size() << ", j: " << j <<", nwords: "
-          << nwords << std::endl;
+        std::cerr << "Yikes!! No data for " << detname.c_str()
+	  //<< " (mod=" << mod << ") in c: "
+		  << crate << " s: " << slot << " c: " << chan
+		  << ", lchan: " << lchan << endl;
+	//<< ", mult: " << chan_mult
+          //<< " size: " << detdata.() << ", j: " << j <<", nwords: "
+          //<< nwords << std::endl;
+      }
+    }
+  }else if(detname.find("gem")!=std::string::npos){
+    while(j<fTree->SampHitDataDet[detname]->nhits){
+      lchan = (int)fTree->SampHitDataDet[detname]->chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
+      Decoder::THaSlotData *sldat = 0;
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)];
+      }
+      
+      if(sldat) {
+        std::vector<UInt_t> *myev = &(map[sldat]);
+	for(uint i = 0; i<fTree->SampHitDataDet[detname]->nwords->at(j); i++){
+	  myev->push_back((fTree->SampHitDataDet[detname]->samps_datawords->at(j)).at(i));
+	}
+        // First, re-encode the proper channel info into the header
+	//if()
+        //myev->push_back(fTree->SampHitDataDet[detname]->dataword->at(j));
+	//TSBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
+        //for(unsigned int k = 0; k < nwords; k++) {
+	//myev->push_back(detdata.fData[j++]);
+        //}
+      } else {
+        std::cerr << "Yikes!! No data for " << detname.c_str()
+	  //<< " (mod=" << mod << ") in c: "
+		  << crate << " s: " << slot << " c: " << chan
+		  << ", lchan: " << lchan << endl;
+	//<< ", mult: " << chan_mult
+          //<< " size: " << detdata.() << ", j: " << j <<", nwords: "
+          //<< nwords << std::endl;
+      }
+    }
+  }else{
+    while(j<fTree->HitDataDet[detname]->nhits){
+      lchan = (int)fTree->HitDataDet[detname]->chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
+      Decoder::THaSlotData *sldat = 0;
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)];
+      }
+      
+      if(sldat) {
+        std::vector<UInt_t> *myev = &(map[sldat]);
+        myev->push_back(fTree->HitDataDet[detname]->dataword->at(j));
+      } else {
+        std::cerr << "Yikes!! No data for " << detname.c_str()
+		  << crate << " s: " << slot << " c: " << chan
+		  << ", lchan: " << lchan << endl;
       }
     }
   }
-  */
+  
   return HED_OK;
 }
 

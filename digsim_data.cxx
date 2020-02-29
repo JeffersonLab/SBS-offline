@@ -81,7 +81,8 @@ namespace SBSDigSim{
     int ret = 0;
     ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"chan", chan);
-    ret += SetupBranch(tree,prefix,"nwords", dataword);
+    //ret += SetupBranch(tree,prefix,"nwords", dataword);//NO: 
+    ret += SetupBranch(tree,prefix,"nwords", nwords);
     ret += SetupBranch(tree,prefix,"adcsum", adc);
     if(fReadTDC){
       ret += SetupBranch(tree,prefix,"tdc_l", tdc_l);
@@ -91,21 +92,5 @@ namespace SBSDigSim{
     ret += SetupBranch(tree,prefix,"samps_datawords", samps_datawords);
     return (ret ==0);
   }
-  
-  bool GEMData_t::SetupBranches(TTree *tree, const char* prefix)
-  {
-    int ret = 0;
-    ret += SetupBranch(tree,prefix,"nhits", nhits);
-    ret += SetupBranch(tree,prefix,"plane", plane);
-    ret += SetupBranch(tree,prefix,"module", module);
-    ret += SetupBranch(tree,prefix,"proj", proj);
-    ret += SetupBranch(tree,prefix,"nwords", nwords);
-    ret += SetupBranch(tree,prefix,"strip", strip);
-    ret += SetupBranch(tree,prefix,"samp", samp);
-    ret += SetupBranch(tree,prefix,"samps_adc", samps_adc);
-    return (ret ==0);
-  }
-  
-  
   
 }

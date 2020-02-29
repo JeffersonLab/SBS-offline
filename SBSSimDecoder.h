@@ -41,20 +41,18 @@ class SBSSimDecoder : public Podd::SimDecoder {
   virtual Int_t DefineVariables( THaAnalysisObject::EMode mode =
 				 THaAnalysisObject::kDefine );
   
-  //Utilities
-  // a bit dumb, I know, but I don't know another way
-  void SetTree(TTree *t);
-  void AddDetector(std::string detname);
-  void SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc);
-  
-  /*
   // Workaround for fubar THaEvData
 #if ANALYZER_VERSION_CODE >= 67072  // ANALYZER_VERSION(1,6,0)
   static Int_t GetMAXSLOT() { return Decoder::MAXSLOT; }
 #else
   static Int_t GetMAXSLOT() { return MAXSLOT; }
 #endif
-  */
+  
+  //Utilities
+  // a bit dumb, I know, but I don't know another way
+  void SetTree(TTree *t);
+  void AddDetector(std::string detname);
+  void SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc);
   
 protected:
   // MANDATORY
@@ -95,7 +93,6 @@ protected:
   std::map<std::string, int> fSlotsPerCrateDetMap;
   std::map<std::string, int> fFirstSlotDetMap;
   std::map<std::string, int> fFirstCrateDetMap;
-  
   
   void ChanToROC( const std::string detname, Int_t h_chan, 
 		  Int_t &crate, Int_t &slot, Int_t &chan ) const;
