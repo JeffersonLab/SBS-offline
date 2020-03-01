@@ -121,18 +121,18 @@ void digsim_tree::Init(TTree *tree)
   SetupDetBranch(GEMSimHitDet["bb.gem"], "bb.gem.simhit");
   std::string fullgemname;
   for(int ipl = 0; ipl<5; ipl++){
-    int nmod = 3;
-    if(ipl==4)nmod = 4;
-    for(int imod = 0; imod<nmod; imod++){
-      for(int ipr = 0; ipr<2; ipr++){
-	//fullgemname = Form("bb.gem.p%d.%s", ipl+1, kProj_str[ipr].c_str());
-	fullgemname = Form("bb.gem.p%d.m%d.%s", 
-			   ipl+1, imod+1, kProj_str[ipr].c_str());
-	SampHitDataDet[fullgemname] = new SampHitData_t();
-	SetupDetBranch(SampHitDataDet[fullgemname], 
-		       Form("%s.hit", fullgemname.c_str()));
-      }
+    // int nmod = 3;
+    // if(ipl==4)nmod = 4;
+    // for(int imod = 0; imod<nmod; imod++){
+    for(int ipr = 0; ipr<2; ipr++){
+      //fullgemname = Form("bb.gem.p%d.m%d.%s", 
+      //		   ipl+1, imod+1, kProj_str[ipr].c_str());
+      fullgemname = Form("bb.gem.p%d.%s", ipl+1, kProj_str[ipr].c_str());
+      SampHitDataDet[fullgemname] = new SampHitData_t();
+      SetupDetBranch(SampHitDataDet[fullgemname], 
+		     Form("%s.hit", fullgemname.c_str()));
     }
+    //}
   }
   //GEMDataDet["bb.gem"] = new GEMData_t();
   //SetupDetBranch(GEMDataDet["bb.gem"], "bb.gem.hit");
