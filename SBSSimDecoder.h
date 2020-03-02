@@ -12,6 +12,7 @@
 #include "ha_compiledata.h"
 #include "TTree.h"
 #include "digsim_tree.h"
+#include "THaApparatus.h"
 
 #include <cassert>
 #include <map>
@@ -51,8 +52,9 @@ class SBSSimDecoder : public Podd::SimDecoder {
   //Utilities
   // a bit dumb, I know, but I don't know another way
   void SetTree(TTree *t);
-  void AddDetector(std::string detname);
-  void SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc);
+  //Setup all detectors for an apparatus
+  void SetDetectors(THaApparatus* app);
+  //void SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc);
   
 protected:
   // MANDATORY
@@ -75,8 +77,10 @@ protected:
 			    int& crateperslot, int& slotpercrate, 
 			    int& firstcrate, int& firstslot);
   */
+  Int_t AddDetector(std::string detname, TDatime date);
+  Int_t ReadDetectorDB(std::string detname, TDatime date);
   Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map,
-		      std::string detname, digsim_tree* tree); 
+		      std::string detname);//, digsim_tree* tree); 
   
   void CheckForEnabledDetectors();
   //void CheckForDetector(const char *detname, short id);

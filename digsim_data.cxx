@@ -1,6 +1,7 @@
 #include "digsim_data.h"
 #include <TTree.h>
 #include <iostream>
+#define DEBUG 0
 
 namespace SBSDigSim{
   
@@ -9,6 +10,9 @@ namespace SBSDigSim{
 			      const char* varname, T &var)
   {
     TString branchname = TString::Format("%s.%s",prefix,varname);
+#if DEBUG>0
+    printf("%s\n", branchname.Data());
+#endif
     if(!tree)
       return 1;
     var = 0;
@@ -25,7 +29,7 @@ namespace SBSDigSim{
   bool PMTSimHit_t::SetupBranches(TTree *tree, const char* prefix)
   {
     int ret = 0;
-    ret += SetupBranch(tree,prefix,"nsimhits", nsimhits);
+    ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"src", src);
     ret += SetupBranch(tree,prefix,"trid", trid);
     ret += SetupBranch(tree,prefix,"pid", pid);
@@ -43,7 +47,7 @@ namespace SBSDigSim{
   bool GEMSimHit_t::SetupBranches(TTree *tree, const char* prefix)
   {
     int ret = 0;
-    ret += SetupBranch(tree,prefix,"nsimhits", nsimhits);
+    ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"src", src);
     ret += SetupBranch(tree,prefix,"trid", trid);
     ret += SetupBranch(tree,prefix,"plane", plane);
@@ -64,6 +68,8 @@ namespace SBSDigSim{
   
   bool HitData_t::SetupBranches(TTree *tree, const char* prefix)
   {
+    /*
+    printf("%s\n", prefix);
     int ret = 0;
     ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"chan", chan);
@@ -74,6 +80,8 @@ namespace SBSDigSim{
       ret += SetupBranch(tree,prefix,"tdc_t", tdc_t);
     }
     return (ret ==0);
+    */
+    return true;
   }
   
   bool SampHitData_t::SetupBranches(TTree *tree, const char* prefix)

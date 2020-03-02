@@ -3,6 +3,7 @@
 #include <TH2.h>
 #include <TStyle.h>
 #include <TCanvas.h>
+#define DEBUG 0
 
 digsim_tree::digsim_tree(TTree *tree) : fChain(0) 
 {
@@ -75,7 +76,7 @@ void digsim_tree::Init(TTree *tree)
   SampHitDataDet["sbs.hcal"] = new SampHitData_t(true);
   SetupDetBranch(SampHitDataDet["sbs.hcal"], "sbs.hcal.hit");
   
-
+  
   // PS/SH
   // bb_sh_simhits = new PMTSimHit_t(false, true);
   // SetupDetBranch(bb_sh_simhits, "bb.sh.simhit");
@@ -84,7 +85,7 @@ void digsim_tree::Init(TTree *tree)
   PMTSimHitDet["bb.sh"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.sh"], "bb.sh.simhit");
   HitDataDet["bb.sh"] = new HitData_t(true, false);
-  SetupDetBranch(SampHitDataDet["bb.sh"], "bb.sh.hit");
+  SetupDetBranch(HitDataDet["bb.sh"], "bb.sh.hit");
   // bb_ps_simhits = new PMTSimHit_t(false, true);
   // SetupDetBranch(bb_ps_simhits, "bb.ps.simhit");
   // bb_ps_hits = new HitData_t(true, false);
@@ -92,7 +93,7 @@ void digsim_tree::Init(TTree *tree)
   PMTSimHitDet["bb.ps"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.ps"], "bb.ps.simhit");
   HitDataDet["bb.ps"] = new HitData_t(true, false);
-  SetupDetBranch(SampHitDataDet["bb.ps"], "bb.ps.hit");
+  SetupDetBranch(HitDataDet["bb.ps"], "bb.ps.hit");
   
   // Hodoscope
   // bb_hodo_simhits = new PMTSimHit_t(true, true);
@@ -102,7 +103,7 @@ void digsim_tree::Init(TTree *tree)
   PMTSimHitDet["bb.hodo"] = new PMTSimHit_t(true, true);
   SetupDetBranch(PMTSimHitDet["bb.hodo"], "bb.hodo.simhit");
   HitDataDet["bb.hodo"] = new HitData_t(false, true);
-  SetupDetBranch(SampHitDataDet["bb.hodo"], "bb.hodo.hit");
+  SetupDetBranch(HitDataDet["bb.hodo"], "bb.hodo.hit");
   
   // Grinch
   // bb_grinch_simhits = new PMTSimHit_t(true, false);
@@ -112,7 +113,7 @@ void digsim_tree::Init(TTree *tree)
   PMTSimHitDet["bb.grinch"] = new PMTSimHit_t(true, false);
   SetupDetBranch(PMTSimHitDet["bb.grinch"], "bb.grinch.simhit");
   HitDataDet["bb.grinch"] = new HitData_t(false, true);
-  SetupDetBranch(SampHitDataDet["bb.grinch"], "bb.grinch.hit");
+  SetupDetBranch(HitDataDet["bb.grinch"], "bb.grinch.hit");
   
   // GEMs
   // bb_gem_simhits = new GEMSimHit_t();
@@ -127,8 +128,8 @@ void digsim_tree::Init(TTree *tree)
     for(int ipr = 0; ipr<2; ipr++){
       //fullgemname = Form("bb.gem.p%d.m%d.%s", 
       //		   ipl+1, imod+1, kProj_str[ipr].c_str());
-      fullgemname = Form("bb.gem.p%d.%s", ipl+1, kProj_str[ipr].c_str());
-      SampHitDataDet[fullgemname] = new SampHitData_t();
+      fullgemname = Form("bb.gem.%d.%s", ipl+1, kProj_str[ipr].c_str());
+      SampHitDataDet[fullgemname] = new SampHitData_t(false);
       SetupDetBranch(SampHitDataDet[fullgemname], 
 		     Form("%s.hit", fullgemname.c_str()));
     }
@@ -206,5 +207,8 @@ void digsim_tree::Loop()
 //void digsim_tree::SetupDetBranch(SBSDigSim::VDetData_t &det, const char *prefix)
 void digsim_tree::SetupDetBranch(SBSDigSim::VDetData_t* det, const char *prefix)
 {
+#if DEBUG>0
+  printf("SetupDetBranch %s\n", prefix);
+#endif
   det->SetupBranches(fChain,prefix);
 }

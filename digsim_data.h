@@ -23,7 +23,7 @@ namespace SBSDigSim {
   
   //To read the "MC truth" info for hits from PMT detectors
   struct PMTSimHit_t : public VDetData_t {
-    UInt_t          nsimhits;      // number of hits
+    UInt_t                nhits;   // number of hits
     std::vector<short>   *src;     // source (sig, bkgd)
     std::vector<short>   *trid;    // track ID
     std::vector<int>     *pid;     // Particle ID
@@ -36,7 +36,7 @@ namespace SBSDigSim {
     bool fReadEdep;                // flag to read edep. Set to true by default
     bool fReadTimes;               // flag to read times. Set to true by default
     // these flags are set in constructor - just below
-    PMTSimHit_t(bool readTimes = true, bool readEdep = true) : nsimhits(0),
+    PMTSimHit_t(bool readTimes = true, bool readEdep = true) : nhits(0),
       src(0), trid(0), pid(0), 
       chan(0), edep(0), npe(0), 
       time(0), t_lead(0), t_trail(0), 
@@ -48,7 +48,7 @@ namespace SBSDigSim {
   
   //To read the "MC truth" info for hits from PMT detectors
   struct GEMSimHit_t : public VDetData_t {
-    UInt_t          nsimhits;      // number of hits
+    UInt_t                nhits;   // number of hits
     std::vector<short>   *src;     // source (sig, bkgd)
     std::vector<short>   *trid;    // track ID
     std::vector<int>     *pid;     // Particle ID
@@ -68,7 +68,7 @@ namespace SBSDigSim {
     // hit extension (in number of strips) in both projections
     std::vector<short>   *startx;
     std::vector<short>   *starty;
-    GEMSimHit_t() : nsimhits(0),
+    GEMSimHit_t() : nhits(0),
       src(0), trid(0), pid(0),
       plane(0), module(0), 
       edep(0), time(0), xpos(0), ypos(0), 

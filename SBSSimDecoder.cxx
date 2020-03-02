@@ -24,8 +24,11 @@
 #include "TDatabasePDG.h"
 #include "TRandom.h"
 #include "THaVarList.h"
+#include "THaDetector.h"
 
 //#include <SBSSimFadc250Module.h>// we need not to need this
+#include "TList.h"
+#include "TObject.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -35,6 +38,8 @@
 
 using namespace std;
 //using namespace Podd;
+
+class THaAnalysisObject;
 
 ClassImp(SBSSimDecoder) // Implements SBSSimDecoder
 
@@ -282,7 +287,7 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
 
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   std::vector<UInt_t> > &map,
-				   const std::string detname, digsim_tree* tree)
+				   const std::string detname)//, digsim_tree* tree)
 {
   //int detid = detinfo.DetUniqueId();
   Int_t crate, slot, chan;
@@ -385,6 +390,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   return HED_OK;
 }
 
+/*
 void SBSSimDecoder::SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc)
 {
   fChansPerSlotDetMap[detname] = cps;
@@ -392,6 +398,7 @@ void SBSSimDecoder::SetDetMapParam(const std::string detname, int cps, int spc, 
   fFirstSlotDetMap[detname] = fs;
   fFirstCrateDetMap[detname] = fc;
 }
+*/
 
 void SBSSimDecoder::CheckForEnabledDetectors()
 {
@@ -413,10 +420,68 @@ void SBSSimDecoder::SetTree(TTree *t)
   fTreeIsSet = true;
 }
 
-void SBSSimDecoder::AddDetector(std::string detname)
+void SBSSimDecoder::SetDetectors(THaApparatus* app)
+{
+  TList* listdet = app->GetDetectors();
+  TIter iter(listdet);
+  TObject* det = 0;
+  while( (det=(TObject*)iter()) ){
+    cout << app->GetName() << "." << det->GetName() << endl;
+    AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
+		(app->GetDetector(det->GetName()))->GetInitDate());
+  }
+
+}
+
+Int_t SBSSimDecoder::AddDetector(std::string detname, TDatime date)
 {
   fDetectors.push_back(detname);
+  return ReadDetectorDB(detname, date);
 }
+
+Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
+{
+  //EPAF: in here the det name is the "full" det name i.e. including the spectro name
+  std::string path = "../db/";
+  if(std::getenv("SBS")) {
+    path = std::string(std::getenv("SBS")) + "/DB/";
+  }
+  const string& fileName = path+"db_"+detname+".dat";
+  
+  const string prefix = detname+".";
+  // First, open the common db file and parse info there, later, the
+  // digitization specific db can be used to override any values
+  FILE* file  = THaAnalysisObject::OpenFile(fileName.c_str(), date);
+  
+  std::vector<int> detmap,chanmap;
+  int chanmap_start = 0;
+  
+  int cps, spc, fs, fc;
+  
+  DBRequest request[] = {
+    {"detmap", &detmap, kIntV, 0, true}, ///< Optional
+    {"chanmap", &chanmap, kIntV, 0, true}, ///< Optional
+    {"chanmap_start", &chanmap_start, kInt, 0, true}, ///< Optional
+    {"first_crate", &fc, kInt, 0, true},// 
+    {"first_slot", &fs, kInt, 0, true},// 
+    {"chan_per_slot", &cps, kInt, 0, true},// 
+    {"slot_per_crate", &spc, kInt, 0, true},// 
+    { 0 }
+  };
+  Int_t err = THaAnalysisObject::LoadDB(file, date, request, prefix.c_str());
+  // Could close the common file already
+  fclose(file);
+  
+  if(err)return THaAnalysisObject::kInitError;
+  
+  fChansPerSlotDetMap[detname] = cps;
+  fSlotsPerCrateDetMap[detname] = spc;
+  fFirstSlotDetMap[detname] = fs;
+  fFirstCrateDetMap[detname] = fc;
+  
+  return(THaAnalysisObject::kOK);
+}
+
 
 //-----------------------------------------------------------------------------
 //static inline
