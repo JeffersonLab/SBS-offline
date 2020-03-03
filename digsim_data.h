@@ -10,6 +10,12 @@ class TTree;
 
 
 namespace SBSDigSim {
+  //dummy class to get rid of "unused class rule"
+  class digsim_data {
+  public :
+    digsim_data(){};
+    virtual ~digsim_data(){};
+  };
 
   // Purely virtual data structure for detector data in a G4SBS ROOT tree.
   struct VDetData_t {

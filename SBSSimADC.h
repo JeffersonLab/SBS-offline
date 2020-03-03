@@ -58,7 +58,7 @@ namespace Decoder {
     static TypeIter_t fgThisType;
     std::vector<SimEncoder::fadc_data> fadc_data;
 
-    ClassDef(SBSSimADC,1)  //  Generic SimADC module
+    ClassDef(SBSSimADC,0)  //  Generic SimADC module
 
   };  // SBSSimADC class
 

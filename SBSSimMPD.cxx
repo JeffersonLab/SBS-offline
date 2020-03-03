@@ -36,6 +36,7 @@ namespace Decoder {
   }
 
   SBSSimMPD::SBSSimMPD(Int_t crate, Int_t slot)
+    : PipeliningModule(crate, slot)//EPAF: I think we need that don't we ?
   {
     //fadc_data.resize(NADCCHAN);
     IsInit = kFALSE;

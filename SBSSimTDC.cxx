@@ -37,6 +37,7 @@ namespace Decoder {
   }
 
   SBSSimTDC::SBSSimTDC(Int_t crate, Int_t slot)
+    : PipeliningModule(crate, slot)//EPAF: I think we need that don't we ?
   {
     tdc_data.resize(NADCCHAN);
     IsInit = kFALSE;

@@ -45,7 +45,7 @@ namespace Decoder {
     static TypeIter_t fgThisType;
     //std::vector<SimEncoder::fadc_data> fadc_data;
 
-    ClassDef(SBSSimMPD,1)  //  Generic SimMPD module
+    ClassDef(SBSSimMPD,0)  //  Generic SimMPD module
 
   };  // SBSSimMPD class
 
