@@ -59,8 +59,9 @@ set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
   SBSScintPlane.cxx SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx
   SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx
   SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
-  SBSCalorimeterCluster.cxx SBSSimDataEncoder.cxx SBSSimDecoder.cxx
-  digsim_data.cxx digsim_tree.cxx
+  SBSCalorimeterCluster.cxx SBSSimDataEncoder.cxx 
+  SBSSimMPD.cxx SBSSimADC.cxx SBSSimTDC.cxx
+  SBSSimDecoder.cxx digsim_data.cxx digsim_tree.cxx
   )
 #
 

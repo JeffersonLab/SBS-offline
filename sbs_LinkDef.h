@@ -7,6 +7,8 @@
 #pragma link C++ nestedclass;
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace Decoder;
+#pragma link C++ namespace SimEncoder;
+#pragma link C++ namespace SBSDigSim;
 
 #pragma link C++ class Decoder::SBSDecodeF1TDCModule+;
 #pragma link C++ class Decoder::MPDModule+;
@@ -38,6 +40,9 @@
 #pragma link C++ class SBSScintPartialHit+;
 #pragma link C++ class SBSScintPlane+;
 #pragma link C++ class SBSSimDataEncoder+;
+#pragma link C++ class SBSSimMPD+;
+#pragma link C++ class SBSSimADC+;
+#pragma link C++ class SBSSimTDC+;
 #pragma link C++ class SBSSimDecoder+;
 #pragma link C++ class digsim_data+;
 #pragma link C++ class digsim_tree+;
