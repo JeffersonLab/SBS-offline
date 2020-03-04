@@ -104,8 +104,8 @@ namespace SBSDigSim {
   };
   
   struct SampHitData_t : public HitData_t {
-    std::vector<unsigned int> *nwords;// => takes "dataword" branch // yes but confusion with dataword shall be avoided
-    //std::vector<int>     *adcsum;// => "adc branch"// fine
+    //"nwords" and "adcsum" are covered with "dataword" and "adc"
+    std::vector<unsigned int> *nsamps;
     std::vector< std::vector<int> > *samps_adc; // decoded ADC samples
     std::vector< std::vector<unsigned int> > *samps_datawords; // encoded ADC samples
     SampHitData_t(bool readTDC = true) : 

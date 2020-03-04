@@ -67,10 +67,6 @@ void digsim_tree::Init(TTree *tree)
   fChain->SetBranchAddress("NSignal", &NSignal, &b_NSignal);
   
   // HCal
-  // sbs_hcal_simhits = new PMTSimHit_t(true, true);
-  // SetupDetBranch(sbs_hcal_simhits, "sbs.hcal.simhit");
-  // sbs_hcal_hits = new SampHitData_t(true);
-  // SetupDetBranch(sbs_hcal_hits, "sbs.hcal.hit");
   PMTSimHitDet["sbs.hcal"] = new PMTSimHit_t(true, true);
   SetupDetBranch(PMTSimHitDet["sbs.hcal"], "sbs.hcal.simhit");
   SampHitDataDet["sbs.hcal"] = new SampHitData_t(true);
@@ -78,46 +74,29 @@ void digsim_tree::Init(TTree *tree)
   
   
   // PS/SH
-  // bb_sh_simhits = new PMTSimHit_t(false, true);
-  // SetupDetBranch(bb_sh_simhits, "bb.sh.simhit");
-  // bb_sh_hits = new HitData_t(true, false);
-  // SetupDetBranch(bb_sh_hits, "bb.sh.hit");
   PMTSimHitDet["bb.sh"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.sh"], "bb.sh.simhit");
   HitDataDet["bb.sh"] = new HitData_t(true, false);
   SetupDetBranch(HitDataDet["bb.sh"], "bb.sh.hit");
-  // bb_ps_simhits = new PMTSimHit_t(false, true);
-  // SetupDetBranch(bb_ps_simhits, "bb.ps.simhit");
-  // bb_ps_hits = new HitData_t(true, false);
-  // SetupDetBranch(bb_ps_hits, "bb.ps.hit");
+  
   PMTSimHitDet["bb.ps"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.ps"], "bb.ps.simhit");
   HitDataDet["bb.ps"] = new HitData_t(true, false);
   SetupDetBranch(HitDataDet["bb.ps"], "bb.ps.hit");
   
   // Hodoscope
-  // bb_hodo_simhits = new PMTSimHit_t(true, true);
-  // SetupDetBranch(bb_hodo_simhits, "bb.hodo.simhit");
-  // bb_hodo_hits = new HitData_t(false, true);
-  // SetupDetBranch(bb_hodo_hits, "bb.hodo.hit");
   PMTSimHitDet["bb.hodo"] = new PMTSimHit_t(true, true);
   SetupDetBranch(PMTSimHitDet["bb.hodo"], "bb.hodo.simhit");
   HitDataDet["bb.hodo"] = new HitData_t(false, true);
   SetupDetBranch(HitDataDet["bb.hodo"], "bb.hodo.hit");
   
   // Grinch
-  // bb_grinch_simhits = new PMTSimHit_t(true, false);
-  // SetupDetBranch(bb_hodo_simhits, "bb.grinch.simhit");
-  // bb_grinch_hits = new HitData_t(false, true);
-  // SetupDetBranch(bb_hodo_hits, "bb.grinch.hit");
   PMTSimHitDet["bb.grinch"] = new PMTSimHit_t(true, false);
   SetupDetBranch(PMTSimHitDet["bb.grinch"], "bb.grinch.simhit");
   HitDataDet["bb.grinch"] = new HitData_t(false, true);
   SetupDetBranch(HitDataDet["bb.grinch"], "bb.grinch.hit");
   
   // GEMs
-  // bb_gem_simhits = new GEMSimHit_t();
-  // SetupDetBranch(bb_hodo_simhits, "bb.gem.simhit");
   GEMSimHitDet["bb.gem"] = new GEMSimHit_t();
   SetupDetBranch(GEMSimHitDet["bb.gem"], "bb.gem.simhit");
   std::string fullgemname;
@@ -135,8 +114,6 @@ void digsim_tree::Init(TTree *tree)
     }
     //}
   }
-  //GEMDataDet["bb.gem"] = new GEMData_t();
-  //SetupDetBranch(GEMDataDet["bb.gem"], "bb.gem.hit");
   
 }
 

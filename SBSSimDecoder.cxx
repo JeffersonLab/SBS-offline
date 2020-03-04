@@ -13,6 +13,7 @@
 /////////////////////////////////////////////////////////////////////
 
 #include "SBSSimDecoder.h"
+#include "SBSSimDataEncoder.h"
 #include "THaCrateMap.h"
 #include "THaBenchmark.h"
 #include "VarDef.h"
@@ -60,8 +61,8 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
 
   gSystem->Load("libEG.so");  // for TDatabasePDG
   // Get MPD encoder for GEMs
-  //fEncoderMPD = dynamic_cast<TSBSSimMPDEncoder*>(
-  //  TSBSSimDataEncoder::GetEncoderByName("mpd"));
+  fEncoderMPD = dynamic_cast<SBSSimMPDEncoder*>
+    (SBSSimDataEncoder::GetEncoderByName("mpd"));
 }
 
 //-----------------------------------------------------------------------------
@@ -102,7 +103,7 @@ void SBSSimDecoder::Clear( Option_t* opt )
 
   SimDecoder::Clear(opt);   // clears fMCCherHits, fMCCherClus
   
-  //fPMTMap.clear(); 
+  fPMTMap.clear(); 
 }
 
 //-----------------------------------------------------------------------------
@@ -311,7 +312,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
 	if(fTree->SampHitDataDet[detname]->adc->at(j)>-1.e5){//these are a bunch of ADC samples
-	  for(uint i = 0; i<fTree->SampHitDataDet[detname]->nwords->at(j); i++){
+	  // !!! - here, "dataword" is just used as a number of words! - !!!
+	  for(uint i = 0; i<fTree->SampHitDataDet[detname]->dataword->at(j); i++){
 	    myev->push_back((fTree->SampHitDataDet[detname]->samps_datawords->at(j)).at(i));
 	  }
 	}else{//this is a TDC word
@@ -346,7 +348,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
-	for(uint i = 0; i<fTree->SampHitDataDet[detname]->nwords->at(j); i++){
+	// !!! - here, "dataword" is just used as a number of words! - !!!
+	for(uint i = 0; i<fTree->SampHitDataDet[detname]->dataword->at(j); i++){
 	  myev->push_back((fTree->SampHitDataDet[detname]->samps_datawords->at(j)).at(i));
 	}
         // First, re-encode the proper channel info into the header

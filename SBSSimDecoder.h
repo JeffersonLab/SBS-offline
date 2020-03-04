@@ -20,7 +20,7 @@
 
 //class THaCrateMap;
 
-//class TSBSSimMPDEncoder; // For decoding simulation GEMs
+class SBSSimMPDEncoder; // For decoding simulation GEMs
 //class TDetInfo;
 
 //-----------------------------------------------------------------------------
@@ -66,10 +66,10 @@ protected:
 #endif
 
   //Utilities
-  //typedef std::map<Int_t,Int_t> PMTMap_t;
+  typedef std::map<Int_t,Int_t> PMTMap_t;
 
   // Event-by-event data
-  //PMTMap_t      fPMTMap;   //! Map ROCKey -> index of corresponding PMT
+  PMTMap_t      fPMTMap;   //! Map ROCKey -> index of corresponding PMT
   
   // retrive chanperslot, slotpercrate, etc...
   /*
@@ -85,7 +85,7 @@ protected:
   void CheckForEnabledDetectors();
   //void CheckForDetector(const char *detname, short id);
 
-  //TSBSSimMPDEncoder *fEncoderMPD;
+  SBSSimMPDEncoder *fEncoderMPD;
   
   bool fCheckedForEnabledDetectors;
   std::vector<std::string> fDetectors;

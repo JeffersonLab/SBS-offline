@@ -68,7 +68,6 @@ namespace SBSDigSim{
   
   bool HitData_t::SetupBranches(TTree *tree, const char* prefix)
   {
-    /*
     printf("%s\n", prefix);
     int ret = 0;
     ret += SetupBranch(tree,prefix,"nhits", nhits);
@@ -80,8 +79,6 @@ namespace SBSDigSim{
       ret += SetupBranch(tree,prefix,"tdc_t", tdc_t);
     }
     return (ret ==0);
-    */
-    return true;
   }
   
   bool SampHitData_t::SetupBranches(TTree *tree, const char* prefix)
@@ -89,8 +86,9 @@ namespace SBSDigSim{
     int ret = 0;
     ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"chan", chan);
-    //ret += SetupBranch(tree,prefix,"nwords", dataword);//NO: 
-    ret += SetupBranch(tree,prefix,"nwords", nwords);
+    // "dataword" could be the header, the number of sample words or the TDC word
+    ret += SetupBranch(tree,prefix,"dataword", dataword);
+    ret += SetupBranch(tree,prefix,"nsamps", nsamps);
     ret += SetupBranch(tree,prefix,"adcsum", adc);
     if(fReadTDC){
       ret += SetupBranch(tree,prefix,"tdc_l", tdc_l);
