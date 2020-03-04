@@ -94,9 +94,31 @@ namespace SBSDigSim{
       ret += SetupBranch(tree,prefix,"tdc_l", tdc_l);
       ret += SetupBranch(tree,prefix,"tdc_t", tdc_t);
     }
+    ret += SetupBranch(tree,prefix,"nsamps", nsamps);
     ret += SetupBranch(tree,prefix,"samps_adc", samps_adc);
     ret += SetupBranch(tree,prefix,"samps_datawords", samps_datawords);
     return (ret ==0);
   }
+  
+  bool UHitData_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    printf("%s\n", prefix);
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"nhits", nhits);
+    ret += SetupBranch(tree,prefix,"chan", chan);
+    ret += SetupBranch(tree,prefix,"dataword", dataword);
+    if(fReadADC)ret += SetupBranch(tree,prefix,"adc", adc);
+    if(fReadTDC){
+      ret += SetupBranch(tree,prefix,"tdc_l", tdc_l);
+      ret += SetupBranch(tree,prefix,"tdc_t", tdc_t);
+    }
+    if(fReadSamples){
+      ret += SetupBranch(tree,prefix,"nsamps", nsamps);
+      ret += SetupBranch(tree,prefix,"samps_adc", samps_adc);
+      ret += SetupBranch(tree,prefix,"samps_datawords", samps_datawords);
+    }
+    return (ret ==0);
+  }
+ 
   
 }

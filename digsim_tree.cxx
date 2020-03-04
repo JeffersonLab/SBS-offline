@@ -69,31 +69,37 @@ void digsim_tree::Init(TTree *tree)
   // HCal
   PMTSimHitDet["sbs.hcal"] = new PMTSimHit_t(true, true);
   SetupDetBranch(PMTSimHitDet["sbs.hcal"], "sbs.hcal.simhit");
-  SampHitDataDet["sbs.hcal"] = new SampHitData_t(true);
-  SetupDetBranch(SampHitDataDet["sbs.hcal"], "sbs.hcal.hit");
+  //SampHitDataDet["sbs.hcal"] = new SampHitData_t(true);
+  //SetupDetBranch(SampHitDataDet["sbs.hcal"], "sbs.hcal.hit");
+  HitDataDet["sbs.hcal"] = new UHitData_t(true, true, true);
+  SetupDetBranch(HitDataDet["sbs.hcal"], "sbs.hcal.hit");
   
   
   // PS/SH
   PMTSimHitDet["bb.sh"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.sh"], "bb.sh.simhit");
-  HitDataDet["bb.sh"] = new HitData_t(true, false);
+  //HitDataDet["bb.sh"] = new HitData_t(true, false);
+  HitDataDet["bb.sh"] = new UHitData_t(true, false, false);
   SetupDetBranch(HitDataDet["bb.sh"], "bb.sh.hit");
   
   PMTSimHitDet["bb.ps"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.ps"], "bb.ps.simhit");
-  HitDataDet["bb.ps"] = new HitData_t(true, false);
+  //HitDataDet["bb.ps"] = new HitData_t(true, false);
+  HitDataDet["bb.ps"] = new UHitData_t(true, false, false);
   SetupDetBranch(HitDataDet["bb.ps"], "bb.ps.hit");
   
   // Hodoscope
   PMTSimHitDet["bb.hodo"] = new PMTSimHit_t(true, true);
   SetupDetBranch(PMTSimHitDet["bb.hodo"], "bb.hodo.simhit");
-  HitDataDet["bb.hodo"] = new HitData_t(false, true);
+  //HitDataDet["bb.hodo"] = new HitData_t(false, true);
+  HitDataDet["bb.hodo"] = new UHitData_t(false, true, false);
   SetupDetBranch(HitDataDet["bb.hodo"], "bb.hodo.hit");
   
   // Grinch
   PMTSimHitDet["bb.grinch"] = new PMTSimHit_t(true, false);
   SetupDetBranch(PMTSimHitDet["bb.grinch"], "bb.grinch.simhit");
-  HitDataDet["bb.grinch"] = new HitData_t(false, true);
+  //HitDataDet["bb.grinch"] = new HitData_t(false, true);
+  HitDataDet["bb.grinch"] = new UHitData_t(false, true, false);
   SetupDetBranch(HitDataDet["bb.grinch"], "bb.grinch.hit");
   
   // GEMs
@@ -108,8 +114,10 @@ void digsim_tree::Init(TTree *tree)
       //fullgemname = Form("bb.gem.p%d.m%d.%s", 
       //		   ipl+1, imod+1, kProj_str[ipr].c_str());
       fullgemname = Form("bb.gem.%d.%s", ipl+1, kProj_str[ipr].c_str());
-      SampHitDataDet[fullgemname] = new SampHitData_t(false);
-      SetupDetBranch(SampHitDataDet[fullgemname], 
+      //SampHitDataDet[fullgemname] = new SampHitData_t(false);
+      //SetupDetBranch(SampHitDataDet[fullgemname], 
+      HitDataDet[fullgemname] = new UHitData_t(true, false, true);
+      SetupDetBranch(HitDataDet[fullgemname], 
 		     Form("%s.hit", fullgemname.c_str()));
     }
     //}

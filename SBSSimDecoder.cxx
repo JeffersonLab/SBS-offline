@@ -188,6 +188,14 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   //Bool_t newclus;
   //Int_t crate, slot, chan,lchan;
+
+  std::vector<std::map<Decoder::THaSlotData*, std::vector<UInt_t> > > detmaps;
+  detmaps.resize(fDetectors.size());
+  
+  for(int i = 0; i<fDetectors.size(); i++){
+    cout << fDetectors[i] << endl;
+    LoadDetector(detmaps[i], fDetectors[i]);
+  }
   
   // We must check at least once which detectors are enabled
   // before we try to load up data for that detector
@@ -195,7 +203,6 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   if(!fCheckedForEnabledDetectors)
     CheckForEnabledDetectors();
 
-  std::vector<std::map<Decoder::THaSlotData*, std::vector<UInt_t> > > detmaps;
   //detmaps.resize(fDetectors.size());
   
   // for(std::vector<std::string>::const_iterator it =
@@ -300,8 +307,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   UInt_t j = 0;
   //FIXME: we don't want that, I just set it up this way for the sake of going forward
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    while(j<fTree->SampHitDataDet[detname]->nhits){
-      lchan = (int)fTree->SampHitDataDet[detname]->chan->at(j);
+    while(j<fTree->HitDataDet[detname]->nhits){
+      lchan = (int)fTree->HitDataDet[detname]->chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       Decoder::THaSlotData *sldat = 0;
@@ -311,10 +318,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
-	if(fTree->SampHitDataDet[detname]->adc->at(j)>-1.e5){//these are a bunch of ADC samples
+	if(fTree->HitDataDet[detname]->adc->at(j)>-1.e5){//these are a bunch of ADC samples
 	  // !!! - here, "dataword" is just used as a number of words! - !!!
-	  for(uint i = 0; i<fTree->SampHitDataDet[detname]->dataword->at(j); i++){
-	    myev->push_back((fTree->SampHitDataDet[detname]->samps_datawords->at(j)).at(i));
+	  for(uint i = 0; i<fTree->HitDataDet[detname]->dataword->at(j); i++){
+	    myev->push_back((fTree->HitDataDet[detname]->samps_datawords->at(j)).at(i));
 	  }
 	}else{//this is a TDC word
 	  myev->push_back(fTree->HitDataDet[detname]->dataword->at(j));
@@ -337,8 +344,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
     }
   }else if(detname.find("gem")!=std::string::npos){
-    while(j<fTree->SampHitDataDet[detname]->nhits){
-      lchan = (int)fTree->SampHitDataDet[detname]->chan->at(j);
+    while(j<fTree->HitDataDet[detname]->nhits){
+      lchan = (int)fTree->HitDataDet[detname]->chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       Decoder::THaSlotData *sldat = 0;
@@ -349,8 +356,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
 	// !!! - here, "dataword" is just used as a number of words! - !!!
-	for(uint i = 0; i<fTree->SampHitDataDet[detname]->dataword->at(j); i++){
-	  myev->push_back((fTree->SampHitDataDet[detname]->samps_datawords->at(j)).at(i));
+	for(uint i = 0; i<fTree->HitDataDet[detname]->dataword->at(j); i++){
+	  myev->push_back((fTree->HitDataDet[detname]->samps_datawords->at(j)).at(i));
 	}
         // First, re-encode the proper channel info into the header
 	//if()

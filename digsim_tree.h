@@ -40,9 +40,10 @@ public :
    std::map<std::string, PMTSimHit_t*> PMTSimHitDet;
    std::map<std::string, GEMSimHit_t*> GEMSimHitDet;
    
-   std::map<std::string, HitData_t*> HitDataDet;
-   std::map<std::string, SampHitData_t*> SampHitDataDet;
-
+   //std::map<std::string, HitData_t*> HitDataDet;
+   //std::map<std::string, SampHitData_t*> SampHitDataDet;
+   std::map<std::string, UHitData_t*> HitDataDet;
+   
    
    //Need to declare and fill standard containers
    //std::map<string, vector<> >

@@ -110,12 +110,39 @@ namespace SBSDigSim {
     std::vector< std::vector<unsigned int> > *samps_datawords; // encoded ADC samples
     SampHitData_t(bool readTDC = true) : 
       HitData_t(true, readTDC),
-      samps_adc(0), samps_datawords(0)
+	nsamps(0), samps_adc(0), samps_datawords(0)
       {}
     virtual ~SampHitData_t(){};
     virtual bool SetupBranches(TTree *t, const char* prefix);
   };
   
+  //U for "universal"...
+  struct UHitData_t : public VDetData_t {
+    UInt_t          nhits;
+    std::vector<short>   *chan;           // channel (PMT)
+    std::vector<unsigned int> *dataword;  // data word (encoded ADC/TDC value)
+    std::vector<int>     *adc;            // ped sub ADC value
+    std::vector<int>     *tdc_l;          // lead TDC (centered on t = 0)
+    std::vector<int>     *tdc_t;          // trail TDC (centered on t = 0)
+    //variables specific to hits with samples;
+    std::vector<unsigned int> *nsamps;    // actual number of samples
+    std::vector< std::vector<int> > *samps_adc; // decoded ADC samples
+    std::vector< std::vector<unsigned int> > *samps_datawords; // encoded ADC samples
+    bool fReadADC;                        // bool to load ADC branch
+    bool fReadTDC;                        // bool to load zero centered TDC branch
+    bool fReadSamples;                    // bool to load samples
+    // these flags are set in constructor - just below
+  UHitData_t(bool readadc = true, 
+	     bool readtdc = true,
+	     bool readsamp = false) : nhits(0),
+      chan(0), dataword(0), adc(0), tdc_l(0), tdc_t(0),
+      nsamps(0), samps_adc(0), samps_datawords(0), 
+      fReadADC(readadc), fReadTDC(readtdc), fReadSamples(readsamp)
+      {}
+    virtual ~UHitData_t(){};
+    virtual bool SetupBranches(TTree *t, const char* prefix);
+  };
+    
   const std::string kProj_str[2] = {"x", "y"};
 }//end of namespace
 
