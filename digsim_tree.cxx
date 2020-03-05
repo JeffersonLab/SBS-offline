@@ -14,7 +14,7 @@ digsim_tree::digsim_tree(TTree *tree) : fChain(0)
       if (!f || !f->IsOpen()) {
          f = new TFile("simdig_test.root");
       }
-      f->GetObject("digtree",tree);
+      f->GetObject(treeName,tree);
 
    }
    Init(tree);

@@ -14,6 +14,8 @@
 #include <digsim_data.h>
 #include <map>
 
+#define treeName "digtree"
+
 // Header file for the classes stored in the TTree if any.
 using namespace SBSDigSim;
 
