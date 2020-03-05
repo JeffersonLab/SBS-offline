@@ -57,7 +57,7 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   DefineVariables();
 
   fDetectors.clear();
-  fTree = 0;
+  //fTree = 0;
 
   gSystem->Load("libEG.so");  // for TDatabasePDG
   // Get MPD encoder for GEMs
@@ -142,15 +142,15 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   // Local copy of evbuffer pointer, used in GetMCHitInfo
   buffer = evbuffer;
 
-  if(!fTreeIsSet){
-    std::cerr << "SBSSimDecoder Tree not initialized correctly - exiting" << std::endl;
-    return HED_FATAL;
-  }
+  // if(!fTreeIsSet){
+  //   std::cerr << "SBSSimDecoder Tree not initialized correctly - exiting" << std::endl;
+  //   return HED_FATAL;
+  // }
+  //fTree->GetEntry(GetEvNum());
   // Cast the evbuffer pointer back to exactly the event type that is present
   // in the input file (in TSBSSimFile). The pointer-to-unsigned integer is
   // needed compatibility with the standard decoder.
-  //const TSBSSimEvent* simEvent = reinterpret_cast<const TSBSSimEvent*>(buffer);
-  fTree->GetEntry(GetEvNum());
+  const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
@@ -177,11 +177,11 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   event_length = 0;
   
   event_type = 1;
-  //event_num = simEvent->fEvtID;
+  event_num = simEvent->EvtID;
   recent_event = event_num;
 
   // Event weight
-  //fWeight = simEvent->fWeight;
+  fWeight = simEvent->Weight;
 
   //
   if( fDoBench ) fBench->Begin("physics_decode");
@@ -194,83 +194,26 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   for(int i = 0; i<fDetectors.size(); i++){
     cout << fDetectors[i] << endl;
-    LoadDetector(detmaps[i], fDetectors[i]);
+    SBSDigSim::UHitData_t* HitData_Det = simEvent->HitDataDet.at(fDetectors[i]);
+    LoadDetector(detmaps[i], fDetectors[i], HitData_Det);
   }
-  
-  // We must check at least once which detectors are enabled
-  // before we try to load up data for that detector
-  /*
-  if(!fCheckedForEnabledDetectors)
-    CheckForEnabledDetectors();
-
-  //detmaps.resize(fDetectors.size());
-  
-  // for(std::vector<std::string>::const_iterator it =
-  //     fDetectors.begin(); it != fDetectors.end();
-  //     ++it){
-    
-  // }
-  
-  // Loop through the TSBSSimEvent vector and load the data onto
-  // all declared detectors.
-  for(std::vector<TSBSSimEvent::DetectorData>::const_iterator it =
-      simEvent->fDetectorData.begin(); it != simEvent->fDetectorData.end();
-      ++it )
-  {
-    for(size_t d = 0; d < fDetectors.size(); d++) {
-      LoadDetector(detmaps[d], fDetectors[d], (*it));
-      //LoadDetector(detmaps[d], fDetNames[d], (*it), fDetIDs[d]);
-    }
-    // what if we were just coding the stuff above in a function ?
-    // what would this function need ? name (or CPS/SPC) +detID of det, and map ???? 
-    // go for it ?
-    // // OK, faisons l'exercise bete de copier en adaptant pour e.g. CDet brouillon
-    // if((*it).fDetID == CDET_UNIQUE_DETID && (*it).fData.size() > 0) { // 
-    //   int mod =  (*it).fChannel;
-    //   //This should be *general* and work for *every* subsystem
-    //   chan = mod%CPS_cdet;
-    //   slot = ((mod-chan)/CPS_cdet)%SPC_cdet;//+first_slot
-    //   crate = (mod-slot*CPS_cdet-chan)/SPC_cdet;//+first_crate
-      
-    //   Decoder::THaSlotData *sldat = crateslot[idx(crate,slot)];
-    //   if(sldat) { // meaning the module is available
-    // 	std::vector<UInt_t> *myev = &(map[sldat]);
-    // 	myev->push_back(chan);
-    // 	for(size_t k = 0; k < (*it).fData.size(); k++) {
-    // 	  myev->push_back((*it).fData[k]);
-    // 	}
-    //   }
-    //   if((*it).fData[0] == 1) {
-    // 	std::cerr << "M: " << mod << ", C: " << crate << ", S: " << slot
-    // 		  << ", C: " << chan << ", I: " << (*it).fData[2] << std::endl;
-    //   }
-    // }
-  }
-  */
   
   // Now call LoadSlot for the different detectors
-  /*
   for(size_t d = 0; d < fDetectors.size(); d++) {
     for( std::map<Decoder::THaSlotData*, std::vector<UInt_t> >::iterator it =
 	   detmaps[d].begin(); it != detmaps[d].end(); ++it) {
-      //unsigned short data_type = 0, chan_mult = 0;
-      //unsigned int nwords = 0;
-      //TSBSSimDataEncoder::DecodeHeader(it->second.front(),data_type,chan_mult,
-      //    nwords);
       if(it->first->GetModule()==0) {
-	if(fDebug>0) {
-	  // std::cout << "No data available for detector "
-	  // 	  << fDetectors[d].DetName() << std::endl;
-	}
+        if(fDebug>0) {
+          std::cout << "No data available for detector "
+            << fDetectors[d] << std::endl;
+        }
       } else {
-	it->first->GetModule()->LoadSlot(it->first,
+        it->first->GetModule()->LoadSlot(it->first,
 					 it->second.data(),0,it->second.size() );
       }
-      //it->first->GetModule()->LoadSlot(it->first,
-      //    it->second.data(),&(it->second.back()) );
     }
   }
-  */
+  
   return HED_OK;
 }
 
@@ -295,7 +238,8 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
 
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   std::vector<UInt_t> > &map,
-				   const std::string detname)//, digsim_tree* tree)
+				   const std::string detname, 
+				   SBSDigSim::UHitData_t* HitData_Det)
 {
   //int detid = detinfo.DetUniqueId();
   Int_t crate, slot, chan;
@@ -307,8 +251,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   UInt_t j = 0;
   //FIXME: we don't want that, I just set it up this way for the sake of going forward
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    while(j<fTree->HitDataDet[detname]->nhits){
-      lchan = (int)fTree->HitDataDet[detname]->chan->at(j);
+    while(j<HitData_Det->nhits){
+      lchan = (int)HitData_Det->chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       Decoder::THaSlotData *sldat = 0;
@@ -318,17 +262,17 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
-	if(fTree->HitDataDet[detname]->adc->at(j)>-1.e5){//these are a bunch of ADC samples
+	if(HitData_Det->adc->at(j)>-1.e5){//these are a bunch of ADC samples
 	  // !!! - here, "dataword" is just used as a number of words! - !!!
-	  for(uint i = 0; i<fTree->HitDataDet[detname]->dataword->at(j); i++){
-	    myev->push_back((fTree->HitDataDet[detname]->samps_datawords->at(j)).at(i));
+	  for(uint i = 0; i<HitData_Det->dataword->at(j); i++){
+	    myev->push_back((HitData_Det->samps_datawords->at(j)).at(i));
 	  }
 	}else{//this is a TDC word
-	  myev->push_back(fTree->HitDataDet[detname]->dataword->at(j));
+	  myev->push_back(HitData_Det->dataword->at(j));
 	}
         // First, re-encode the proper channel info into the header
 	//if()
-        //myev->push_back(fTree->SampHitDataDet[detname]->dataword->at(j));
+        //myev->push_back(fTree->SampHitData_Det[detname]->dataword->at(j));
 	//TSBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
         //for(unsigned int k = 0; k < nwords; k++) {
 	//myev->push_back(detdata.fData[j++]);
@@ -344,8 +288,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
     }
   }else if(detname.find("gem")!=std::string::npos){
-    while(j<fTree->HitDataDet[detname]->nhits){
-      lchan = (int)fTree->HitDataDet[detname]->chan->at(j);
+    while(j<HitData_Det->nhits){
+      lchan = (int)HitData_Det->chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       Decoder::THaSlotData *sldat = 0;
@@ -356,12 +300,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
 	// !!! - here, "dataword" is just used as a number of words! - !!!
-	for(uint i = 0; i<fTree->HitDataDet[detname]->dataword->at(j); i++){
-	  myev->push_back((fTree->HitDataDet[detname]->samps_datawords->at(j)).at(i));
+	for(uint i = 0; i<HitData_Det->dataword->at(j); i++){
+	  myev->push_back((HitData_Det->samps_datawords->at(j)).at(i));
 	}
         // First, re-encode the proper channel info into the header
 	//if()
-        //myev->push_back(fTree->SampHitDataDet[detname]->dataword->at(j));
+        //myev->push_back(fTree->SampHitData_Det[detname]->dataword->at(j));
 	//TSBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
         //for(unsigned int k = 0; k < nwords; k++) {
 	//myev->push_back(detdata.fData[j++]);
@@ -377,8 +321,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
     }
   }else{
-    while(j<fTree->HitDataDet[detname]->nhits){
-      lchan = (int)fTree->HitDataDet[detname]->chan->at(j);
+    while(j<HitData_Det->nhits){
+      lchan = (int)HitData_Det->chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       Decoder::THaSlotData *sldat = 0;
@@ -388,7 +332,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       if(sldat) {
         std::vector<UInt_t> *myev = &(map[sldat]);
-        myev->push_back(fTree->HitDataDet[detname]->dataword->at(j));
+        myev->push_back(HitData_Det->dataword->at(j));
       } else {
         std::cerr << "Yikes!! No data for " << detname.c_str()
 		  << crate << " s: " << slot << " c: " << chan
@@ -422,6 +366,7 @@ void SBSSimDecoder::CheckForEnabledDetectors()
   fCheckedForEnabledDetectors = true;
 }
 
+/*
 void SBSSimDecoder::SetTree(TTree *t)
 {
   if(t==0)return;
@@ -429,6 +374,7 @@ void SBSSimDecoder::SetTree(TTree *t)
   if(fTree==0)return;
   fTreeIsSet = true;
 }
+*/
 
 void SBSSimDecoder::SetDetectors(THaApparatus* app)
 {

@@ -10,8 +10,9 @@
 #include "SimDecoder.h"
 //#include "TSBSSimEvent.h"
 #include "ha_compiledata.h"
-#include "TTree.h"
-#include "digsim_tree.h"
+#include "SBSSimFile.h"//needed for SBSSimEvent
+//#include "TTree.h"
+//#include "digsim_tree.h"
 #include "THaApparatus.h"
 
 #include <cassert>
@@ -51,7 +52,7 @@ class SBSSimDecoder : public Podd::SimDecoder {
   
   //Utilities
   // a bit dumb, I know, but I don't know another way
-  void SetTree(TTree *t);
+  //void SetTree(TTree *t);
   //Setup all detectors for an apparatus
   void SetDetectors(THaApparatus* app);
   //void SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc);
@@ -80,7 +81,8 @@ protected:
   Int_t AddDetector(std::string detname, TDatime date);
   Int_t ReadDetectorDB(std::string detname, TDatime date);
   Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map,
-		      std::string detname);//, digsim_tree* tree); 
+		      const std::string detname, 
+		      SBSDigSim::UHitData_t* HitData_Det); 
   
   void CheckForEnabledDetectors();
   //void CheckForDetector(const char *detname, short id);
@@ -89,8 +91,8 @@ protected:
   
   bool fCheckedForEnabledDetectors;
   std::vector<std::string> fDetectors;
-  bool fTreeIsSet;
-  digsim_tree* fTree;
+  //bool fTreeIsSet;
+  //digsim_tree* fTree;
   
   // again, probably dumb...
   std::map<std::string, int> fChansPerSlotDetMap;

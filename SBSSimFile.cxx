@@ -133,6 +133,7 @@ Int_t SBSSimFile::Open()
 
   //  fTree->SetBranchStatus("*", kFALSE);
 
+  /*
   // Set up reading of the event branch
   delete fEvent; fEvent = 0;
 
@@ -154,7 +155,12 @@ Int_t SBSSimFile::Open()
 
   fNEntries = fTree->GetEntries();
   fEntry = 0;
-
+  */
+  //fEvent is actually the tree!!!
+  // and if it works it turns out to make the thing actually much simpler.
+  delete fEvent; fEvent = 0;// really needed anymore ?
+  fEvent = new SBSSimEvent(fTree);
+  
   fOpened = kTRUE;
   return 0;
 }
@@ -190,7 +196,8 @@ Int_t SBSSimFile::ReadEvent()
   if( fEvent ) fEvent->Clear();
 
   // Read input file
-  ret = fTree->GetEntry(fEntry++);
+  //ret = fTree->GetEntry(fEntry++);
+  ret = fEvent->GetEntry(fEntry++);
   if( ret == 0 )
     return EOF;
   if( ret < 0 )
