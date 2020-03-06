@@ -95,13 +95,14 @@ protected:
   //digsim_tree* fTree;
   
   // again, probably dumb...
+  std::map<std::string, int> fNChan;
   std::map<std::string, int> fChansPerSlotDetMap;
   std::map<std::string, int> fSlotsPerCrateDetMap;
   std::map<std::string, int> fFirstSlotDetMap;
   std::map<std::string, int> fFirstCrateDetMap;
   
   void ChanToROC( const std::string detname, Int_t h_chan, 
-		  Int_t &crate, Int_t &slot, Int_t &chan ) const;
+		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   //Int_t ChanFromROC( std::string detname, Int_t crate, Int_t slot, Int_t chan ) const;
   /*
   // void  PMTtoROC( Int_t s_plane, Int_t s_sector, Int_t s_proj, Int_t s_chan,

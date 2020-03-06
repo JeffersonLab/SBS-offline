@@ -192,10 +192,10 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   std::vector<std::map<Decoder::THaSlotData*, std::vector<UInt_t> > > detmaps;
   detmaps.resize(fDetectors.size());
   
-  for(int i = 0; i<fDetectors.size(); i++){
-    cout << fDetectors[i] << endl;
-    SBSDigSim::UHitData_t* HitData_Det = simEvent->HitDataDet.at(fDetectors[i]);
-    LoadDetector(detmaps[i], fDetectors[i], HitData_Det);
+  for(size_t d = 0; d<fDetectors.size(); d++){
+    cout << fDetectors[d] << endl;
+    //SBSDigSim::UHitData_t* HitData_Det = simEvent->HitDataDet.at(fDetectors[d]);
+    LoadDetector(detmaps[d], fDetectors[d], simEvent->HitDataDet.at(fDetectors[d]));
   }
   
   // Now call LoadSlot for the different detectors
@@ -242,105 +242,84 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   SBSDigSim::UHitData_t* HitData_Det)
 {
   //int detid = detinfo.DetUniqueId();
-  Int_t crate, slot, chan;
-  //unsigned short data_type = 0, chan = 0, chan_mult = 0;
+  Int_t crate, slot;
+  unsigned int nwords = 0;
+  unsigned short data_type = 0, chan = 0, chan_mult = 0;
   int lchan;
+  SimEncoder::mpd_data tmp_mpd;
+  UInt_t* mpd_hdr = new UInt_t[2];
   
   //This should be *general* and work for *every* subsystem
   // Loop over all raw data in this event
   UInt_t j = 0;
   //FIXME: we don't want that, I just set it up this way for the sake of going forward
-  if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    while(j<HitData_Det->nhits){
-      lchan = (int)HitData_Det->chan->at(j);
-      ChanToROC(detname, lchan, crate, slot, chan);
+  while(j < HitData_Det->nhits){
+    //Decode header first
+    lchan = 0;
+    if(HitData_Det->chan->at(j)<0){
+      SBSSimDataEncoder::DecodeHeader(HitData_Det->dataword->at(j),
+				       data_type,chan_mult,nwords);
       
-      Decoder::THaSlotData *sldat = 0;
-      if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+      //if header if from GEM detector, also decode the MPD header
+      if(detname.find("gem")!=std::string::npos){
+	for(uint k = 0; k<(HitData_Det->samps_datawords->at(j)).size();k++){
+	  mpd_hdr[k] = (HitData_Det->samps_datawords->at(j)).at(k);
+	}
+	fEncoderMPD->DecodeMPDHeader(mpd_hdr, tmp_mpd);
+	//reencode header for GEMs - not sure why - to set "chan" value ?
       }
-      
-      if(sldat) {
-        std::vector<UInt_t> *myev = &(map[sldat]);
-	if(HitData_Det->adc->at(j)>-1.e5){//these are a bunch of ADC samples
-	  // !!! - here, "dataword" is just used as a number of words! - !!!
-	  for(uint i = 0; i<HitData_Det->dataword->at(j); i++){
-	    myev->push_back((HitData_Det->samps_datawords->at(j)).at(i));
+
+      if(nwords>0)j++;
+    }
+
+    //channel should *not* be negative (unless there's a problem with nwords...)
+    assert(HitData_Det->chan->at(j)>=0);
+    //determine crate/slot
+    lchan = (int)HitData_Det->chan->at(j);//+chan_mult*fNChan[detname];
+    ChanToROC(detname, lchan, crate, slot, chan);
+    
+    if(detname.find("gem")!=std::string::npos){
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+    }
+
+    Decoder::THaSlotData *sldat = 0;
+    if( crate >= 0 || slot >=  0 ) {
+      sldat = crateslot[idx(crate,slot)];
+    }
+    
+    //save the header
+    std::vector<UInt_t> *myev = &(map[sldat]);
+    myev->push_back(SBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
+    if(detname.find("gem")!=std::string::npos){
+      for(int k = 0; k<2;k++){ myev->push_back(mpd_hdr[k]);
+      }
+    }
+    //Then save the hits
+    //nwords = n following "hits" for ECal, Cher, Scint;
+    //nowrds = n following hits*n data words for HCal, GEMs
+    uint i = 0;
+    while(i<nwords){
+      if(detname.find("gem")!=std::string::npos || 
+	 detname.find("hcal")!=std::string::npos){
+	//if GEM or HCal, loop on "samples datawords" 
+	if(HitData_Det->adc->at(j)>-9.e5){
+	  // here dataword stores the number of samples datawords
+	  for(int k = 0; k<HitData_Det->dataword->at(j);k++, i++){
+	    myev->push_back( (HitData_Det->samps_datawords->at(j)).at(k) );
 	  }
-	}else{//this is a TDC word
+	}else{
+	  //if adc has dummy value , it is a HCal TDC
 	  myev->push_back(HitData_Det->dataword->at(j));
 	}
-        // First, re-encode the proper channel info into the header
-	//if()
-        //myev->push_back(fTree->SampHitData_Det[detname]->dataword->at(j));
-	//TSBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
-        //for(unsigned int k = 0; k < nwords; k++) {
-	//myev->push_back(detdata.fData[j++]);
-        //}
-      } else {
-        std::cerr << "Yikes!! No data for " << detname.c_str()
-	  //<< " (mod=" << mod << ") in c: "
-		  << crate << " s: " << slot << " c: " << chan
-		  << ", lchan: " << lchan << endl;
-	//<< ", mult: " << chan_mult
-          //<< " size: " << detdata.() << ", j: " << j <<", nwords: "
-          //<< nwords << std::endl;
+      }else{
+	//straightforward for detectors other than GEMs, HCal.
+	myev->push_back(HitData_Det->dataword->at(j));
       }
+      i++;
+      j++;
     }
-  }else if(detname.find("gem")!=std::string::npos){
-    while(j<HitData_Det->nhits){
-      lchan = (int)HitData_Det->chan->at(j);
-      ChanToROC(detname, lchan, crate, slot, chan);
-      
-      Decoder::THaSlotData *sldat = 0;
-      if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
-      }
-      
-      if(sldat) {
-        std::vector<UInt_t> *myev = &(map[sldat]);
-	// !!! - here, "dataword" is just used as a number of words! - !!!
-	for(uint i = 0; i<HitData_Det->dataword->at(j); i++){
-	  myev->push_back((HitData_Det->samps_datawords->at(j)).at(i));
-	}
-        // First, re-encode the proper channel info into the header
-	//if()
-        //myev->push_back(fTree->SampHitData_Det[detname]->dataword->at(j));
-	//TSBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
-        //for(unsigned int k = 0; k < nwords; k++) {
-	//myev->push_back(detdata.fData[j++]);
-        //}
-      } else {
-        std::cerr << "Yikes!! No data for " << detname.c_str()
-	  //<< " (mod=" << mod << ") in c: "
-		  << crate << " s: " << slot << " c: " << chan
-		  << ", lchan: " << lchan << endl;
-	//<< ", mult: " << chan_mult
-          //<< " size: " << detdata.() << ", j: " << j <<", nwords: "
-          //<< nwords << std::endl;
-      }
-    }
-  }else{
-    while(j<HitData_Det->nhits){
-      lchan = (int)HitData_Det->chan->at(j);
-      ChanToROC(detname, lchan, crate, slot, chan);
-      
-      Decoder::THaSlotData *sldat = 0;
-      if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
-      }
-      
-      if(sldat) {
-        std::vector<UInt_t> *myev = &(map[sldat]);
-        myev->push_back(HitData_Det->dataword->at(j));
-      } else {
-        std::cerr << "Yikes!! No data for " << detname.c_str()
-		  << crate << " s: " << slot << " c: " << chan
-		  << ", lchan: " << lchan << endl;
-      }
-    }
-  }
-  
+  }//end loop on j
+
   return HED_OK;
 }
 
@@ -412,12 +391,13 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   std::vector<int> detmap,chanmap;
   int chanmap_start = 0;
   
-  int cps, spc, fs, fc;
+  int nc, cps, spc, fs, fc;
   
   DBRequest request[] = {
     {"detmap", &detmap, kIntV, 0, true}, ///< Optional
     {"chanmap", &chanmap, kIntV, 0, true}, ///< Optional
     {"chanmap_start", &chanmap_start, kInt, 0, true}, ///< Optional
+    {"nchan", &nc, kInt, 0, true},// 
     {"first_crate", &fc, kInt, 0, true},// 
     {"first_slot", &fs, kInt, 0, true},// 
     {"chan_per_slot", &cps, kInt, 0, true},// 
@@ -430,6 +410,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   
   if(err)return THaAnalysisObject::kInitError;
   
+  fNChan[detname] = nc;
   fChansPerSlotDetMap[detname] = cps;
   fSlotsPerCrateDetMap[detname] = spc;
   fFirstSlotDetMap[detname] = fs;
@@ -442,7 +423,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 //-----------------------------------------------------------------------------
 //static inline
 void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
-			       Int_t& crate, Int_t& slot, Int_t& chan )const 
+			       Int_t& crate, Int_t& slot, UShort_t& chan )const 
 {
   // Convert location parameters (row, col, chan) of the given Channel
   // to hardware channel (crate,slot,chan)
