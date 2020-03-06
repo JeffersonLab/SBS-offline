@@ -58,11 +58,16 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
 
   fDetectors.clear();
   //fTree = 0;
-
+  // Load detectors: rely on gHaApps (please tell me it works!!!)
+  cout << " Calling SBSSimDecoder! "<< endl;
+  cout << " Make sure you have already declared your apparatuses and detectors, and added these to gHaApps" << endl;
+  SetDetectors();
+  
   gSystem->Load("libEG.so");  // for TDatabasePDG
   // Get MPD encoder for GEMs
   fEncoderMPD = dynamic_cast<SBSSimMPDEncoder*>
     (SBSSimDataEncoder::GetEncoderByName("mpd"));
+  
 }
 
 //-----------------------------------------------------------------------------
@@ -355,17 +360,20 @@ void SBSSimDecoder::SetTree(TTree *t)
 }
 */
 
-void SBSSimDecoder::SetDetectors(THaApparatus* app)
+void SBSSimDecoder::SetDetectors()
 {
-  TList* listdet = app->GetDetectors();
-  TIter iter(listdet);
-  TObject* det = 0;
-  while( (det=(TObject*)iter()) ){
-    cout << app->GetName() << "." << det->GetName() << endl;
-    AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
-		(app->GetDetector(det->GetName()))->GetInitDate());
+  TIter aiter(gHaApps);
+  THaApparatus* app = 0;
+  while( (app=(THaApparatus*)aiter()) ){
+    TList* listdet = app->GetDetectors();
+    TIter diter(listdet);
+    TObject* det = 0;
+    while( (det=(TObject*)diter()) ){
+      cout << app->GetName() << "." << det->GetName() << endl;
+      AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
+		  (app->GetDetector(det->GetName()))->GetInitDate());
+    }
   }
-
 }
 
 Int_t SBSSimDecoder::AddDetector(std::string detname, TDatime date)

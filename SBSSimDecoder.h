@@ -54,7 +54,6 @@ class SBSSimDecoder : public Podd::SimDecoder {
   // a bit dumb, I know, but I don't know another way
   //void SetTree(TTree *t);
   //Setup all detectors for an apparatus
-  void SetDetectors(THaApparatus* app);
   //void SetDetMapParam(const std::string detname, int cps, int spc, int fs, int fc);
   
 protected:
@@ -78,6 +77,7 @@ protected:
 			    int& crateperslot, int& slotpercrate, 
 			    int& firstcrate, int& firstslot);
   */
+  void SetDetectors();
   Int_t AddDetector(std::string detname, TDatime date);
   Int_t ReadDetectorDB(std::string detname, TDatime date);
   Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map,
