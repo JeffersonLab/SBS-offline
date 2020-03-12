@@ -13,7 +13,7 @@
 /////////////////////////////////////////////////////////////////////
 
 #include "SBSSimFile.h"
-#include "digsim_tree.h"
+#include "SBSSimEvent.h"
 //#include "evio.h"     // for S_SUCCESS
 // We really only need S_SUCCESS from evio.h, so why not just define
 // it ourselves so we don't have to pull the whole header file.
@@ -254,40 +254,5 @@ void SBSSimFile::Print( Option_t* opt ) const
 
 }
 
-// ----------------------------------------------- 
-// class SBSSimEvent: encapsulation of digsim_tree 
-//
-//_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent() : digsim_tree()
-{
-  cout << "Initializing TSBSSimEvent" << endl;
-  RunID = EvtID = 0;
-  Weight = 1;
-  Clear();
-}
-
-//_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent(TTree* tree) : digsim_tree(tree)
-{
-  cout << "Initializing TSBSSimEvent" << endl;
-  RunID = EvtID = 0;
-  Weight = 1;
-  Clear();
-}
-
-//_____________________________________________________________________________
-void SBSSimEvent::Clear( const Option_t* opt )
-{
-  // do nothing...
-}
-
-//_____________________________________________________________________________
-void SBSSimEvent::Print( const Option_t* opt ) const
-{
-  cout << RunID << " " << RunID << " " << Weight << endl;
-}
-
 //-----------------------------------------------------------------------------
 ClassImp(SBSSimFile)
-ClassImp(SBSSimEvent)
-

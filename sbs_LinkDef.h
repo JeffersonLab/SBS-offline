@@ -44,7 +44,6 @@
 #pragma link C++ class SBSSimFile+;
 #pragma link C++ class SBSSimEvent+;
 #pragma link C++ class SBSSimDecoder+;
-#pragma link C++ class digsim_data+;
 #pragma link C++ class digsim_tree+;
 //#pragma link C++ defined_in "SBSSimFadc250Module.h";
 #endif

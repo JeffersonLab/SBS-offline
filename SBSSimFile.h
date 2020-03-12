@@ -13,28 +13,13 @@
 
 #include "THaRunBase.h"
 #include "TString.h"
-#include "digsim_tree.h"
+#include "SBSSimEvent.h"
 #include "ha_compiledata.h"
 
 class TFile;
 class TTree;
 class TBranch;
-//class digsim_tree;
-//class SBSSimEvent;
-
-//Class SBSSimEvent encapsulates digsim_tree
-class SBSSimEvent : public digsim_tree {
-public:
-  SBSSimEvent();                 // Default constructor, for ROOT I/O
-  SBSSimEvent(TTree* tree);
-  
-  virtual ~SBSSimEvent(){};
-  
-  virtual void Clear( const Option_t* opt="" );
-  virtual void Print( const Option_t* opt="" ) const;
-
-  ClassDef(SBSSimEvent, 1) // Simulated data for one event
-};
+class SBSSimEvent;
 
 class SBSSimFile : public THaRunBase {
  public:
