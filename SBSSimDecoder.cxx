@@ -25,6 +25,7 @@
 #include "TDatabasePDG.h"
 #include "TRandom.h"
 #include "THaVarList.h"
+#include "THaDetMap.h"
 #include "THaDetector.h"
 
 //#include <SBSSimFadc250Module.h>// we need not to need this
@@ -137,7 +138,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 {
   // Fill crateslot structures with Monte Carlo event data in 'evbuffer'
   
-  //static const char* const here = "SBSSimDecoder::LoadEvent";
+  static const char* const here = "SBSSimDecoder::LoadEvent";
 
 #if ANALYZER_VERSION_CODE < ANALYZER_VERSION(1,6,0)
   Bool_t fNeedInit = fgNeedInit;
@@ -155,7 +156,11 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   // Cast the evbuffer pointer back to exactly the event type that is present
   // in the input file (in TSBSSimFile). The pointer-to-unsigned integer is
   // needed compatibility with the standard decoder.
+  if(fDebug>2)std::cout << "Processing " << here << std::endl;
+  
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
+  
+  
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
@@ -198,7 +203,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   detmaps.resize(fDetectors.size());
   
   for(size_t d = 0; d<fDetectors.size(); d++){
-    cout << fDetectors[d] << endl;
+    if(fDebug>2)cout << fDetectors[d] << endl;
     //SBSDigSim::UHitData_t* HitData_Det = simEvent->HitDataDet.at(fDetectors[d]);
     LoadDetector(detmaps[d], fDetectors[d], simEvent->HitDataDet.at(fDetectors[d]));
   }
@@ -213,6 +218,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
             << fDetectors[d] << std::endl;
         }
       } else {
+	if(fDebug>2)std::cout << "load slot" << std::endl;
         it->first->GetModule()->LoadSlot(it->first,
 					 it->second.data(),0,it->second.size() );
       }
@@ -369,7 +375,8 @@ void SBSSimDecoder::SetDetectors()
     TIter diter(listdet);
     TObject* det = 0;
     while( (det=(TObject*)diter()) ){
-      cout << app->GetName() << "." << det->GetName() << endl;
+      cout << "Setting det " << app->GetName() << "." << det->GetName() 
+	   << " into SBSSimDecoder" << endl;
       AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
 		  (app->GetDetector(det->GetName()))->GetInitDate());
     }
@@ -386,8 +393,10 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 {
   //EPAF: in here the det name is the "full" det name i.e. including the spectro name
   std::string path = "../db/";
-  if(std::getenv("SBS")) {
-    path = std::string(std::getenv("SBS")) + "/DB/";
+  if(std::getenv("DB_DIR")) {
+    path = std::string(std::getenv("DB_DIR"))+"/";
+  }else if(std::getenv("SBS")){
+    path = std::string(std::getenv("SBS"))+"/DB/";
   }
   const string& fileName = path+"db_"+detname+".dat";
   
@@ -397,19 +406,19 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   FILE* file  = THaAnalysisObject::OpenFile(fileName.c_str(), date);
   
   std::vector<int> detmap,chanmap;
-  int chanmap_start = 0;
+  uint nchan, chanmapstart = 0;
   
-  int nc, cps, spc, fs, fc;
+  int cps, spc, fs, fc;
   
   DBRequest request[] = {
-    {"detmap", &detmap, kIntV, 0, true}, ///< Optional
-    {"chanmap", &chanmap, kIntV, 0, true}, ///< Optional
-    {"chanmap_start", &chanmap_start, kInt, 0, true}, ///< Optional
-    {"nchan", &nc, kInt, 0, true},// 
-    {"first_crate", &fc, kInt, 0, true},// 
-    {"first_slot", &fs, kInt, 0, true},// 
-    {"chan_per_slot", &cps, kInt, 0, true},// 
-    {"slot_per_crate", &spc, kInt, 0, true},// 
+    {"nchan", &nchan, kInt, 0, false},// 
+    {"detmap", &detmap, kIntV, 0, false}, //
+    {"chanmap", &chanmap, kIntV, 0, false}, //
+    {"chanmap_start", &chanmapstart, kInt, 0, true}, // <- optional
+    {"first_crate", &fc, kInt, 0, true},// <- optional 
+    {"first_slot", &fs, kInt, 0, true},//  <- optional
+    {"chan_per_slot", &cps, kInt, 0, true},//  <- optional
+    {"slot_per_crate", &spc, kInt, 0, true},//  <- optional
     { 0 }
   };
   Int_t err = THaAnalysisObject::LoadDB(file, date, request, prefix.c_str());
@@ -418,7 +427,38 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   
   if(err)return THaAnalysisObject::kInitError;
   
-  fNChan[detname] = nc;
+  fNChanDet[detname] = nchan;
+  fChanMapStartDet[detname] = chanmapstart;
+  fDetMapDet[detname] = new THaDetMap();
+  if( fDetMapDet[detname]->Fill(detmap, 0) <= 0 )
+    return THaAnalysisObject::kInitError;
+  fChanMapDet[detname].clear();
+  
+  Int_t nmodules = fDetMapDet[detname]->GetSize();
+  cout << "Set up the new channel map" << nmodules << endl;
+  assert( nmodules > 0 );
+  fChanMapDet[detname].resize(nmodules);
+  for( Int_t i=0, k=0; i < nmodules && !err; i++ ) {
+    THaDetMap::Module* module = fDetMapDet[detname]->GetModule(i);
+    Int_t nchan = module->hi - module->lo + 1;
+    cout << " nchan = " << nchan << endl;
+    if( nchan > 0 ) {
+      fChanMapDet[detname].at(i).resize(nchan);
+      for( Int_t j=0; j<nchan; ++j ) {
+	cout << " k = " << k << " " << nchan*nmodules << endl;
+	assert( k < nmodules*nchan );
+	fChanMapDet[detname].at(i).at(j) = chanmap.empty() ? k : chanmap[k]-1;
+	cout << " k = " << k << " " << nchan*nmodules << " " << chanmap[k] << " " << fChanMapDet[detname].at(i).at(j)<< endl;
+	++k;
+      }
+    } else {
+      std::cerr << "SBSSimDecoder::ReadDetectorDB() No channels defined for module " 
+		<< i << std::endl;
+      fChanMapDet[detname].clear();
+      err = THaAnalysisObject::kInitError;
+    }
+  }
+    
   fChansPerSlotDetMap[detname] = cps;
   fSlotsPerCrateDetMap[detname] = spc;
   fFirstSlotDetMap[detname] = fs;

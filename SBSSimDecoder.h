@@ -19,8 +19,7 @@
 #include <map>
 #include <stdint.h>
 
-//class THaCrateMap;
-
+class THaDetMap;
 class SBSSimMPDEncoder; // For decoding simulation GEMs
 //class TDetInfo;
 
@@ -94,12 +93,16 @@ protected:
   //bool fTreeIsSet;
   //digsim_tree* fTree;
   
+  std::map<std::string, UInt_t> fNChanDet;
+  std::map<std::string, UInt_t> fChanMapStartDet;
+  std::map<std::string, THaDetMap*> fDetMapDet;
+  std::map<std::string, std::vector< std::vector<UShort_t> > > fChanMapDet;
+  
   // again, probably dumb...
-  std::map<std::string, int> fNChan;
-  std::map<std::string, int> fChansPerSlotDetMap;
-  std::map<std::string, int> fSlotsPerCrateDetMap;
-  std::map<std::string, int> fFirstSlotDetMap;
-  std::map<std::string, int> fFirstCrateDetMap;
+  std::map<std::string, uint> fChansPerSlotDetMap;
+  std::map<std::string, uint> fSlotsPerCrateDetMap;
+  std::map<std::string, uint> fFirstSlotDetMap;
+  std::map<std::string, uint> fFirstCrateDetMap;
   
   void ChanToROC( const std::string detname, Int_t h_chan, 
 		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;

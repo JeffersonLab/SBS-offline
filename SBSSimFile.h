@@ -60,6 +60,8 @@ class SBSSimFile : public THaRunBase {
   Int_t         ReadEvent();
   void          SetFileName( const char* name ) { fROOTFileName = name; }
 
+  void          SetVerbose(int v){fVerbose = v;};
+
  protected:
   virtual Int_t ReadDatabase() {return 0;}
 
@@ -70,6 +72,8 @@ class SBSSimFile : public THaRunBase {
 
   ULong64_t fNEntries;    //! Number of entries in tree
   ULong64_t fEntry;       //! Current entry number
+
+  Int_t fVerbose;       //! Current entry number
 
   ClassDef(SBSSimFile,1) // Interface to input file with simulated SoLID data
 };

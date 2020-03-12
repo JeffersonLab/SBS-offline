@@ -39,7 +39,7 @@ using namespace std;
 //-----------------------------------------------------------------------------
 SBSSimFile::SBSSimFile(const char* filename, const char* description) :
   THaRunBase(description), fROOTFileName(filename), fROOTFile(0), fTree(0), 
-  fEvent(0), fNEntries(0), fEntry(0)
+  fEvent(0), fNEntries(0), fEntry(0), fVerbose(0)
 {
   // Constructor
 
@@ -53,7 +53,7 @@ SBSSimFile::SBSSimFile(const char* filename, const char* description) :
 //-----------------------------------------------------------------------------
 SBSSimFile::SBSSimFile(const SBSSimFile &run)
   : THaRunBase(run), fROOTFileName(run.fROOTFileName), 
-    fROOTFile(0), fTree(0), fEvent(0), fNEntries(0), fEntry(0)
+    fROOTFile(0), fTree(0), fEvent(0), fNEntries(0), fEntry(0), fVerbose(0)
 {
 }
 
@@ -115,8 +115,9 @@ Int_t SBSSimFile::Init()
 Int_t SBSSimFile::Open()
 {
   // Open ROOT input file
-
-  fROOTFile = new TFile(fROOTFileName, "READ", "SoLID MC data");
+  if(fVerbose>0)std::cout << "SBSSimFile::Open()" << std::endl;
+  
+  fROOTFile = new TFile(fROOTFileName, "READ", "SBS MC data");
   if( !fROOTFile || fROOTFile->IsZombie() ) {
     Error( __FUNCTION__, "Cannot open input file %s", fROOTFileName.Data() );
     Close();
@@ -153,9 +154,11 @@ Int_t SBSSimFile::Open()
     return -3;
   }
 
+  */
+  
   fNEntries = fTree->GetEntries();
   fEntry = 0;
-  */
+  
   //fEvent is actually the tree!!!
   // and if it works it turns out to make the thing actually much simpler.
   delete fEvent; fEvent = 0;// really needed anymore ?
@@ -182,7 +185,10 @@ Int_t SBSSimFile::Close()
 Int_t SBSSimFile::ReadEvent()
 {
   // Read next event from ROOT file
-
+  if(fVerbose>1 || fEntry%(fNEntries/100)==0 )
+  std::cout << " SBSSimFile::ReadEvent() -> fEntry = " 
+	    << fEntry << " / " << fNEntries
+	    << std::endl;
   if( fEntry >= fNEntries )
     return EOF;
 
