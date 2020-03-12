@@ -1,0 +1,123 @@
+## This file is no longer in use! Use the db_sbssim_cratemap.dat
+## in the SBS-offline repository instead!!
+
+
+# -*- mode: Text -*-
+#
+# Crate map for SBS simulation input (see TSBSSimDecoder).
+# Hardware models emulates the APV25 VME readout module.
+# header and mask are not needed for simulation data.
+# nchan must match CHAN_PER_SLOT in TSBSSimDecoder.cxx. 
+# ndata = number_of_samples * nchan => OK
+#
+
+==== Crate  2 type fastbus
+# ADC (+TDCs) for BBPS, BBSH
+# slot model clear header mask       nchan ndata
+   15    1881  1 0x00000000 0x00000000 64     64
+   16    1881  1 0x00000000 0x00000000 64     64
+   17    1881  1 0x00000000 0x00000000 64     64
+   18    1881  1 0x00000000 0x00000000 64     64
+   19    1881  1 0x00000000 0x00000000 64     64
+#   5    1881  1 0x00000000 0x00000000 64     64
+#   6    1877  1 0x00000000 0x00000000 96    960
+
+==== Crate  5 type vme
+# TDCs for BBTH (+ADCs for )
+# slot model clear header mask       nchan ndata
+   0    1190  1 0x00000000 0x00000000 128 12800
+   1    1190  1 0x00000000 0x00000000 128 12800
+   2     792  1 0x00000000 0x00000000  32    32
+   3     792  1 0x00000000 0x00000000  32    32 
+# QDC for GRINCH/Hodoscope ADC/TOT calibration
+
+==== Crate  6 type vme
+# TDCs for GRINCH (VETROC) - still stuck with something that is not VETROC
+# slot model clear header mask     nchan ndata
+   0    1190  1 0x00000000 0x00000000 128 12800
+   1    1190  1 0x00000000 0x00000000 128 12800
+   2    1190  1 0x00000000 0x00000000 128 12800
+   3    1190  1 0x00000000 0x00000000 128 12800
+   4     792  1 0x00000000 0x00000000  32    32
+   5     792  1 0x00000000 0x00000000  32    32 
+
+==== Crate  8 type fastbus
+# TDC for CDet: similar to 
+# slot model clear header mask       nchan ndata
+   0    1877  1 0x00000000 0x00000000 96   960
+   1    1877  1 0x00000000 0x00000000 96   960
+   2    1877  1 0x00000000 0x00000000 96   960
+   3    1877  1 0x00000000 0x00000000 96   960
+   4    1877  1 0x00000000 0x00000000 96   960
+   5    1877  1 0x00000000 0x00000000 96   960
+   6    1877  1 0x00000000 0x00000000 96   960
+   7    1877  1 0x00000000 0x00000000 96   960
+   8    1877  1 0x00000000 0x00000000 96   960
+   9    1877  1 0x00000000 0x00000000 96   960
+  10    1877  1 0x00000000 0x00000000 96   960
+  11    1877  1 0x00000000 0x00000000 96   960
+  12    1877  1 0x00000000 0x00000000 96   960
+  13    1877  1 0x00000000 0x00000000 96   960
+  14    1877  1 0x00000000 0x00000000 96   960
+  15    1877  1 0x00000000 0x00000000 96   960
+  16    1877  1 0x00000000 0x00000000 96   960
+  17    1877  1 0x00000000 0x00000000 96   960
+  18    1877  1 0x00000000 0x00000000 96   960
+  19    1877  1 0x00000000 0x00000000 96   960
+
+## Crate map for PS/SH
+==== Crate  9 type fastbus
+   0    1877  1 0x00000000 0x00000000 96   960
+   1    1877  1 0x00000000 0x00000000 96   960
+   2    1877  1 0x00000000 0x00000000 96   960
+   3    1877  1 0x00000000 0x00000000 96   960
+   4    1877  1 0x00000000 0x00000000 96   960
+# one extra for BB PS/SH
+
+==== Crate 16 type vme
+## slot model bank
+## This is only an example. Presently the first 12 crates
+## match the test setup Marco has for developing the HCAL trigger
+   4   50250  1 0x00000000 0x00000000 16 20000
+   5   50250  1 0x00000000 0x00000000 16 20000
+   6   50250  1 0x00000000 0x00000000 16 20000
+   7   50250  1 0x00000000 0x00000000 16 20000
+   8   50250  1 0x00000000 0x00000000 16 20000
+   9   50250  1 0x00000000 0x00000000 16 20000
+  10   50250  1 0x00000000 0x00000000 16 20000
+  13   50250  1 0x00000000 0x00000000 16 20000
+  14   50250  1 0x00000000 0x00000000 16 20000
+  15   50250  1 0x00000000 0x00000000 16 20000
+  16   50250  1 0x00000000 0x00000000 16 20000
+  17   50250  1 0x00000000 0x00000000 16 20000
+## These are also just guesses. Marco has an F1 TDC in slot 20
+## TODO: Change these values to match reality once we have
+##       a crate with TDCs.
+##  18    3204  20 # 0x00000000 0x00000000 16 20000
+##  19    3204  20 # 0x00000000 0x00000000 16 20000
+##  20    3204  20 # 0x00000000 0x00000000 16 20000
+
+## Just an example, but presently doees not match
+## any existing DAQ setup.
+## TODO: Update these values once a second HCAL crate is setup
+==== Crate 3 type vme
+   4   50250  1 0x00000000 0x00000000 16 20000
+   5   50250  1 0x00000000 0x00000000 16 20000
+   6   50250  1 0x00000000 0x00000000 16 20000
+   7   50250  1 0x00000000 0x00000000 16 20000
+   8   50250  1 0x00000000 0x00000000 16 20000
+   9   50250  1 0x00000000 0x00000000 16 20000
+==== Crate 4 type vme
+## Just for this digitization example, I'm going to toss
+## the TDCs in with the mix. But again, they match no reality
+   4   53204  20 # 0x00000000 0x00000000 16 20000
+   5   53204  20 # 0x00000000 0x00000000 16 20000
+   6   53204  20 # 0x00000000 0x00000000 16 20000
+   7   53204  20 # 0x00000000 0x00000000 16 20000
+   8   53204  20 # 0x00000000 0x00000000 16 20000
+   9   53204  20 # 0x00000000 0x00000000 16 20000
+  10   53204  20 # 0x00000000 0x00000000 16 20000
+  13   53204  20 # 0x00000000 0x00000000 16 20000
+  14   53204  20 # 0x00000000 0x00000000 16 20000
+
+#   4 250 3
