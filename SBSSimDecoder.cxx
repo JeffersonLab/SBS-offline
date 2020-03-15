@@ -210,15 +210,20 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   // Now call LoadSlot for the different detectors
   for(size_t d = 0; d < fDetectors.size(); d++) {
+    if(fDebug>2)cout << " " << fDetectors[d] << endl;
     for( std::map<Decoder::THaSlotData*, std::vector<UInt_t> >::iterator it =
 	   detmaps[d].begin(); it != detmaps[d].end(); ++it) {
       if(it->first->GetModule()==0) {
         if(fDebug>0) {
-          std::cout << "No data available for detector "
-            << fDetectors[d] << std::endl;
+	  std::cout << "No data available for detector "
+		    << fDetectors[d] << std::endl;
         }
       } else {
-	if(fDebug>2)std::cout << "load slot" << std::endl;
+	if(fDebug>2){
+	  std::cout << "load slot: it->second = {";
+	  for(size_t k = 0; k<it->second.size(); k++)std::cout << it->second[k] << " ; ";
+	  std::cout << " } " << std::endl;
+	}
         it->first->GetModule()->LoadSlot(it->first,
 					 it->second.data(),0,it->second.size() );
       }
@@ -252,6 +257,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   const std::string detname, 
 				   SBSDigSim::UHitData_t* HitData_Det)
 {
+  if(fDebug>1)std::cout << "SBSSimDecoder::LoadDectector(" << detname << ")" << std::endl;
   //int detid = detinfo.DetUniqueId();
   Int_t crate, slot;
   unsigned int nwords = 0;
@@ -268,6 +274,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     //Decode header first
     lchan = 0;
     if(HitData_Det->chan->at(j)<0){
+      if(fDebug>2)
+	std::cout << "j = " << j << " header = " << HitData_Det->dataword->at(j) << std::endl;
       SBSSimDataEncoder::DecodeHeader(HitData_Det->dataword->at(j),
 				       data_type,chan_mult,nwords);
       
@@ -282,13 +290,16 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 
       if(nwords>0)j++;
     }
-
+    if(fDebug>2)
+      std::cout << "j = " << j << " det chan = " << HitData_Det->chan->at(j) << std::endl;
     //channel should *not* be negative (unless there's a problem with nwords...)
     assert(HitData_Det->chan->at(j)>=0);
     //determine crate/slot
-    lchan = (int)HitData_Det->chan->at(j);//+chan_mult*fNChan[detname];
+    lchan = (int)HitData_Det->chan->at(j)+1;//+chan_mult*fNChan[detname];
     ChanToROC(detname, lchan, crate, slot, chan);
-    
+
+    if(fDebug>2)
+      std::cout << "crate " << crate  << " slot " << slot << " chan " << chan << std::endl;
     if(detname.find("gem")!=std::string::npos){
       fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
     }
@@ -310,6 +321,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     //nowrds = n following hits*n data words for HCal, GEMs
     uint i = 0;
     while(i<nwords){
+      if(fDebug>2)
+	std::cout << " i = " << i << " j = " << j << " dataword = " << HitData_Det->dataword->at(j) << std::endl;
       if(detname.find("gem")!=std::string::npos || 
 	 detname.find("hcal")!=std::string::npos){
 	//if GEM or HCal, loop on "samples datawords" 
@@ -317,6 +330,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  // here dataword stores the number of samples datawords
 	  for(int k = 0; k<HitData_Det->dataword->at(j);k++, i++){
 	    myev->push_back( (HitData_Det->samps_datawords->at(j)).at(k) );
+	    if(fDebug>2)
+	      std::cout << " samp " << k << " dataword = " << (HitData_Det->samps_datawords->at(j)).at(k) << std::endl;
 	  }
 	}else{
 	  //if adc has dummy value , it is a HCal TDC
@@ -328,6 +343,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       i++;
       j++;
+    }
+    if(fDebug>2){
+      std::cout << " j = " << j << " my ev = {";
+      for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+      std::cout << " } " << std::endl;
     }
   }//end loop on j
 
@@ -406,14 +426,15 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   FILE* file  = THaAnalysisObject::OpenFile(fileName.c_str(), date);
   
   std::vector<int> detmap,chanmap;
-  uint nchan, chanmapstart = 0;
+  uint nchan, nlogchan = 0, chanmapstart = 0;
   
   int cps, spc, fs, fc;
   
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
+    {"nlog_chan", &nlogchan, kInt, 0, true},// <- optional
     {"detmap", &detmap, kIntV, 0, false}, //
-    {"chanmap", &chanmap, kIntV, 0, false}, //
+    {"chanmap", &chanmap, kIntV, 0, true}, // <- optional
     {"chanmap_start", &chanmapstart, kInt, 0, true}, // <- optional
     {"first_crate", &fc, kInt, 0, true},// <- optional 
     {"first_slot", &fs, kInt, 0, true},//  <- optional
@@ -425,40 +446,49 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   // Could close the common file already
   fclose(file);
   
+  if(nlogchan==0)nlogchan = nchan;
+  
   if(err)return THaAnalysisObject::kInitError;
   
   fNChanDet[detname] = nchan;
   fChanMapStartDet[detname] = chanmapstart;
-  fDetMapDet[detname] = new THaDetMap();
-  if( fDetMapDet[detname]->Fill(detmap, 0) <= 0 )
-    return THaAnalysisObject::kInitError;
-  fChanMapDet[detname].clear();
-  
-  Int_t nmodules = fDetMapDet[detname]->GetSize();
-  cout << "Set up the new channel map" << nmodules << endl;
-  assert( nmodules > 0 );
-  fChanMapDet[detname].resize(nmodules);
-  for( Int_t i=0, k=0; i < nmodules && !err; i++ ) {
-    THaDetMap::Module* module = fDetMapDet[detname]->GetModule(i);
-    Int_t nchan = module->hi - module->lo + 1;
-    cout << " nchan = " << nchan << endl;
-    if( nchan > 0 ) {
-      fChanMapDet[detname].at(i).resize(nchan);
-      for( Int_t j=0; j<nchan; ++j ) {
-	cout << " k = " << k << " " << nchan*nmodules << endl;
-	assert( k < nmodules*nchan );
-	fChanMapDet[detname].at(i).at(j) = chanmap.empty() ? k : chanmap[k]-1;
-	cout << " k = " << k << " " << nchan*nmodules << " " << chanmap[k] << " " << fChanMapDet[detname].at(i).at(j)<< endl;
-	++k;
+
+  int crate,slot,ch_lo,ch_hi, ch_count = 0, ch_map = 0;
+  for(size_t k = 0; k < detmap.size(); k+=4) {
+    crate  = detmap[k];
+    slot   = detmap[k+1];
+    ch_lo  = detmap[k+2];
+    ch_hi  = detmap[k+3];
+    if(chanmap.empty()){
+      for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
+	if(ch_count>=nlogchan){
+	  std::cout << " number of channels defined in detmap ( >= " << ch_count+ch_hi-i << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	  return THaAnalysisObject::kInitError;
+	}
+	(fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
       }
-    } else {
-      std::cerr << "SBSSimDecoder::ReadDetectorDB() No channels defined for module " 
-		<< i << std::endl;
-      fChanMapDet[detname].clear();
-      err = THaAnalysisObject::kInitError;
+    }else{
+      for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
+	if(ch_count>=nlogchan){
+	  std::cout << " number of channels defined in detmap ( >= " << ch_count+ch_hi-i << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	    return THaAnalysisObject::kInitError;
+	}
+	if(fDebug>=2)
+	  std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map] << " (+" << nchan << ") " << std::endl;
+	if(chanmap[ch_map]>=0){
+	  if(ch_count<nchan){
+	    (fInvDetMap[detname])[chanmap[ch_map]]=detchaninfo(crate, slot, i);
+	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]) << std::endl;
+	  }else{
+	    (fInvDetMap[detname])[chanmap[ch_map]+nchan]=detchaninfo(crate, slot, i);
+	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan) << std::endl;
+	  }
+	  ch_count++;
+	}
+      }
     }
   }
-    
+  
   fChansPerSlotDetMap[detname] = cps;
   fSlotsPerCrateDetMap[detname] = spc;
   fFirstSlotDetMap[detname] = fs;
@@ -479,6 +509,8 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   // the database!  See TreeSearch/dbconvert.cxx
   // In the case of GRINCH/RICH: 
   // crate = GTP; slot = VETROC; chan = PMT. (NINOs are "transparent", in a similar way to the MPDs)
+  
+  /*
   int CPS = fChansPerSlotDetMap.at(detname);
   int SPC = fSlotsPerCrateDetMap.at(detname);
   int FS = fFirstSlotDetMap.at(detname);
@@ -492,6 +524,15 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   d = div( slot, SPC );
   crate = d.quot+FC;
   slot  = d.rem+FS;
+  */
+
+  if(fDebug>3){std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << " " << std::endl;
+    std::cout << &(fInvDetMap.at(detname)).at(h_chan) << std::endl;
+  }
+  crate = ((fInvDetMap.at(detname)).at(h_chan)).crate;
+  slot = ((fInvDetMap.at(detname)).at(h_chan)).slot;
+  chan = ((fInvDetMap.at(detname)).at(h_chan)).chan;
+  
 }
 
 /*

@@ -48,6 +48,17 @@ class SBSSimDecoder : public Podd::SimDecoder {
 #else
   static Int_t GetMAXSLOT() { return MAXSLOT; }
 #endif
+
+  //Needs to be public
+  struct detchaninfo{
+    uint crate;
+    uint slot;
+    uint chan;
+  detchaninfo(int cr = 0, int sl = 0, int ch = 0) : 
+    crate(cr), slot(sl), chan(ch)
+    {}
+    virtual ~detchaninfo(){};
+  };
   
   //Utilities
   // a bit dumb, I know, but I don't know another way
@@ -95,8 +106,8 @@ protected:
   
   std::map<std::string, UInt_t> fNChanDet;
   std::map<std::string, UInt_t> fChanMapStartDet;
-  std::map<std::string, THaDetMap*> fDetMapDet;
-  std::map<std::string, std::vector< std::vector<UShort_t> > > fChanMapDet;
+  std::map<std::string, std::map<UInt_t, detchaninfo> > fInvDetMap;
+  //std::map<std::string, std::vector< std::vector<UShort_t> > > fChanMapDet;
   
   // again, probably dumb...
   std::map<std::string, uint> fChansPerSlotDetMap;
