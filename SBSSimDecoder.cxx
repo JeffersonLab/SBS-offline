@@ -68,7 +68,6 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   // Get MPD encoder for GEMs
   fEncoderMPD = dynamic_cast<SBSSimMPDEncoder*>
     (SBSSimDataEncoder::GetEncoderByName("mpd"));
-  
 }
 
 //-----------------------------------------------------------------------------
@@ -220,7 +219,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
         }
       } else {
 	if(fDebug>2){
-	  std::cout << "load slot: it->second = {";
+	  std::cout << "load crate/slot: " << it->first->getCrate() << "/" << it->first->getSlot() << " it->second = {";
 	  for(size_t k = 0; k<it->second.size(); k++)std::cout << it->second[k] << " ; ";
 	  std::cout << " } " << std::endl;
 	}
@@ -461,16 +460,16 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     ch_hi  = detmap[k+3];
     if(chanmap.empty()){
       for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
-	if(ch_count>=nlogchan){
-	  std::cout << " number of channels defined in detmap ( >= " << ch_count+ch_hi-i << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	if(ch_count>nlogchan){
+	  std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	  return THaAnalysisObject::kInitError;
 	}
 	(fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
       }
     }else{
       for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
-	if(ch_count>=nlogchan){
-	  std::cout << " number of channels defined in detmap ( >= " << ch_count+ch_hi-i << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	if(ch_count>nlogchan){
+	  std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	    return THaAnalysisObject::kInitError;
 	}
 	if(fDebug>=2)

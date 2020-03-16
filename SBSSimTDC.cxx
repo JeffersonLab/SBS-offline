@@ -87,6 +87,7 @@ namespace Decoder {
     unsigned short chan = 0, type = 0;
     UInt_t raw_buff;
     SimEncoder::tdc_data tmp_tdc_data;
+    //std::cout << "load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
     while(evbuffer < pstop) {
       // First, decode the header
       chan = type = nwords = 0;
@@ -102,8 +103,8 @@ namespace Decoder {
             << " is not a TDC!" << std::endl;
         } else if ( nwords > 0 ) {
           enc->DecodeTDC(tmp_tdc_data,evbuffer,nwords);
-          std::cerr << "Got TDC encoder for type: " << type
-            << ", name: " << enc->GetName() << std::endl;
+          //std::cerr << "Got TDC encoder for type: " << type
+	  //<< ", name: " << enc->GetName() << std::endl;
           for(size_t i = 0; i < tmp_tdc_data.time.size(); i++ ) {
             raw_buff = tmp_tdc_data.getTime(i);
             if(tmp_tdc_data.getEdge(i)) { // Trail

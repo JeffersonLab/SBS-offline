@@ -87,6 +87,7 @@ namespace Decoder {
     UInt_t raw_buff;
     bool printed = false;
     bool is_first = true;
+    //std::cout << "load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
     while(evbuffer < pstop) {
       // First, decode the header
       SBSSimDataEncoder::DecodeHeader(*evbuffer++,type,chan,nwords);
