@@ -6,8 +6,8 @@ sbs.hcal.nchan = 288
 sbs.hcal.nlog_chan = 576
 sbs.hcal.chan_per_slot = 16
 sbs.hcal.slot_per_crate = 18
-sbs.hcal.first_crate = 2
-sbs.hcal.first_slot = 4
+sbs.hcal.first_crate = 16
+sbs.hcal.first_slot = 3
 
 ## Detector map
 sbs.hcal.detmap =

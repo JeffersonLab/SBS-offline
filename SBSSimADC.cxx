@@ -112,6 +112,7 @@ namespace Decoder {
             SimEncoder::adc_data tmp_adc_data;
             enc->DecodeADC(tmp_adc_data,evbuffer,nwords);
             raw_buff = tmp_adc_data.integral;
+	    //std::cout << raw_buff << endl;
             fadc_data[chan].integral = raw_buff;
             sldat->loadData("adc",chan,raw_buff,raw_buff);
           }
