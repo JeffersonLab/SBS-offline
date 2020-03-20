@@ -669,6 +669,7 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       }
       // Get the data. If multiple hits on a channel, take the first (ADC)
       Int_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
+      
       Int_t jchan = (d->reverse) ? d->hi - chan : chan-d->lo;
       //cout << " jchan = " <<  jchan << " " << chan << " " << d->hi << " chanmap = " << fChanMap[i][jchan]<< endl;
        if( jchan<0 || jchan>d->hi ) {
@@ -681,17 +682,18 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       Int_t k = fChanMap.at(i).at(jchan);
 #endif
       //      cout << " k = " << k << " " << i << " " << jchan << endl;
-      if (k+1==999) continue; // 999 means channel is not used
-      if( k<0 || k>fNelem ) {
+      if (k<0) continue; // < 0 means channel is not used
+      if( k>fNelem ) {
 	Error( Here(here), "Bad array index: %d. Your channel map is "
 	       "invalid. Data skipped.", k );
 	continue;
       }
       
       // Copy the data and apply calibrations
-      fA[k]   = data;                   // ADC value
-      fA_p[k] = data - fPed[k];         // ADC minus ped
+      fA[k]   = (Float_t)data;                   // ADC value
+      fA_p[k] = (Float_t)data - fPed[k];         // ADC minus ped
       fA_c[k] = fA_p[k] * fGain[k];     // ADC corrected
+      //cout << "k ? " << k << " data ? " << data << " fA[k] ???" << fA[k] << endl;
       if( fA_p[k] > 0.0 )
 	fAsum_p += fA_p[k];             // Sum of ADC minus ped
       if( fA_c[k] > 0.0 )
