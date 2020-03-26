@@ -116,13 +116,15 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   if( !fi ) return kFileError;
  
   // to be inserted in the data base 
+  /*
   fiducial_zone_range = 0.05;
   cluster_distribution_sigma = 0.025;
   minimum_chi2_degree_of_freedom = 4;
   acceptable_chi2_prob = 0.01;
   clear_noise_trial_maximum_number = 5;
   epsilon = 1.;
-    
+  */
+  
   // Storage and default values for non-Double_t and non-member 
   // data from database. Note: These must be Double_t
   // Double_t debug = 0, do_resolve = false,
@@ -136,8 +138,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     const DBRequest tags[] = {
       {"detmap",       detmap,         kIntV,   0, 1},
       {"zckov_in",     &fZCkovIn,      kDouble, 0, 1},
-      {"n_radiator",   &fNradiator,    kDouble, 0, 1},
-      {"l_radiator",   &fLradiator,    kDouble, 0, 1},
+      //{"n_radiator",   &fNradiator,    kDouble, 0, 1},
+      //{"l_radiator",   &fLradiator,    kDouble, 0, 1},
       {"npmts",        &fNPMTs,        kInt,    0, 1},
       {"npmtrows",     &fNPMTrows,     kInt,    0, 1},
       {"npmtcolsmax",  &fNPMTcolsMax,  kInt,    0, 1},
@@ -181,9 +183,11 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     
     if(fDebug){
       cout << "GRINCH params: " << endl;
+      /*
       cout << "zckov_in " << fZCkovIn 
 	   << " n_radiator " << fNradiator 
 	   << " l_radiator " << fLradiator << endl;
+      */
       cout << "npmts " << fNPMTs 
 	   << " npmtrows " << fNPMTrows
 	   << " npmtcolsmax " << fNPMTcolsMax << endl;
@@ -519,6 +523,7 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
   return kOK;
 }
 
+/*
 //_____________________________________________________________________________
 //
 Double_t SBSGRINCH::Cherenkov_Angle(double mass, double momentum)  const
@@ -530,7 +535,7 @@ Double_t SBSGRINCH::Cherenkov_Angle(double mass, double momentum)  const
   return acos(sqrt(1+(mass*mass)/(momentum*momentum))/n_radiator);
 
 }
-
+*/
 //_____________________________________________________________________________
 Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 {
@@ -598,8 +603,10 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	//assuming "data" is the vetroc word...     
 	uint32_t data = evdata.GetData(d->crate,d->slot,chan,hit);
 	// NB: the VETROC words are re-added 2^31 to convert them back from int to Uint... 
+	cout << "GRINCH data " << data << endl;
+	
 	// This *should be temporary* !!!
-	data+=pow(2, 31);
+	//data+=pow(2, 31);
 	/*
 	uint32_t rawdata = evdata.GetRawData(d->crate,d->slot,chan,hit)+pow(2, 31);
 	// FIX ME next line is for testing and can be removed later on
@@ -609,10 +616,11 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	      << endl;
        	}
 	*/
+	
 	//cout << data << endl;
 	
-	DecipherVetrocWord(data, edge, channel, tdctime_raw);
-	
+	//No we don't want to do that here
+	//DecipherVetrocWord(data, edge, channel, tdctime_raw);
 	//cout << edge << " " << channel << " " << tdctime_raw << endl;
 	
 	if(channel<0)continue;
@@ -1101,6 +1109,7 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   return 0;
 }
 
+/*
 //__________________________________________________________________________
 void SBSGRINCH::DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& chan, UShort_t& time)
 {
@@ -1145,7 +1154,6 @@ void SBSGRINCH::DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& c
     time = -kBig;
   }
   
-  /*
     uint32_t TDCvetrocWord0, TDCvetrocWord1;
     TDCvetrocWord0 = TDCvetrocWord1 = 0;
     
@@ -1170,12 +1178,11 @@ void SBSGRINCH::DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& c
     
     hit.fTDC[0] = TDCvetrocWord0;
     hit.fTDC[1] = TDCvetrocWord1;
-  */
   
   
   return;
 }
-
+*/
 
 //__________________________________________________________________________
 void SBSGRINCH::DeleteClusters()
@@ -1287,9 +1294,9 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       double Xclus = theCluster->GetXcenter()*100.0;// in cm...
       double Yclus = theCluster->GetYcenter()*100.0;// in cm...
       
-      double Xtrk = theTrack->GetX(Z_CkovIn)*100.0;// in cm...
+      double Xtrk = theTrack->GetX(fZCkovIn)*100.0;// in cm...
       double dXtrk = theTrack->GetTheta()*100.0;// in cm...
-      double Ytrk = theTrack->GetY(Z_CkovIn)*100.0;// in cm...
+      double Ytrk = theTrack->GetY(fZCkovIn)*100.0;// in cm...
       
       /* 
 	 // fx0,1,2_min,max (6); fx0,1,2_p0,1_corr (6); fsigma_x (1);

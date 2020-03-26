@@ -6,7 +6,7 @@
 //
 //   Decoder for SoLID simulation data
 //
-//   Interprets event buffer from input as TSBSSimEvent objects
+//   Interprets event buffer from input as SBSSimEvent objects
 //   (containing digitized simulation data) and unpacks them into
 //   crateslot arrays for low-level decoding by detectors.
 //
@@ -153,7 +153,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   // }
   //fTree->GetEntry(GetEvNum());
   // Cast the evbuffer pointer back to exactly the event type that is present
-  // in the input file (in TSBSSimFile). The pointer-to-unsigned integer is
+  // in the input file (in SBSSimFile). The pointer-to-unsigned integer is
   // needed compatibility with the standard decoder.
   if(fDebug>2)std::cout << "Processing " << here << std::endl;
   
@@ -213,7 +213,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
     for( std::map<Decoder::THaSlotData*, std::vector<UInt_t> >::iterator it =
 	   detmaps[d].begin(); it != detmaps[d].end(); ++it) {
       if(it->first->GetModule()==0) {
-        if(fDebug>0) {
+        if(fDebug>2) {
 	  std::cout << "No data available for detector "
 		    << fDetectors[d] << std::endl;
         }
@@ -320,7 +320,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     //nowrds = n following hits*n data words for HCal, GEMs
     uint i = 0;
     while(i<nwords){
-      if(fDebug>2)
+      if(fDebug>2)// || detname.find("grinch")!=std::string::npos 
 	std::cout << " i = " << i << " j = " << j << " dataword = " << HitData_Det->dataword->at(j) << std::endl;
       if(detname.find("gem")!=std::string::npos || 
 	 detname.find("hcal")!=std::string::npos){

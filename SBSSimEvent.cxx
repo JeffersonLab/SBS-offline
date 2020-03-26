@@ -17,7 +17,7 @@ SBSSimEvent::SBSSimEvent() : digsim_tree()
 //_____________________________________________________________________________
 SBSSimEvent::SBSSimEvent(TTree* tree) : digsim_tree(tree)
 {
-  std::cout << "Initializing TSBSSimEvent" << std::endl;
+  std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
   Weight = 1;
   Clear();

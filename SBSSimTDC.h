@@ -49,7 +49,7 @@ namespace Decoder {
     };  // tdc_data_struct
 
   private:
-    static const size_t NADCCHAN = 64; // Max ADC channels
+    static const size_t NTDCCHAN = 128; // Max ADC channels
     static TypeIter_t fgThisType;
     std::vector<tdc_data_struct> tdc_data;
 

@@ -33,13 +33,13 @@ namespace Decoder {
 
   SBSSimTDC::SBSSimTDC()
   {
-    tdc_data.resize(NADCCHAN);
+    tdc_data.resize(NTDCCHAN);
   }
 
   SBSSimTDC::SBSSimTDC(Int_t crate, Int_t slot)
     : PipeliningModule(crate, slot)//EPAF: I think we need that don't we ?
   {
-    tdc_data.resize(NADCCHAN);
+    tdc_data.resize(NTDCCHAN);
     IsInit = kFALSE;
     Init();
   }
@@ -59,8 +59,8 @@ namespace Decoder {
   // Clear all data vectors
   void SBSSimTDC::ClearDataVectors() {
     // Clear all data objects
-    assert(tdc_data.size() == NADCCHAN);  // Initialization error in constructor
-    for (uint32_t i = 0; i < NADCCHAN; i++) {
+    assert(tdc_data.size() == NTDCCHAN);  // Initialization error in constructor
+    for (uint32_t i = 0; i < NTDCCHAN; i++) {
       tdc_data[i].lead_time.clear();
       tdc_data[i].trail_time.clear();
     }
@@ -92,8 +92,8 @@ namespace Decoder {
       // First, decode the header
       chan = type = nwords = 0;
       SBSSimDataEncoder::DecodeHeader(*evbuffer++,type,chan,nwords);
+      //std::cout << " nwords " << nwords << " chan " << chan << " type " << type << std::endl; 
       SBSSimDataEncoder *enc = SBSSimDataEncoder::GetEncoder(type);
-      evbuffer += nwords; // Skip ahead in the buffer
       if(!enc) {
         std::cerr << "Could not find TDC decoder of type: " << type
           << std::endl;
@@ -102,9 +102,10 @@ namespace Decoder {
           std::cerr << "Encoder " << enc->GetName() << " of type " << type
             << " is not a TDC!" << std::endl;
         } else if ( nwords > 0 ) {
-          enc->DecodeTDC(tmp_tdc_data,evbuffer,nwords);
+	  enc->DecodeTDC(tmp_tdc_data,evbuffer,nwords);
           //std::cerr << "Got TDC encoder for type: " << type
 	  //<< ", name: " << enc->GetName() << std::endl;
+	  //cout << "time array size ? " << tmp_tdc_data.time.size() << endl;
           for(size_t i = 0; i < tmp_tdc_data.time.size(); i++ ) {
             raw_buff = tmp_tdc_data.getTime(i);
             if(tmp_tdc_data.getEdge(i)) { // Trail
@@ -112,6 +113,7 @@ namespace Decoder {
             } else { // Lead
               tdc_data[chan].trail_time.push_back(raw_buff);
             }
+	    //cout << " raw_buff " << raw_buff << "; edge ? " <<  tmp_tdc_data.getEdge(i) << endl;
             // TODO: Figure out what to do with the edge information
             // I'd imagine we need to distinguish it somehow!
             sldat->loadData("tdc",chan,raw_buff,raw_buff);
@@ -119,6 +121,7 @@ namespace Decoder {
           tmp_tdc_data.time.clear(); // Clear it to prepare for next read
         }
       }
+      evbuffer += nwords; // Skip ahead in the buffer
     }
    return 0;
   }

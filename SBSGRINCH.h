@@ -79,6 +79,7 @@ protected:
 
 
   //RICH parameters from database
+  /*
   Double_t Z_CkovIn; // Z of the Cherenkov entrance window in the spectrometer
   Double_t L_RAD,l_quartz,l_gap;    //length of radiator,quartz,proxiity gap
   Double_t l_emission;              //photon emission depth in the radiator.
@@ -96,9 +97,10 @@ protected:
   // sigma of single cluster angular distribution.
   //Double_t PMTinterdist;// distance between two PMTs in a row, or between 2 rows of PMTs
 
-  Double_t fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
   Double_t fNradiator;     // radiator index of refraction;
   Double_t fLradiator;     // radiator length on central ray;
+  */
+  Double_t fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
   Int_t    fNPMTs;         // number of PMTs
   Int_t    fNPMTrows;      // number of PMT rows
   Int_t    fNPMTcolsMax;   // max number of PMT columns 
@@ -121,14 +123,15 @@ protected:
 
   Bool_t         fDoBench;         //Collect detailed timing statistics
   THaBenchmark*  fBench;           //Counters for timing statistics
-
-  void    DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& chan, UShort_t& time);
+  
+  Bool_t GetEdge(uint32_t &dataword);
+  //void    DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& chan, UShort_t& time);
   void    DeleteClusters();
   Int_t   FindClusters();
   Int_t   MatchClustersWithTracks( TClonesArray& tracks );
   Int_t   CleanClustersWithTime();
   //Int_t   ResolveClusters();
-  Double_t Cherenkov_Angle(double mass, double momentum) const;
+  //Double_t Cherenkov_Angle(double mass, double momentum) const;
 
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
@@ -137,6 +140,7 @@ private:
   
   std::map< int, std::pair< int, int > > map_chan_tdcs;
   
+  /*
   // Fix me: to insert in the data base
   Double_t minimum_chi2_degree_of_freedom; // minum number of degree of freedom
                                       // (that is clusters) on desires
@@ -145,7 +149,7 @@ private:
   Double_t acceptable_chi2_prob; // the probability a reduced chi2 is 
                                  // "acceptable"
   Double_t epsilon; // epsilon parameter in the Maximum Likeood Algorithm 
-
+  */
   ClassDef(SBSGRINCH,0)   //The Hall A RICH
 };
 
