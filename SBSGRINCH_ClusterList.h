@@ -14,7 +14,7 @@ class TClonesArray;
 #include <iostream>
 #include <stdio.h>
 
-// Data class contains the data of a single pad (of a cluster).
+// Data class contains the data of a single PMT
 // (i,j) coordinate of a pad; (x,y) coordinated of a pad; ADC value
 // and a Veto to point it cannot be a local minimum inside the cluster
 // useful to tell overlapping clusters apart). 
@@ -23,32 +23,36 @@ class TClonesArray;
 
 class SBSGRINCH_Hit : public TObject {
 
-public:
-  SBSGRINCH_Hit() 
-    : fFlag(0), fVeto(0) {}
-  SBSGRINCH_Hit( Int_t number, Int_t ADC, Int_t i, Int_t j, 
-	       Float_t x, Float_t y ) :
-    fNumber(number), fADC(ADC), fI(i), fJ(j), fX(x), fY(y), fFlag(0), 
+ public:
+ SBSGRINCH_Hit() 
+   : fFlag(0), fVeto(0) {}
+ SBSGRINCH_Hit( Int_t pmtnum, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
+		Float_t x, Float_t y ) :
+  fPMTNum(pmtnum), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), fRow(i), fCol(j), fX(x), fY(y), fFlag(0), 
     fVeto(0) {}
   virtual ~SBSGRINCH_Hit() {}
-
+  
   void       Show(FILE * fout1);
   void       Show(FILE * fout1, FILE * fout2);
-
-  Int_t      GetNumber()   const {return fNumber;}
+  
+  Int_t      GetPMTNum()   const {return fPMTNum;}
   Float_t    GetX()        const {return fX;}
   Float_t    GetY()        const {return fY;}
-  Int_t      GetI()        const {return fI;}
-  Int_t      GetJ()        const {return fJ;}
+  Int_t      GetRow()      const {return fRow;}
+  Int_t      GetCol()      const {return fCol;}
   Int_t      GetADC()      const {return fADC;}
+  Int_t      GetTDC_r()    const {return fTDC_r;}
+  Int_t      GetTDC_f()    const {return fTDC_f;}
   Int_t      GetFlag()     const {return fFlag;}
   Int_t      GetVeto()     const {return fVeto;} 
-  void       SetNumber( Int_t number ) {fNumber = number;}
+  void       SetPMTNum( Int_t pmtnum ) {fPMTNum = pmtnum;}
   void       SetX( Float_t x )         {fX = x;}
   void       SetY( Float_t y )         {fY = y;}
-  void       SetI( Int_t i )           {fI = i;}
-  void       SetJ( Int_t j )           {fJ = j;}
+  void       SetRow( Int_t i )         {fRow = i;}
+  void       SetCol( Int_t j )         {fCol = j;}
   void       SetADC( Int_t ADC )       {fADC = ADC;}
+  void       SetTDC_r( Int_t TDC_r )   {fTDC_r = TDC_r;}
+  void       SetTDC_f( Int_t TDC_f )   {fTDC_f = TDC_f;}
   void       SetFlag( Int_t Flag )     {fFlag = Flag;}
   void       SetVeto( Int_t Veto )     {fVeto = Veto;}
 
@@ -56,19 +60,93 @@ public:
   virtual Bool_t  IsSortable() const { return kTRUE; }
 
 private:
-  Int_t     fNumber;
-  Int_t     fADC;
-  Int_t     fI;
-  Int_t     fJ;
-  Float_t   fX;
-  Float_t   fY;
-  Int_t     fFlag;
-  Int_t     fVeto;
+  Int_t     fPMTNum; // Hit PMT number
+  Int_t     fTDC_r;  // Hit rise time TDC
+  Int_t     fTDC_f;  // Hit fall time TDC
+  Int_t     fADC;    // Hit ADC /!\ deduced from TDC values
+  Int_t     fRow;      // Hit row number in PMT matrix
+  Int_t     fCol;      // Hit column number in PMT matrix
+  Float_t   fX;      // Hit X position in PMT matrix
+  Float_t   fY;      // Hit Y position in PMT matrix
+  Int_t     fFlag;   // ?
+  Int_t     fVeto;   // ?
 
   ClassDef(SBSGRINCH_Hit,0)   //A hit in the RICH
 };
 
 
+// --------------------------------------------------------------
+
+// Cluster: List of Hits of elements that make up a cluster in GRINCH. 
+// Specifically, in the GRINCH, a cluster is a list of adjacent PMT hits;
+// 
+
+class SBSGRINCH_Cluster : public TObject {
+ public:
+  SBSGRINCH_Cluster();
+  SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs );
+  SBSGRINCH_Cluster& operator=( const SBSGRINCH_Cluster& rhs );
+
+  ~SBSGRINCH_Cluster() { delete fHitList; }
+  
+  void    Clear( Option_t* opt="" );
+  void    Insert( SBSGRINCH_Hit* theHit );
+  void    Remove( SBSGRINCH_Hit* theHit );
+  
+  Bool_t  IsNeighbor( const SBSGRINCH_Hit* theHit,  Float_t par);
+  
+  Int_t   GetNHits()   const { return fHitList->GetSize(); }
+  TList*  GetHitList()      { return fHitList; }
+  
+  Float_t GetXcenter() const { return fXcenter; }
+  Float_t GetYcenter() const  { return fYcenter; }
+  Float_t GetXcenter_w() const { return fXcenter_w; }
+  Float_t GetYcenter_w() const  { return fYcenter_w; }
+  Float_t GetCharge()  const     { return fCharge; }
+  
+  Float_t GetMeanRisingTime() const { return fMeanRisingTime; }
+  Float_t GetMeanFallingTime() const { return fMeanFallingTime; }
+  Float_t GetRisingTimeRMS() const    { return fRisingTimeRMS; }
+  Float_t GetFallingTimeRMS() const    { return fFallingTimeRMS; }
+
+  THaTrack* GetTrack() const            { return fTrack; }
+
+  void    SetXcenter(Float_t xcenter)    { fXcenter = xcenter; }
+  void    SetYcenter(Float_t ycenter)     { fYcenter = ycenter; }
+  void    SetXcenter_w(Float_t xcenter_w)  { fXcenter_w = xcenter_w; }
+  void    SetYcenter_w(Float_t ycenter_w)   { fYcenter_w = ycenter_w; }
+  void    SetCharge(Float_t charge)          { fCharge = charge; }
+  
+  void    SetMeanRisingTime(Float_t meanrisingtime)  { fMeanRisingTime = meanrisingtime; }
+  void    SetMeanFallingTime(Float_t meanfallingtime) { fMeanFallingTime = meanfallingtime; }
+  void    SetRisingTimeRMS(Float_t risingtimerms)      { fRisingTimeRMS = risingtimerms; }
+  void    SetFallingTimeRMS(Float_t fallingtimerms)     { fFallingTimeRMS = fallingtimerms; }
+  
+  void    SetTrack( THaTrack* track ) { fTrack = track; }
+
+  void    MergeCluster( const SBSGRINCH_Cluster& rhs );
+  
+ private:
+  TList*     fHitList;   //List of hits belonging to this cluster
+  
+  Float_t    fXcenter;   // X mean of all hits in the list
+  Float_t    fYcenter;   // Y mean of all hits in the list
+  Float_t    fXcenter_w; // Weighted X mean : (Sum of x*adc)/(sum adc) of all hits in the list
+  Float_t    fYcenter_w; // Weighted Y mean : (Sum of y*adc)/(sum adc) of all hits in the list
+  Float_t    fCharge;    // Sum of ADCs
+  
+  Float_t    fMeanRisingTime;  // Mean rising time of all hits in the list
+  Float_t    fMeanFallingTime; // Mean falling time of all hits in the list
+  Float_t    fRisingTimeRMS;   // Rising time RMS of all hits in the list
+  Float_t    fFallingTimeRMS;  // Falling time RMS of all hits in the list
+  
+  Bool_t     fTrackMatch;// true if a track can be matched to the cluster
+  THaTrack*  fTrack;     // Track best associated with this cluster
+  
+  ClassDef(SBSGRINCH_Cluster,0)  //A cluster of hits in the GRINCH
+};
+
+/*
 // --------------------------------------------------------------
 
 // ClusterElement: class of elements that make up a cluster. They are orderd
@@ -95,18 +173,18 @@ private:
 // Hits must be TObjects.
 // If you want a sorted list, just replace TList with TSortedList
 
-class SBSGRINCH_Cluster : public TObject {
+class SBSRICH_Cluster : public TObject {
 
 public:
-  SBSGRINCH_Cluster();
-  SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs );
-  SBSGRINCH_Cluster& operator=( const SBSGRINCH_Cluster& rhs );
+  SBSRICH_Cluster();
+  SBSRICH_Cluster( const SBSRICH_Cluster& rhs );
+  SBSRICH_Cluster& operator=( const SBSRICH_Cluster& rhs );
 
-  ~SBSGRINCH_Cluster() { delete fHitList; }
+  ~SBSRICH_Cluster() { delete fHitList; }
 
 
   void       Clear( Option_t* opt="" );
-  Float_t    Dist( const SBSGRINCH_Cluster* c ) const;
+  Float_t    Dist( const SBSRICH_Cluster* c ) const;
   void       Insert( SBSGRINCH_Hit* theHit );
   void       Insert( SBSGRINCH_Hit* theHit, Float_t factor);
   void       Insert_Photon(Int_t flag, Float_t angle, Int_t ResolvedFlag);
@@ -148,14 +226,14 @@ public:
   void       Setnoise_cut_success(Int_t value, Int_t ResolvedFlag);
   Int_t      FindLocalMaximumNumber();
   Int_t FindResolvedClusterElements (const SBSGRINCH_Hit* localMaximum,
-				     SBSGRINCH_Cluster* resolvedCluster,
+				     SBSRICH_Cluster* resolvedCluster,
 				     TClonesArray* resolvedHits );
   Float_t    GetTheta_photon() const         { return fTheta_photon; }
   Float_t    GetPhi_photon() const           { return fPhi_photon; }
   Float_t    GetAngle()   const              { return fAngle; }
   THaTrack*  GetTrack()   const              { return fTrack; }
   void       MakeMIP( Bool_t flag = kTRUE );
-  void       SetMIP( SBSGRINCH_Cluster* mip )  { fMIP = mip; }
+  void       SetMIP( SBSRICH_Cluster* mip )  { fMIP = mip; }
   void       SetFictious_MIP_Flag(Int_t value) { fFictious_Mip_Flag = value; }
   void       SetTheta_photon ( Float_t Theta_photon) 
     { fTheta_photon = Theta_photon; }
@@ -272,7 +350,7 @@ private:
   Float_t fPhi_photon;   // Phi angle in the RICH system of the photon 
                          // associated with the cluster.
   Float_t    fAngle;     //Calculated angle wrt particle ray (not used yet)
-  SBSGRINCH_Cluster* fMIP; //Pointer to MIP cluster belonging to this cluster
+  SBSRICH_Cluster* fMIP; //Pointer to MIP cluster belonging to this cluster
   THaTrack*  fTrack;     //Track associated with this cluster (only for MIPs)
   Int_t N_Photon[3];     //Only for MIPs; number of clusters whose angles 
                          // with respect to the MIP considered are in the 
@@ -399,14 +477,14 @@ private:
                                             // MaximumLikelihood_Photon for 
                                             // resolved clusters.
 
-  ClassDef(SBSGRINCH_Cluster,0)  //A cluster of hits in the RICH
+  ClassDef(SBSRICH_Cluster,0)  //A cluster of hits in the RICH
 };
-
+*/
 
 // ---------------- inlines -------------------------------------
-
+/*
 inline
-void SBSGRINCH_Cluster::MakeMIP( Bool_t flag )
+void SBSRICH_Cluster::MakeMIP( Bool_t flag )
 {
   fMIPflag = flag;
   if( flag )
@@ -414,7 +492,7 @@ void SBSGRINCH_Cluster::MakeMIP( Bool_t flag )
   else
     fMIP = NULL;
 }
-
+*/
 #endif
 
 

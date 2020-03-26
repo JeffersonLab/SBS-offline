@@ -13,6 +13,8 @@
 #include "SBSGRINCH_ClusterList.h"
 #include "TBits.h"
 #include "TClonesArray.h"
+#include <stdint.h>
+#include <map>
 
 class THaTrack;
 class THaBenchmark;
@@ -22,6 +24,7 @@ const double m_el = 0.5110034e-3; // electron mas in GeV
 // const double m_pi = 0.5110034e-3; // FC: NOT TRUE, JUST FOR TESTING!
 const double m_ka = 493.677e-3;   // kaon mass in GeV
 const double m_pr = 938.272e-3;   // proton mass in GeV
+static const Float_t kBig = 1e38;
 
 class SBSGRINCH : public THaPidDetector {
   
@@ -36,35 +39,29 @@ public:
   virtual Int_t        CoarseProcess( TClonesArray& tracks );
   virtual Int_t        FineProcess( TClonesArray& tracks );
 
-  void                 ReadBadPads(Char_t* infilename);
-  Int_t                ReadData( FILE *infile );
   SBSGRINCH_Hit*         GetHit(Int_t i) const 
     { return (SBSGRINCH_Hit*)fHits->At(i); }
-  SBSGRINCH_Hit*         GetResolvedHit(Int_t i) const 
-    { return (SBSGRINCH_Hit*)fResolvedHits->At(i); }
+  /* SBSGRINCH_Hit*         GetResolvedHit(Int_t i) const  */
+  /*   { return (SBSGRINCH_Hit*)fResolvedHits->At(i); } */
   SBSGRINCH_Cluster*     GetCluster(Int_t i) const 
     { return (SBSGRINCH_Cluster*)fClusters->At(i); }
-  SBSGRINCH_Cluster*     GetResolvedCluster(Int_t i) const 
-    { return (SBSGRINCH_Cluster*)fResolvedClusters->At(i); }
+  /* SBSGRINCH_Cluster*     GetResolvedCluster(Int_t i) const  */
+  /*   { return (SBSGRINCH_Cluster*)fResolvedClusters->At(i); } */
   Int_t                GetNumHits() const 
     { return fHits->GetLast()+1; }
   Int_t                GetNumClusters() const 
     { return fClusters->GetLast()+1; }
-  Int_t                GetNumResolvedHits() const 
-    { return fResolvedHits->GetLast()+1; }
-  Int_t                GetNumResolvedClusters() const 
-    { return fResolvedClusters->GetLast()+1; }
-
+  /* Int_t                GetNumResolvedHits() const  */
+  /*   { return fResolvedHits->GetLast()+1; } */
+  /* Int_t                GetNumResolvedClusters() const  */
+  /*   { return fResolvedClusters->GetLast()+1; } */
+  
   // FIX ME the latter ones return non sense if decode has not been processed
 
   //  Int_t                GetTIRDat() const { return fTIRDat; }
   Int_t                GetMaxNumHits() const { return fMaxNumHits; }
   void                 SetMaxNumHits( Int_t MaxNumHit ) 
     { fMaxNumHits=MaxNumHit; }
-
-  void                 SetMIPArea(Double_t xmin, Double_t xmax, 
-				  Double_t ymin, Double_t ymax) 
-  {fMaxxMIP=xmax; fMinxMIP=xmin; fMaxyMIP=ymax; fMinyMIP=ymin;}
   void                 EnableClusterResolving( Bool_t flag = kTRUE )
   { fDoResolve = flag; }
   void                 EnableBenchmarks( Bool_t b = kTRUE )
@@ -73,125 +70,73 @@ public:
 
 protected:
 
-  Int_t             fNypads;  // Number of pads along y (transverse)
+  //Int_t             fNypads;  // Number of pads along y (transverse)
 
   TClonesArray*     fHits;          // Array of hits for each event
   TClonesArray*     fClusters;      // Clusters of hits
-  TClonesArray*     fResolvedHits;  // Hits of resolved clusters
-  TClonesArray*     fResolvedClusters; // Resolved clusters
+  /* TClonesArray*     fResolvedHits;  // Hits of resolved clusters */
+  /* TClonesArray*     fResolvedClusters; // Resolved clusters */
 
-  SBSGRINCH_Cluster** fMIPs;          //MIP clusters for each track
-  SBSGRINCH_Cluster   fMIP;           //MIP cluster of the Golden Track
 
   //RICH parameters from database
+  Double_t Z_CkovIn; // Z of the Cherenkov entrance window in the spectrometer
   Double_t L_RAD,l_quartz,l_gap;    //length of radiator,quartz,proxiity gap
   Double_t l_emission;              //photon emission depth in the radiator.
-  Double_t n_radiator,n_quartz,n_gap; //the refraction indices 
-  Double_t n_quartz_min, n_quartz_max; 
-  // Minimum and maximun refraction index value for the quartz in the range 
+  Double_t n_radiator,n_quartz,n_gap; //the refraction indices
+  Double_t n_quartz_min, n_quartz_max;
+  // Minimum and maximun refraction index value for the quartz in the range
   // of Cherenkov photon energy the PMT are sensible at.
-  Double_t n_radiator_min, n_radiator_max; 
-  // Minimum and maximun refraxion index value for the radiator in the range 
+  Double_t n_radiator_min, n_radiator_max;
+  // Minimum and maximun refraxion index value for the radiator in the range
   // of Cherenkov photon energy the PMT are sensible at.
-  Double_t fiducial_zone_range; 
-  // angular range of the fiducial zone around the expected angle for each 
+  Double_t fiducial_zone_range;
+  // angular range of the fiducial zone around the expected angle for each
   // kind of particle
   Double_t cluster_distribution_sigma;
   // sigma of single cluster angular distribution.
+  //Double_t PMTinterdist;// distance between two PMTs in a row, or between 2 rows of PMTs
 
-  Double_t PAD_SIZE_X;              //dimension of a pad (mm). 
-  Double_t PAD_SIZE_Y;              //dimension of a pad (mm).
-  Double_t fMaxdist2;               // Search radius for MIP finding
-  Double_t fMaxxMIP,fMinxMIP,fMaxyMIP,fMinyMIP;
-                                   // Window, where the MIP is allowed to be
-                                   // FIX ME one should use a cut instead
-  Int_t fMIP_through_interception;
-                                  // flag that set the MIP search algorithm 
-                                  // for each event:
-                                  // MIP_through_interception = 3   
-                                  //            the MIP will be always 
-                                  //            the interception between 
-                                  //            the track and the PAD 
-                                  //            Plane regardless
-                                  //            of the cluster pattern in the 
-                                  //            Pad plane 
-                                  // MIP_through_interception = 2   
-                                  //            the MIP is the maximum charge 
-                                  //            cluster inside the Mip search 
-                                  //            radius or, in case no cluster 
-                                  //            of this kind is found, 
-                                  //            is the interception between 
-                                  //            the track and the PAD plane
-                                  // MIP_through_interception = 1   
-                                  //            the MIP is the maximum 
-                                  //            charge cluster inside the Mip
-                                  //            search radius or, ONLY IN 
-                                  //            CASE THE INTERCEPTION OF THE 
-                                  //            TRACK WITH THE PAD PLANE
-                                  //            FALLS IN A NOT SENSIBLE 
-                                  //            REGION OF THE RICH (and hence
-                                  //            no MIP spot in the pad plane 
-                                  //            is supposed to exist), is the 
-                                  //            track interception on the pad 
-                                  //            plane 
-                                  // MIP_through_interception = 0   
-                                  //            the MIP is the maximum charge
-                                  //            cluster inside the Mip search
-                                  //            radius. No action is taken (and
-                                  //            hence no MIP is given) if no 
-                                  //            cluster of this kind is found
-  Int_t   fMaxNumHits;            
-
-
+  Double_t fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
+  Double_t fNradiator;     // radiator index of refraction;
+  Double_t fLradiator;     // radiator length on central ray;
+  Int_t    fNPMTs;         // number of PMTs
+  Int_t    fNPMTrows;      // number of PMT rows
+  Int_t    fNPMTcolsMax;   // max number of PMT columns 
+  Double_t fPMTmatrixHext; // horizontal extension, in m, of the PMT matrix (from lower PMT center to higher PMT center)
+  Double_t fPMTmatrixVext; // vertical extension, in m, of the PMT matrix (from left PMT center to right PMT center)
+  Double_t fPMTdistX;      // X distance between the center of 2 PMT tubes in consecutive rows, in m
+  Double_t fPMTdistY;      // Y distance between the center of 2 PMT tubes in consecutive columns, in m
+  Double_t fX_TCPMT;       // X position of the top close PMT center in the PMT matrix (transport coord)
+  Double_t fY_TCPMT;       // Y position of the top close PMT center in the PMT matrix (transport coord)
+  
+  Int_t   fMaxNumHits;
+  
   Bool_t  fDoResolve;    // true = resolve overlapping clusters
-  Int_t   fNseg;         // Number of x segments
-  Double_t* fXseg;       // Array of x segmentation boudaries and offsets
-
+  Bool_t  fDoTimeFilter; // true = filter the hits in each cluster with timing
+  /* Int_t   fNseg;         // Number of x segments */
+  /* Double_t* fXseg;       // Array of x segmentation boudaries and offsets */
+  
   Double_t fTrackX;      // x pos of Golden Track in RICH plane
   Double_t fTrackY;      // y pos of Golden Track in RICH plane
 
   Bool_t         fDoBench;         //Collect detailed timing statistics
   THaBenchmark*  fBench;           //Counters for timing statistics
 
-  void    Padn2xy(Int_t, Int_t, Double_t);
+  void    DecipherVetrocWord(uint32_t VetrocWord, Bool_t& edge, Short_t& chan, UShort_t& time);
   void    DeleteClusters();
   Int_t   FindClusters();
-  Int_t   ResolveClusters();
-  Int_t   FindMIP( const TClonesArray& tracks );
-
-
-  Double_t Get_phi_photon( Double_t x_photon, Double_t y_photon,
-			   Double_t x_mip, Double_t y_mip,
-			   Double_t theta_mip, Double_t phi_mip,
-			   Int_t Calculation_kind) const;
-
-  Double_t Get_a( Double_t theta_mip, Int_t Calculation_Kind ) const;
-
-  Double_t Get_b( Double_t x_photon, Double_t y_photon,
-		  Double_t x_mip, Double_t y_mip,
-		  Double_t theta_mip, Double_t phi_mip,
-		  Int_t Calculation_kind) const;
-
-  Double_t Get_theta_photon(Double_t x_photon, Double_t y_photon,
-			    Double_t x_mip, Double_t y_mip,
-			    Double_t theta_mip, Double_t phi_mip,
-			    Int_t Calculation_kind) const;
-
-  Double_t RecoAng( Double_t x_photon, Double_t y_photon,
-		    Double_t &theta_photon, Double_t &phi_photon, 
-		    Double_t x_mip, Double_t y_mip,
-		    Double_t theta_mip, Double_t phi_mip, 
-		    Int_t Calculation_kind) const;
-
+  Int_t   MatchClustersWithTracks( TClonesArray& tracks );
+  Int_t   CleanClustersWithTime();
+  //Int_t   ResolveClusters();
   Double_t Cherenkov_Angle(double mass, double momentum) const;
-
-  Int_t ClearNoise(Int_t igold, Int_t ResolvedFlag);
 
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
 
 private:
-
+  
+  std::map< int, std::pair< int, int > > map_chan_tdcs;
+  
   // Fix me: to insert in the data base
   Double_t minimum_chi2_degree_of_freedom; // minum number of degree of freedom
                                       // (that is clusters) on desires

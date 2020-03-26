@@ -35,12 +35,16 @@ void SBSGRINCH_Hit::Show(FILE * fout1, FILE* fout2)
 {
   // FIXME comment on fprintf(fout1...) should be changed accordingly 
   // when ntuple will be created 
-  fprintf(fout2," I, J ");
-  fprintf(fout2,"%4d,%4d",fI,fJ);
+  fprintf(fout2," PMT num ");
+  fprintf(fout2,"%4d",fPMTNum);
+  fprintf(fout2," Row, Col ");
+  fprintf(fout2,"%4d,%4d",fRow,fCol);
   fprintf(fout2," ; X, Y ");
   fprintf(fout2,"%4f,%4f",fX,fY);
   fprintf(fout2,"; fADC = ");
   fprintf(fout2,"%4d",fADC);
+  fprintf(fout2,"; fTDC_r, fTDC_f ");
+  fprintf(fout2,"%4d,%4d",fTDC_r, fTDC_f);
   fprintf(fout2,"\n");
   //  Show(fout1);
 }
@@ -49,14 +53,226 @@ void SBSGRINCH_Hit::Show(FILE * fout1)
 {
   // FIXME comment on fprintf(fout1...) should be changed accordingly 
   // when ntuple will be created
-  fprintf(fout1," %4d %4d",fI,fJ);
+  fprintf(fout1," %4d",fPMTNum);
+  fprintf(fout1," %4d %4d",fRow,fCol);
   fprintf(fout1,"% 4f %4f",fX,fY);
   fprintf(fout1," %4d \n",fADC);
+  fprintf(fout1," %4d %4d \n",fTDC_r, fTDC_f);
 }
 
 
 //=============================================================================
-SBSGRINCH_Cluster::SBSGRINCH_Cluster() :
+// SBSGRINCH_Cluster
+//=============================================================================
+
+//_____________________________________________________________________________
+SBSGRINCH_Cluster::SBSGRINCH_Cluster() : // f(0)
+  fXcenter(0), fYcenter(0),
+  fXcenter_w(0), fYcenter_w(0), fCharge(0),
+  fMeanRisingTime(0), fMeanFallingTime(0),
+  fRisingTimeRMS(0), fFallingTimeRMS(0),
+  fTrackMatch(false), fTrack(0)
+{
+  fHitList = new TList; 
+}
+
+//_____________________________________________________________________________
+SBSGRINCH_Cluster::SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs ) : // f(rhs.f)
+  fXcenter(rhs.fXcenter), fYcenter(rhs.fYcenter),
+  fXcenter_w(rhs.fXcenter_w), fYcenter_w(rhs.fYcenter_w), fCharge(rhs.fCharge), 
+  fMeanRisingTime(rhs.fMeanRisingTime), fMeanFallingTime(rhs.fMeanFallingTime),
+  fRisingTimeRMS(rhs.fRisingTimeRMS), fFallingTimeRMS(rhs.fFallingTimeRMS),
+  fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack)
+{
+  fHitList = new TList; 
+  if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+    TIter next( rhs.fHitList );
+    while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() ))
+      fHitList->AddLast(pHit);
+  }
+}
+
+//_____________________________________________________________________________
+SBSGRINCH_Cluster& SBSGRINCH_Cluster::operator=( const SBSGRINCH_Cluster& rhs ) // f = rhs.f;
+{
+  // Assignment operator
+  if( this != &rhs ) {
+    fXcenter = rhs.fXcenter;
+    fYcenter = rhs.fYcenter;
+    fXcenter_w = rhs.fXcenter_w;
+    fYcenter_w = rhs.fYcenter_w;
+    fCharge = rhs.fCharge;
+    fMeanRisingTime = rhs.fMeanRisingTime;
+    fMeanFallingTime = rhs.fMeanFallingTime;
+    fRisingTimeRMS = rhs.fRisingTimeRMS;
+    fFallingTimeRMS = rhs.fFallingTimeRMS;
+    fTrackMatch = rhs.fTrackMatch;
+    fTrack = rhs.fTrack;
+    
+    if( !fHitList )
+      fHitList = new TList;
+    else
+      fHitList->Clear("nodelete");
+    if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+      TIter next( rhs.fHitList ); 
+      while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() ))
+	fHitList->AddLast(pHit);
+    }
+  }
+  return *this;
+}
+
+//_____________________________________________________________________________
+void SBSGRINCH_Cluster::MergeCluster( const SBSGRINCH_Cluster& rhs )
+{//adds the cluster in argument to the cluster which the method is applied to 
+  if( !fHitList ) fHitList = new TList;
+  Int_t list1size = fHitList->GetSize();
+  Int_t list2size = 0;
+  
+  if(list1size==0){
+    *this = rhs;
+    //return *this;
+  }
+  
+  if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+    list2size = rhs.fHitList->GetSize();
+    TIter next( rhs.fHitList ); 
+    while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() ))
+      fHitList->AddLast(pHit);
+  }
+  
+  if(list2size==0)return;// return *this;
+  
+  fXcenter = (fXcenter*((Double_t)(list1size))+ rhs.fXcenter*((Double_t)(list2size)))/
+    ((Double_t)(list1size+list2size));
+  fYcenter = (fYcenter*((Double_t)(list1size))+ rhs.fYcenter*((Double_t)(list2size)))/
+    ((Double_t)(list1size+list2size));
+  
+  fXcenter_w = (fXcenter_w*fCharge+rhs.fXcenter_w*rhs.fCharge)/(fCharge+rhs.fCharge);
+  fYcenter_w = (fYcenter_w*fCharge+rhs.fYcenter_w*rhs.fCharge)/(fCharge+rhs.fCharge);
+  
+  fCharge += rhs.fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)list1size)+rhs.fMeanRisingTime*((Double_t)list2size))/
+    ((Double_t)(list1size+list2size));
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)list1size)+rhs.fMeanFallingTime*((Double_t)list2size))/
+    ((Double_t)(list1size+list2size));
+  
+  fRisingTimeRMS = sqrt( (pow(fRisingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fRisingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  fFallingTimeRMS = sqrt( (pow(fFallingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fFallingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  //return *this;
+}
+
+//_____________________________________________________________________________
+void SBSGRINCH_Cluster::Clear( Option_t* opt ) // f = 0;
+{
+  //Reset the cluster to an empty state.
+
+  //Don't delete the hits, just clear the internal list.
+  if( fHitList ) 
+    fHitList->Clear("nodelete");
+
+  // Full clear
+  if( opt && opt[0] == 'F' ) {
+    fXcenter = 0;
+    fYcenter = 0;
+    fXcenter_w = 0;
+    fYcenter_w = 0;
+    fCharge = 0;
+    fMeanRisingTime = 0;
+    fMeanFallingTime = 0;
+    fRisingTimeRMS = 0;
+    fFallingTimeRMS = 0;
+    fTrackMatch = false;
+    fTrack = 0;
+  } else {
+    // Fast clear for clearing TClonesArrays of clusters
+    // Needs to be deleted since a TList allocates memory
+    // FIXME: performance issue?
+    delete fHitList;
+    fHitList = 0;
+  }  
+}
+
+//_____________________________________________________________________________
+void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit )
+{
+  //Add a hit to the cluster
+    
+  if( !fHitList ) fHitList = new TList;
+  fHitList->AddLast( theHit );
+  
+  Int_t listnewsize = fHitList->GetSize();
+  fXcenter = (fXcenter*((Double_t)(listnewsize-1))+theHit->GetX())/((Double_t)listnewsize);
+  fYcenter = (fYcenter*((Double_t)(listnewsize-1))+theHit->GetY())/((Double_t)listnewsize);
+  
+  fXcenter_w = fXcenter_w*fCharge;
+  fYcenter_w = fYcenter_w*fCharge;
+  fCharge+= theHit->GetADC();
+  fXcenter_w+= theHit->GetADC()*theHit->GetX();
+  fYcenter_w+= theHit->GetADC()*theHit->GetY();
+  fXcenter_w = fXcenter_w/fCharge;
+  fYcenter_w = fYcenter_w/fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_r())/((Double_t)listnewsize);
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_f())/((Double_t)listnewsize);
+  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_r(), 2))/
+  			((Double_t)listnewsize));
+  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_f(), 2))/
+  			 ((Double_t)listnewsize));
+}
+
+//_____________________________________________________________________________
+void SBSGRINCH_Cluster::Remove( SBSGRINCH_Hit* theHit )
+{
+  
+  if( !fHitList ) return;//if list does not exist, nothing to do
+  if(fHitList->IndexOf(theHit)<0) return;//if hit not in list, nothing to do
+    
+  Int_t listnewsize = fHitList->GetSize();
+  fXcenter = (fXcenter*((Double_t)(listnewsize+1))-theHit->GetX())/((Double_t)listnewsize);
+  fYcenter = (fYcenter*((Double_t)(listnewsize+1))-theHit->GetY())/((Double_t)listnewsize);
+  
+  fXcenter_w = fXcenter_w*fCharge;
+  fYcenter_w = fYcenter_w*fCharge;
+  fCharge-= theHit->GetADC();
+  fXcenter_w-= theHit->GetADC()*theHit->GetX();
+  fYcenter_w-= theHit->GetADC()*theHit->GetY();
+  fXcenter_w = fXcenter_w/fCharge;
+  fYcenter_w = fYcenter_w/fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_r())/((Double_t)listnewsize);
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_f())/((Double_t)listnewsize);
+  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_r(), 2))/
+  			((Double_t)listnewsize));
+  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_f(), 2))/
+  			 ((Double_t)listnewsize));
+}
+
+//_____________________________________________________________________________
+Bool_t SBSGRINCH_Cluster::IsNeighbor(const SBSGRINCH_Hit* theHit, Float_t par)
+{
+  Float_t dx,dy,dist;
+  if( !fHitList ) return 0;
+  TIter next( fHitList );
+
+  while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() )) {
+    dx   = theHit->GetX() - pHit->GetX();
+    dy   = theHit->GetY() - pHit->GetY();
+    dist = sqrt( dx*dx + dy*dy );
+    if( dist<par )
+      return true;
+  }
+  return false;
+}
+
+/*
+//=============================================================================
+// SBSRICH_Cluster
+//=============================================================================
+
+//_____________________________________________________________________________
+SBSRICH_Cluster::SBSRICH_Cluster() :
   fLocalMaximumNumber(1), fMIPflag(kFALSE), fFictious_Mip_Flag(0),
   fPionChi2AnalysisFlag(kFALSE), fKaonChi2AnalysisFlag(kFALSE), 
   fProtonChi2AnalysisFlag(kFALSE), fXcenter(0.0), fYcenter(0.0), fCharge(0.0),
@@ -91,7 +307,7 @@ SBSGRINCH_Cluster::SBSGRINCH_Cluster() :
 }
 
 //_____________________________________________________________________________
-SBSGRINCH_Cluster::SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs ) :
+SBSRICH_Cluster::SBSRICH_Cluster( const SBSRICH_Cluster& rhs ) :
   fLocalMaximumNumber(rhs.fLocalMaximumNumber), fMIPflag(rhs.fMIPflag),
   fFictious_Mip_Flag(rhs.fFictious_Mip_Flag),
   fPionChi2AnalysisFlag(rhs.fPionChi2AnalysisFlag),
@@ -138,7 +354,7 @@ SBSGRINCH_Cluster::SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs ) :
 }
 
 //_____________________________________________________________________________
-SBSGRINCH_Cluster& SBSGRINCH_Cluster::operator=( const SBSGRINCH_Cluster& rhs )
+SBSRICH_Cluster& SBSRICH_Cluster::operator=( const SBSRICH_Cluster& rhs )
 {
   // Assignment operator
 
@@ -198,7 +414,7 @@ SBSGRINCH_Cluster& SBSGRINCH_Cluster::operator=( const SBSGRINCH_Cluster& rhs )
 }
 
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Clear( Option_t* opt )
+void SBSRICH_Cluster::Clear( Option_t* opt )
 {
   //Reset the cluster to an empty state.
 
@@ -257,7 +473,7 @@ void SBSGRINCH_Cluster::Clear( Option_t* opt )
 }
 
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Dist( const SBSGRINCH_Cluster* c ) const
+Float_t SBSRICH_Cluster::Dist( const SBSRICH_Cluster* c ) const
 {
   // Calculate distance of this cluster to another cluster
 
@@ -267,7 +483,7 @@ Float_t SBSGRINCH_Cluster::Dist( const SBSGRINCH_Cluster* c ) const
 }
 
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit )
+void SBSRICH_Cluster::Insert( SBSGRINCH_Hit* theHit )
 {
   //Add a hit to the cluster
 
@@ -283,7 +499,7 @@ void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit )
 }
 
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit, Float_t factor )
+void SBSRICH_Cluster::Insert( SBSGRINCH_Hit* theHit, Float_t factor )
 {
   //Add a hit to the cluster with its charge weighted by a factor.
 
@@ -299,7 +515,7 @@ void SBSGRINCH_Cluster::Insert( SBSGRINCH_Hit* theHit, Float_t factor )
 }
 
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert_Photon(Int_t flag, Float_t angle_to_add,
+void SBSRICH_Cluster::Insert_Photon(Int_t flag, Float_t angle_to_add,
 				    Int_t ResolvedFlag)
 {
   // add a photon to the MIP
@@ -326,7 +542,7 @@ void SBSGRINCH_Cluster::Insert_Photon(Int_t flag, Float_t angle_to_add,
   }
 }
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert_Photon(Int_t flag, Float_t angle_to_add,
+void SBSRICH_Cluster::Insert_Photon(Int_t flag, Float_t angle_to_add,
 				    Int_t ResolvedFlag, Float_t expected_angle,
 				    Float_t central_momentum_expected_angle)
 {
@@ -358,7 +574,7 @@ void SBSGRINCH_Cluster::Insert_Photon(Int_t flag, Float_t angle_to_add,
   }
 }
 //____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert_chi2(Int_t flag, Float_t chi2_to_add)
+void SBSRICH_Cluster::Insert_chi2(Int_t flag, Float_t chi2_to_add)
 {
   // only for simple clusters, it calculates the single contribution 
   // of a cluster to the chi square value
@@ -366,7 +582,7 @@ void SBSGRINCH_Cluster::Insert_chi2(Int_t flag, Float_t chi2_to_add)
     chi2[flag] = chi2[flag] + chi2_to_add; 
 } 
 //____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert_chi2(Int_t flag, Float_t chi2_to_add,
+void SBSRICH_Cluster::Insert_chi2(Int_t flag, Float_t chi2_to_add,
 				    Int_t ResolvedFlag)
 {
   // add a photon to the MIP for chi square calculation 
@@ -381,7 +597,7 @@ void SBSGRINCH_Cluster::Insert_chi2(Int_t flag, Float_t chi2_to_add,
   }
 }
 //____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert_chi2_corrected(Int_t flag, Float_t chi2,
+void SBSRICH_Cluster::Insert_chi2_corrected(Int_t flag, Float_t chi2,
 				    Int_t ResolvedFlag)
 {
   // add a photon to the MIP
@@ -393,7 +609,7 @@ void SBSGRINCH_Cluster::Insert_chi2_corrected(Int_t flag, Float_t chi2,
   }
 }
 //____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert_N_chi2_corrected_Photon(Int_t flag, Int_t N_Photon, Int_t ResolvedFlag)
+void SBSRICH_Cluster::Insert_N_chi2_corrected_Photon(Int_t flag, Int_t N_Photon, Int_t ResolvedFlag)
 {
   // add a photon to the MIP
 
@@ -404,7 +620,7 @@ void SBSGRINCH_Cluster::Insert_N_chi2_corrected_Photon(Int_t flag, Int_t N_Photo
   }
 }
 //____________________________________________________________________________
-void SBSGRINCH_Cluster::Insert_MaximumLikelihood(Int_t flag, 
+void SBSRICH_Cluster::Insert_MaximumLikelihood(Int_t flag, 
 					     Float_t MaximumLikelihood_to_add,
 					     Int_t ResolvedFlag)
 {
@@ -420,7 +636,7 @@ void SBSGRINCH_Cluster::Insert_MaximumLikelihood(Int_t flag,
   }
 }
 //____________________________________________________________________________
-  void SBSGRINCH_Cluster::Setchi2_prob(Int_t flag, Float_t chi2_value, 
+  void SBSRICH_Cluster::Setchi2_prob(Int_t flag, Float_t chi2_value, 
 				       Int_t N_Photon, Int_t ResolvedFlag)
 {
   // calculate chi2 probability
@@ -432,7 +648,7 @@ void SBSGRINCH_Cluster::Insert_MaximumLikelihood(Int_t flag,
   }
 }
 //____________________________________________________________________________
-  void SBSGRINCH_Cluster::Setchi2_corrected_prob(Int_t flag, Float_t chi2_value,
+  void SBSRICH_Cluster::Setchi2_corrected_prob(Int_t flag, Float_t chi2_value,
 					       Int_t N_Photon, 
 					       Int_t ResolvedFlag)
 {
@@ -445,7 +661,7 @@ void SBSGRINCH_Cluster::Insert_MaximumLikelihood(Int_t flag,
   }
 }
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Setnoise_cut_success(Int_t value, Int_t ResolvedFlag)
+void SBSRICH_Cluster::Setnoise_cut_success(Int_t value, Int_t ResolvedFlag)
 {
   if(ResolvedFlag == 0)
     {
@@ -457,7 +673,7 @@ void SBSGRINCH_Cluster::Setnoise_cut_success(Int_t value, Int_t ResolvedFlag)
     }
 }
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::SetN_Photon(Int_t i, Int_t Value, Int_t ResolvedFlag)
+void SBSRICH_Cluster::SetN_Photon(Int_t i, Int_t Value, Int_t ResolvedFlag)
 {
   if(ResolvedFlag == 0)
     {
@@ -469,7 +685,7 @@ void SBSGRINCH_Cluster::SetN_Photon(Int_t i, Int_t Value, Int_t ResolvedFlag)
     }
 }
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Setangle(Int_t i, Float_t Value, Int_t ResolvedFlag)
+void SBSRICH_Cluster::Setangle(Int_t i, Float_t Value, Int_t ResolvedFlag)
 {
   if(ResolvedFlag == 0)
     {
@@ -481,7 +697,7 @@ void SBSGRINCH_Cluster::Setangle(Int_t i, Float_t Value, Int_t ResolvedFlag)
     }
 }
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Setangle_corrected(Int_t i, Float_t Value, 
+void SBSRICH_Cluster::Setangle_corrected(Int_t i, Float_t Value, 
 					 Int_t ResolvedFlag)
 {
   if(ResolvedFlag == 0)
@@ -494,7 +710,7 @@ void SBSGRINCH_Cluster::Setangle_corrected(Int_t i, Float_t Value,
     }
 }
 //_____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::GetN_Photon(Int_t i, Int_t ResolvedFlag) const     
+Int_t SBSRICH_Cluster::GetN_Photon(Int_t i, Int_t ResolvedFlag) const     
 {
   if(ResolvedFlag == 0)
     {
@@ -506,7 +722,7 @@ Int_t SBSGRINCH_Cluster::GetN_Photon(Int_t i, Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::GetNphot_pi(Int_t ResolvedFlag) const             
+Int_t SBSRICH_Cluster::GetNphot_pi(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -518,7 +734,7 @@ Int_t SBSGRINCH_Cluster::GetNphot_pi(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::GetNphot_k(Int_t ResolvedFlag) const             
+Int_t SBSRICH_Cluster::GetNphot_k(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -530,7 +746,7 @@ Int_t SBSGRINCH_Cluster::GetNphot_k(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::GetNphot_p(Int_t ResolvedFlag) const             
+Int_t SBSRICH_Cluster::GetNphot_p(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -542,7 +758,7 @@ Int_t SBSGRINCH_Cluster::GetNphot_p(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle(Int_t i, Int_t ResolvedFlag) const       
+Float_t SBSRICH_Cluster::Getangle(Int_t i, Int_t ResolvedFlag) const       
 {
   if(ResolvedFlag == 0)
     {
@@ -554,7 +770,7 @@ Float_t SBSGRINCH_Cluster::Getangle(Int_t i, Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle_pi(Int_t ResolvedFlag) const             
+Float_t SBSRICH_Cluster::Getangle_pi(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -566,7 +782,7 @@ Float_t SBSGRINCH_Cluster::Getangle_pi(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle_k(Int_t ResolvedFlag) const             
+Float_t SBSRICH_Cluster::Getangle_k(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -578,7 +794,7 @@ Float_t SBSGRINCH_Cluster::Getangle_k(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle_p(Int_t ResolvedFlag) const             
+Float_t SBSRICH_Cluster::Getangle_p(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -590,7 +806,7 @@ Float_t SBSGRINCH_Cluster::Getangle_p(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle_corrected(Int_t i, Int_t ResolvedFlag) const       
+Float_t SBSRICH_Cluster::Getangle_corrected(Int_t i, Int_t ResolvedFlag) const       
 {
   if(ResolvedFlag == 0)
     {
@@ -602,7 +818,7 @@ Float_t SBSGRINCH_Cluster::Getangle_corrected(Int_t i, Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle_corrected_pi(Int_t ResolvedFlag) const             
+Float_t SBSRICH_Cluster::Getangle_corrected_pi(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -614,7 +830,7 @@ Float_t SBSGRINCH_Cluster::Getangle_corrected_pi(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle_corrected_k(Int_t ResolvedFlag) const             
+Float_t SBSRICH_Cluster::Getangle_corrected_k(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -626,7 +842,7 @@ Float_t SBSGRINCH_Cluster::Getangle_corrected_k(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getangle_corrected_p(Int_t ResolvedFlag) const             
+Float_t SBSRICH_Cluster::Getangle_corrected_p(Int_t ResolvedFlag) const             
 {
   if(ResolvedFlag == 0)
     {
@@ -638,7 +854,7 @@ Float_t SBSGRINCH_Cluster::Getangle_corrected_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
- Int_t SBSGRINCH_Cluster::GetN_chi2_phot_pi(Int_t ResolvedFlag) const 
+ Int_t SBSRICH_Cluster::GetN_chi2_phot_pi(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -650,7 +866,7 @@ Float_t SBSGRINCH_Cluster::Getangle_corrected_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
- Int_t SBSGRINCH_Cluster::GetN_chi2_phot_k(Int_t ResolvedFlag) const 
+ Int_t SBSRICH_Cluster::GetN_chi2_phot_k(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -662,7 +878,7 @@ Float_t SBSGRINCH_Cluster::Getangle_corrected_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
- Int_t SBSGRINCH_Cluster::GetN_chi2_phot_p(Int_t ResolvedFlag) const 
+ Int_t SBSRICH_Cluster::GetN_chi2_phot_p(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -674,7 +890,7 @@ Float_t SBSGRINCH_Cluster::Getangle_corrected_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_pi(Int_t ResolvedFlag) const
+Float_t    SBSRICH_Cluster::Getchi2_pi(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -686,7 +902,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_pi(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_k(Int_t ResolvedFlag) const
+Float_t    SBSRICH_Cluster::Getchi2_k(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -698,7 +914,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_k(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_p(Int_t ResolvedFlag) const
+Float_t    SBSRICH_Cluster::Getchi2_p(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -710,7 +926,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_prob_pi(Int_t ResolvedFlag) const
+Float_t    SBSRICH_Cluster::Getchi2_prob_pi(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -722,7 +938,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_prob_pi(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_prob_k(Int_t ResolvedFlag) const
+Float_t    SBSRICH_Cluster::Getchi2_prob_k(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -734,7 +950,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_prob_k(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_prob_p(Int_t ResolvedFlag) const
+Float_t    SBSRICH_Cluster::Getchi2_prob_p(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -746,7 +962,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_prob_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_prob(Int_t flag, Int_t ResolvedFlag) const
+Float_t    SBSRICH_Cluster::Getchi2_prob(Int_t flag, Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -758,7 +974,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_prob(Int_t flag, Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::GetN_chi2_corrected_phot_pi(Int_t ResolvedFlag) const 
+Int_t SBSRICH_Cluster::GetN_chi2_corrected_phot_pi(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -770,7 +986,7 @@ Int_t SBSGRINCH_Cluster::GetN_chi2_corrected_phot_pi(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::GetN_chi2_corrected_phot_k(Int_t ResolvedFlag) const 
+Int_t SBSRICH_Cluster::GetN_chi2_corrected_phot_k(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -782,7 +998,7 @@ Int_t SBSGRINCH_Cluster::GetN_chi2_corrected_phot_k(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::GetN_chi2_corrected_phot_p(Int_t ResolvedFlag) const
+Int_t SBSRICH_Cluster::GetN_chi2_corrected_phot_p(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -794,7 +1010,7 @@ Int_t SBSGRINCH_Cluster::GetN_chi2_corrected_phot_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getchi2_corrected_pi(Int_t ResolvedFlag) const
+Float_t SBSRICH_Cluster::Getchi2_corrected_pi(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -806,7 +1022,7 @@ Float_t SBSGRINCH_Cluster::Getchi2_corrected_pi(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getchi2_corrected_k(Int_t ResolvedFlag) const 
+Float_t SBSRICH_Cluster::Getchi2_corrected_k(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -818,7 +1034,7 @@ Float_t SBSGRINCH_Cluster::Getchi2_corrected_k(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getchi2_corrected_p(Int_t ResolvedFlag) const 
+Float_t SBSRICH_Cluster::Getchi2_corrected_p(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -830,7 +1046,7 @@ Float_t SBSGRINCH_Cluster::Getchi2_corrected_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getchi2_corrected_prob_pi(Int_t ResolvedFlag) const
+Float_t SBSRICH_Cluster::Getchi2_corrected_prob_pi(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -842,7 +1058,7 @@ Float_t SBSGRINCH_Cluster::Getchi2_corrected_prob_pi(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getchi2_corrected_prob_k(Int_t ResolvedFlag) const 
+Float_t SBSRICH_Cluster::Getchi2_corrected_prob_k(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -854,7 +1070,7 @@ Float_t SBSGRINCH_Cluster::Getchi2_corrected_prob_k(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t SBSGRINCH_Cluster::Getchi2_corrected_prob_p(Int_t ResolvedFlag) const 
+Float_t SBSRICH_Cluster::Getchi2_corrected_prob_p(Int_t ResolvedFlag) const 
 {
   if(ResolvedFlag == 0)
     {
@@ -866,7 +1082,7 @@ Float_t SBSGRINCH_Cluster::Getchi2_corrected_prob_p(Int_t ResolvedFlag) const
     }
 }
 //____________________________________________________________________________
-Float_t    SBSGRINCH_Cluster::Getchi2_corrected_prob(Int_t flag, 
+Float_t    SBSRICH_Cluster::Getchi2_corrected_prob(Int_t flag, 
 						   Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
@@ -879,7 +1095,7 @@ Float_t    SBSGRINCH_Cluster::Getchi2_corrected_prob(Int_t flag,
     }
 }
 //____________________________________________________________________________
-Int_t  SBSGRINCH_Cluster::Getnoise_cut_success(Int_t ResolvedFlag) const
+Int_t  SBSRICH_Cluster::Getnoise_cut_success(Int_t ResolvedFlag) const
 {
   if(ResolvedFlag == 0)
     {
@@ -891,7 +1107,7 @@ Int_t  SBSGRINCH_Cluster::Getnoise_cut_success(Int_t ResolvedFlag) const
     }
 }
 //_____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::Test( const SBSGRINCH_Hit* theHit, Float_t par1, 
+Int_t SBSRICH_Cluster::Test( const SBSGRINCH_Hit* theHit, Float_t par1, 
 			     Float_t par2, Float_t par3 ) const
 {
   // Check if theHit is sufficiently close to any of the hits of the
@@ -916,7 +1132,7 @@ Int_t SBSGRINCH_Cluster::Test( const SBSGRINCH_Hit* theHit, Float_t par1,
   return 0;
 }
 //_____________________________________________________________________________
-Int_t SBSGRINCH_Cluster::FindLocalMaximumNumber( )
+Int_t SBSRICH_Cluster::FindLocalMaximumNumber( )
 {
   // determine how many local maxima are in the cluster
   //
@@ -931,13 +1147,13 @@ Int_t SBSGRINCH_Cluster::FindLocalMaximumNumber( )
 
   next.Reset();
   while( SBSGRINCH_Hit* pHitSave = static_cast<SBSGRINCH_Hit*>( next() )) {
-    Int_t I_Position = pHitSave->GetI();
-    Int_t J_Position = pHitSave->GetJ();
+    Int_t I_Position = pHitSave->GetRow();
+    Int_t J_Position = pHitSave->GetCol();
 
     TIter next1( next );
     while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next1() )) {
-      Int_t intdist = TMath::Abs(I_Position - pHit->GetI()) + 
-	TMath::Abs(J_Position - pHit->GetJ());
+      Int_t intdist = TMath::Abs(I_Position - pHit->GetRow()) + 
+	TMath::Abs(J_Position - pHit->GetCol());
       if(intdist == 1) {
 	//set the flag that forbids the Hit to be a local maximum
 	if (pHit->Compare(pHitSave) == -1)
@@ -962,14 +1178,14 @@ Int_t SBSGRINCH_Cluster::FindLocalMaximumNumber( )
 	continue;
       }
       if(iteration == i) {
-	I_Position = pHit->GetI();
-	J_Position = pHit->GetJ();
+	I_Position = pHit->GetRow();
+	J_Position = pHit->GetCol();
 	pHitSave = pHit; 
 	iteration++;
 	continue;
       }
-      intdist = TMath::Abs(I_Position - pHit->GetI()) + 
-	TMath::Abs(J_Position - pHit->GetJ());
+      intdist = TMath::Abs(I_Position - pHit->GetRow()) + 
+	TMath::Abs(J_Position - pHit->GetCol());
       if(intdist == 1) {
 	//set the flag that forbids the Hit to be a local maximum
 	if (pHit->Compare(pHitSave) == -1)
@@ -992,8 +1208,8 @@ Int_t SBSGRINCH_Cluster::FindLocalMaximumNumber( )
 }
 
 //---------------------------------------------------------------------------
-Int_t SBSGRINCH_Cluster::FindResolvedClusterElements
-  ( const SBSGRINCH_Hit* theLocalMaximum, SBSGRINCH_Cluster* resolvedCluster,
+Int_t SBSRICH_Cluster::FindResolvedClusterElements
+  ( const SBSGRINCH_Hit* theLocalMaximum, SBSRICH_Cluster* resolvedCluster,
     TClonesArray* resolvedHits )
 
   // It finds the hits of a new resolved cluster from the present one. 
@@ -1034,18 +1250,18 @@ Int_t SBSGRINCH_Cluster::FindResolvedClusterElements
   SBSGRINCH_Hit* newHit = new( (*resolvedHits)[nResolvedHits++] ) 
     SBSGRINCH_Hit( *pHit );
   resolvedCluster->Insert( newHit );
-  fIRef = pHit->GetI();
-  fJRef = pHit->GetJ();
+  fIRef = pHit->GetRow();
+  fJRef = pHit->GetCol();
   ChargeofMaximum = pHit->GetADC();
 
   // take as the elements of the new clusters the elements next to the maximum.
 
   TIter next( fHitList );
   while( (pHit = static_cast<SBSGRINCH_Hit*>( next() ))) {
-    if( ( TMath::Abs(pHit->GetI() - fIRef) + 
-	  TMath::Abs(pHit->GetJ() - fJRef) ) == 1) {
-      Int_t fIofHit = pHit->GetI();
-      Int_t fJofHit = pHit->GetJ();
+    if( ( TMath::Abs(pHit->GetRow() - fIRef) + 
+	  TMath::Abs(pHit->GetCol() - fJRef) ) == 1) {
+      Int_t fIofHit = pHit->GetRow();
+      Int_t fJofHit = pHit->GetCol();
       Float_t SumofCharges = 0;
       TIter next2( fHitList );
       while( SBSGRINCH_Hit* pHit1 = static_cast<SBSGRINCH_Hit*>( next2() )) {
@@ -1053,23 +1269,23 @@ Int_t SBSGRINCH_Cluster::FindResolvedClusterElements
 	// Make the sum of the charges of the local maximum the Hit
 	// belongs to. 
 	if( (!pHit1->GetVeto()) &&
-	    ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-	      TMath::Abs(pHit1->GetJ() - fJofHit)  == 1) ) {
+	    ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+	      TMath::Abs(pHit1->GetCol() - fJofHit)  == 1) ) {
 	  SumofCharges = SumofCharges + pHit1->GetADC();
 	}
 	if( (!pHit1->GetVeto()) &&
-	    ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-	      TMath::Abs(pHit1->GetJ() - fJofHit)  == 2) ) {
+	    ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+	      TMath::Abs(pHit1->GetCol() - fJofHit)  == 2) ) {
 	  // for the posibility of more distant Hits to belong 
 	  // to a local maximum see below.  
-	  Int_t fItocheck = pHit1->GetI();
-	  Int_t fJtocheck = pHit1->GetJ();
+	  Int_t fItocheck = pHit1->GetRow();
+	  Int_t fJtocheck = pHit1->GetCol();
 	  Int_t BelongingFlag = 1;
 	  TIter next5( fHitList );
 	  while( SBSGRINCH_Hit* pHit2 = 
 		 static_cast<SBSGRINCH_Hit*>( next5() )) {
-	    if(( TMath::Abs(pHit2->GetI() - fItocheck) + 
-		 TMath::Abs(pHit2->GetJ() - fJtocheck)  == 1) 
+	    if(( TMath::Abs(pHit2->GetRow() - fItocheck) + 
+		 TMath::Abs(pHit2->GetCol() - fJtocheck)  == 1) 
 	       && (pHit->GetADC() > pHit2->GetADC()) ) {
 	      BelongingFlag = 0;
 	    }
@@ -1096,10 +1312,10 @@ Int_t SBSGRINCH_Cluster::FindResolvedClusterElements
   while( (pHit = static_cast<SBSGRINCH_Hit*>( next() ))) {
     if(!pHit->GetVeto()) continue; 
     // do not analyze local maximum 
-    if( ( TMath::Abs(pHit->GetI() - fIRef) 
-	  + TMath::Abs(pHit->GetJ() - fJRef) ) == 2) {
-      Int_t fIofHit = pHit->GetI();
-      Int_t fJofHit = pHit->GetJ();
+    if( ( TMath::Abs(pHit->GetRow() - fIRef) 
+	  + TMath::Abs(pHit->GetCol() - fJRef) ) == 2) {
+      Int_t fIofHit = pHit->GetRow();
+      Int_t fJofHit = pHit->GetCol();
       Float_t CheckedCharge = pHit->GetADC();
       Int_t ClusterFlag = 1;
       for(Int_t icheck = 0; icheck <= isaved; icheck++) {
@@ -1115,21 +1331,21 @@ Int_t SBSGRINCH_Cluster::FindResolvedClusterElements
 	TIter next4( fHitList );
 	while( SBSGRINCH_Hit* pHit1 = static_cast<SBSGRINCH_Hit*>( next4() )){
 	  if( (!pHit1->GetVeto()) &&
-	      ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-		TMath::Abs(pHit1->GetJ() - fJofHit)  == 1) ){
+	      ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+		TMath::Abs(pHit1->GetCol() - fJofHit)  == 1) ){
 	    SumofCharges = SumofCharges + pHit1->GetADC();
 	  }
 	  if( (!pHit1->GetVeto()) &&
-	      ( TMath::Abs(pHit1->GetI() - fIofHit) + 
-		TMath::Abs(pHit1->GetJ() - fJofHit)  == 2) ) {
-	    Int_t fItocheck = pHit1->GetI();
-	    Int_t fJtocheck = pHit1->GetJ();
+	      ( TMath::Abs(pHit1->GetRow() - fIofHit) + 
+		TMath::Abs(pHit1->GetCol() - fJofHit)  == 2) ) {
+	    Int_t fItocheck = pHit1->GetRow();
+	    Int_t fJtocheck = pHit1->GetCol();
 	    Int_t BelongingFlag = 1;
 	    TIter next5( fHitList );
 	    while( SBSGRINCH_Hit* pHit2 = 
 		   static_cast<SBSGRINCH_Hit*>( next5() )) {
-	      if(( TMath::Abs(pHit2->GetI() - fItocheck) + 
-		   TMath::Abs(pHit2->GetJ() - fJtocheck)  == 1) 
+	      if(( TMath::Abs(pHit2->GetRow() - fItocheck) + 
+		   TMath::Abs(pHit2->GetCol() - fJtocheck)  == 1) 
 		 && (CheckedCharge > pHit2->GetADC()) ){
 		BelongingFlag = 0;
 	      }
@@ -1164,7 +1380,7 @@ Int_t SBSGRINCH_Cluster::FindResolvedClusterElements
 }
 
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Show( FILE* fout1, FILE* fout2 ) const
+void SBSRICH_Cluster::Show( FILE* fout1, FILE* fout2 ) const
 {
   //Print info about cluster statistics and all the hits in the cluster.
 
@@ -1227,7 +1443,7 @@ void SBSGRINCH_Cluster::Show( FILE* fout1, FILE* fout2 ) const
 }
 
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::Show( FILE* fout1) const
+void SBSRICH_Cluster::Show( FILE* fout1) const
 {
   //Print info about cluster statistics and all the hits in the cluster.
 
@@ -1254,7 +1470,7 @@ void SBSGRINCH_Cluster::Show( FILE* fout1) const
 
 
 //_____________________________________________________________________________
-void SBSGRINCH_Cluster::ShowElements(FILE * fout)  const
+void SBSRICH_Cluster::ShowElements(FILE * fout)  const
 {
   fprintf(fout,"\n");
   fprintf(fout, "Cluster Number Elements ");
@@ -1269,10 +1485,12 @@ void SBSGRINCH_Cluster::ShowElements(FILE * fout)  const
   fprintf(fout,"\n");
   Show(fout);
 }
-
+*/
 
 //_____________________________________________________________________________
 
 ClassImp(SBSGRINCH_Hit)
 ClassImp(SBSGRINCH_Cluster)
+//ClassImp(SBSRICH_Cluster)
+
 
