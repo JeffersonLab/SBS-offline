@@ -150,22 +150,21 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     }
     if( !err ) {
       // Set up the new channel map
-//cout << "Set up the new channel map" << endl;
       Int_t nmodules = fDetMap->GetSize();
-cout << "Set up the new channel map" << nmodules << endl;
+      if(fDebug>=2)cout << "Set up the new channel map " << nmodules << endl;
       assert( nmodules > 0 );
-fChanMap.resize(nmodules);
+      fChanMap.resize(nmodules);
       for( Int_t i=0, k=0; i < nmodules && !err; i++ ) {
 	THaDetMap::Module* module = fDetMap->GetModule(i);
 	Int_t nchan = module->hi - module->lo + 1;
-        cout << " nchan = " << nchan << endl;
+        if(fDebug>=2)cout << " nchan = " << nchan << endl;
 	if( nchan > 0 ) {
 	  fChanMap.at(i).resize(nchan);
 	  for( Int_t j=0; j<nchan; ++j ) {
-	    cout << " k = " << k << " " << nchan*nmodules << endl;
+	    if(fDebug>=2)cout << " k = " << k << " " << nchan*nmodules << endl;
 	    assert( k < nmodules*nchan );
 	    fChanMap.at(i).at(j) = chanmap.empty() ? k : chanmap[k]-1;
-	  	    cout << " k = " << k << " " << nchan*nmodules << " " << chanmap[k] << " " << fChanMap.at(i).at(j)<< endl;
+	    if(fDebug>=2)cout << " k = " << k << " " << nchan*nmodules << " " << chanmap[k] << " " << fChanMap.at(i).at(j)<< endl;
 	    ++k;
 	  }
 	} else {

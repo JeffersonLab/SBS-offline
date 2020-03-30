@@ -110,7 +110,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   // 'date' contains the date/time of the run being analyzed.
   //
   static const char* const here = "ReadDatabase";
-
+  cout << here << endl;
   // Open the database file
   FILE* fi = OpenFile( date );
   if( !fi ) return kFileError;
@@ -136,13 +136,13 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     detmap = new vector<Int_t>;
     // Set up a table of tags to read and locations to store values.
     const DBRequest tags[] = {
-      {"detmap",       detmap,         kIntV,   0, 1},
-      {"zckov_in",     &fZCkovIn,      kDouble, 0, 1},
+      {"detmap",       detmap,         kIntV,   0, false },
+      {"zpos",     &fZCkovIn,      kDouble, 0, false },
       //{"n_radiator",   &fNradiator,    kDouble, 0, 1},
       //{"l_radiator",   &fLradiator,    kDouble, 0, 1},
-      {"npmts",        &fNPMTs,        kInt,    0, 1},
-      {"npmtrows",     &fNPMTrows,     kInt,    0, 1},
-      {"npmtcolsmax",  &fNPMTcolsMax,  kInt,    0, 1},
+      {"nchan",        &fNPMTs,        kInt,    0, false },
+      {"nrows",        &fNPMTrows,     kInt,    0, false },
+      {"ncols",        &fNPMTcolsMax,  kInt,    0, false },
       {"pmtdistx",     &fPMTdistX,     kDouble, 0, 1},
       {"pmtdisty",     &fPMTdistY,     kDouble, 0, 1},
       {"x_tcpmt",      &fX_TCPMT,      kDouble, 0, 1},
@@ -183,9 +183,9 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     
     if(fDebug){
       cout << "GRINCH params: " << endl;
-      /*
-      cout << "zckov_in " << fZCkovIn 
-	   << " n_radiator " << fNradiator 
+
+      cout << "zpos_front " << fZCkovIn  << endl;
+      /*	   << " n_radiator " << fNradiator 
 	   << " l_radiator " << fLradiator << endl;
       */
       cout << "npmts " << fNPMTs 
@@ -206,7 +206,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     }
     
     UInt_t flags = 0;//THaDetMap::kFillPlane;//TestBit(kHaveRefChans) ? THaDetMap::kFillRefChan : 0;
-    cout<<"asd################asda"<<flags<<endl;
+    //cout<<"asd################asda"<<flags<<endl;
     // Parse the detector map of the data channels
     if( FillDetMap( *detmap, flags, here ) <= 0 )
       return kInitError;
@@ -221,6 +221,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   }
   
   fMaxNumHits = fNPMTs*10;
+  
+  cout << "Max num hits  = " << fMaxNumHits << ", nPMTs  = " << fNPMTs << endl;
   
   //initialize channel map here:
   int a = pow(2, 31), b = a-1;
@@ -587,6 +589,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
       if( GetNumHits()+nhit > fMaxNumHits ) {
 	Warning("Decode", "Too many hits! Should never ever happen! "
 		"Event skipped.");
+	cout << "(fMaxNumHits = " << fMaxNumHits << ")" << endl;
 	fHits->Clear();
 	if( fDoBench ) fBench->Stop("Decode");
 	return -2;
@@ -603,7 +606,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	//assuming "data" is the vetroc word...     
 	uint32_t data = evdata.GetData(d->crate,d->slot,chan,hit);
 	// NB: the VETROC words are re-added 2^31 to convert them back from int to Uint... 
-	cout << "GRINCH data " << data << endl;
+	if(fDebug)cout << "GRINCH data " << data << endl;
 	
 	// This *should be temporary* !!!
 	//data+=pow(2, 31);
@@ -623,25 +626,27 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	//DecipherVetrocWord(data, edge, channel, tdctime_raw);
 	//cout << edge << " " << channel << " " << tdctime_raw << endl;
 	
-	if(channel<0)continue;
+	//if(channel<0)continue;
 	// a priori, the channel in the vetroc word and the channel must be equal at this point
-	assert(chan==channel);
+	//assert(chan==channel);
 	
 	// then I add the slot (VETROC) number * 128 
 	// => unique channel (NB: 4 VETROC for GRINCH, 16 VETROC for RICH ?)
-	channel+= d->slot*128;
+	channel = chan+d->slot*128;
 
 	if(fDebug)
 	  cout << "hit " << hit << ": channel " << channel << " edge " << edge 
-	       << ":  => " << map_chan_tdcs[channel].first << " <=? time " << tdctime_raw 
+	       << ":  => " << map_chan_tdcs[channel].first << " <=? time " << data 
 	       << " <=? " << map_chan_tdcs[channel].second << endl;
 	
-	if(edge==0 && tdctime_raw<map_chan_tdcs[channel].second){
-	  map_chan_tdcs[channel].first = tdctime_raw;
+	edge = hit%2;//DUMB!!! but I do it for the time being
+	if(edge==0 && data<map_chan_tdcs[channel].second){
+	  map_chan_tdcs[channel].first = data;
 	}
-	if(edge==1 && tdctime_raw>map_chan_tdcs[channel].first){
-	  map_chan_tdcs[channel].second = tdctime_raw;
+	if(edge==1 && data>map_chan_tdcs[channel].first){
+	  map_chan_tdcs[channel].second = data;
 	}
+	
       }
     }
   }
@@ -649,7 +654,10 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   for(int channel = 0; channel<fNPMTs; channel++){
     //fill fHits !!!
     //only if both egdes have been initialized and the falling edge is above the rising edge
+    //
+    
     if(map_chan_tdcs[channel].first>=0 && map_chan_tdcs[channel].second>=map_chan_tdcs[channel].first){
+      if(fDebug)cout << "channel: " << map_chan_tdcs[channel].first << " " << map_chan_tdcs[channel].second << endl;
       if(col0_ismaxsize){
 	col_ismaxsize = true;
       }else{
@@ -1216,7 +1224,7 @@ Int_t SBSGRINCH::FindClusters()
   SBSGRINCH_Hit* theHit;
   SBSGRINCH_Cluster* theCluster;
   Int_t nHits  = GetNumHits();
-  Int_t nClust = 0;
+  Int_t nClust = GetNumClusters();
   Int_t hit_1stclusmatch;
   
   //loop on hits
@@ -1230,6 +1238,7 @@ Int_t SBSGRINCH::FindClusters()
       // we loop on *all* existing clusters to check which of them the hit can already be associated to.
       for(int i_cl = 0; i_cl<nClust; i_cl++){
 	theCluster = GetCluster(i_cl);
+	//cout << " i_cl " << i_cl << " <? nClust " << nClust << " => theCluster ? " << theCluster << endl;
 	if(theCluster->IsNeighbor(theHit, par)){
 	  if(theHit->GetFlag() == 0){
 	    // if it is the first cluster the hit may be associated to,
@@ -1245,7 +1254,11 @@ Int_t SBSGRINCH::FindClusters()
 	    refCluster->MergeCluster(*theCluster);
 	    // theCluster->AddCluster(GetCluster(hit_1stclusmatch));
 	    theCluster->Clear("F");
+	    //cout << "i_cl " << i_cl << " fClusters->At(i_cl) ? " << fClusters->At(i_cl) << endl;
 	    fClusters->RemoveAt(i_cl);
+	    fClusters->Compress();
+	    //cout << "i_cl " << i_cl << " fClusters->At(i_cl) ? " << fClusters->At(i_cl) << endl;
+	    //i_cl--;//??
 	    nClust--;
 	  }
 	}

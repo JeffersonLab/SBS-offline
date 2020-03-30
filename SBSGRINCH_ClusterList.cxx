@@ -73,7 +73,7 @@ SBSGRINCH_Cluster::SBSGRINCH_Cluster() : // f(0)
   fRisingTimeRMS(0), fFallingTimeRMS(0),
   fTrackMatch(false), fTrack(0)
 {
-  fHitList = new TList; 
+  fHitList = new TList(); 
 }
 
 //_____________________________________________________________________________
@@ -84,7 +84,7 @@ SBSGRINCH_Cluster::SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs ) : // f(rhs.
   fRisingTimeRMS(rhs.fRisingTimeRMS), fFallingTimeRMS(rhs.fFallingTimeRMS),
   fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack)
 {
-  fHitList = new TList; 
+  fHitList = new TList();
   if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
     TIter next( rhs.fHitList );
     while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() ))
@@ -252,16 +252,29 @@ void SBSGRINCH_Cluster::Remove( SBSGRINCH_Hit* theHit )
 //_____________________________________________________________________________
 Bool_t SBSGRINCH_Cluster::IsNeighbor(const SBSGRINCH_Hit* theHit, Float_t par)
 {
-  Float_t dx,dy,dist;
-  if( !fHitList ) return 0;
+  //cout << "SBSGRINCH_Cluster::IsNeighbor: " << endl;
+  //cout << fHitList << endl;
+  Float_t dx,dy,dist2;
+  if( !fHitList )//{
+    return 0;
+  //}else{cout << " size ? " << fHitList->GetLast()+1 << endl;}
   TIter next( fHitList );
 
+  //if(theHit){
+  //cout << " theHit pos " << theHit->GetX() << " " << theHit->GetY() << endl;
+  //}else{cout << "SBSGRINCH_Cluster::IsNeighbor : theHit is 0" << endl; }
   while( SBSGRINCH_Hit* pHit = static_cast<SBSGRINCH_Hit*>( next() )) {
-    dx   = theHit->GetX() - pHit->GetX();
-    dy   = theHit->GetY() - pHit->GetY();
-    dist = sqrt( dx*dx + dy*dy );
-    if( dist<par )
-      return true;
+    if(pHit){
+      //cout << " pHit pos: " <<endl;
+      //cout << pHit->GetX() << endl; 
+      dx   = theHit->GetX() - pHit->GetX();
+      //cout<< " " << pHit->GetY() << endl;
+      dy   = theHit->GetY() - pHit->GetY();
+      dist2 = dx*dx + dy*dy;
+      assert(dist2>=0);
+      if( sqrt(dist2)<par )
+	return true;
+    }
   }
   return false;
 }
