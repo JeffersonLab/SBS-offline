@@ -4,10 +4,10 @@ sbs.hcal.unique_id = 0
 
 sbs.hcal.nchan = 288
 sbs.hcal.nlog_chan = 576
-sbs.hcal.chan_per_slot = 16
-sbs.hcal.slot_per_crate = 18
-sbs.hcal.first_crate = 16
-sbs.hcal.first_slot = 3
+#sbs.hcal.chan_per_slot = 16
+#sbs.hcal.slot_per_crate = 18
+#sbs.hcal.first_crate = 16
+#sbs.hcal.first_slot = 3
 
 ## Detector map
 sbs.hcal.detmap =
@@ -79,10 +79,7 @@ sbs.hcal.chanmap =  ## The number entered here is the module-number (1-288)
 
 sbs.hcal.chanmap_start = 1
 
-sbs.hcal.nrows = 24
-sbs.hcal.ncols = 12
-
-## Positions in [m] where +z is roated by sbs.theta
+## Positions in [m] where +z is rotated by sbs.theta
 sbs.hcal.position = 0 0 17.77785
 
 ## HCal is composed of 4 sub-assemblies each of 6x12 (row,col) modules
@@ -95,52 +92,52 @@ sbs.hcal.xyz    =  0.85217 1.82563 0.0
 #sbs.hcal.dxdydz  =  0.00254  0.00254 0.0
 sbs.hcal.dxdydz  =  0.15494 0.15875 0.00000
 
+#hcal geometry
+sbs.hcal.nrows = 24
+sbs.hcal.ncols = 12
+sbs.hcal.xsize = 3.6576 #m
+sbs.hcal.ysize = 1.8288 #m
+sbs.hcal.zpos = 17.00 #m
+sbs.hcal.xoffset = -0.45 #m  #in transport coordinates
+sbs.hcal.yoffset = 0.0 #m  #in transport coordinates
+
 ## Cluster information
 ## Mininum energy  for a cluster
 sbs.hcal.emin  = 1.0
 sbs.hcal.cluster_dim = 4 ## 4x4 cluster
 
-#hcal geometry
-geo.sbs.hcal.nrows = 24
-geo.sbs.hcal.ncols = 12
-geo.sbs.hcal.xsize = 3.6576 #m
-geo.sbs.hcal.ysize = 1.8288 #m
-geo.sbs.hcal.zpos = 17.00 #m
-geo.sbs.hcal.xoffset = -0.45 #m  #in transport coordinates
-geo.sbs.hcal.yoffset = 0.0 #m  #in transport coordinates
-
 #hcal digitization info
-dig.sbs.hcal.roimpedance = 50 # ohm
-dig.sbs.hcal.adcconv = 1 # ohm
-dig.sbs.hcal.adc_encoder = fadc250
-dig.sbs.hcal.tdc_encoder = f1tdc
-dig.sbs.hcal.adcbits = 12 ## I think they are 12-bit ADCs
+sbs.hcal.roimpedance = 50 # ohm
+sbs.hcal.adcconv = 1 # ohm
+sbs.hcal.adc_encoder = fadc250
+sbs.hcal.tdc_encoder = f1tdc
+sbs.hcal.adcbits = 12 ## I think they are 12-bit ADCs
 ## I'm just copying things exactly as they are in the cdet for now...
 ## fixing it - I had changed convention: ns/ch instead of ch/ns. sorry for confusion (EF)
-dig.sbs.hcal.tdcconversion = 0.5 #ns/ch 5.0 #tdc channel/ns
-dig.sbs.hcal.tdcbits = 16 #
+sbs.hcal.tdcconversion = 0.5 #ns/ch 5.0 #tdc channel/ns
+sbs.hcal.tdcbits = 16 #
 
-dig.sbs.hcal.threshold = 0.003 #V
-dig.sbs.hcal.triggerjitter = 3.0  # ns
-dig.sbs.hcal.triggeroffset = 100.0  # ns 
-dig.sbs.hcal.gatewidth = 80 #ns #used to be 50ns, but might have been meant to be a half width
+sbs.hcal.threshold = 0.003 #V
+sbs.hcal.triggerjitter = 3.0  # ns
+sbs.hcal.triggeroffset = 100.0  # ns 
+sbs.hcal.gatewidth = 80 #ns #used to be 50ns, but might have been meant to be a half width
 
-#dig.sbs.hcal.spe_tau = 0.65  # ns
-#dig.sbs.hcal.spe_sigma = 1.05  # ns
-#dig.sbs.hcal.spe_transit = 19.0  # ns
+#sbs.hcal.spe_tau = 0.65  # ns
+#sbs.hcal.spe_sigma = 1.05  # ns
+#sbs.hcal.spe_transit = 19.0  # ns
 
 #PMT paramters
-dig.sbs.hcal.spe_tau = 2.08  # ns
-dig.sbs.hcal.spe_sigma = 2.20  # ns
-dig.sbs.hcal.spe_transit = 19.0  # ns
+sbs.hcal.spe_tau = 2.08  # ns
+sbs.hcal.spe_sigma = 2.20  # ns
+sbs.hcal.spe_transit = 19.0  # ns
 
 #one per channel...
-#dig.sbs.hcal.gain = 1.0e5
-#dig.sbs.hcal.pedestal = 0.0
-#dig.sbs.hcal.pednoise = 0.0
+#sbs.hcal.gain = 1.0e5
+#sbs.hcal.pedestal = 0.0
+#sbs.hcal.pednoise = 0.0
 
 ## Set the default pedestals
-dig.sbs.hcal.pedestal =                           # Row-[ColRange]
+sbs.hcal.pedestal =                           # Row-[ColRange]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 #  1-[1- 4]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 #  1-[4- 8]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 #  1-[9-12]
@@ -214,7 +211,7 @@ dig.sbs.hcal.pedestal =                           # Row-[ColRange]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 # 24-[4- 8]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 # 24-[9-12]
 
-dig.sbs.hcal.pednoise =                           # Row-[ColRange]
+sbs.hcal.pednoise =                           # Row-[ColRange]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 #  1-[1- 4]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 #  1-[4- 8]
   0.0000e+000 0.0000e+000 0.0000e+000 0.0000e+000 #  1-[9-12]
@@ -290,7 +287,7 @@ dig.sbs.hcal.pednoise =                           # Row-[ColRange]
 
 
 ## Set the default gain (calibration factor)
-dig.sbs.hcal.gain =
+sbs.hcal.gain =
   1.0e6 1.0e6 1.0e6 1.0e6 #  1-[1- 4]
   1.0e6 1.0e6 1.0e6 1.0e6 #  1-[4- 8]
   1.0e6 1.0e6 1.0e6 1.0e6 #  1-[9-12]

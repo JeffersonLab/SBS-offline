@@ -4,10 +4,10 @@ bb.ps.dettype = ECal
 bb.ps.unique_id = 10
 
 bb.ps.nchan = 52
-bb.ps.first_crate = 2
-bb.ps.first_slot = 15
-bb.ps.chan_per_slot = 64
-bb.ps.slot_per_crate = 20
+#bb.ps.first_crate = 2
+#bb.ps.first_slot = 15
+#bb.ps.chan_per_slot = 64
+#bb.ps.slot_per_crate = 20
 
 ## Detector map
 bb.ps.detmap = 
@@ -24,15 +24,19 @@ bb.ps.chanmap =  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
 # inconvenient: some of the stuff will need to be redeclared - 
 # but let's not change everythingbefore we're sure it's needed
 
+#PS geometry info
+bb.ps.nrows = 26
+bb.ps.ncols = 2
+bb.ps.xsize = 2.34 #m
+bb.ps.ysize = 0.74 #m
+bb.ps.zpos =  2.5319 #m # center of the blocks
+bb.ps.xoffset = 0.0 #m
+bb.ps.yoffset = 0.0 #m
+
 ## Positions in [m] where +z is rotated by bb.theta ????
 bb.ps.position = 0 0 2.5319
-
 ## Test settings for one sub-assembly
 bb.ps.size = 0.74  2.34  0.09
-
-bb.ps.ncols = 2
-bb.ps.nrows = 26
- 
 ## Position of first module
 bb.ps.xy    =  -1.125  0.185
 ## Space between modules
@@ -41,45 +45,37 @@ bb.ps.dxdy  =  0.0  0.0
 ## Mininum energy  for a cluster center (not really used right now)
 bb.ps.emin  = 0.0
 
-#PS geometry info
-geo.bb.ps.nrows = 26
-geo.bb.ps.ncols = 2
-geo.bb.ps.xsize = 2.34 #m
-geo.bb.ps.ysize = 0.74 #m
-geo.bb.ps.zpos =  2.5319 #m # center of the blocks
-geo.bb.ps.xoffset = 0.0 #m
-geo.bb.ps.yoffset = 0.0 #m
 
 #PS digitization info
-dig.bb.ps.roimpedance = 50 # ohm
+bb.ps.roimpedance = 50 # ohm
 #BB ECal will use Lecroy 1881M ADC
-dig.bb.ps.adc_encoder = lecroy1881
-dig.bb.ps.adcconversion = 50.0 #fC/ch 
-dig.bb.ps.adcbits = 12
+bb.ps.adc_encoder = lecroy1881
+bb.ps.adcconversion = 50.0 #fC/ch 
+bb.ps.adcbits = 12
 #BB ECal trigger logic will use Lecroy 1877 TDC
 #only question is if and how include this
-#dig.bb.ps.tdcconversion = 0.5 #ns/ch #optionnal for ECal ?
-#dig.bb.ps.tdcbits = 16 #optionnal for ECal ?
+#bb.ps.tdcconversion = 0.5 #ns/ch #optionnal for ECal ?
+#bb.ps.tdcbits = 16 #optionnal for ECal ?
 
-dig.bb.ps.threshold = 0.006 #V
-dig.bb.ps.triggerjitter = 3.0  # ns
-dig.bb.ps.triggeroffset = 37.2  # ns 
-dig.bb.ps.gatewidth = 200. #ns
+bb.ps.threshold = 0.006 #V
+bb.ps.triggerjitter = 3.0  # ns
+bb.ps.triggeroffset = 37.2  # ns 
+bb.ps.gatewidth = 200. #ns
 
-dig.bb.ps.spe_tau = 0.65  # ns
-dig.bb.ps.spe_sigma = 1.05  # ns
-dig.bb.ps.spe_transit = 19.0  # ns
+bb.ps.spe_tau = 0.65  # ns
+bb.ps.spe_sigma = 1.05  # ns
+bb.ps.spe_transit = 19.0  # ns
 
-#dig.bb.ps.do_crosstalk = 0
-#dig.bb.ps.crosstalk_mean = 0.1
-#dig.bb.ps.crosstalk_sigma = 0.03
-#dig.bb.ps.crosstalk_chan_apart = 8
+#bb.ps.do_crosstalk = 0
+#bb.ps.crosstalk_mean = 0.1
+#bb.ps.crosstalk_sigma = 0.03
+#bb.ps.crosstalk_chan_apart = 8
 
-#dig.bb.ps.gain = 5.0e5
-#dig.bb.ps.pedestal = 300.0 # ADC channels 
-#dig.bb.ps.pednoise = 50.0 # ADC channels 
+#bb.ps.gain = 5.0e5
+#bb.ps.pedestal = 300.0 # ADC channels 
+#bb.ps.pednoise = 50.0 # ADC channels 
 
-dig.bb.ps.pedestal = # pedestal per ch - ADC channels 
+bb.ps.pedestal = # pedestal per ch - ADC channels 
 589.64   607.16   
 539.418   583.349   
 542.174   570.26   
@@ -108,7 +104,7 @@ dig.bb.ps.pedestal = # pedestal per ch - ADC channels
 538.836   594.839   
 #504.326   535.352   
 
-dig.bb.ps.pednoise = # pedestal per ch - ADC channels 
+bb.ps.pednoise = # pedestal per ch - ADC channels 
 2.69316   2.6368   
 2.61478   1.98586   
 2.60199   2.53275   
@@ -137,7 +133,7 @@ dig.bb.ps.pednoise = # pedestal per ch - ADC channels
 2.14884   2.15269   
 #2.00597   2.43246   
 
-dig.bb.ps.gain = # gain per ch
+bb.ps.gain = # gain per ch
  5.0e5  5.0e5 
  5.0e5  5.0e5 
  5.0e5  5.0e5 

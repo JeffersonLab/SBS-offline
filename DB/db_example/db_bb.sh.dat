@@ -26,7 +26,7 @@ bb.sh.chanmap =  1  2  3  4  5  6  7  -1   8  9 10 11 12 13 14  -1
 		99 100 101 102 103 104 105  -1 106 107 108 109 110 111 112  -1
 		113 114 115 116 117 118 119  -1 120 121 122 123 124 125 126  -1
 		127 128 129 130 131 132 133  -1 134 135 136 137 138 139 140  -1
-		142 141 143 144 145 146 147  -1 148 149 150 151 152 153 154  -1
+		141 142 143 144 145 146 147  -1 148 149 150 151 152 153 154  -1
 		155 156 157 158 159 160 161  -1 162 163 164 165 166 167 168  -1
 		169 170 171 172 173 174 175  -1 176 177 178 179 180 181 182  -1
 		183 184 185 186 187 188 189  -1 -1 -1 -1 -1 -1 -1 -1  -1
@@ -37,15 +37,19 @@ bb.sh.chanmap =  1  2  3  4  5  6  7  -1   8  9 10 11 12 13 14  -1
 # inconvenient: some of the stuff will need to be redeclared - 
 # but let's not change everythingbefore we're sure it's needed
 
+#SH geometry info
+bb.sh.nrows = 27
+bb.sh.ncols = 7
+bb.sh.xsize = 2.295 #m
+bb.sh.ysize = 0.595 #m
+bb.sh.zpos =  2.8474 #m # center of the blocks
+bb.sh.xoffset = 0.0 #m
+bb.sh.yoffset = 0.0 #m
+
 ## Positions in [m] where +z is roated by bb.theta ????
 bb.sh.position = 0 0 2.8474
-
 ## Test settings for one sub-assembly
 bb.sh.size = 0.595  2.295  0.37
-
-bb.sh.ncols = 7
-bb.sh.nrows = 27
-
 ## Position of first module
 bb.sh.xy    =  -1.105  0.255
 ## Space between modules
@@ -54,45 +58,36 @@ bb.sh.dxdy  =  0.0  0.0
 ## Mininum energy  for a cluster center (not really used right now)
 bb.sh.emin  = 0.0
 
-#SH geometry info
-geo.bb.sh.nrows = 27
-geo.bb.sh.ncols = 7
-geo.bb.sh.xsize = 2.295 #m
-geo.bb.sh.ysize = 0.595 #m
-geo.bb.sh.zpos =  2.8474 #m # center of the blocks
-geo.bb.sh.xoffset = 0.0 #m
-geo.bb.sh.yoffset = 0.0 #m
-
 #SH digitization info
-dig.bb.sh.roimpedance = 50 # ohm
+bb.sh.roimpedance = 50 # ohm
 #BB ECal will use Lecroy 1881M ADC
-dig.bb.sh.adcconversion = 50.0 #adc channel/C
-dig.bb.sh.adc_encoder = lecroy1881
-dig.bb.sh.adcbits = 12
+bb.sh.adcconversion = 50.0 #adc channel/C
+bb.sh.adc_encoder = lecroy1881
+bb.sh.adcbits = 12
 #BB ECal trigger logic will use Lecroy 1877 TDC
 #only question is if and how include this
-#dig.bb.sh.tdcconversion = 0.5 #ns/ch #optionnal for ECal ?
-#dig.bb.sh.tdcbits = 16 #optionnal for ECal ?
+#bb.sh.tdcconversion = 0.5 #ns/ch #optionnal for ECal ?
+#bb.sh.tdcbits = 16 #optionnal for ECal ?
 
-dig.bb.sh.threshold = 0.006 #V
-dig.bb.sh.triggerjitter = 3.0  # ns
-dig.bb.sh.triggeroffset = 37.5  # ns 
-dig.bb.sh.gatewidth = 200. #ns
+bb.sh.threshold = 0.006 #V
+bb.sh.triggerjitter = 3.0  # ns
+bb.sh.triggeroffset = 37.5  # ns 
+bb.sh.gatewidth = 200. #ns
 
-dig.bb.sh.spe_tau = 0.65  # ns
-dig.bb.sh.spe_sigma = 1.05  # ns
-dig.bb.sh.spe_transit = 19.0  # ns
+bb.sh.spe_tau = 0.65  # ns
+bb.sh.spe_sigma = 1.05  # ns
+bb.sh.spe_transit = 19.0  # ns
 
-#dig.bb.sh.do_crosstalk = 0
-#dig.bb.sh.crosstalk_mean = 0.1
-#dig.bb.sh.crosstalk_sigma = 0.03
-#dig.bb.sh.crosstalk_chan_apart = 8
+#bb.sh.do_crosstalk = 0
+#bb.sh.crosstalk_mean = 0.1
+#bb.sh.crosstalk_sigma = 0.03
+#bb.sh.crosstalk_chan_apart = 8
 
-#dig.bb.sh.gain = 5.0e5
-#dig.bb.sh.pedestal = 300.0 # ADC channels 
-#dig.bb.sh.pednoise = 50.0 # ADC channels 
+#bb.sh.gain = 5.0e5
+#bb.sh.pedestal = 300.0 # ADC channels 
+#bb.sh.pednoise = 50.0 # ADC channels 
 
-dig.bb.sh.pedestal = # pedestal per ch - ADC channels 
+bb.sh.pedestal = # pedestal per ch - ADC channels 
 507.22   473.424   459.937   470.504   566.968   525.192   613.88   
 525.646   502.961   519.225   466.72   591.014   609.694   564.026   
 532.501   502.903   493.446   458.975   544.809   615.381   609.314   
@@ -121,7 +116,7 @@ dig.bb.sh.pedestal = # pedestal per ch - ADC channels
 400.702   512.669   444.382   305.576   606.493   485.177   615.621   
 429.525   441.33   450.841   500.528   471.901   511.556   641.625   
 
-dig.bb.sh.pednoise = # pedestal per ch - ADC channels 
+bb.sh.pednoise = # pedestal per ch - ADC channels 
 4.49587   4.57032   4.51849   4.4896   4.71743   4.50596   4.56804   
 4.55751   4.54294   4.67681   4.64417   4.48097   4.53765   4.57808   
 4.30487   4.25932   4.37904   4.37938   4.21877   4.18567   4.27773   
@@ -151,7 +146,7 @@ dig.bb.sh.pednoise = # pedestal per ch - ADC channels
 4.51346   4.50818   4.54355   4.57541   4.48996   4.5969   4.56684   
 
 
-dig.bb.sh.gain = # gain per ch
+bb.sh.gain = # gain per ch
  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5 
  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5 
  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5  5.0e5 
