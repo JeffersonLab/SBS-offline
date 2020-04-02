@@ -14,6 +14,7 @@
 
 #include "SBSBigBite.h"
 #include "SBSBBShower.h"
+#include "SBSGRINCH.h"
 #include "SBSEArm.h"
 #include "SBSHCal.h"
 
@@ -24,6 +25,7 @@ void replay_gmn_test(const char* filebase = "simdig_gmn13.5_100evts_NB", uint ne
   SBSBigBite* bigbite = new SBSBigBite("bb", "BigBite spectrometer" );
   bigbite->AddDetector( new SBSBBShower("ps", "BigBite preshower") );
   bigbite->AddDetector( new SBSBBShower("sh", "BigBite shower") );
+  bigbite->AddDetector( new SBSGRINCH("grinch", "GRINCH PID") );
   gHaApps->Add(bigbite);
   
   SBSEArm *harm = new SBSEArm("sbs","Hadron Arm with HCal");
