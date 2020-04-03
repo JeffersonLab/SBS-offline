@@ -84,7 +84,7 @@ THaNonTrackingDetector(name,description,apparatus)
 
 
 	// Persistent properties of the class
-	fBars  = new TClonesArray("SBSScintBar", 25 );
+	fBars  = new TClonesArray("SBSScintBar", 100 );
 	fRefCh       = new TClonesArray("SBSScintPMT", 5 );
 
 	// per-event information
@@ -262,8 +262,287 @@ Int_t SBSTimingHodoscope::GetTable( FILE* file, const TString tag, Double_t* val
 }
 
 //_____________________________________________________________________________
+Int_t SBSTimingHodoscope::ReadDatabase(const TDatime& date)
+{
+  // Read this detector's parameters from the database file 'fi'.
+  // This function is called by THaDetectorBase::Init() once at the
+  // beginning of the analysis.
+  // 'date' contains the date/time of the run being analyzed.
 
-Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
+  // We can use this name here for logs
+  static const char* const here = "ReadDatabase()";
+
+  FILE* file = OpenFile( date );
+  if( !file ) return kFileError;
+
+  // Read in required geometry variables, which include fOrigin and fSize and 
+  Int_t err = ReadGeometry( file, date, true );
+  if( err ) {
+    fclose(file);
+    return err;
+  }
+
+  // Some temporary variables which we'll use to read in the database
+  std::vector<Int_t> detmap_adc;
+  std::vector<Int_t> detmap, chanmap;
+  Int_t nbars,nref_chans = 0;
+  std::vector<Float_t> xyz, dxyz;
+  std::vector<Float_t> hit_acceptance;
+  std::vector<Float_t> ref_ch_res;
+
+  // Read mapping/geometry/configuration parameters
+  fChanMapStart = 0;
+  DBRequest config_request[] = {
+    { "adc_detmap",   &detmap_adc,  kIntV, 0, true }, ///< Detector map for ADCs [optional]
+    { "detmap",       &detmap,  kIntV }, ///< Detector map
+    { "chanmap",      &chanmap, kIntV,    0, true }, ///< Optional channel map
+    { "nbars",     &nbars,   kInt, 1, true }, ///< Number of modules
+    { "dxdydz",       &dxyz,     kFloatV, 3 },  ///< block spacing (dx,dy,dz)
+    { "hit_acceptance", &hit_acceptance, kFloatV, 2}, ///< fHitAcceptanceDx and Dy
+    { "ref_ch_res", &ref_ch_res, kFloatV}, ///< Reference channel resolution
+    { 0 } ///< Request must end in a NULL
+  };
+
+  // Clear out the old channel map before reading a new one
+  fChanMap.clear();
+  err = LoadDB( file, date, config_request, fPrefix );
+  if(err) return err; // Return on any errors already
+
+  // Sanity checks (make sure there were no inconsistent values entered)
+  if(nbars <= 0) {
+    Error( Here(here), "Must have at least one bar, number of bars specified: %d",
+        nbars);
+    return kInitError;  // Error already printed by FillDetMap
+  }
+  Int_t nlpmt,nrpmt;
+  nlpmt = nrpmt = nbars;
+  Int_t npmt = nlpmt+nrpmt;
+
+  // Clear out the old channel map before reading a new one
+  fChanMap.clear();
+  if( FillDetMap(detmap, THaDetMap::kFillRefIndex, here) <= 0 ) {
+    return kInitError;  // Error already printed by FillDetMap
+  }
+
+  // Step through the modules already filled and find out how many reference
+  // channels we have (and also, make these modules TDCs)
+  nref_chans = 0;
+  for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
+    THaDetMap::Module *d = fDetMap->GetModule( imod );
+    d->MakeTDC();
+    if(d->refindex == -1) {
+      nref_chans += (d->hi - d->lo)+1;
+    }
+  }
+
+  // Now that we got the number of reference channels, let's make sure
+  // the user specified the resolution of those channels
+  if(ref_ch_res.size() == 1) {
+    for(int i = 0; i < nref_chans; i++) {
+      new((*fRefCh)[i]) SBSScintPMT(1.0,0,ref_ch_res[0]);
+    }
+  } else if (ref_ch_res.size() == nref_chans) {
+    for(int i = 0; i < nref_chans; i++) {
+      new((*fRefCh)[i]) SBSScintPMT(1.0,0,ref_ch_res[i]);
+    }
+  } else {
+    Error( Here(here), "Malformed ref_ch_res in database. %d entries provided"
+        " but expected either 1 or %d",ref_ch_res.size(),nref_chans);
+    return kInitError;
+
+  }
+
+  fNelem = fDetMap->GetTotNumChan();
+  if(fNelem != npmt + nref_chans) {
+    Error( Here(here), "Number of crate module channels (%d) "
+        "inconsistent with number of PMTs(2*nbars=%d) + refeference channels (%d)",
+        fNelem, 2*nbars, nref_chans );
+    return kInitError;
+  }
+
+  // Now fill the ADC detmap if specified
+  if(detmap_adc.size() > 0 ) {
+    if(FillDetMap(detmap_adc, THaDetMap::kDoNotClear, here) <= 0 ) {
+      return kInitError;  // Error already printed by FillDetMap
+    } else {
+      fNelem = fDetMap->GetTotNumChan();
+      Int_t nadc = fNelem - npmt - nref_chans;
+      if(nadc != npmt) {
+        Error( Here(here), "Number of ADC crate module channels (%d) "
+            "inconsistent with number of PMTs(2*nbars=%d)",
+            nadc, 2*nbars);
+        return kInitError;
+      }
+    }
+  }
+
+  typedef std::pair<const char*,int> t_v;
+  std::vector<t_v> vars;
+  vars.push_back(t_v("bar_geom",6));
+  vars.push_back(t_v("speed_of_light",1));
+  vars.push_back(t_v("attenuation",1));
+  for(int i = 0; i < 2; i++) {
+    const char *name = (i==0?"left":"right");
+    vars.push_back(t_v(Form("%s_pedestal",name),1));
+    vars.push_back(t_v(Form("%s_gain",name),1));
+    vars.push_back(t_v(Form("%s_calib",name),4));
+    vars.push_back(t_v(Form("%s_toff",name),1));
+    vars.push_back(t_v(Form("%s_walkcor",name),1));
+    vars.push_back(t_v(Form("%s_walkexp",name),1));
+  }
+
+  std::vector<DBRequest> calib_request;
+  int nvars = vars.size();
+  std::vector<Float_t> db_read[nvars];
+  int nvals = 0;
+  for(int i = 0; i < nvars; i++) {
+    calib_request.push_back({vars[i].first,&db_read[i],kFloatV});
+    nvals += vars[i].second;
+  }
+  calib_request.push_back({0});
+  
+  // Make the databse request
+  err = LoadDB( file, date, calib_request.data(), fPrefix );
+  if(err) return err;
+
+  // Parse through each database variable and fill the bar properties
+  int first,last;
+  Float_t db[nbars][nvals];
+  int idx = 0;
+  for(int i = 0; i < nvars; i++) {
+    int ni = vars[i].second; // Number of elements per bar/pmt
+    int n = db_read[i].size(); // Vector size
+    if(n == ni) {
+      for(Int_t ibar = 0; ibar < nbars; ibar++ ) {
+        for(Int_t j = 0; j < ni; j++) {
+          db[ibar][idx+j] = db_read[i][j];
+        }
+      }
+      idx+=ni;
+    } else if ( n == nbars*ni ) {
+      for(Int_t ibar = 0; ibar < nbars; ibar++) {
+        for(int j = 0; j < ni; j++) {
+          db[ibar][idx+j] = db_read[i][ibar*ni+j];
+        }
+      }
+      idx+=ni;
+    } else {
+      Error(Here(here), "Malformed database for %s: Has '%d' entries, and "
+         " expected either %d*nbars=%d or %d to apply to all bars.",
+          vars[i].first,n,ni,ni*nbars,ni);
+      return kInitError;
+    }
+  }
+
+  // A quick sanity check for geometry. If bar_geom only has 6 values,
+  // then the origins of all the bars were set the same. Fix that now
+  if(db_read[0].size() == 6) {
+    float x[3] = { db[0][0], db[0][1], db[0][2] };
+    for(int ibar = 1; ibar <nbars; ibar++) {
+      for(int j = 0; j < 3; j++) {
+        x[j] += dxyz[j];
+        db[ibar][j] = x[j];
+      }
+    };
+  }
+
+  // Next, after reading the entire DB, let's create the instances of
+  // those ScintBars
+  fRefCh->Clear();
+  fBars->Clear();
+  for(int i = 0; i < nbars; i++) {
+    new((*fBars)[i]) SBSScintBar(
+        db[i][0],db[i][1], db[i][2], db[i][3], db[i][4], db[i][5],
+        db[i][6],db[i][7],
+        db[i][8],db[i][9], db[i][10], // skip 11, 12, 13  for now
+        db[i][14],db[i][15], // Skip 16 it does not go in constructor
+
+        db[i][17],db[i][18],db[i][19], // Skip 20, 21, 22 for now
+        db[i][23],db[i][24], // Skip 25, it does not go in the constructor
+        i,
+        db[i][11],db[i][12],db[i][13],
+        db[i][20],db[i][21],db[i][22]
+        );
+    (GetBar(i)->GetLPMT())->SetTimeWExp(db[i][16]);
+    (GetBar(i)->GetRPMT())->SetTimeWExp(db[i][25]);
+  }
+
+  fNBars= GetNBars();
+  if (fLE) {
+    Warning(Here(here),"Re-initializing: detectors must be the SAME SIZE!");
+  } else {
+    fLE    = new Double_t[fNBars];
+    fRE    = new Double_t[fNBars];
+    fLT    = new Double_t[fNBars];
+    fRT    = new Double_t[fNBars];
+    fLrawA = new Double_t[fNBars];
+    fRrawA = new Double_t[fNBars];
+    fLpedcA= new Double_t[fNBars];
+    fRpedcA= new Double_t[fNBars];
+
+    fLTcounter= new Int_t[fNBars];
+    fRTcounter= new Int_t[fNBars];
+    hitcounter= new Int_t[fNBars];
+    Energy = new Double_t[fNBars];
+    TDIFF  = new Double_t[fNBars];
+    T_tot  = new Double_t[fNBars];
+    TOF    = new Double_t[fNBars];
+    Yt_pos = new Double_t[fNBars];
+    Ya_pos = new Double_t[fNBars];
+    Y_pred = new Double_t[fNBars];
+    Y_dev  = new Double_t[fNBars];
+    fAngle = new Double_t[fNBars];
+    fLtIndex = new Int_t[fNBars];
+    fRtIndex = new Int_t[fNBars];
+    fLaIndex = new Int_t[fNBars];
+    fRaIndex = new Int_t[fNBars];
+  }
+
+  return (!err?err:kOK);
+}
+
+//_____________________________________________________________________________
+Int_t SBSTimingHodoscope::LoadDBPMT(FILE* file, const TDatime &date, bool is_left)
+{
+  std::vector<Float_t> ped,gain,toff, walkcor, walkexp;
+  const char *prefix = Form("%s%s_",fPrefix,is_left?"left":"right");
+
+  DBRequest pmt_request[] = {
+    { "pedestal", &ped,     kFloatV },
+    { "gain",     &gain,    kFloatV },
+    { "toff",     &toff,    kFloatV },
+    { "walkcor",  &walkcor, kFloatV },
+    { "walkexp",  &walkexp, kFloatV },
+    { 0 } ///< Request must end in a NULL
+  };
+  Int_t err = LoadDB( file, date, pmt_request, prefix );
+  if(err) return err;
+
+  // Now loop through the read values and set properties for the given bars;
+  int first,last;
+  std::vector<Float_t>::iterator it;
+  it = ped.begin();
+  if(ped.size() % 3 == 0) {
+    while(it != ped.end() ) {
+      first = (*it++);
+      last  = (*it++);
+      if(last == -1) {
+        last = GetNBars();
+      }
+      for(int i = first; i <= last; i++) {
+
+      }
+    }
+  }
+
+  return -1;
+
+}
+
+
+//_____________________________________________________________________________
+
+Int_t SBSTimingHodoscope::ReadDatabaseOld( const TDatime& date )
 {
 	// Read this detector's parameters from the database file 'fi'.
 	// This function is called by THaNonTrackingDetectorBase::Init() once at the
@@ -1847,7 +2126,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 		Bool_t known = fDetMap->IsADC(d) || fDetMap->IsTDC(d);
 #if DEBUG_LEVEL>=1//start show warning 
 		if(!known) Warning(Here(here),
-			"\tUnkown Module %d @ crate=%d, slot=%d",i,d->crate ,d->slot);
+			"\tUnknown Module %d @ crate=%d, slot=%d",i,d->crate ,d->slot);
 #endif//#if DEBUG_LEVEL>=1
 
 		// NOT IMPLEMENTED YET:

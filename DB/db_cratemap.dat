@@ -40,10 +40,10 @@
 ==== Crate 5 type vme
 # slot model clear header mask       nchan ndata
 # TDCs for BBTH (+ADCs for )
-  1    1190  1 0x00000000 0x00000000 128 12800
-  2    1190  1 0x00000000 0x00000000 128 12800
-  3     792  1 0x00000000 0x00000000  32    32
-  4     792  1 0x00000000 0x00000000  32    32 
+  1    1190  1 0x00000000 0x00000000 128 12800  ## 90 Channels for Hodoscope
+  2    1190  1 0x00000000 0x00000000 128 12800  ## 90 Channels for Hodoscope
+  3     792  1 0x00000000 0x00000000  32    32  ## Shared(??)
+  4     792  1 0x00000000 0x00000000  32    32  ## Shared(??)
 ## Need QDC for GRINCH/Hodoscope ADC/TOT calibration
 ## (jc2) Not sure what these were reserved for
   5     3201    1       0x28000000      0xf8000000      32      1024
