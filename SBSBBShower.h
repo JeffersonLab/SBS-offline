@@ -119,7 +119,7 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   
   SBSShowerBlock** fBlocks; //[fNelem] Array of blocks
   SBSBBShowerCluster** fClusters; //[fMaxNClust] 
-  SBSShowerBlock*** fBlkGrid; //[fNrows]
+  //SBSShowerBlock*** fBlkGrid; //[fNrows]
 
   //TRotation  fDetToTarg;
   //TVector3   fDetOffset;

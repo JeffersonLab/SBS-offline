@@ -197,3 +197,4 @@ void digsim_tree::SetupDetBranch(SBSDigSim::VDetData_t* det, const char *prefix)
 #endif
   det->SetupBranches(fChain,prefix);
 }
+

@@ -7,6 +7,7 @@
 #pragma link C++ nestedclass;
 #pragma link C++ nestedtypedef;
 #pragma link C++ namespace Decoder;
+#pragma link C++ namespace SBSDigSim;
 
 #pragma link C++ class Decoder::SBSDecodeF1TDCModule+;
 #pragma link C++ class Decoder::MPDModule+;
@@ -45,5 +46,9 @@
 #pragma link C++ class SBSSimEvent+;
 #pragma link C++ class SBSSimDecoder+;
 #pragma link C++ class digsim_tree+;
+#pragma link C++ class VDetData_t+;
+#pragma link C++ class PMTSimHit_t+;
+#pragma link C++ class GEMSimHit_t+;
+#pragma link C++ class UHitData_t+;
 //#pragma link C++ defined_in "SBSSimFadc250Module.h";
 #endif

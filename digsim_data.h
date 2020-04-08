@@ -11,7 +11,8 @@ class TTree;
 
 namespace SBSDigSim {
   // Purely virtual data structure for detector data in a G4SBS ROOT tree.
-  struct VDetData_t {
+  class VDetData_t {
+  public:
     VDetData_t() {};
     virtual ~VDetData_t(){};
     // All sub-classes *must* implement a concrete instance of this
@@ -21,7 +22,8 @@ namespace SBSDigSim {
   };
   
   //To read the "MC truth" info for hits from PMT detectors
-  struct PMTSimHit_t : public VDetData_t {
+  class PMTSimHit_t : public VDetData_t {
+  public:
     UInt_t                nhits;   // number of hits
     std::vector<short>   *src;     // source (sig, bkgd)
     std::vector<short>   *trid;    // track ID
@@ -46,7 +48,8 @@ namespace SBSDigSim {
   };
   
   //To read the "MC truth" info for hits from PMT detectors
-  struct GEMSimHit_t : public VDetData_t {
+  class GEMSimHit_t : public VDetData_t {
+  public:
     UInt_t                nhits;   // number of hits
     std::vector<short>   *src;     // source (sig, bkgd)
     std::vector<short>   *trid;    // track ID
@@ -78,7 +81,8 @@ namespace SBSDigSim {
     virtual bool SetupBranches(TTree *t, const char* prefix);
   };
   
-  struct HitData_t : public VDetData_t {
+  class HitData_t : public VDetData_t {
+  public:
     UInt_t          nhits;
     std::vector<short>   *chan;           // channel (PMT)
     std::vector<unsigned int> *dataword;  // data word (encoded ADC/TDC value)
@@ -96,7 +100,8 @@ namespace SBSDigSim {
     virtual bool SetupBranches(TTree *t, const char* prefix);
   };
   
-  struct SampHitData_t : public HitData_t {
+  class SampHitData_t : public HitData_t {
+  public:
     //"nwords" and "adcsum" are covered with "dataword" and "adc"
     std::vector<unsigned int> *nsamps;
     std::vector< std::vector<int> > *samps_adc; // decoded ADC samples
@@ -110,7 +115,8 @@ namespace SBSDigSim {
   };
   
   //U for "universal"...
-  struct UHitData_t : public VDetData_t {
+  class UHitData_t : public VDetData_t {
+  public:
     UInt_t          nhits;
     std::vector<short>   *chan;           // channel (PMT)
     std::vector<unsigned int> *dataword;  // data word (encoded ADC/TDC value)

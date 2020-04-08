@@ -209,6 +209,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   for( int c=0; c<ncols; c++ ) {
     for( int r=0; r<nrows; r++ ) {
       int k = nrows*c + r;
+      //cout << " k " << k << " r " << r << " c " << c << endl;
       // Units are meters
       fBlockX[k] = xy[0] + r*dxy[0];
       fBlockY[k] = xy[1] + c*dxy[1];
@@ -259,221 +260,15 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 fMaxNClust=10;
   fClusters = new SBSBBShowerCluster*[fMaxNClust];
   fBlocks = new SBSShowerBlock*[fNelem];
+  for(int k = 0; k<fNelem;k++){
+    int row = k%nrows;
+    int col = (k-row)/nrows;
+    //cout << " k " << k << " row " << row << " col " << col << endl;
+    
+    fBlocks[k] = new SBSShowerBlock(fBlockX[k], fBlockY[k], fPed[k], fGain[k], row, col);
+  }
 //cout << " retruning" << endl;
   return kOK;
-  /*
-    const int LEN = 100;
-    char buf[LEN];
-    Int_t nelem, ncols, nrows, nclbl;
-
-    // clean out the old
-    RemoveVariables();
-
-    // Read data from database
-    FILE* fi = OpenFile( date );
-    if( !fi ) return kFileError;
-
-    // Blocks, rows, max blocks per cluster
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );          
-    fscanf ( fi, "%d%d", &ncols, &nrows );  
-
-    nelem = ncols * nrows;
-    nclbl = TMath::Min( 3, nrows ) * TMath::Min( 3, ncols );
-    // Reinitialization only possible for same basic configuration 
-    if( fIsInit && (nelem != fNelem || nclbl != fNclublk) ) {
-        Error( Here(here), "Cannot re-initalize with different number of blocks or "
-            "blocks per cluster. Detector not re-initialized." );
-        fclose(fi);
-        return kInitError;
-    }
-
-    if( nrows <= 0 || ncols <= 0 || nclbl <= 0 ) {
-        Error( Here(here), "Illegal number of rows or columns: "
-            "%d %d", nrows, ncols );
-        fclose(fi);
-        return kInitError;
-    }
-    fNelem = nelem;
-    fNrows = nrows;
-    fNcols = ncols;
-    fNclublk = nclbl;
-
-    // Clear out the old detector map before reading a new one
-    UShort_t mapsize = fDetMap->GetSize();
-    delete [] fNChan;
-    if( fChanMap ) {
-        for( UShort_t i = 0; i<mapsize; i++ )
-            delete [] fChanMap[i];
-    }
-    delete [] fChanMap;
-    fDetMap->Clear();
-
-    // Read detector map
-
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    while (1) {
-        Int_t crate, slot, first, last;
-        fscanf ( fi,"%d%d%d%d", &crate, &slot, &first, &last );
-        fgets ( buf, LEN, fi );
-        if( crate < 0 ) break;
-        if( fDetMap->AddModule( crate, slot, first, last ) < 0 ) {
-            Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-                THaDetMap::kDetMapSize);
-            fclose(fi);
-            return kInitError;
-        }
-    }
-
-    // Set up the new channel map
-    mapsize = fDetMap->GetSize();
-    if( mapsize == 0 ) {
-        Error( Here(here), "No modules defined in detector map.");
-        fclose(fi);
-        return kInitError;
-    }
-
-    fNChan = new UShort_t[ mapsize ];
-    fChanMap = new UShort_t*[ mapsize ];
-    for( UShort_t i=0; i < mapsize; i++ ) {
-        THaDetMap::Module* module = fDetMap->GetModule(i);
-        fNChan[i] = module->hi - module->lo + 1;
-        if( fNChan[i] > 0 )
-            fChanMap[i] = new UShort_t[ fNChan[i] ];
-        else {
-            Error( Here(here), "No channels defined for module %d.", i);
-            delete [] fNChan; fNChan = NULL;
-            for( UShort_t j=0; j<i; j++ )
-                delete [] fChanMap[j];
-            delete [] fChanMap; fChanMap = NULL;
-            fclose(fi);
-            return kInitError;
-        }
-    }
-    // Read channel map
-    fgets ( buf, LEN, fi );
-    for ( UShort_t i = 0; i < mapsize; i++ ) {
-        for ( UShort_t j = 0; j < fNChan[i]; j++ ) 
-            fscanf (fi, "%hu", *(fChanMap+i)+j ); 
-        fgets ( buf, LEN, fi );
-    }
-    fgets ( buf, LEN, fi );
-
-    Float_t x,y,z;
-    fscanf ( fi, "%f%f%f", &x, &y, &z );               // Detector's X,Y,Z coord
-    fOrigin.SetXYZ( x, y, z );
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%lf%lf%lf", fSize, fSize+1, fSize+2 );  // Sizes of det in X,Y,Z
-    fdZ = TMath::Abs(fSize[2]);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-
-    Float_t angle;
-    fscanf ( fi, "%f", &angle );                       // Rotation angle of det
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    const Double_t degrad = TMath::Pi()/180.0;
-    tan_angle = TMath::Tan(angle*degrad);
-    sin_angle = TMath::Sin(angle*degrad);
-    cos_angle = TMath::Cos(angle*degrad);
-
-    DefineAxes(angle*degrad);
-
-    // Dimension arrays
-    if( !fIsInit ) {
-        fBlockX = new Float_t[ fNelem ];
-        fBlockY = new Float_t[ fNelem ];
-        fPed    = new Float_t[ fNelem ];
-        fGain   = new Float_t[ fNelem ];
-
-        // Per-event data
-        fA    = new Float_t[ fNelem ];
-        fA_p  = new Float_t[ fNelem ];
-        fA_c  = new Float_t[ fNelem ];
-        fNblk = new Int_t[ fNclublk ];
-        fEblk = new Float_t[ fNclublk ];
-
-        fIsInit = true;
-    }
-
-    fscanf ( fi, "%f%f", &x, &y );                     // Block 1 center position
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    Float_t dx, dy;
-    fscanf ( fi, "%f%f", &dx, &dy );                   // Block spacings in x and y
-    fdX = TMath::Abs(dx); 
-    fdY = TMath::Abs(dy);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%f", &fEmin );                       // Emin thresh for center
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    fscanf ( fi, "%i", &fMaxNClust );                   // Max number of clusters
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-
-    // Read calibrations.
-    // Before doing this, search for any date tags that follow, and start reading from
-    // the best matching tag if any are found. If none found, but we have a configuration
-    // string, search for it.
-    if( SeekDBdate( fi, date ) == 0 && fConfig.Length() > 0 && 
-        SeekDBconfig( fi, fConfig.Data() )) {}
-
-    fgets ( buf, LEN, fi );  
-    // Crude protection against a missed date/config tag
-    if( buf[0] == '[' ) fgets ( buf, LEN, fi );
-
-    // Read ADC pedestals and gains (in order of logical channel number)
-    for (int j=0; j<fNelem; j++)
-        fscanf (fi,"%f",fPed+j);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );
-    for (int j=0; j<fNelem; j++) 
-        fscanf (fi, "%f",fGain+j);
-    fgets ( buf, LEN, fi ); fgets ( buf, LEN, fi );  //new line added
-    
-    // Compute block positions and creates blocks array
-    fBlkGrid = new SBSShowerBlock**[fNrows];
-    for (int i=0;i<fNrows;i++) fBlkGrid[i] = new SBSShowerBlock*[fNcols];
-    fClusters = new SBSBBShowerCluster*[fMaxNClust];
-    fBlocks = new SBSShowerBlock*[fNelem];
-    for( int c=0; c<ncols; c++ ) {
-        for( int r=0; r<nrows; r++ ) {
-            int k = nrows*c + r;
-            fBlockX[k] = x + r*dx;                         // Units are meters
-            fBlockY[k] = y + c*dy;
-            SBSShowerBlock* block = 
-                new SBSShowerBlock(fBlockX[k],fBlockY[k],fPed[k],fGain[k],r,c);
-            fBlocks[k]=block;
-            fBlkGrid[r][c]=fBlocks[k];
-        }
-    }
-
-
-    fE = new Float_t[fMaxNClust];
-    fE_cl_corr = new Float_t[fMaxNClust];
-    fX = new Float_t[fMaxNClust];
-    fY = new Float_t[fMaxNClust]; 
-    //fXtarg = new Float_t[fMaxNClust];
-    //fYtarg = new Float_t[fMaxNClust];
-    //fZtarg = new Float_t[fMaxNClust];
-    fMult = new Int_t[fMaxNClust];
-    
-    //Read parameters for correcting gain drop.
-    fscanf ( fi, "%f%f%f", &gconst, &gslope, &acc_charge );  
-    //    cout << "gconst : " << gconst << endl;
-    //    cout << "gslope : " << gslope <<endl;
-    //    cout << "acc_charge : " << acc_charge <<endl;
-
-    fclose(fi);
-
-
-    //THaBBe *bb = dynamic_cast<THaBBe *> (GetApparatus());
-    //if( bb )
-    //{
-    //    fDetToTarg = bb->GetDetectorToTarg();
-    //    fDetOffset = bb->GetDetectorOffset();
-    //}
-    //else
-    //{
-    //    fDetToTarg.SetToIdentity();
-    //    fDetOffset.SetXYZ( 0.0, 0.0, 0.0 );
-    //}
-
-    return kOK;
-    */
 }
 
 
@@ -614,11 +409,12 @@ void SBSBBShower::ClearEvent()
       fBlocks[i]->ClearEvent();
     for (int i=0;i<fMaxNClust;i++) 
       fBlocks[i]->ClearEvent();
-     
+    
+    /*
     for (int i=0;i<fNrows;i++)
       for (int j=0;j<fNcols;j++)  
 	fBlkGrid[i][j]->ClearEvent();
-
+    */
 
 }
 
@@ -748,7 +544,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     // fTRX;          -  X-coordinate of track cross point with shower plane
     // fTRY;          -  Y-coordinate of track cross point with shower plane
     //
-    return 0;
+  //return 0;
     if( fCoarseProcessed ) return 0;
 
     Int_t col, row;

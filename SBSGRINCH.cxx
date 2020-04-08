@@ -94,11 +94,10 @@ void SBSGRINCH::Clear( Option_t* opt )
   map_chan_tdcs.clear();
   int a = pow(2, 31), b = a-1;
   pair<int, int> dummy_pair(a, b);
-  //dummy_pair = std::make_pair<a, b>;
   for(int i = 0; i<fNPMTs; i++){
     map_chan_tdcs.insert(pair<int, pair<int, int > >(i, dummy_pair) );
   }
-
+  
 }
 
 //_____________________________________________________________________________
@@ -633,13 +632,15 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	// then I add the slot (VETROC) number * 128 
 	// => unique channel (NB: 4 VETROC for GRINCH, 16 VETROC for RICH ?)
 	channel = chan+d->slot*128;
-
+	
+	
 	if(fDebug)
 	  cout << "hit " << hit << ": channel " << channel << " edge " << edge 
 	       << ":  => " << map_chan_tdcs[channel].first << " <=? time " << data 
 	       << " <=? " << map_chan_tdcs[channel].second << endl;
 	
 	edge = hit%2;//DUMB!!! but I do it for the time being
+	//map_chan_tdcs[channel].resize(map_chan_tdcs[channel].size()+1);
 	if(edge==0 && data<map_chan_tdcs[channel].second){
 	  map_chan_tdcs[channel].first = data;
 	}
