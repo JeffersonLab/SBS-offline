@@ -5,3 +5,11 @@
 ebeam      = 1.
 sbs.theta    = 32.0
 sbs.pcentral = 11.0
+sbs.phi = 0
+sbs.colldist = 1.5
+sbs.off_x = 0
+sbs.off_y = 0
+sbs.off_z = 0
+
+bb.theta    = 33.0                                                              
+bb.pcentral = 2.0 

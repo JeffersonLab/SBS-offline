@@ -264,16 +264,21 @@ protected:
 	//Threshold of ave. error reference per event that will pop up warnings
 	Bool_t  fTooManyErrRefCh;       //flag whether there are too much error reference
 
+  // Mapping (see also fDetMap)
+  UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
+  std::vector<std::vector<UShort_t> > fChanMap;
 
 	void           ClearEvent();
 	void           DeleteArrays();
 	virtual Int_t  ReadDatabase( const TDatime& date );
+	virtual Int_t  ReadDatabaseOld( const TDatime& date );
 	virtual Int_t  DefineVariables( EMode mode = kDefine );
 	virtual  Double_t TimeWalkCorrection(
 		SBSScintPMT* pmt,
 		Double_t ADC,
 		Double_t time);
 	enum ESide { kLeft = 0, kRight = 1 };
+  virtual Int_t LoadDBPMT(FILE *file, const TDatime& date, bool is_left = true);
 
 	SBSTimingHodoscope& operator=( const SBSTimingHodoscope& ) {return *this; }
 
