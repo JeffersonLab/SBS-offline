@@ -67,7 +67,7 @@ SBSGRINCH::~SBSGRINCH()
 {
   // Destructor. Remove variables from global list and free up the memory
   // allocated by us.
-
+  Clear();// so the prgram doesn't complain when deleting clusters
   RemoveVariables();
   delete fHits;
   // delete fResolvedHits;
