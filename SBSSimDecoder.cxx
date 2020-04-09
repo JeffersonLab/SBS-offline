@@ -136,7 +136,6 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 #endif
 {
   // Fill crateslot structures with Monte Carlo event data in 'evbuffer'
-  
   static const char* const here = "SBSSimDecoder::LoadEvent";
 
 #if ANALYZER_VERSION_CODE < ANALYZER_VERSION(1,6,0)
@@ -294,7 +293,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     //channel should *not* be negative (unless there's a problem with nwords...)
     assert(HitData_Det->chan->at(j)>=0);
     //determine crate/slot
-    lchan = (int)HitData_Det->chan->at(j)+1;//+chan_mult*fNChan[detname];
+    lchan = (int)HitData_Det->chan->at(j);//+chan_mult*fNChan[detname];
     ChanToROC(detname, lchan, crate, slot, chan);
 
     if(fDebug>2)
@@ -476,11 +475,11 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map] << " (+" << nchan << ") " << std::endl;
 	if(chanmap[ch_map]>=0){
 	  if(ch_count<nchan){
-	    (fInvDetMap[detname])[chanmap[ch_map]]=detchaninfo(crate, slot, i);
-	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]) << std::endl;
+	    (fInvDetMap[detname])[chanmap[ch_map]-1]=detchaninfo(crate, slot, i);
+	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]-1) << std::endl;
 	  }else{
-	    (fInvDetMap[detname])[chanmap[ch_map]+nchan]=detchaninfo(crate, slot, i);
-	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan) << std::endl;
+	    (fInvDetMap[detname])[chanmap[ch_map]+nchan-1]=detchaninfo(crate, slot, i);
+	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-1) << std::endl;
 	  }
 	  ch_count++;
 	}

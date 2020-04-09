@@ -138,7 +138,7 @@ protected:
 
 private:
   
-  std::map< int, std::pair< int, int > > map_chan_tdcs;
+  //std::map< int, std::pair< int, int > > map_chan_tdcs;
   
   /*
   // Fix me: to insert in the data base

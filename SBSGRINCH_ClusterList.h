@@ -28,8 +28,9 @@ class SBSGRINCH_Hit : public TObject {
    : fFlag(0), fVeto(0) {}
  SBSGRINCH_Hit( Int_t pmtnum, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
 		Float_t x, Float_t y ) :
-  fPMTNum(pmtnum), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), fRow(i), fCol(j), fX(x), fY(y), fFlag(0), 
-    fVeto(0) {}
+  fPMTNum(pmtnum), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), 
+    fRow(i), fCol(j), fX(x), fY(y), fFlag(0), 
+    tdcr_set(false), tdcf_set(false), fVeto(0) {}
   virtual ~SBSGRINCH_Hit() {}
   
   void       Show(FILE * fout1);
@@ -58,6 +59,9 @@ class SBSGRINCH_Hit : public TObject {
 
   virtual Int_t   Compare( const TObject* ) const;
   virtual Bool_t  IsSortable() const { return kTRUE; }
+  
+  Bool_t     TDC_risSet() {return tdcr_set;}
+  Bool_t     TDC_fisSet() {return tdcf_set;}
 
 private:
   Int_t     fPMTNum; // Hit PMT number
@@ -70,7 +74,10 @@ private:
   Float_t   fY;      // Hit Y position in PMT matrix
   Int_t     fFlag;   // ?
   Int_t     fVeto;   // ?
-
+  
+  Bool_t tdcr_set;// lead TDC is set
+  Bool_t tdcf_set;// fall TDC is set
+  
   ClassDef(SBSGRINCH_Hit,0)   //A hit in the RICH
 };
 
