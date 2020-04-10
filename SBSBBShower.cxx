@@ -494,6 +494,8 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       if( fA_c[k] > 0.0 )
 	fAsum_c += fA_c[k];             // Sum of ADC corrected
       fNhits++;
+      
+      //cout << " channel " << k << " data " << data << endl;
     }
   }
   if( has_warning )
@@ -531,110 +533,107 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
 //_____________________________________________________________________________
 Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 {
-    // Reconstruct Clusters in shower detector and copy the data 
-    // into the following local data structure:
-    //
-    // fNclust        -  Number of clusters in shower;
-    // fE             -  Energy (in MeV) of the "main" cluster;
-    // fX             -  X-coordinate (in cm) of the cluster;
-    // fY             -  Y-coordinate (in cm) of the cluster;
-    // fMult          -  Number of blocks in the cluster;
-    // fNblk[0]...[5] -  Numbers of blocks composing the cluster;
-    // fEblk[0]...[5] -  Energies in blocks composing the cluster;
-    // fTRX;          -  X-coordinate of track cross point with shower plane
-    // fTRY;          -  Y-coordinate of track cross point with shower plane
-    //
+  // Reconstruct Clusters in shower detector and copy the data 
+  // into the following local data structure:
+  //
+  // fNclust        -  Number of clusters in shower;
+  // fE             -  Energy (in MeV) of the "main" cluster;
+  // fX             -  X-coordinate (in cm) of the cluster;
+  // fY             -  Y-coordinate (in cm) of the cluster;
+  // fMult          -  Number of blocks in the cluster;
+  // fNblk[0]...[5] -  Numbers of blocks composing the cluster;
+  // fEblk[0]...[5] -  Energies in blocks composing the cluster;
+  // fTRX;          -  X-coordinate of track cross point with shower plane
+  // fTRY;          -  Y-coordinate of track cross point with shower plane
+  //
   //return 0;
-    if( fCoarseProcessed ) return 0;
+  if( fCoarseProcessed ) return 0;
 
-    Int_t col, row;
-    Int_t colmax=0, rowmax=0;
-    Double_t  energy_prev = 0.0;
+  Int_t col, row;
+  Int_t colmax=0, rowmax=0;
+  Double_t  energy_prev = 0.0;
 
 # if not defined(_WIN32)//Win32 compiler do not support variable as array size
-    Double_t energyDep[fNcols][fNrows];
+  Double_t energyDep[fNcols][fNrows];
 # else
-    Double_t energyDep[100][100];
+  Double_t energyDep[100][100];
 # endif
-
-    Double_t energyTotal = 0.0;
-    SBSBBShowerCluster cluster(9);
-
-    //  for( col = 0; col < fNcols; col++ )
-    //     {
-    //       for( row = 0; row < fNrows; row++ )
-    // 	{
-    // 	  energyDep[col][row] = 0.0;
-    // 	}
-    //     }
-
-    //  cout << "Energy Deposition:" << endl <<"___________________________________________________" << endl;
-    for( row = 0; row < fNrows; row++ )
-    {
-        for( col = 0; col < fNcols; col++ )
-        {
-            energyDep[col][row] = fA_c[BlockColRowToNumber(col,row)]; 
-
-            //	  cout << energyDep[col][row] << " ";
-            if( energyDep[col][row] < 0.0 ) 
-                energyDep[col][row] = 0.0;
-            energyTotal += energyDep[col][row];
-        }
-        //      cout << endl;
+  
+  Double_t energyTotal = 0.0;
+  SBSBBShowerCluster cluster(fMaxNClust);
+  
+  //  for( col = 0; col < fNcols; col++ )
+  //     {
+  //       for( row = 0; row < fNrows; row++ )
+  // 	{
+  // 	  energyDep[col][row] = 0.0;
+  // 	}
+  //     }
+  
+  //  cout << "Energy Deposition:" << endl <<"___________________________________________________" << endl;
+  for( row = 0; row < fNrows; row++ ){
+    for( col = 0; col < fNcols; col++ ){
+      energyDep[col][row] = fA_c[BlockColRowToNumber(col,row)]; 
+      
+      //cout << " col " << col << " row " << row << " block ? " << BlockColRowToNumber(col,row) << " Edep ? " << energyDep[col][row] << endl; 
+      //	  cout << energyDep[col][row] << " ";
+      if( energyDep[col][row] < 0.0 ) 
+	energyDep[col][row] = 0.0;
+      energyTotal += energyDep[col][row];
     }
+    //      cout << endl;
+  }
 
-    for( row = 0; row < fNrows; row++ )
-    {
-        for( col = 0; col < fNcols; col++ )
-        {
-            if(energyDep[col][row]>energy_prev)
-            {
-                energy_prev=energyDep[col][row];
-                colmax = col;
-                rowmax = row;
-            }
-        }
+  for( row = 0; row < fNrows; row++ ){
+    for( col = 0; col < fNcols; col++ ){
+      if(energyDep[col][row]>energy_prev){
+	energy_prev=energyDep[col][row];
+	colmax = col;
+	rowmax = row;
+      }
     }
+  }
+  
+  // cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_prev << endl;
+  
+  //  cout <<"___________________________________________________" << endl;
+  
+  Int_t i, j, k=0;
+  Double_t energyClusterTotal = 0.0;
+  //  Double_t energyClusterGreatest = 0.0;
+  
+  Int_t clusterRow = 0;
+  Int_t clusterCol = 0;
+  
+  //  for( row = 0; row < fNrows; row++ )
+  //     {
+  //       for( col = 0; col < fNcols; col++ )
+  // 	{
+  // 	  energyClusterTotal = 0.0;
+  // 	  for( i = row-CLUSTER_BLOCK_RADIUS; i <= row+CLUSTER_BLOCK_RADIUS; i++ )
+  // 	    {
+  // 	      for( j = col-CLUSTER_BLOCK_RADIUS; j <= col+CLUSTER_BLOCK_RADIUS; j++)
+  // 		{
+  // 		  if( (i >= 0 && i < fNrows ) && ( j >=0 && j < fNcols ) ){   
+  // 		    energyClusterTotal += energyDep[j][i];
+  // 		  }
+  // 		}
+  // 	    }
 
-
-    //  cout <<"___________________________________________________" << endl;
-
-    Int_t i, j, k=0;
-    Double_t energyClusterTotal = 0.0;
-    //  Double_t energyClusterGreatest = 0.0;
-
-    Int_t clusterRow = 0;
-    Int_t clusterCol = 0;
-
-    //  for( row = 0; row < fNrows; row++ )
-    //     {
-    //       for( col = 0; col < fNcols; col++ )
-    // 	{
-    // 	  energyClusterTotal = 0.0;
-    // 	  for( i = row-CLUSTER_BLOCK_RADIUS; i <= row+CLUSTER_BLOCK_RADIUS; i++ )
-    // 	    {
-    // 	      for( j = col-CLUSTER_BLOCK_RADIUS; j <= col+CLUSTER_BLOCK_RADIUS; j++)
-    // 		{
-    // 		  if( (i >= 0 && i < fNrows ) && ( j >=0 && j < fNcols ) ){   
-    // 		    energyClusterTotal += energyDep[j][i];
-    // 		  }
-    // 		}
-    // 	    }
-
-    // 	  if( energyClusterTotal > energyClusterGreatest )
-    // 	    {
-    // 	      energyClusterGreatest = energyClusterTotal;
-    // 	      clusterRow = row;
-    // 	      clusterCol = col;
-    // 	    }
-    // 	}
-    //     }
-    energyClusterTotal = 0.0; 
-    Int_t
-        mnrow=TMath::Max(rowmax-CLUSTER_BLOCK_RADIUS,0),
-        mxrow=TMath::Min(rowmax+CLUSTER_BLOCK_RADIUS,fNrows-1),
-        mncol=TMath::Max(colmax-CLUSTER_BLOCK_RADIUS,0),
-        mxcol=TMath::Min(colmax+CLUSTER_BLOCK_RADIUS,fNcols-1);
+  // 	  if( energyClusterTotal > energyClusterGreatest )
+  // 	    {
+  // 	      energyClusterGreatest = energyClusterTotal;
+  // 	      clusterRow = row;
+  // 	      clusterCol = col;
+  // 	    }
+  // 	}
+  //     }
+  energyClusterTotal = 0.0; 
+  Int_t
+    mnrow=TMath::Max(rowmax-CLUSTER_BLOCK_RADIUS,0),
+    mxrow=TMath::Min(rowmax+CLUSTER_BLOCK_RADIUS,fNrows-1),
+    mncol=TMath::Max(colmax-CLUSTER_BLOCK_RADIUS,0),
+    mxcol=TMath::Min(colmax+CLUSTER_BLOCK_RADIUS,fNcols-1);
 
     for( i = mnrow; i <= mxrow; i++ )
     {

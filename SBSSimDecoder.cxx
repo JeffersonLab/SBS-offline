@@ -410,11 +410,9 @@ Int_t SBSSimDecoder::AddDetector(std::string detname, TDatime date)
 Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 {
   //EPAF: in here the det name is the "full" det name i.e. including the spectro name
-  std::string path = "../db/";
+  std::string path = std::string(std::getenv("SBS"))+"/DB/";
   if(std::getenv("DB_DIR")) {
     path = std::string(std::getenv("DB_DIR"))+"/";
-  }else if(std::getenv("SBS")){
-    path = std::string(std::getenv("SBS"))+"/DB/";
   }
   const string& fileName = path+"db_"+detname+".dat";
   
@@ -450,13 +448,17 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   
   fNChanDet[detname] = nchan;
   fChanMapStartDet[detname] = chanmapstart;
-
+  int nparam_mod = 4;
+  if(detmap[4]==-1)nparam_mod = 5;
   int crate,slot,ch_lo,ch_hi, ch_count = 0, ch_map = 0;
-  for(size_t k = 0; k < detmap.size(); k+=4) {
+  for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
     crate  = detmap[k];
     slot   = detmap[k+1];
     ch_lo  = detmap[k+2];
     ch_hi  = detmap[k+3];
+    if(detname.find("hodo")!=std::string::npos)
+      cout << " crate " << crate << " slot " << slot 
+	   << " ch_lo " << ch_lo << " ch_hi " << ch_hi << endl;
     if(chanmap.empty()){
       for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
 	if(ch_count>nlogchan){
@@ -464,6 +466,11 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  return THaAnalysisObject::kInitError;
 	}
 	(fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
+	if(detname.find("hodo")!=std::string::npos){
+	  cout << " crate " << crate << " slot " << slot 
+	       << " i " << i << " ch_count " << ch_count << endl;
+	  cout << &(fInvDetMap.at(detname)).at(ch_count) << endl;
+	}
       }
     }else{
       for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
@@ -524,7 +531,8 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   slot  = d.rem+FS;
   */
 
-  if(fDebug>3){std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << " " << std::endl;
+  if(fDebug>3){
+    std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << " " << std::endl;
     std::cout << &(fInvDetMap.at(detname)).at(h_chan) << std::endl;
   }
   crate = ((fInvDetMap.at(detname)).at(h_chan)).crate;
