@@ -49,9 +49,10 @@ THaShower(name,description,apparatus), //fNChan(NULL), fChanMap(NULL)
   fE_cl(0), fX_cl(0), fY_cl(0), fMult_cl(0), fNblk_cl(0), fEblk_cl(0), fE_cl_corr(0), 
   fBlocks(0), fClusters(0) //, fBlkGrid(0)
 {
-    // Constructor.
-    fCoarseProcessed = 0;
-    fFineProcessed = 0;
+  // Constructor.
+  fCoarseProcessed = 0;
+  fFineProcessed = 0;
+  //Clear();
 }
 
 
@@ -81,6 +82,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   vector<Int_t> detmap, chanmap;
   vector<Double_t> xy, dxy;
   Int_t ncols, nrows;
+  fMaxNClust=10;
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
     { "detmap",       &detmap,  kIntV },
@@ -90,6 +92,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     { "xy",           &xy,      kDoubleV, 2 },  // center pos of block 1
     { "dxdy",         &dxy,     kDoubleV, 2 },  // dx and dy block spacings
     { "emin",         &fEmin,   kDouble },
+    { "maxclust",     &fMaxNClust, kIntV,  0, 1 },
     { 0 }
   };
 //cout << " call Loaddb" << endl;
@@ -201,6 +204,18 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     fNblk = new Int_t[ fNclublk ];
     fEblk = new Float_t[ fNclublk ];
 
+    fE_cl = new Float_t[ fMaxNClust ];
+    fX_cl = new Float_t[ fMaxNClust ];
+    fY_cl = new Float_t[ fMaxNClust ];
+    fMult_cl = new Int_t[ fMaxNClust ];
+    fE_cl_corr = new Float_t[ fMaxNClust ];
+    
+    fNblk_cl = new Int_t*[ fMaxNClust ];
+    fEblk_cl = new Float_t*[ fMaxNClust ];
+    for(Int_t k = 0; k<fMaxNClust; k++){
+      fNblk_cl[k] = new Int_t[ fNclublk ];
+      fEblk_cl[k] = new Float_t[ fNclublk ];
+    }
     fIsInit = true;
   }
 
@@ -257,17 +272,16 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     DebugPrint( list );
   }
 #endif
-fMaxNClust=10;
   fClusters = new SBSBBShowerCluster*[fMaxNClust];
   fBlocks = new SBSShowerBlock*[fNelem];
   for(int k = 0; k<fNelem;k++){
     int row = k%nrows;
     int col = (k-row)/nrows;
-    //cout << " k " << k << " row " << row << " col " << col << endl;
+    if(fDebug)cout << " k " << k << " row " << row << " col " << col << endl;
     
     fBlocks[k] = new SBSShowerBlock(fBlockX[k], fBlockY[k], fPed[k], fGain[k], row, col);
   }
-//cout << " retruning" << endl;
+  //cout << " retruning" << endl;
   return kOK;
 }
 
@@ -275,36 +289,36 @@ fMaxNClust=10;
 //_____________________________________________________________________________
 Int_t SBSBBShower::DefineVariables( EMode mode )
 {
-    // Initialize global variables
+  // Initialize global variables
 
-    if( mode == kDefine && fIsSetup ) return kOK;
-    fIsSetup = ( mode == kDefine );
+  if( mode == kDefine && fIsSetup ) return kOK;
+  fIsSetup = ( mode == kDefine );
 
-    // Register variables in global list
+  // Register variables in global list
 
-    RVarDef vars[] = {
-        { "nhit",   "Number of hits",                     "fNhits" },
-        { "a",      "Raw ADC amplitudes",                 "fA" },
-        { "a_p",    "Ped-subtracted ADC amplitudes",      "fA_p" },
-        { "a_c",    "Calibrated ADC amplitudes",          "fA_c" },
-        { "asum_p", "Sum of ped-subtracted ADCs",         "fAsum_p" },
-        { "asum_c", "Sum of calibrated ADCs",             "fAsum_c" },
-        { "nclust", "Number of clusters",                 "fNclust" },
-        { "e",      "Energy (MeV) of largest cluster",    "fE" },
-        { "e_c",    "Corrected Energy (MeV) of largest cluster",    "fE_cl_corr" },
-        { "x",      "x-position (m) of largest cluster", "fX" },
-        { "y",      "y-position (m) of largest cluster", "fY" },
-        //{ "targ.x", "x-position (m) of largest cluster in target coords", "fXtarg" },
-        //{ "targ.y", "y-position (m) of largest cluster in target coords", "fYtarg" },
-        //{ "targ.z", "z-position (m) of largest cluster in target coords", "fZtarg" },
-        { "mult",   "Multiplicity of largest cluster",    "fMult" },
-        { "nblk",   "Numbers of blocks in main cluster",  "fNblk" },
-        { "eblk",   "Energies of blocks in main cluster", "fEblk" },
-        //     { "trx",    "track x-position in det plane",      "fTRX" },
-        //     { "try",    "track y-position in det plane",      "fTRY" },
-        { 0 }
-    };
-    return DefineVarsFromList( vars, mode );
+  RVarDef vars[] = {
+    { "nhit",   "Number of hits",                     "fNhits" },
+    { "a",      "Raw ADC amplitudes",                 "fA" },
+    { "a_p",    "Ped-subtracted ADC amplitudes",      "fA_p" },
+    { "a_c",    "Calibrated ADC amplitudes",          "fA_c" },
+    { "asum_p", "Sum of ped-subtracted ADCs",         "fAsum_p" },
+    { "asum_c", "Sum of calibrated ADCs",             "fAsum_c" },
+    { "nclust", "Number of clusters",                 "fNclust" },
+    { "e",      "Energy (MeV) of largest cluster",    "fE" },
+    { "e_c",    "Corrected Energy (MeV) of largest cluster",    "fE_cl_corr" },
+    { "x",      "x-position (m) of largest cluster", "fX" },
+    { "y",      "y-position (m) of largest cluster", "fY" },
+    //{ "targ.x", "x-position (m) of largest cluster in target coords", "fXtarg" },
+    //{ "targ.y", "y-position (m) of largest cluster in target coords", "fYtarg" },
+    //{ "targ.z", "z-position (m) of largest cluster in target coords", "fZtarg" },
+    { "mult",   "Multiplicity of largest cluster",    "fMult" },
+    { "nblk",   "Numbers of blocks in main cluster",  "fNblk" },
+    { "eblk",   "Energies of blocks in main cluster", "fEblk" },
+    //     { "trx",    "track x-position in det plane",      "fTRX" },
+    //     { "try",    "track y-position in det plane",      "fTRY" },
+    { 0 }
+  };
+  return DefineVarsFromList( vars, mode );
 }
 
 //_____________________________________________________________________________
@@ -321,101 +335,117 @@ SBSBBShower::~SBSBBShower()
 //_____________________________________________________________________________
 void SBSBBShower::DeleteArrays()
 {
-    // Delete member arrays. Internal function used by destructor.
+  // Delete member arrays. Internal function used by destructor.
   //cout << "SBSBBShower::DeleteArrays() " << endl;
   //cout << 0 << endl;
   // ? THaShower::DeleteArrays()
   //delete [] fNChan; fNChan = 0;
-    //UShort_t mapsize = fDetMap->GetSize();
-    // if( fChanMap ) {
-    //     for( UShort_t i = 0; i<mapsize; i++ )
-    //         delete [] fChanMap[i];
-    // }
-    //delete [] fChanMap; fChanMap = 0;
-    fChanMap.clear();
-    delete [] fBlockX;  fBlockX  = 0;
-    delete [] fBlockY;  fBlockY  = 0;
-    delete [] fPed;     fPed     = 0;
-    delete [] fGain;    fGain    = 0;
-    delete [] fA;       fA       = 0;
-    delete [] fA_p;     fA_p     = 0;
-    delete [] fA_c;     fA_c     = 0;
-    delete [] fBlocks;  fBlocks  = 0;
-    //for (int i=0;i<fNrows;i++) {
-    //    delete [] fBlkGrid[i]; fBlkGrid[i] = 0;
-    //}
-    //delete [] fBlkGrid; fBlkGrid = 0;
-    delete [] fClusters; fClusters = 0;
-    //delete [] fXtarg; fXtarg = 0;
-    //delete [] fYtarg; fYtarg = 0;
-    //delete [] fZtarg; fZtarg = 0;
-    
-    delete [] fE_cl; fE_cl = 0;
-    delete [] fX_cl; fX_cl = 0;
-    delete [] fY_cl; fY_cl = 0;
-    delete [] fMult_cl; fMult_cl = 0;
-    for(int i = 0; i<fNclusters; i++){
-      delete [] fNblk_cl[i]; fNblk_cl = 0;
-      delete [] fEblk_cl[i]; fEblk_cl = 0;
-    }
-    delete [] fNblk_cl;
-    delete [] fEblk_cl;
-    delete [] fE_cl_corr; fE_cl_corr = 0;
-    
+  //UShort_t mapsize = fDetMap->GetSize();
+  // if( fChanMap ) {
+  //     for( UShort_t i = 0; i<mapsize; i++ )
+  //         delete [] fChanMap[i];
+  // }
+  //delete [] fChanMap; fChanMap = 0;
+  fChanMap.clear();
+  delete [] fBlockX;  fBlockX  = 0;
+  delete [] fBlockY;  fBlockY  = 0;
+  delete [] fPed;     fPed     = 0;
+  delete [] fGain;    fGain    = 0;
+  delete [] fA;       fA       = 0;
+  delete [] fA_p;     fA_p     = 0;
+  delete [] fA_c;     fA_c     = 0;
+  delete [] fBlocks;  fBlocks  = 0;
+  //for (int i=0;i<fNrows;i++) {
+  //    delete [] fBlkGrid[i]; fBlkGrid[i] = 0;
+  //}
+  //delete [] fBlkGrid; fBlkGrid = 0;
+  delete [] fClusters; fClusters = 0;
+  //delete [] fXtarg; fXtarg = 0;
+  //delete [] fYtarg; fYtarg = 0;
+  //delete [] fZtarg; fZtarg = 0;
+  
+  delete [] fE_cl; fE_cl = 0;
+  delete [] fX_cl; fX_cl = 0;
+  delete [] fY_cl; fY_cl = 0;
+  delete [] fMult_cl; fMult_cl = 0;
+  for(int i = 0; i<fNclust; i++){
+    delete [] fNblk_cl[i]; fNblk_cl = 0;
+    delete [] fEblk_cl[i]; fEblk_cl = 0;
+  }
+  delete [] fNblk_cl;
+  delete [] fEblk_cl;
+  delete [] fE_cl_corr; fE_cl_corr = 0;
+  
 }
 
 //_____________________________________________________________________________
 inline
-void SBSBBShower::ClearEvent()
+void SBSBBShower::Clear( Option_t* opt )//Event()//
 {
-    // Reset all local data to prepare for next event.
-
-    fCoarseProcessed = 0;
-    fFineProcessed = 0;
-
-    const int lsh = fNelem*sizeof(Float_t);
-    const int lshh = fMaxNClust*sizeof(Float_t);
-    const int lsc = fNclublk*sizeof(Float_t);
-    const int lsi = fNclublk*sizeof(Int_t);
-    const int lsj = fMaxNClust*sizeof(Int_t);
-
-    fNhits = 0;
-    memset( fA, 0, lsh );
-    memset( fA_p, 0, lsh );
-    memset( fA_c, 0, lsh );
-    memset( fE_cl, 0, lshh );
-    memset( fE_cl_corr, 0, lshh );
-    memset( fX_cl, 0, lshh );
-    memset( fY_cl, 0, lshh );
-    //memset( fXtarg, 0, lshh );
-    //memset( fYtarg, 0, lshh );
-    //memset( fZtarg, 0, lshh );
-    fAsum_p = 0.0;
-    fAsum_c = 0.0;
-    fNclust = 0;
-    memset( fNblk, 0, lsi );
-    memset( fEblk, 0, lsc );
-    memset( fNblk_cl, 0, lsi*fMaxNClust );
-    memset( fEblk_cl, 0, lsc*fMaxNClust );
-    memset( fMult_cl, 0, lsj );
-    fE = 0.0;
-    fX = 0.0;
-    fY = 0.0;
-    fMult = 0.0;
-    fTRX = 0.0;
-    fTRY = 0.0;
+  // Reset all local data to prepare for next event.
   
-    for (int i=0;i<fNelem;i++) 
-      fBlocks[i]->ClearEvent();
-    for (int i=0;i<fMaxNClust;i++) 
-      fBlocks[i]->ClearEvent();
-    
-    /*
+  if(fDebug)cout << " resetting variables for new event" << endl;
+  
+  fCoarseProcessed = 0;
+  fFineProcessed = 0;
+  
+  const int lsh = fNelem*sizeof(Float_t);
+  const int lshh = fMaxNClust*sizeof(Float_t);
+  const int lsc = fNclublk*sizeof(Float_t);
+  const int lsi = fNclublk*sizeof(Int_t);
+  //const int lsch = fNclublk*fMaxNClust*sizeof(Float_t);
+  //const int lsih = fNclublk*fMaxNClust*sizeof(Int_t);
+  const int lsj = fMaxNClust*sizeof(Int_t);
+  
+  if(fDebug){
+    cout << " lsh " << lsh << " lshh " << lshh << " lsc " << lsc   << " lsi " << lsi  << " lsj " << lsj << endl;
+    cout << " lsh " << lsh << " sizeof(fA) " << sizeof(*fA)*fNelem << " " << sizeof(*fA_p)*fNelem << " " << sizeof(*fA_c)*fNelem << endl;
+    cout << " lshh " << lshh << " sizeof(fE_cl) " << sizeof(*fE_cl)*fMaxNClust << " " << sizeof(*fE_cl_corr)*fMaxNClust << " " << sizeof(*fX_cl)*fMaxNClust << " " << sizeof(*fY_cl)*fMaxNClust << endl;
+    cout << " lsc " << lsc << " sizeof(fEblk) " << sizeof(*fEblk)*fNclublk << " * " << fMaxNClust << " = " << sizeof(**fEblk_cl)*fNclublk*fMaxNClust << endl;
+    cout << " lsi " << lsi << " sizeof(fNblk) " << sizeof(*fNblk)*fNclublk << " * " << fMaxNClust << " = " << sizeof(**fNblk_cl)*fNclublk*fMaxNClust << endl;
+    cout << " lsj " << lsj << " sizeof(fMult_cl) " << sizeof(*fMult_cl)*fMaxNClust << endl;
+  }
+  
+  fNhits = 0;
+  memset( fA, 0, lsh );
+  memset( fA_p, 0, lsh );
+  memset( fA_c, 0, lsh );
+  memset( fE_cl, 0, lshh );
+  memset( fE_cl_corr, 0, lshh );
+  memset( fX_cl, 0, lshh );
+  memset( fY_cl, 0, lshh );
+  //memset( fXtarg, 0, lshh );
+  //memset( fYtarg, 0, lshh );
+  //memset( fZtarg, 0, lshh );
+  fAsum_p = 0.0;
+  fAsum_c = 0.0;
+  fNclust = 0;
+  memset( fNblk, 0, lsi );
+  memset( fEblk, 0, lsc );
+  for(int i = 0; i<fMaxNClust; i++){
+    memset( fNblk_cl[i], 0, lsi );
+    memset( fEblk_cl[i], 0, lsc );
+  }
+  memset( fMult_cl, 0, lsj );
+  fE = 0.0;
+  fX = 0.0;
+  fY = 0.0;
+  fMult = 0.0;
+  fTRX = 0.0;
+  fTRY = 0.0;
+  
+  for (int i=0;i<fNelem;i++) 
+    if(fBlocks[i])fBlocks[i]->ClearEvent();
+  for (int i=0;i<fNclust;i++) 
+    if(fClusters[i])fClusters[i]->ClearEvent();
+  
+  
+  /*
     for (int i=0;i<fNrows;i++)
-      for (int j=0;j<fNcols;j++)  
-	fBlkGrid[i][j]->ClearEvent();
-    */
-
+    for (int j=0;j<fNcols;j++)  
+    fBlkGrid[i][j]->ClearEvent();
+  */
+  if(fDebug)cout << "Done Clearing" << endl;
 }
 
 //_____________________________________________________________________________
@@ -487,14 +517,14 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       // Copy the data and apply calibrations
       fA[k]   = (Float_t)data;                   // ADC value
       fA_p[k] = (Float_t)data - fPed[k];         // ADC minus ped
-      fA_c[k] = fA_p[k] * fGain[k];     // ADC corrected
+      fA_c[k] = fA_p[k];// * fGain[k];//FIXME: should be calibration...     // ADC corrected
       //cout << "k ? " << k << " data ? " << data << " fA[k] ???" << fA[k] << endl;
       if( fA_p[k] > 0.0 )
 	fAsum_p += fA_p[k];             // Sum of ADC minus ped
       if( fA_c[k] > 0.0 )
 	fAsum_c += fA_c[k];             // Sum of ADC corrected
       fNhits++;
-      
+      fBlocks[k]->SetE(fA_c[k]);
       //cout << " channel " << k << " data " << data << endl;
     }
   }
@@ -560,7 +590,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 # endif
   
   Double_t energyTotal = 0.0;
-  SBSBBShowerCluster cluster(fMaxNClust);
+  SBSBBShowerCluster cluster(fNclublk);
   
   //  for( col = 0; col < fNcols; col++ )
   //     {
@@ -594,7 +624,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     }
   }
   
-  // cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_prev << endl;
+  //cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_prev << endl;
   
   //  cout <<"___________________________________________________" << endl;
   
@@ -602,8 +632,8 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   Double_t energyClusterTotal = 0.0;
   //  Double_t energyClusterGreatest = 0.0;
   
-  Int_t clusterRow = 0;
-  Int_t clusterCol = 0;
+  //Int_t clusterRow = 0;
+  //Int_t clusterCol = 0;
   
   //  for( row = 0; row < fNrows; row++ )
   //     {
@@ -634,121 +664,151 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     mxrow=TMath::Min(rowmax+CLUSTER_BLOCK_RADIUS,fNrows-1),
     mncol=TMath::Max(colmax-CLUSTER_BLOCK_RADIUS,0),
     mxcol=TMath::Min(colmax+CLUSTER_BLOCK_RADIUS,fNcols-1);
-
-    for( i = mnrow; i <= mxrow; i++ )
-    {
-        for( j = mncol; j <= mxcol; j++)
-        {
-            energyClusterTotal += energyDep[j][i];
-            fEblk[k] = energyDep[j][i];
-            k++;
-        }
+  
+  if(fDebug){
+    cout << " Cluster: mnrow " << mnrow << " mxrow " << mxrow 
+	 << " mncol " << mncol << " mxcol " << mxcol << endl;
+  }
+  for( i = mnrow; i <= mxrow; i++ ){
+    for( j = mncol; j <= mxcol; j++){
+      energyClusterTotal += energyDep[j][i];
+      fEblk[k] = energyDep[j][i];
+      k++;
     }
-
-    //  cout <<"___________________________________________________" << endl;
-
-    Double_t energyCluster = energyClusterTotal;
-    Double_t X, Y;
-
-    if( energyCluster < 0.0 ) return 0;
-
-    //  cout << "Got a cluster!" << endl;
-    X = fBlockX[BlockColRowToNumber(colmax, rowmax)];
-    Y = fBlockY[BlockColRowToNumber(colmax, rowmax)];
-
-    Double_t energyX = 0.0;
-    Double_t energyY = 0.0;
-
-    Int_t  blockcounter = 0;
-    for( i = clusterRow-CLUSTER_BLOCK_RADIUS; i <= clusterRow + CLUSTER_BLOCK_RADIUS; i++ )
-    {
-        for( j = clusterCol-CLUSTER_BLOCK_RADIUS; j <= clusterCol + CLUSTER_BLOCK_RADIUS; j++ )
-        {
-            if( (i >= 0 && i < fNrows ) && ( j >=0 && j < fNcols ) )
-            {
-                energyX += energyDep[j][i]*fBlockX[BlockColRowToNumber(j,i)];
-                energyY += energyDep[j][i]*fBlockY[BlockColRowToNumber(j,i)];
-
-                cluster.AddBlock( fBlocks[BlockColRowToNumber(j,i)] );
-                blockcounter++;
-            }
-        }
+  }
+  
+  //  cout <<"___________________________________________________" << endl;
+  
+  Double_t energyCluster = energyClusterTotal;
+  Double_t X, Y;
+  
+  if( energyCluster < 0.0 ) return 0;
+  
+  X = fBlockX[BlockColRowToNumber(colmax, rowmax)];
+  Y = fBlockY[BlockColRowToNumber(colmax, rowmax)];
+  
+  //cout << "Got a cluster! E = " << energyCluster << " X = " << X << " Y = " << Y << endl;
+  
+  Double_t energyX = 0.0;
+  Double_t energyY = 0.0;
+  
+  Int_t  blockcounter = 0;
+  for( i = mnrow; i <= mxrow; i++ ){
+    for( j = mncol; j <= mxcol; j++ ){
+      if( (i >= 0 && i < fNrows ) && ( j >=0 && j < fNcols ) ){
+	energyX += energyDep[j][i]*fBlockX[BlockColRowToNumber(j,i)];
+	energyY += energyDep[j][i]*fBlockY[BlockColRowToNumber(j,i)];
+	
+	/*
+	if(i!=fBlocks[BlockColRowToNumber(j,i)]->GetRow()){
+	cout << "row " << i << " " << fBlocks[BlockColRowToNumber(j,i)]->GetRow() << endl;
+	}
+	if(j!=fBlocks[BlockColRowToNumber(j,i)]->GetCol()){
+	  cout << "col " << j << " " << fBlocks[BlockColRowToNumber(j,i)]->GetCol() << endl;
+	}
+	*/
+	cluster.AddBlock( fBlocks[BlockColRowToNumber(j,i)] );
+	if(fDebug){
+	  cout << "Cluster " << &cluster << " Adding block row " 
+	       << fBlocks[BlockColRowToNumber(j,i)]->GetRow() 
+	       << " col " << fBlocks[BlockColRowToNumber(j,i)]->GetCol() 
+	       << " E " << fBlocks[BlockColRowToNumber(j,i)]->GetE() 
+	       << " new size " << cluster.GetSize() << " block " << blockcounter 
+	       << " address " << cluster.GetBlock(blockcounter) << endl;
+	} 
+	blockcounter++;
+      }
     }
-
-    //  cout << energyCluster << " " << energyX/energyCluster << " " << energyY/ energyCluster << " " << cluster.GetMult() << endl;
-
-    cluster.SetE( energyCluster );
-    //cluster.SetX( energyX/energyCluster );
-    cluster.SetX( X+fOrigin.X() );
-    cluster.SetY( Y+fOrigin.Y() );
-    //cluster.SetY( energyY/energyCluster );
-
-    AddCluster(cluster);  
-
-    //  cout << "Added - we now have " << fNclust << endl;
-
-    fCoarseProcessed = 1;
-    return 0;
-
+  }
+  
+  //cout << energyCluster << " " << energyX/energyCluster << " " << energyY/ energyCluster << " " << cluster.GetMult() << endl;
+  
+  X = energyX/energyCluster;
+  Y = energyY/energyCluster;
+  
+  cluster.SetE( energyCluster );
+  //cluster.SetX( energyX/energyCluster );
+  cluster.SetX( X+fOrigin.X() );
+  cluster.SetY( Y+fOrigin.Y() );
+  //cluster.SetY( energyY/energyCluster );
+  
+  AddCluster(cluster);  
+  
+  if(fDebug)cout << "Added - we now have " << fNclust << endl;
+  
+  fCoarseProcessed = 1;
+  return 0;
 }
 
 //_____________________________________________________________________________
 Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
 {
-     return 0;
-    if( fFineProcessed ) return 0;
-
-    // Fine Shower processing.
-
-    //   cout << endl << fNclust << " clusters " << GetName()  << endl;
-    //   for (int i=0;i<fNclust;i++) {
-    //     cout << setw(2) << i << setw(7) << setprecision(1) 
-    // 	 << fClusters[i]->GetE() << setw(8) << setprecision(3) 
-    // 	 << fClusters[i]->GetX() << setw(8) << fClusters[i]->GetY() 
-    // 	 << setw(4) << fClusters[i]->GetMult() << endl;
-    //   }
-
-    TVector3 clusterpoint;
-    Double_t Emax = -10.0;
-    for (int i=0;i<fNclust;i++) {
-        //    cout << fClusters[i]->GetE() << " " << fClusters[i]->GetX() << " " << fClusters[i]->GetY() <<fClusters[i]->GetMult()  << endl; 
-      fE_cl[i] = fClusters[i]->GetE();
-      fE_cl_corr[i] = fClusters[i]->GetE()*(gconst + gslope*acc_charge);
-      fX_cl[i] = fClusters[i]->GetX();
-      fY_cl[i] = fClusters[i]->GetY();
-      fMult_cl[i] = fClusters[i]->GetMult();
-      for(int j = 0; j<fMult_cl[i]; j++){
-	if(fClusters[i]->GetBlock(j)){
-	  fNblk_cl[i][j] = BlockColRowToNumber(fClusters[i]->GetBlock(j)->GetCol(), fClusters[i]->GetBlock(j)->GetRow());
-	  fEblk_cl[i][j] = fClusters[i]->GetBlock(j)->GetE();
-	}
-      }
-      
-      if(fClusters[i]->GetE()>Emax){
-	fE = fE_cl[i];
-	fX = fX_cl[i];
-	fY = fY_cl[i];
-	fMult = fMult_cl[i];
-	for(int j = 0; j<fMult; j++){
-	  if(fClusters[i]->GetBlock(j)){
-	   fNblk[j] = fNblk_cl[i][j];
-	   fEblk[j] = fEblk_cl[i][j];
-	  }
-	}
-      }
-        //clusterpoint.SetXYZ( fX[i], fY[i], fOrigin.Z() );
-        //clusterpoint.Transform(fDetToTarg);
-        //clusterpoint = clusterpoint + fDetOffset;
-
-        //fXtarg[i] = clusterpoint.X();
-        //fYtarg[i] = clusterpoint.Y();
-        //fZtarg[i] = clusterpoint.Z();
-        //// We want the shower coordinates in target coordinates
-
+  //return 0;
+  if( fFineProcessed ) return 0;
+  
+  // Fine Shower processing.
+  
+  if(fDebug)cout << endl << fNclust << " clusters " << GetName()  << endl;
+  //   for (int i=0;i<fNclust;i++) {
+  //     cout << setw(2) << i << setw(7) << setprecision(1) 
+  // 	 << fClusters[i]->GetE() << setw(8) << setprecision(3) 
+  // 	 << fClusters[i]->GetX() << setw(8) << fClusters[i]->GetY() 
+  // 	 << setw(4) << fClusters[i]->GetMult() << endl;
+  //   }
+  
+  TVector3 clusterpoint;
+  Double_t Emax = -10.0;
+  for (int i=0;i<fNclust;i++) {
+    if(fDebug){
+      cout << fClusters[i] << " " << fClusters[i]->GetE() << " " 
+	   << fClusters[i]->GetX() << " " << fClusters[i]->GetY() 
+	   << " " << fClusters[i]->GetMult()  << endl; 
     }
-
-    fFineProcessed = 1;
-    return 0;
+    fE_cl[i] = fClusters[i]->GetE();
+    fE_cl_corr[i] = fClusters[i]->GetE()*(gconst + gslope*acc_charge);
+    fX_cl[i] = fClusters[i]->GetX();
+    fY_cl[i] = fClusters[i]->GetY();
+    fMult_cl[i] = fClusters[i]->GetMult();
+    for(int j = 0; j<fMult_cl[i]; j++){
+      if(fDebug){
+	cout << " block " << j << " address " << fClusters[i]->GetBlock(j) << endl;
+      }
+      if(fClusters[i]->GetBlock(j)){
+	if(fDebug){
+	  cout << " E ? "<< fClusters[i]->GetBlock(j)->GetE() << endl;
+	  cout << " col ? "<< fClusters[i]->GetBlock(j)->GetCol() << endl;
+	  cout << " row ? " << fClusters[i]->GetBlock(j)->GetRow() << endl;
+	}
+	fNblk_cl[i][j] = BlockColRowToNumber(fClusters[i]->GetBlock(j)->GetCol(), fClusters[i]->GetBlock(j)->GetRow());
+	fEblk_cl[i][j] = fClusters[i]->GetBlock(j)->GetE();
+      }
+    }
+    
+    if(fClusters[i]->GetE()>Emax){
+      fE = fE_cl[i];
+      fX = fX_cl[i];
+      fY = fY_cl[i];
+      fMult = fMult_cl[i];
+      for(int j = 0; j<fMult; j++){
+	if(fClusters[i]->GetBlock(j)){
+	  fNblk[j] = fNblk_cl[i][j];
+	  fEblk[j] = fEblk_cl[i][j];
+	}
+      }
+      Emax = fE;
+    }
+    //clusterpoint.SetXYZ( fX[i], fY[i], fOrigin.Z() );
+    //clusterpoint.Transform(fDetToTarg);
+    //clusterpoint = clusterpoint + fDetOffset;
+    
+    //fXtarg[i] = clusterpoint.X();
+    //fYtarg[i] = clusterpoint.Y();
+    //fZtarg[i] = clusterpoint.Z();
+    //// We want the shower coordinates in target coordinates
+  }
+  
+  fFineProcessed = 1;
+  return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -760,9 +820,18 @@ void SBSBBShower::AddCluster(SBSBBShowerCluster* clus) {
 void SBSBBShower::AddCluster(SBSBBShowerCluster& clus) {
 
     fClusters[fNclust] = new SBSBBShowerCluster(clus.GetNMaxBlocks());
+    for(int k = 0; k<clus.GetSize(); k++){
+      fClusters[fNclust]->AddBlock(clus.GetBlock(k));
+    }
     fClusters[fNclust]->SetE(clus.GetE());
     fClusters[fNclust]->SetX(clus.GetX());
     fClusters[fNclust]->SetY(clus.GetY());
+    if(fDebug){
+      cout << " E " << fClusters[fNclust]->GetE() 
+	   << " X " << fClusters[fNclust]->GetX()
+	   << " Y " << fClusters[fNclust]->GetY()
+	   << endl;
+    }
     fClusters[fNclust++]->SetMult(clus.GetMult());
 }
 
@@ -778,18 +847,19 @@ Int_t SBSBBShower::BlockColRowToNumber( Int_t col, Int_t row )
 
 void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {  
-    ClearEvent();
-    fNclust = 0;
-    fClusters[fNclust] = new SBSBBShowerCluster(0);
-    fClusters[fNclust]->SetE(E);
-    fClusters[fNclust]->SetX(x);
-    fClusters[fNclust]->SetY(y);
-    fClusters[fNclust]->SetMult(0);   
-
-    fE_cl[fNclust] = fClusters[fNclust]->GetE();
-    fX_cl[fNclust] = fClusters[fNclust]->GetX();
-    fY_cl[fNclust] = fClusters[fNclust]->GetY();
-    fMult_cl[fNclust] = fClusters[fNclust]->GetMult();
-    fNclust++;
+  //ClearEvent();
+  Clear();
+  fNclust = 0;
+  fClusters[fNclust] = new SBSBBShowerCluster(0);
+  fClusters[fNclust]->SetE(E);
+  fClusters[fNclust]->SetX(x);
+  fClusters[fNclust]->SetY(y);
+  fClusters[fNclust]->SetMult(0);   
+  
+  fE_cl[fNclust] = fClusters[fNclust]->GetE();
+  fX_cl[fNclust] = fClusters[fNclust]->GetX();
+  fY_cl[fNclust] = fClusters[fNclust]->GetY();
+  fMult_cl[fNclust] = fClusters[fNclust]->GetMult();
+  fNclust++;
 }
 

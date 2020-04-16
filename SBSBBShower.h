@@ -24,45 +24,45 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   virtual Int_t      CoarseProcess(TClonesArray& tracks);
   virtual Int_t      FineProcess(TClonesArray& tracks);
   
-          /* Int_t      GetNclust() const { return fNclust; } */
-          /* Int_t      GetNhits() const  { return fNhits; } */
-          /* Float_t    GetE(int i) const { return fE[i]; } */
-          /* Float_t    GetX(int i) const { return fX[i]; } */
-          /* Float_t    GetY(int i) const { return fY[i]; } */
-
-	  Int_t      GetNBlocks() { return (fNrows * fNcols);}
-	  Float_t    GetBlockX( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetX(); else return 0.0;}
-	  Float_t    GetBlockY( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetY(); else  return 0.0;}
-	  
-	  Float_t    GetBlockdX()  {return fdX;}
-	  Float_t    GetBlockdY()  {return fdY;}
-	  Float_t    GetBlockdZ()  {return fdZ;}
-	  
-
-	  Float_t    GetBlockA_c( Int_t i ) const { return fA_c[i]; }
-
-	  Int_t    GetNRows() {return fNrows;}
-	  Int_t    GetNCols() {return fNcols;}
-	  Int_t    BlockColRowToNumber( Int_t col, Int_t row );
-
-	  // Blocks should have a Z!!!
-	  
-	  SBSBBShowerCluster* GetClust(Int_t i) { return fClusters[i]; }
+  /* Int_t      GetNclust() const { return fNclust; } */
+  /* Int_t      GetNhits() const  { return fNhits; } */
+  /* Float_t    GetE(int i) const { return fE[i]; } */
+  /* Float_t    GetX(int i) const { return fX[i]; } */
+  /* Float_t    GetY(int i) const { return fY[i]; } */
   
-	  void       AddCluster(SBSBBShowerCluster* clus);
-	  void       RemoveCluster(int i);
-	  void       AddCluster(SBSBBShowerCluster& clus);
-
-	  void       LoadMCHitAt( Double_t x, Double_t y, Double_t E );
-	  
+  Int_t      GetNBlocks() { return (fNrows * fNcols);}
+  Float_t    GetBlockX( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetX(); else return 0.0;}
+  Float_t    GetBlockY( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetY(); else  return 0.0;}
+  
+  Float_t    GetBlockdX()  {return fdX;}
+  Float_t    GetBlockdY()  {return fdY;}
+  Float_t    GetBlockdZ()  {return fdZ;}
+  
+  
+  Float_t    GetBlockA_c( Int_t i ) const { return fA_c[i]; }
+  
+  Int_t    GetNRows() {return fNrows;}
+  Int_t    GetNCols() {return fNcols;}
+  Int_t    BlockColRowToNumber( Int_t col, Int_t row );
+  
+  // Blocks should have a Z!!!
+  
+  SBSBBShowerCluster* GetClust(Int_t i) { return fClusters[i]; }
+  
+  void       AddCluster(SBSBBShowerCluster* clus);
+  void       RemoveCluster(int i);
+  void       AddCluster(SBSBBShowerCluster& clus);
+  
+  void       LoadMCHitAt( Double_t x, Double_t y, Double_t E );
+  
  protected:
-	  
+  
   Bool_t fCoarseProcessed;
   Bool_t fFineProcessed;
 
   // Maximum number of clusters
   Int_t fMaxNClust;
-  Int_t fNclusters;
+  //Int_t fNclusters;
   // Mapping (see also fDetMap)
   //UShort_t*  fNChan;     // Number of channels for each module
   //std::vector< std::vector<UShort_t> > fChanMap; 
@@ -128,7 +128,8 @@ class SBSBBShower : public THaShower {//THaPidDetector {
 
   Double_t tan_angle, sin_angle, cos_angle;
 
-  void           ClearEvent();
+  //void           ClearEvent();
+  virtual void   Clear( Option_t* opt="" );
   void           DeleteArrays();
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );

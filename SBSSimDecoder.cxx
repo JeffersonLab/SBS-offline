@@ -456,9 +456,11 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     slot   = detmap[k+1];
     ch_lo  = detmap[k+2];
     ch_hi  = detmap[k+3];
+    /*
     if(detname.find("hodo")!=std::string::npos)
       cout << " crate " << crate << " slot " << slot 
 	   << " ch_lo " << ch_lo << " ch_hi " << ch_hi << endl;
+    */
     if(chanmap.empty()){
       for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
 	if(ch_count>nlogchan){
@@ -466,11 +468,13 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  return THaAnalysisObject::kInitError;
 	}
 	(fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
+	/*
 	if(detname.find("hodo")!=std::string::npos){
 	  cout << " crate " << crate << " slot " << slot 
 	       << " i " << i << " ch_count " << ch_count << endl;
 	  cout << &(fInvDetMap.at(detname)).at(ch_count) << endl;
 	}
+	*/
       }
     }else{
       for(int i = ch_lo; i<=ch_hi; i++, ch_map++){

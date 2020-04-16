@@ -57,9 +57,10 @@ void SBSBBShowerCluster::AddBlock(SBSShowerBlock* block) {
 
     if (fMult<fNMaxBlocks) {
         fBlocks[fMult] = block;
+	//cout << fBlocks[fMult] << " " << fBlocks[fMult+1] << endl;
         block->SetStat(1);
         fMult++;
-        //     cout << fX << " " << fE << " " << fMult << " " 
+        //    cout << fX << " " << fE << " " << fMult << " " 
         // 	 << block->GetX() << " " << block->GetE() << endl;
         //     cout << fX*fE*(fMult-1) << " " << block->GetX()*block->GetE() << endl;
         fX = (fX*fE*(fMult-1) + block->GetX()*block->GetE()) / 
