@@ -53,7 +53,7 @@ bb.sh.size = 0.595  2.295  0.37
 ## Position of first module
 bb.sh.xy    =  -1.105  0.255
 ## Space between modules
-bb.sh.dxdy  =  0.0  0.0
+bb.sh.dxdy  =  0.085  0.085
 
 ## Mininum energy  for a cluster center (not really used right now)
 bb.sh.emin  = 0.0

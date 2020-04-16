@@ -40,7 +40,7 @@ bb.ps.size = 0.74  2.34  0.09
 ## Position of first module
 bb.ps.xy    =  -1.125  0.185
 ## Space between modules
-bb.ps.dxdy  =  0.0  0.0
+bb.ps.dxdy  =  0.09  0.34
 
 ## Mininum energy  for a cluster center (not really used right now)
 bb.ps.emin  = 0.0

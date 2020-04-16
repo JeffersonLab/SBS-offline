@@ -25,10 +25,10 @@
 ==== Crate  5 type vme
 # TDCs for BBTH (+ADCs for )
 # slot model clear header mask       nchan ndata
-   0   53204  1 0x00000000 0x00000000 128 12800
    1   53204  1 0x00000000 0x00000000 128 12800
-   2   50250  1 0x00000000 0x00000000  32    32
-   3   50250  1 0x00000000 0x00000000  32    32 
+   2   53204  1 0x00000000 0x00000000 128 12800
+   4   50250  1 0x00000000 0x00000000  32    32
+   5   50250  1 0x00000000 0x00000000  32    32 
 # QDC for GRINCH/Hodoscope ADC/TOT calibration
 
 ==== Crate  6 type vme

@@ -224,10 +224,15 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   for( int c=0; c<ncols; c++ ) {
     for( int r=0; r<nrows; r++ ) {
       int k = nrows*c + r;
-      //cout << " k " << k << " r " << r << " c " << c << endl;
       // Units are meters
       fBlockX[k] = xy[0] + r*dxy[0];
       fBlockY[k] = xy[1] + c*dxy[1];
+      if(fDebug){
+	cout << " k " << k << " r " << r << " c " << c 
+	     << " x " << xy[0] << " dx " << dxy[0] << " => " <<  fBlockX[k]
+	     << " y " << xy[1] << " dy " << dxy[1] << " => " <<  fBlockY[k] 
+	     << endl;
+      }
     }
   }
 
@@ -721,10 +726,13 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     }
   }
   
-  //cout << energyCluster << " " << energyX/energyCluster << " " << energyY/ energyCluster << " " << cluster.GetMult() << endl;
-  
   X = energyX/energyCluster;
   Y = energyY/energyCluster;
+
+  if(fDebug){
+    cout << energyCluster << " " << X << " " << Y 
+	 << " " << cluster.GetMult() << endl;
+  }
   
   cluster.SetE( energyCluster );
   //cluster.SetX( energyX/energyCluster );
@@ -732,7 +740,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   cluster.SetY( Y+fOrigin.Y() );
   //cluster.SetY( energyY/energyCluster );
   
-  AddCluster(cluster);  
+  AddCluster(cluster);
   
   if(fDebug)cout << "Added - we now have " << fNclust << endl;
   
