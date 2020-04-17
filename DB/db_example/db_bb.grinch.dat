@@ -29,6 +29,8 @@ bb.grinch.yoffset = 0.0 #m
 bb.grinch.xyz = -0.9145 -0.124 0.0 #m # we don't really need z
 bb.grinch.pmtdistx = 0.031
 bb.grinch.pmtdisty = 0.031
+bb.grinch.x_tcpmt = -0.9145
+bb.grinch.y_tcpmt = -0.124
 
 #hodoscope digitization info
 bb.grinch.roimpedance = 50 # ohm

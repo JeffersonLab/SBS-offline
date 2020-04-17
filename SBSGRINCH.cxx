@@ -367,6 +367,12 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	   << " num chans " << evdata.GetNumChan(d->crate, d->slot) << endl;
     
     for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+      if(col0_ismaxsize){
+	col_ismaxsize = true;
+      }else{
+	col_ismaxsize = false;
+      }
+      
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
       
       if( chan > d->hi || chan < d->lo ) continue; // Not one of my channels
@@ -464,12 +470,12 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	  
 	  row = 2*d.quot;
 	  col = d.rem;
-  
 	  if(d.rem>fNPMTcolsMax-1 && col0_ismaxsize){
 	    row+=1;
 	    col-=fNPMTcolsMax;
 	    col_ismaxsize = false;
 	  }
+	  
 	  if(d.rem>fNPMTcolsMax-2 && !col0_ismaxsize){
 	    row+=1;
 	    col-=fNPMTcolsMax-1;
