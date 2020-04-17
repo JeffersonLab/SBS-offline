@@ -51,7 +51,7 @@ bb.sh.position = 0 0 2.8474
 ## Test settings for one sub-assembly
 bb.sh.size = 0.595  2.295  0.37
 ## Position of first module
-bb.sh.xy    =  -1.105  0.255
+bb.sh.xy    =  -1.105 0.255
 ## Space between modules
 bb.sh.dxdy  =  0.085  0.085
 

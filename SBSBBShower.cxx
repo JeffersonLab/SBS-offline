@@ -226,7 +226,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
       int k = nrows*c + r;
       // Units are meters
       fBlockX[k] = xy[0] + r*dxy[0];
-      fBlockY[k] = xy[1] + c*dxy[1];
+      fBlockY[k] = xy[1] - c*dxy[1];
       if(fDebug){
 	cout << " k " << k << " r " << r << " c " << c 
 	     << " x " << xy[0] << " dx " << dxy[0] << " => " <<  fBlockX[k]
@@ -731,14 +731,14 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 
   if(fDebug){
     cout << energyCluster << " " << X << " " << Y 
-	 << " " << cluster.GetMult() << endl;
+	 << " " << fOrigin.X() << " " << fOrigin.Y() << " " << cluster.GetMult() << endl;
   }
   
   cluster.SetE( energyCluster );
-  //cluster.SetX( energyX/energyCluster );
   cluster.SetX( X+fOrigin.X() );
   cluster.SetY( Y+fOrigin.Y() );
-  //cluster.SetY( energyY/energyCluster );
+  //cluster.SetX( X );
+  //cluster.SetY( Y );
   
   AddCluster(cluster);
   
