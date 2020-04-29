@@ -247,8 +247,8 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 
   // Read ADC pedestals and gains (in order of logical channel number)
   DBRequest calib_request[] = {
-    { "pedestals",    fPed,   kFloat, nval, 1 },
-    { "gains",        fGain,  kFloat, nval, 1 },
+    { "pedestal",    fPed,   kFloat, nval, 1 },
+    { "adc_calib",        fGain,  kFloat, nval, 1 },
     { 0 }
   };
   err = LoadDB( file, date, calib_request, fPrefix );
@@ -282,8 +282,10 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   for(int k = 0; k<fNelem;k++){
     int row = k%nrows;
     int col = (k-row)/nrows;
-    if(fDebug)cout << " k " << k << " row " << row << " col " << col << endl;
-    
+    if(fDebug){
+      cout << " k " << k << " row " << row << " col " << col 
+	   << " gain " << fGain[k] << " ped " << fPed[k] << endl;
+    }
     fBlocks[k] = new SBSShowerBlock(fBlockX[k], fBlockY[k], fPed[k], fGain[k], row, col);
   }
   //cout << " retruning" << endl;
@@ -309,18 +311,22 @@ Int_t SBSBBShower::DefineVariables( EMode mode )
     { "asum_p", "Sum of ped-subtracted ADCs",         "fAsum_p" },
     { "asum_c", "Sum of calibrated ADCs",             "fAsum_c" },
     { "nclust", "Number of clusters",                 "fNclust" },
-    { "e",      "Energy (MeV) of largest cluster",    "fE" },
-    { "e_c",    "Corrected Energy (MeV) of largest cluster",    "fE_cl_corr" },
-    { "x",      "x-position (m) of largest cluster", "fX" },
-    { "y",      "y-position (m) of largest cluster", "fY" },
-    //{ "targ.x", "x-position (m) of largest cluster in target coords", "fXtarg" },
-    //{ "targ.y", "y-position (m) of largest cluster in target coords", "fYtarg" },
-    //{ "targ.z", "z-position (m) of largest cluster in target coords", "fZtarg" },
-    { "mult",   "Multiplicity of largest cluster",    "fMult" },
-    { "nblk",   "Numbers of blocks in main cluster",  "fNblk" },
-    { "eblk",   "Energies of blocks in main cluster", "fEblk" },
+    { "e_m",      "Energy (MeV) of main (high E) cluster",    "fE" },
+    { "e_c_m",    "Corrected Energy (MeV) of main (high E) cluster",    "fE_corr" },
+    { "x_m",      "x-position (m) of main (high E) cluster", "fX" },
+    { "y_m",      "y-position (m) of main (high E) cluster", "fY" },
+    { "mult_m",   "Multiplicity of main (high E) cluster",    "fMult" },
+    { "nblk_m",   "Numbers of blocks in main (high E) cluster",  "fNblk" },
+    { "eblk_m",   "Energies of blocks in main (high E) cluster", "fEblk" },
     //     { "trx",    "track x-position in det plane",      "fTRX" },
     //     { "try",    "track y-position in det plane",      "fTRY" },
+    { "e",      "Energy (MeV) of all clusters", "fE_cl" },
+    { "e_c",    "Corrected Energy (MeV) of all clusters", "fE_cl_corr" },
+    { "x",      "x-position (m) of all clusters", "fX_cl" },
+    { "y",      "y-position (m) of all clusters", "fY_cl" },
+    { "mult",   "Multiplicity of all clusters",    "fMult_cl" },
+    { "nblk",   "Numbers of blocks in all clusters",  "fNblk_cl" },
+    { "eblk",   "Energies of blocks in all clusters", "fEblk_cl" },
     { 0 }
   };
   return DefineVarsFromList( vars, mode );
@@ -522,12 +528,12 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       // Copy the data and apply calibrations
       fA[k]   = (Float_t)data;                   // ADC value
       fA_p[k] = (Float_t)data - fPed[k];         // ADC minus ped
-      fA_c[k] = fA_p[k];// * fGain[k];//FIXME: should be calibration...     // ADC corrected
+      fA_c[k] = fA_p[k] * fGain[k];//FIXME: should be calibration...     // ADC corrected for simu: SH 6.64734e-01 PS 1.36180e+00
       //cout << "k ? " << k << " data ? " << data << " fA[k] ???" << fA[k] << endl;
-      if( fA_p[k] > 0.0 )
-	fAsum_p += fA_p[k];             // Sum of ADC minus ped
-      if( fA_c[k] > 0.0 )
-	fAsum_c += fA_c[k];             // Sum of ADC corrected
+      //if( fA_p[k] > 0.0 )
+      fAsum_p += fA_p[k];             // Sum of ADC minus ped
+      //if( fA_c[k] > 0.0 )
+      fAsum_c += fA_c[k];             // Sum of ADC corrected
       fNhits++;
       fBlocks[k]->SetE(fA_c[k]);
       //cout << " channel " << k << " data " << data << endl;
@@ -618,14 +624,16 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     }
     //      cout << endl;
   }
-
+  
   for( row = 0; row < fNrows; row++ ){
     for( col = 0; col < fNcols; col++ ){
+      // Main cluster (highest energy)
       if(energyDep[col][row]>energy_prev){
 	energy_prev=energyDep[col][row];
 	colmax = col;
 	rowmax = row;
-      }
+      }//else if(){ // other local maxima
+      //}
     }
   }
   

@@ -26,13 +26,33 @@ namespace SBSDigSim{
     return 0;
   }
   
+  bool TrackMCHit_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"nhits", nhits);
+    ret += SetupBranch(tree,prefix,"source", source);
+    ret += SetupBranch(tree,prefix,"trid", trid);
+    ret += SetupBranch(tree,prefix,"pid", pid);
+    ret += SetupBranch(tree,prefix,"xhit", xhit);
+    ret += SetupBranch(tree,prefix,"yhit", yhit);
+    ret += SetupBranch(tree,prefix,"thit", thit);
+    ret += SetupBranch(tree,prefix,"e", e);
+    ret += SetupBranch(tree,prefix,"weight", weight);
+    ret += SetupBranch(tree,prefix,"trpx", trpx);
+    ret += SetupBranch(tree,prefix,"trpy", trpy);
+    ret += SetupBranch(tree,prefix,"trpz", trpz);
+    ret += SetupBranch(tree,prefix,"trx", tr_x);
+    ret += SetupBranch(tree,prefix,"try", tr_y);
+    return (ret ==0);
+  }
+  
   bool PMTSimHit_t::SetupBranches(TTree *tree, const char* prefix)
   {
     int ret = 0;
     ret += SetupBranch(tree,prefix,"nhits", nhits);
     ret += SetupBranch(tree,prefix,"src", src);
-    ret += SetupBranch(tree,prefix,"trid", trid);
-    ret += SetupBranch(tree,prefix,"pid", pid);
+    //ret += SetupBranch(tree,prefix,"trid", trid);
+    //ret += SetupBranch(tree,prefix,"pid", pid);
     ret += SetupBranch(tree,prefix,"chan", chan);
     if(fReadEdep)ret += SetupBranch(tree,prefix,"edep", edep);
     ret += SetupBranch(tree,prefix,"npe", npe);
@@ -66,6 +86,7 @@ namespace SBSDigSim{
     return (ret ==0);
   }
   
+  /*  
   bool HitData_t::SetupBranches(TTree *tree, const char* prefix)
   {
     printf("%s\n", prefix);
@@ -80,7 +101,7 @@ namespace SBSDigSim{
     }
     return (ret ==0);
   }
-  
+
   bool SampHitData_t::SetupBranches(TTree *tree, const char* prefix)
   {
     int ret = 0;
@@ -99,6 +120,7 @@ namespace SBSDigSim{
     ret += SetupBranch(tree,prefix,"samps_datawords", samps_datawords);
     return (ret ==0);
   }
+  */
   
   bool UHitData_t::SetupBranches(TTree *tree, const char* prefix)
   {

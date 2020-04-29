@@ -76,12 +76,16 @@ void digsim_tree::Init(TTree *tree)
   
   
   // PS/SH
+  TrackMCHitDet["bb.sh"] = new TrackMCHit_t();
+  SetupDetBranch(TrackMCHitDet["bb.sh"], "bb.sh.trackmchit");
   PMTSimHitDet["bb.sh"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.sh"], "bb.sh.simhit");
   //HitDataDet["bb.sh"] = new HitData_t(true, false);
   HitDataDet["bb.sh"] = new UHitData_t(true, false, false);
   SetupDetBranch(HitDataDet["bb.sh"], "bb.sh.hit");
   
+  TrackMCHitDet["bb.ps"] = new TrackMCHit_t();
+  SetupDetBranch(TrackMCHitDet["bb.ps"], "bb.ps.trackmchit");
   PMTSimHitDet["bb.ps"] = new PMTSimHit_t(false, true);
   SetupDetBranch(PMTSimHitDet["bb.ps"], "bb.ps.simhit");
   //HitDataDet["bb.ps"] = new HitData_t(true, false);
@@ -89,6 +93,8 @@ void digsim_tree::Init(TTree *tree)
   SetupDetBranch(HitDataDet["bb.ps"], "bb.ps.hit");
   
   // Hodoscope
+  TrackMCHitDet["bb.hodo"] = new TrackMCHit_t();
+  SetupDetBranch(TrackMCHitDet["bb.hodo"], "bb.hodo.trackmchit");
   PMTSimHitDet["bb.hodo"] = new PMTSimHit_t(true, true);
   SetupDetBranch(PMTSimHitDet["bb.hodo"], "bb.hodo.simhit");
   //HitDataDet["bb.hodo"] = new HitData_t(false, true);
@@ -96,6 +102,8 @@ void digsim_tree::Init(TTree *tree)
   SetupDetBranch(HitDataDet["bb.hodo"], "bb.hodo.hit");
   
   // Grinch
+  TrackMCHitDet["bb.grinch"] = new TrackMCHit_t();
+  SetupDetBranch(TrackMCHitDet["bb.grinch"], "bb.grinch.trackmchit");
   PMTSimHitDet["bb.grinch"] = new PMTSimHit_t(true, false);
   SetupDetBranch(PMTSimHitDet["bb.grinch"], "bb.grinch.simhit");
   //HitDataDet["bb.grinch"] = new HitData_t(false, true);

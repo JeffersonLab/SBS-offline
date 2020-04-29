@@ -47,6 +47,7 @@
 #pragma link C++ class SBSSimDecoder+;
 #pragma link C++ class digsim_tree+;
 #pragma link C++ class VDetData_t+;
+#pragma link C++ class TrackMCHit_t+;
 #pragma link C++ class PMTSimHit_t+;
 #pragma link C++ class GEMSimHit_t+;
 #pragma link C++ class UHitData_t+;

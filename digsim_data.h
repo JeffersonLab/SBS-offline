@@ -21,13 +21,38 @@ namespace SBSDigSim {
     int SetupBranch(TTree* tree,const char* prefix,const char* varname,T &var);
   };
   
+  class TrackMCHit_t : public VDetData_t {
+  public:
+    UInt_t nhits;
+    std::vector<Short_t>   *source;
+    std::vector<Short_t>   *trid;
+    std::vector<Int_t>     *pid;
+    std::vector<Double_t>  *xhit;
+    std::vector<Double_t>  *yhit;
+    std::vector<Double_t>  *thit;
+    std::vector<Double_t>  *e;
+    std::vector<Double_t>  *weight;
+    std::vector<Double_t>  *trpx;
+    std::vector<Double_t>  *trpy;
+    std::vector<Double_t>  *trpz;
+    std::vector<Double_t>  *tr_x;
+    std::vector<Double_t>  *tr_y;
+    
+    TrackMCHit_t() : nhits(0),
+      source(0), trid(0), pid(0), xhit(0), yhit(0), thit(0), e(0),
+      weight(0), trpx(0), trpy(0), trpz(0), tr_x(0), tr_y(0)
+    {}
+    virtual ~TrackMCHit_t(){};
+    virtual bool SetupBranches(TTree *t, const char* prefix);
+  };
+  
   //To read the "MC truth" info for hits from PMT detectors
   class PMTSimHit_t : public VDetData_t {
   public:
     UInt_t                nhits;   // number of hits
     std::vector<short>   *src;     // source (sig, bkgd)
-    std::vector<short>   *trid;    // track ID
-    std::vector<int>     *pid;     // Particle ID
+    //std::vector<short>   *trid;    // track ID
+    //std::vector<int>     *pid;     // Particle ID
     std::vector<short>   *chan;    // channel (PMT)
     std::vector<double>  *edep;    // energy deposit in element (for non Ckov dets)
     std::vector<int>     *npe;     // number of photoelectrons
@@ -37,8 +62,8 @@ namespace SBSDigSim {
     bool fReadEdep;                // flag to read edep. Set to true by default
     bool fReadTimes;               // flag to read times. Set to true by default
     // these flags are set in constructor - just below
-    PMTSimHit_t(bool readTimes = true, bool readEdep = true) : nhits(0),
-      src(0), trid(0), pid(0), 
+    PMTSimHit_t(bool readTimes = true, bool readEdep = true) : nhits(0), src(0), 
+      //trid(0), pid(0), 
       chan(0), edep(0), npe(0), 
       time(0), t_lead(0), t_trail(0), 
       fReadEdep(readEdep), fReadTimes(readTimes)
@@ -81,6 +106,7 @@ namespace SBSDigSim {
     virtual bool SetupBranches(TTree *t, const char* prefix);
   };
   
+  /*
   class HitData_t : public VDetData_t {
   public:
     UInt_t          nhits;
@@ -113,7 +139,7 @@ namespace SBSDigSim {
     virtual ~SampHitData_t(){};
     virtual bool SetupBranches(TTree *t, const char* prefix);
   };
-  
+  */
   //U for "universal"...
   class UHitData_t : public VDetData_t {
   public:
