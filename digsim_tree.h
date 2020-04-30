@@ -37,6 +37,7 @@ public :
    TBranch        *b_Weight;   //!
    TBranch        *b_NSignal;   //!
    
+   std::map<std::string, MCTrack_t*> MCTrack;
    std::map<std::string, TrackMCHit_t*> TrackMCHitDet;
    std::map<std::string, PMTSimHit_t*> PMTSimHitDet;
    std::map<std::string, GEMSimHit_t*> GEMSimHitDet;

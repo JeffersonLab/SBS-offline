@@ -26,6 +26,29 @@ namespace SBSDigSim{
     return 0;
   }
   
+  bool MCTrack_t::SetupBranches(TTree *tree, const char* prefix)
+  {
+    int ret = 0;
+    ret += SetupBranch(tree,prefix,"ntracks", ntracks);
+    ret += SetupBranch(tree,prefix,"source", source);
+    ret += SetupBranch(tree,prefix,"trid", trid);
+    ret += SetupBranch(tree,prefix,"pid", pid);
+    ret += SetupBranch(tree,prefix,"x", x);
+    ret += SetupBranch(tree,prefix,"y", y);
+    ret += SetupBranch(tree,prefix,"t", t);
+    ret += SetupBranch(tree,prefix,"p", p);
+    ret += SetupBranch(tree,prefix,"dx", dx);
+    ret += SetupBranch(tree,prefix,"dy", dy);
+    ret += SetupBranch(tree,prefix,"xv", xv);
+    ret += SetupBranch(tree,prefix,"yv", yv);
+    ret += SetupBranch(tree,prefix,"zv", zv);
+    ret += SetupBranch(tree,prefix,"pxv", pxv);
+    ret += SetupBranch(tree,prefix,"pyv", pyv);
+    ret += SetupBranch(tree,prefix,"pzv", pzv);
+    ret += SetupBranch(tree,prefix,"weight", weight);
+    return (ret ==0);
+  }
+  
   bool TrackMCHit_t::SetupBranches(TTree *tree, const char* prefix)
   {
     int ret = 0;
@@ -38,11 +61,6 @@ namespace SBSDigSim{
     ret += SetupBranch(tree,prefix,"thit", thit);
     ret += SetupBranch(tree,prefix,"e", e);
     ret += SetupBranch(tree,prefix,"weight", weight);
-    ret += SetupBranch(tree,prefix,"trpx", trpx);
-    ret += SetupBranch(tree,prefix,"trpy", trpy);
-    ret += SetupBranch(tree,prefix,"trpz", trpz);
-    ret += SetupBranch(tree,prefix,"trx", tr_x);
-    ret += SetupBranch(tree,prefix,"try", tr_y);
     return (ret ==0);
   }
   

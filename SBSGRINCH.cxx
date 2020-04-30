@@ -163,6 +163,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
       // { "do_resolve", &do_resolve, kDouble, 1, true  },
       { "do_timefilter", &fDoTimeFilter, kInt, 1, true  },
       { "debug",         &fDebug,        kInt, 1, true  },
+      { "mc_data",       &fMCdata,       kInt, 0, true  },// flag for MC data
       { 0 }
     };
       

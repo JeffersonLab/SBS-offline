@@ -121,13 +121,22 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   SBSBBShowerCluster** fClusters; //[fMaxNClust] 
   //SBSShowerBlock*** fBlkGrid; //[fNrows]
 
+  Float_t   fEres;        // [fNClust] Energy resolution of main cluster
+  Float_t   fXres;        // [fNClust] x position (m) of main cluster
+  Float_t   fYres;        // [fNClust] y position (m) of main cluster
+  
+  Float_t*   fE_cl_res;        // [fNClust] Energy resolution of clusters
+  Float_t*   fX_cl_res;        // [fNClust] x position (m) of clusters
+  Float_t*   fY_cl_res;        // [fNClust] y position (m) of clusters 
   //TRotation  fDetToTarg;
   //TVector3   fDetOffset;
 
   // Useful derived quantities for internal usage.
 
   Double_t tan_angle, sin_angle, cos_angle;
-
+  
+  bool fMCdata;// easy way to enable/disable the use of MC data.
+  
   //void           ClearEvent();
   virtual void   Clear( Option_t* opt="" );
   void           DeleteArrays();

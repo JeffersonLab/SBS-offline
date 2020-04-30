@@ -138,6 +138,8 @@ protected:
 
 private:
   
+  bool fMCdata;// easy way to enable/disable the use of MC data.
+  
   //std::map< int, std::pair< int, int > > map_chan_tdcs;
   
   /*

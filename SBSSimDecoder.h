@@ -117,6 +117,10 @@ protected:
   
   void ChanToROC( const std::string detname, Int_t h_chan, 
 		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;
+  
+  // TODO: function(s) that load(s) the MC track hit
+  
+  
   //Int_t ChanFromROC( std::string detname, Int_t crate, Int_t slot, Int_t chan ) const;
   /*
   // void  PMTtoROC( Int_t s_plane, Int_t s_sector, Int_t s_proj, Int_t s_chan,

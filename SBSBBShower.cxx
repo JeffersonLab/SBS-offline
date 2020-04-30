@@ -47,7 +47,7 @@ SBSBBShower::SBSBBShower( const char* name, const char* description,
 //THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
 THaShower(name,description,apparatus), //fNChan(NULL), fChanMap(NULL)
   fE_cl(0), fX_cl(0), fY_cl(0), fMult_cl(0), fNblk_cl(0), fEblk_cl(0), fE_cl_corr(0), 
-  fBlocks(0), fClusters(0) //, fBlkGrid(0)
+  fBlocks(0), fClusters(0), fMCdata(0)//, fBlkGrid(0)
 {
   // Constructor.
   fCoarseProcessed = 0;
@@ -85,14 +85,15 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   fMaxNClust=10;
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
-    { "detmap",       &detmap,  kIntV },
-    { "chanmap",      &chanmap, kIntV,    0, 1 },
-    { "ncols",        &ncols,   kInt },
-    { "nrows",        &nrows,   kInt },
-    { "xy",           &xy,      kDoubleV, 2 },  // center pos of block 1
-    { "dxdy",         &dxy,     kDoubleV, 2 },  // dx and dy block spacings
-    { "emin",         &fEmin,   kDouble },
-    { "maxclust",     &fMaxNClust, kIntV,  0, 1 },
+    { "detmap",       &detmap,      kIntV     },
+    { "chanmap",      &chanmap,     kIntV,    0, 1 },
+    { "ncols",        &ncols,       kInt      },
+    { "nrows",        &nrows,       kInt      },
+    { "xy",           &xy,          kDoubleV, 2 },  // center pos of block 1
+    { "dxdy",         &dxy,         kDoubleV, 2 },  // dx and dy block spacings
+    { "emin",         &fEmin,       kDouble   },
+    { "maxclust",     &fMaxNClust,  kIntV,    0, 1 },
+    { "mc_data",      &fMCdata,     kInt,     0, 1 },// flag for MC data
     { 0 }
   };
 //cout << " call Loaddb" << endl;
@@ -329,7 +330,27 @@ Int_t SBSBBShower::DefineVariables( EMode mode )
     { "eblk",   "Energies of blocks in all clusters", "fEblk_cl" },
     { 0 }
   };
-  return DefineVarsFromList( vars, mode );
+  Int_t ret = DefineVarsFromList( vars, mode );
+  if( ret != kOK )
+    return ret;
+  
+  if(fMCdata){
+    RVarDef varsmc[] = {
+      { "e_m_res", "Energy resolution of main cluster",    "fEres" },
+      { "x_m_res", "x-position resolution (m) of main cluster", "fXres" },
+      { "y_m_res", "y-position resolution  (m) of main cluster", "fYres" },
+      { "e_res", "Energy resolution of all clusters",    "fE_cl_res" },
+      { "x_res", "x-position resolution (m) of all clusters", "fX_cl_res" },
+      { "y_res", "y-position resolution  (m) of all clusters", "fY_cl_res" },
+      { 0 }
+    };
+    
+    ret = DefineVarsFromList( varsmc, mode );
+    if( ret != kOK )
+      return ret;
+  }
+  
+  return ret;
 }
 
 //_____________________________________________________________________________
@@ -386,7 +407,12 @@ void SBSBBShower::DeleteArrays()
   delete [] fNblk_cl;
   delete [] fEblk_cl;
   delete [] fE_cl_corr; fE_cl_corr = 0;
-  
+  if(fMCdata){
+    delete [] fE_cl_res; fE_cl_res = 0;
+    delete [] fX_cl_res; fX_cl_res = 0;
+    delete [] fY_cl_res; fY_cl_res = 0;
+  }
+    
 }
 
 //_____________________________________________________________________________
@@ -444,6 +470,15 @@ void SBSBBShower::Clear( Option_t* opt )//Event()//
   fMult = 0.0;
   fTRX = 0.0;
   fTRY = 0.0;
+  
+  if(fMCdata){
+    fEres = 0.0;
+    fXres = 0.0;
+    fYres = 0.0;
+    memset( fE_cl_res, 0, lshh );
+    memset( fX_cl_res, 0, lshh );
+    memset( fY_cl_res, 0, lshh );
+  }
   
   for (int i=0;i<fNelem;i++) 
     if(fBlocks[i])fBlocks[i]->ClearEvent();
@@ -748,6 +783,12 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   //cluster.SetX( X );
   //cluster.SetY( Y );
   
+  if(fMCdata){
+    fEres = cluster.GetE();//-
+    fXres = cluster.GetX();//-
+    fYres = cluster.GetY();//-
+  }
+  
   AddCluster(cluster);
   
   if(fDebug)cout << "Added - we now have " << fNclust << endl;
@@ -785,6 +826,13 @@ Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
     fX_cl[i] = fClusters[i]->GetX();
     fY_cl[i] = fClusters[i]->GetY();
     fMult_cl[i] = fClusters[i]->GetMult();
+ 
+    if(fMCdata){
+      fE_cl_res[i] = 1.0 - fClusters[i]->GetE();// /
+      fX_cl_res[i] = fClusters[i]->GetX();//-
+      fY_cl_res[i] = fClusters[i]->GetY();//-
+    }
+
     for(int j = 0; j<fMult_cl[i]; j++){
       if(fDebug){
 	cout << " block " << j << " address " << fClusters[i]->GetBlock(j) << endl;
@@ -812,6 +860,13 @@ Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
 	}
       }
       Emax = fE;
+      
+      if(fMCdata){
+	fEres = 1.0-fE;// /
+	fXres = fX;//-
+	fYres = fY;//-
+      }
+
     }
     //clusterpoint.SetXYZ( fX[i], fY[i], fOrigin.Z() );
     //clusterpoint.Transform(fDetToTarg);

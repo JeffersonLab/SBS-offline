@@ -111,6 +111,8 @@ void digsim_tree::Init(TTree *tree)
   SetupDetBranch(HitDataDet["bb.grinch"], "bb.grinch.hit");
   
   // GEMs
+  MCTrack["bb.gem"] = new MCTrack_t();
+  SetupDetBranch(MCTrack["bb.gem"], "bb.gem.mctrack");
   GEMSimHitDet["bb.gem"] = new GEMSimHit_t();
   SetupDetBranch(GEMSimHitDet["bb.gem"], "bb.gem.simhit");
   std::string fullgemname;
