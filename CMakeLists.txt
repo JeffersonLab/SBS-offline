@@ -79,7 +79,7 @@ set(EXTRAWARN ON CACHE BOOL "g++ Wextra warn options if supported")
 set(VERBOSE ON CACHE BOOL "Compile extra code for printing verbose messages")
 set(TESTCODE ON CACHE BOOL "Compile extra diagnostic code (extra computations and global variables")
 set(MCDATA ON CACHE BOOL "Compile support code for MC input data")
-set(CXXMAXERRORS 0 CACHE INT "Maximum number of allowed errors before cxx stops")
+set(CXXMAXERRORS 0 CACHE STRING "Maximum number of allowed errors before cxx stops")
 list(APPEND SBSEXTRADEF_LIST VERBOSE TESTCODE MCDATA)
 
 #----------------------------------------------------------------------------
@@ -174,7 +174,8 @@ endforeach()
 configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.csh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.csh @ONLY)
 configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.sh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.sh)
 
-message(AUTHOR_WARNING ${DEV_WARNING})
+## Time to disable this warning. The cmake build works...
+#message(AUTHOR_WARNING ${DEV_WARNING})
 
 #install the library under ${CMAKE_INSTALL_PREFIX}/lib
 INSTALL(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
