@@ -91,7 +91,9 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     { "nrows",        &nrows,       kInt      },
     { "xy",           &xy,          kDoubleV, 2 },  // center pos of block 1
     { "dxdy",         &dxy,         kDoubleV, 2 },  // dx and dy block spacings
+    { "thr_adc",      &fThrADC,     kInt,     0, 1 },
     { "emin",         &fEmin,       kDouble   },
+    { "clus_rad",     &fClusterRadius,     kDouble   },
     { "maxclust",     &fMaxNClust,  kIntV,    0, 1 },
     { "mc_data",      &fMCdata,     kInt,     0, 1 },// flag for MC data
     { 0 }
@@ -99,7 +101,9 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 //cout << " call Loaddb" << endl;
   err = LoadDB( file, date, config_request, fPrefix );
 
-
+  fClusBlockRadX = Int_t(fClusterRadius/dxy[0]);
+  fClusBlockRadY = Int_t(fClusterRadius/dxy[1]);
+  
 //cout << " (nrows ' " << nrows << " " <<  ncols << endl;
   // Sanity checks
   if( !err && (nrows <= 0 || ncols <= 0) ) {
@@ -561,16 +565,19 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       }
       
       // Copy the data and apply calibrations
-      fA[k]   = (Float_t)data;                   // ADC value
-      fA_p[k] = (Float_t)data - fPed[k];         // ADC minus ped
-      fA_c[k] = fA_p[k] * fGain[k];//FIXME: should be calibration...     // ADC corrected for simu: SH 6.64734e-01 PS 1.36180e+00
       //cout << "k ? " << k << " data ? " << data << " fA[k] ???" << fA[k] << endl;
-      //if( fA_p[k] > 0.0 )
-      fAsum_p += fA_p[k];             // Sum of ADC minus ped
-      //if( fA_c[k] > 0.0 )
-      fAsum_c += fA_c[k];             // Sum of ADC corrected
-      fNhits++;
-      fBlocks[k]->SetE(fA_c[k]);
+      if( (Float_t)data - fPed[k] > fThrADC ){
+	fA[k]   = (Float_t)data;                   // ADC value
+	fA_p[k] = (Float_t)data - fPed[k];         // ADC minus ped
+	fA_c[k] = fA_p[k] * fGain[k];//FIXME: should be calibration...     // ADC corrected for simu: SH 6.64734e-01 PS 1.36180e+00
+	fAsum_p += fA_p[k];             // Sum of ADC minus ped
+	//if( fA_c[k] > 0.0 )
+	fAsum_c += fA_c[k];             // Sum of ADC corrected
+	fNhits++;
+	fBlocks[k]->SetE(fA_c[k]);
+      }else{
+	fA[k] = fA_p[k] = fA_c[k] = 0.0;
+      }
       //cout << " channel " << k << " data " << data << endl;
     }
   }
@@ -627,7 +634,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 
   Int_t col, row;
   Int_t colmax=0, rowmax=0;
-  Double_t  energy_prev = 0.0;
+  Double_t  energy_max = 0.0;
 
 # if not defined(_WIN32)//Win32 compiler do not support variable as array size
   Double_t energyDep[fNcols][fNrows];
@@ -663,8 +670,8 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   for( row = 0; row < fNrows; row++ ){
     for( col = 0; col < fNcols; col++ ){
       // Main cluster (highest energy)
-      if(energyDep[col][row]>energy_prev){
-	energy_prev=energyDep[col][row];
+      if(energyDep[col][row]>energy_max){
+	energy_max=energyDep[col][row];
 	colmax = col;
 	rowmax = row;
       }//else if(){ // other local maxima
@@ -672,7 +679,9 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     }
   }
   
-  //cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_prev << endl;
+  if(energy_max < fEmin)return 0;
+  
+  //cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_max << endl;
   
   //  cout <<"___________________________________________________" << endl;
   
@@ -708,10 +717,10 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   //     }
   energyClusterTotal = 0.0; 
   Int_t
-    mnrow=TMath::Max(rowmax-CLUSTER_BLOCK_RADIUS,0),
-    mxrow=TMath::Min(rowmax+CLUSTER_BLOCK_RADIUS,fNrows-1),
-    mncol=TMath::Max(colmax-CLUSTER_BLOCK_RADIUS,0),
-    mxcol=TMath::Min(colmax+CLUSTER_BLOCK_RADIUS,fNcols-1);
+    mnrow=TMath::Max(rowmax-fClusBlockRadX,0),
+    mxrow=TMath::Min(rowmax+fClusBlockRadX,fNrows-1),
+    mncol=TMath::Max(colmax-fClusBlockRadY,0),
+    mxcol=TMath::Min(colmax+fClusBlockRadY,fNcols-1);
   
   if(fDebug){
     cout << " Cluster: mnrow " << mnrow << " mxrow " << mxrow 

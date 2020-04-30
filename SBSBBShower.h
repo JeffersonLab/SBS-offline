@@ -82,13 +82,14 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   //Float_t*   fGain;      // [fNelem] Gains for each block
 
   //Gain correction 
-   Float_t   gconst;     // const from gain correction 
-   Float_t   gslope;     // slope for gain correction
-   Float_t   acc_charge; // accumulated charge
-
-  // Other parameters
-  //Float_t    fEmin;      // Minimum energy for a cluster center
-
+  Float_t   gconst;     // const from gain correction 
+  Float_t   gslope;     // slope for gain correction
+  Float_t   acc_charge; // accumulated charge
+  
+  // Cluster parameters Other parameters
+  Float_t fClusterRadius; // radius for cluster search around the max 
+  Int_t fClusBlockRadX;
+  Int_t fClusBlockRadY;
   // Per-event data
   //Int_t      fNhits;     // Number of hits
   //Float_t*   fA;         // [fNelem] Array of ADC amplitudes of blocks
@@ -97,16 +98,16 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   //Float_t    fAsum_p;    // Sum of blocks ADC minus pedestal values
   //Float_t    fAsum_c;    // Sum of blocks corrected ADC amplitudes
   //Int_t      fNclust;    // Number of clusters
-   Float_t*   fE_cl;        // [fNClust] Energy (MeV) of clusters
-   Float_t*   fX_cl;        // [fNClust] x position (m) of clusters
-   Float_t*   fY_cl;        // [fNClust] y position (m) of clusters 
+  Float_t*   fE_cl;        // [fNClust] Energy (MeV) of clusters
+  Float_t*   fX_cl;        // [fNClust] x position (m) of clusters
+  Float_t*   fY_cl;        // [fNClust] y position (m) of clusters 
   //Float_t*   fXtarg;     // [fNClust] x position (m) of clusters in target coords
   //Float_t*   fYtarg;     // [fNClust] y position (m) of clusters in target coords
   //Float_t*   fZtarg;     // [fNClust] z position (m) of clusters in target coords
-   Int_t*     fMult_cl;      // [fNClust]  Number of blocks in main cluster
-   Int_t**     fNblk_cl;      // [fNclublk] Numbers of blocks composing main cluster
-   Float_t**   fEblk_cl;      // [fNclublk] Energies of blocks composing main cluster
-   
+  Int_t*     fMult_cl;      // [fNClust]  Number of blocks in main cluster
+  Int_t**     fNblk_cl;      // [fNclublk] Numbers of blocks composing main cluster
+  Float_t**   fEblk_cl;      // [fNclublk] Energies of blocks composing main cluster
+  
   Float_t    fTRX;       // x position of track cross point
   Float_t    fTRY;       // y position of track cross point
 
@@ -132,7 +133,8 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   //TVector3   fDetOffset;
 
   // Useful derived quantities for internal usage.
-
+  Double_t fThrADC;
+  
   Double_t tan_angle, sin_angle, cos_angle;
   
   bool fMCdata;// easy way to enable/disable the use of MC data.
