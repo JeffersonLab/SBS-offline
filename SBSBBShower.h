@@ -87,9 +87,10 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   Float_t   acc_charge; // accumulated charge
   
   // Cluster parameters Other parameters
-  Float_t fClusterRadius; // radius for cluster search around the max 
+  Float_t fClusRadius; // radius for cluster search around the max 
   Int_t fClusBlockRadX;
   Int_t fClusBlockRadY;
+  
   // Per-event data
   //Int_t      fNhits;     // Number of hits
   //Float_t*   fA;         // [fNelem] Array of ADC amplitudes of blocks
@@ -104,9 +105,9 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   //Float_t*   fXtarg;     // [fNClust] x position (m) of clusters in target coords
   //Float_t*   fYtarg;     // [fNClust] y position (m) of clusters in target coords
   //Float_t*   fZtarg;     // [fNClust] z position (m) of clusters in target coords
-  Int_t*     fMult_cl;      // [fNClust]  Number of blocks in main cluster
-  Int_t**     fNblk_cl;      // [fNclublk] Numbers of blocks composing main cluster
-  Float_t**   fEblk_cl;      // [fNclublk] Energies of blocks composing main cluster
+  Int_t*     fMult_cl;     // [fNClust]  Number of blocks in all clusters
+  Int_t**    fNblk_cl;     // [fNclublk] Block numbers composing main cluster
+  Float_t**  fEblk_cl;     // [fNclublk] Block energies composing main cluster
   
   Float_t    fTRX;       // x position of track cross point
   Float_t    fTRY;       // y position of track cross point

@@ -91,20 +91,20 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     { "nrows",        &nrows,       kInt      },
     { "xy",           &xy,          kDoubleV, 2 },  // center pos of block 1
     { "dxdy",         &dxy,         kDoubleV, 2 },  // dx and dy block spacings
-    { "thr_adc",      &fThrADC,     kInt,     0, 1 },
-    { "emin",         &fEmin,       kDouble   },
-    { "clus_rad",     &fClusterRadius,     kDouble   },
-    { "maxclust",     &fMaxNClust,  kIntV,    0, 1 },
+    { "thr_adc",      &fThrADC,     kDouble,     0, 1 },
+    { "emin",         &fEmin,       kFloat,   0, 1 },
+    { "clus_rad",     &fClusRadius, kFloat,   0, 1 },
+    { "maxclust",     &fMaxNClust,  kInt,     0, 1 },
     { "mc_data",      &fMCdata,     kInt,     0, 1 },// flag for MC data
     { 0 }
   };
-//cout << " call Loaddb" << endl;
+  //cout << " call Loaddb" << endl;
   err = LoadDB( file, date, config_request, fPrefix );
 
-  fClusBlockRadX = Int_t(fClusterRadius/dxy[0]);
-  fClusBlockRadY = Int_t(fClusterRadius/dxy[1]);
+  fClusBlockRadX = Int_t(fClusRadius/dxy[0]);
+  fClusBlockRadY = Int_t(fClusRadius/dxy[1]);
   
-//cout << " (nrows ' " << nrows << " " <<  ncols << endl;
+  //cout << " nrows  " << nrows << " " <<  ncols << endl;
   // Sanity checks
   if( !err && (nrows <= 0 || ncols <= 0) ) {
     Error( Here(here), "Illegal number of rows or columns: %d %d. Must be 0. "
@@ -114,10 +114,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 
   Int_t nelem = ncols * nrows; 
   Int_t nclbl = TMath::Min( 3, nrows ) * TMath::Min( 3, ncols );
-
-
-//cout << " nelem= " << nelem << " " << nclbl << " " << fNelem << endl;
-
+  
   // Reinitialization only possible for same basic configuration
   if( !err ) {
     if( fIsInit && nelem != fNelem ) {
@@ -221,6 +218,12 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
       fNblk_cl[k] = new Int_t[ fNclublk ];
       fEblk_cl[k] = new Float_t[ fNclublk ];
     }
+    if(fMCdata){
+      fE_cl_res = new Float_t[ fMaxNClust ];
+      fX_cl_res = new Float_t[ fMaxNClust ];
+      fY_cl_res = new Float_t[ fMaxNClust ];
+    }
+    
     fIsInit = true;
   }
 
@@ -284,6 +287,11 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 #endif
   fClusters = new SBSBBShowerCluster*[fMaxNClust];
   fBlocks = new SBSShowerBlock*[fNelem];
+  
+  cout << " fEmin " << fEmin << " fClusterRadius " << fClusRadius 
+       << " fClusBlockRadX " << fClusBlockRadX 
+       << " fClusBlockRadY " << fClusBlockRadY << endl;
+  
   for(int k = 0; k<fNelem;k++){
     int row = k%nrows;
     int col = (k-row)/nrows;
@@ -372,8 +380,7 @@ SBSBBShower::~SBSBBShower()
 void SBSBBShower::DeleteArrays()
 {
   // Delete member arrays. Internal function used by destructor.
-  //cout << "SBSBBShower::DeleteArrays() " << endl;
-  //cout << 0 << endl;
+  cout << "SBSBBShower::DeleteArrays() " << endl;
   // ? THaShower::DeleteArrays()
   //delete [] fNChan; fNChan = 0;
   //UShort_t mapsize = fDetMap->GetSize();
@@ -399,24 +406,26 @@ void SBSBBShower::DeleteArrays()
   //delete [] fXtarg; fXtarg = 0;
   //delete [] fYtarg; fYtarg = 0;
   //delete [] fZtarg; fZtarg = 0;
-  
   delete [] fE_cl; fE_cl = 0;
   delete [] fX_cl; fX_cl = 0;
   delete [] fY_cl; fY_cl = 0;
   delete [] fMult_cl; fMult_cl = 0;
+  /*
   for(int i = 0; i<fNclust; i++){
     delete [] fNblk_cl[i]; fNblk_cl = 0;
     delete [] fEblk_cl[i]; fEblk_cl = 0;
   }
-  delete [] fNblk_cl;
-  delete [] fEblk_cl;
+  */
+  delete [] fNblk_cl; fNblk_cl = 0;
+  delete [] fEblk_cl; fEblk_cl = 0; 
+  delete [] fNblk; fNblk = 0;
+  delete [] fEblk; fEblk = 0;
   delete [] fE_cl_corr; fE_cl_corr = 0;
   if(fMCdata){
     delete [] fE_cl_res; fE_cl_res = 0;
     delete [] fX_cl_res; fX_cl_res = 0;
     delete [] fY_cl_res; fY_cl_res = 0;
   }
-    
 }
 
 //_____________________________________________________________________________
@@ -635,7 +644,10 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   Int_t col, row;
   Int_t colmax=0, rowmax=0;
   Double_t  energy_max = 0.0;
-
+  
+  std::vector<Int_t> locrowmax, loccolmax;
+  std::vector<Double_t> locenergy_max;
+  
 # if not defined(_WIN32)//Win32 compiler do not support variable as array size
   Double_t energyDep[fNcols][fNrows];
 # else
@@ -644,6 +656,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   
   Double_t energyTotal = 0.0;
   SBSBBShowerCluster cluster(fNclublk);
+  
   
   //  for( col = 0; col < fNcols; col++ )
   //     {
@@ -658,150 +671,186 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     for( col = 0; col < fNcols; col++ ){
       energyDep[col][row] = fA_c[BlockColRowToNumber(col,row)]; 
       
-      //cout << " col " << col << " row " << row << " block ? " << BlockColRowToNumber(col,row) << " Edep ? " << energyDep[col][row] << endl; 
-      //	  cout << energyDep[col][row] << " ";
+
       if( energyDep[col][row] < 0.0 ) 
 	energyDep[col][row] = 0.0;
       energyTotal += energyDep[col][row];
+      
+      //cluster seeds
+      if(energyDep[col][row]>fEmin){
+	if(energyDep[col][row]>energy_max){
+	  energy_max=energyDep[col][row];
+	  colmax = col;
+	  rowmax = row;
+	}
+	
+	if(fDebug)cout << " col " << col << " row " << row << " block ? " << BlockColRowToNumber(col,row) << " Edep ? " << energyDep[col][row] << endl; 
+	
+	locrowmax.push_back(row);
+	loccolmax.push_back(col);
+	locenergy_max.push_back(energyDep[col][row]);
+      }//end      
     }
     //      cout << endl;
   }
   
+  /*
   for( row = 0; row < fNrows; row++ ){
     for( col = 0; col < fNcols; col++ ){
       // Main cluster (highest energy)
-      if(energyDep[col][row]>energy_max){
-	energy_max=energyDep[col][row];
-	colmax = col;
-	rowmax = row;
-      }//else if(){ // other local maxima
-      //}
-    }
-  }
-  
-  if(energy_max < fEmin)return 0;
-  
-  //cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_max << endl;
-  
-  //  cout <<"___________________________________________________" << endl;
-  
-  Int_t i, j, k=0;
-  Double_t energyClusterTotal = 0.0;
-  //  Double_t energyClusterGreatest = 0.0;
-  
-  //Int_t clusterRow = 0;
-  //Int_t clusterCol = 0;
-  
-  //  for( row = 0; row < fNrows; row++ )
-  //     {
-  //       for( col = 0; col < fNcols; col++ )
-  // 	{
-  // 	  energyClusterTotal = 0.0;
-  // 	  for( i = row-CLUSTER_BLOCK_RADIUS; i <= row+CLUSTER_BLOCK_RADIUS; i++ )
-  // 	    {
-  // 	      for( j = col-CLUSTER_BLOCK_RADIUS; j <= col+CLUSTER_BLOCK_RADIUS; j++)
-  // 		{
-  // 		  if( (i >= 0 && i < fNrows ) && ( j >=0 && j < fNcols ) ){   
-  // 		    energyClusterTotal += energyDep[j][i];
-  // 		  }
-  // 		}
-  // 	    }
-
-  // 	  if( energyClusterTotal > energyClusterGreatest )
-  // 	    {
-  // 	      energyClusterGreatest = energyClusterTotal;
-  // 	      clusterRow = row;
-  // 	      clusterCol = col;
-  // 	    }
-  // 	}
-  //     }
-  energyClusterTotal = 0.0; 
-  Int_t
-    mnrow=TMath::Max(rowmax-fClusBlockRadX,0),
-    mxrow=TMath::Min(rowmax+fClusBlockRadX,fNrows-1),
-    mncol=TMath::Max(colmax-fClusBlockRadY,0),
-    mxcol=TMath::Min(colmax+fClusBlockRadY,fNcols-1);
-  
-  if(fDebug){
-    cout << " Cluster: mnrow " << mnrow << " mxrow " << mxrow 
-	 << " mncol " << mncol << " mxcol " << mxcol << endl;
-  }
-  for( i = mnrow; i <= mxrow; i++ ){
-    for( j = mncol; j <= mxcol; j++){
-      energyClusterTotal += energyDep[j][i];
-      fEblk[k] = energyDep[j][i];
-      k++;
-    }
-  }
-  
-  //  cout <<"___________________________________________________" << endl;
-  
-  Double_t energyCluster = energyClusterTotal;
-  Double_t X, Y;
-  
-  if( energyCluster < 0.0 ) return 0;
-  
-  X = fBlockX[BlockColRowToNumber(colmax, rowmax)];
-  Y = fBlockY[BlockColRowToNumber(colmax, rowmax)];
-  
-  //cout << "Got a cluster! E = " << energyCluster << " X = " << X << " Y = " << Y << endl;
-  
-  Double_t energyX = 0.0;
-  Double_t energyY = 0.0;
-  
-  Int_t  blockcounter = 0;
-  for( i = mnrow; i <= mxrow; i++ ){
-    for( j = mncol; j <= mxcol; j++ ){
-      if( (i >= 0 && i < fNrows ) && ( j >=0 && j < fNcols ) ){
-	energyX += energyDep[j][i]*fBlockX[BlockColRowToNumber(j,i)];
-	energyY += energyDep[j][i]*fBlockY[BlockColRowToNumber(j,i)];
+      if(energyDep[col][row]>fEmin){
+	if(energyDep[col][row]>energy_max){
+	  energy_max=energyDep[col][row];
+	  colmax = col;
+	  rowmax = row;
+	}
 	
-	/*
-	if(i!=fBlocks[BlockColRowToNumber(j,i)]->GetRow()){
-	cout << "row " << i << " " << fBlocks[BlockColRowToNumber(j,i)]->GetRow() << endl;
+	locrowmax.push_back(row);
+	loccolmax.push_back(col);
+	locenergy_max.push_back(energyDep[col][row]);
+      }//end 
+    }
+  }
+  */
+  
+  if(energy_max < fEmin){
+    fCoarseProcessed = 1;
+    return 0;
+  }
+    
+  //clean the extrac cluster seeds
+  for(size_t i = 0; i<locenergy_max.size(); i++){
+    /*
+    if(locrowmax[i]==rowmax && loccolmax[i]==colmax){
+      locrowmax.erase(locrowmax.begin()+i);
+      loccolmax.erase(loccolmax.begin()+i);
+      locenergy_max.erase(locenergy_max.begin()+i);
+    }
+    */
+    for(size_t j = 0; j<i; j++){
+      /*
+      if(locrowmax[j]==rowmax && loccolmax[j]==colmax){
+	locrowmax.erase(locrowmax.begin()+j);
+	loccolmax.erase(loccolmax.begin()+j);
+	locenergy_max.erase(locenergy_max.begin()+j);
+      }
+      */
+      if(abs(locrowmax[i]-locrowmax[j])<=fClusBlockRadX &&
+	 abs(loccolmax[i]-loccolmax[j])<=fClusBlockRadY){
+	if(locenergy_max[i]<locenergy_max[j]){
+	  locrowmax.erase(locrowmax.begin()+i);
+	  loccolmax.erase(loccolmax.begin()+i);
+	  locenergy_max.erase(locenergy_max.begin()+i);
+	}else{
+	  locrowmax.erase(locrowmax.begin()+j);
+	  loccolmax.erase(loccolmax.begin()+j);
+	  locenergy_max.erase(locenergy_max.begin()+j);
 	}
-	if(j!=fBlocks[BlockColRowToNumber(j,i)]->GetCol()){
-	  cout << "col " << j << " " << fBlocks[BlockColRowToNumber(j,i)]->GetCol() << endl;
-	}
-	*/
-	cluster.AddBlock( fBlocks[BlockColRowToNumber(j,i)] );
-	if(fDebug){
-	  cout << "Cluster " << &cluster << " Adding block row " 
-	       << fBlocks[BlockColRowToNumber(j,i)]->GetRow() 
-	       << " col " << fBlocks[BlockColRowToNumber(j,i)]->GetCol() 
-	       << " E " << fBlocks[BlockColRowToNumber(j,i)]->GetE() 
-	       << " new size " << cluster.GetSize() << " block " << blockcounter 
-	       << " address " << cluster.GetBlock(blockcounter) << endl;
-	} 
-	blockcounter++;
       }
     }
   }
   
-  X = energyX/energyCluster;
-  Y = energyY/energyCluster;
-
   if(fDebug){
-    cout << energyCluster << " " << X << " " << Y 
-	 << " " << fOrigin.X() << " " << fOrigin.Y() << " " << cluster.GetMult() << endl;
+    cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_max << " Emin = " << fEmin << endl;
+    cout << " secondary clusters seeds size " << locrowmax.size() << " " << loccolmax.size() << " " << locenergy_max.size() << endl;
   }
   
-  cluster.SetE( energyCluster );
-  cluster.SetX( X+fOrigin.X() );
-  cluster.SetY( Y+fOrigin.Y() );
-  //cluster.SetX( X );
-  //cluster.SetY( Y );
+  Int_t i, j;//, k=0;
+  Double_t energyClusterTotal = 0.0;
+  //  Double_t energyClusterGreatest = 0.0;
   
-  if(fMCdata){
-    fEres = cluster.GetE();//-
-    fXres = cluster.GetX();//-
-    fYres = cluster.GetY();//-
+  Int_t mnrow, mxrow, mncol, mxcol;
+  
+  for(size_t cls = 0; cls<locenergy_max.size(); cls++){
+    energyClusterTotal = 0.0;
+    
+    mnrow=TMath::Max(locrowmax[cls]-fClusBlockRadX,0);
+    mxrow=TMath::Min(locrowmax[cls]+fClusBlockRadX,fNrows-1);
+    mncol=TMath::Max(loccolmax[cls]-fClusBlockRadY,0);
+    mxcol=TMath::Min(loccolmax[cls]+fClusBlockRadY,fNcols-1);
+    
+    if(fDebug){
+      cout << " Cluster: mnrow " << mnrow << " mxrow " << mxrow 
+	   << " mncol " << mncol << " mxcol " << mxcol << endl;
+    }
+    for( i = mnrow; i <= mxrow; i++ ){
+      for( j = mncol; j <= mxcol; j++){
+	energyClusterTotal += energyDep[j][i];
+	//fEblk[k] = energyDep[j][i];
+	//k++;
+      }
+    }
+    
+    //Double_t energyCluster = energyClusterTotal;
+    Double_t X, Y;
+    
+    //if( energyCluster < 0.0 ) return 0;
+    
+    X = fBlockX[BlockColRowToNumber(colmax, rowmax)];
+    Y = fBlockY[BlockColRowToNumber(colmax, rowmax)];
+    
+    if(fDebug)cout << "Got a cluster! E = " << energyClusterTotal << " X = " << X << " Y = " << Y << endl;
+    
+    Double_t energyX = 0.0;
+    Double_t energyY = 0.0;
+    
+    Int_t  blockcounter = 0;
+    for( i = mnrow; i <= mxrow; i++ ){
+      for( j = mncol; j <= mxcol; j++ ){
+	if( (i >= 0 && i < fNrows ) && ( j >=0 && j < fNcols ) ){
+	  energyX += energyDep[j][i]*fBlockX[BlockColRowToNumber(j,i)];
+	  energyY += energyDep[j][i]*fBlockY[BlockColRowToNumber(j,i)];
+	  
+	  /*
+	    if(i!=fBlocks[BlockColRowToNumber(j,i)]->GetRow()){
+	    cout << "row " << i << " " << fBlocks[BlockColRowToNumber(j,i)]->GetRow() << endl;
+	    }
+	    if(j!=fBlocks[BlockColRowToNumber(j,i)]->GetCol()){
+	    cout << "col " << j << " " << fBlocks[BlockColRowToNumber(j,i)]->GetCol() << endl;
+	    }
+	  */
+	  cluster.AddBlock( fBlocks[BlockColRowToNumber(j,i)] );
+	  if(fDebug){
+	    cout << "Cluster " << &cluster << " Adding block row " 
+		 << fBlocks[BlockColRowToNumber(j,i)]->GetRow() 
+		 << " col " << fBlocks[BlockColRowToNumber(j,i)]->GetCol() 
+		 << " E " << fBlocks[BlockColRowToNumber(j,i)]->GetE() 
+		 << " new size " << cluster.GetSize() << " block " << blockcounter 
+		 << " address " << cluster.GetBlock(blockcounter) << endl;
+	  } 
+	  blockcounter++;
+	}
+      }
+    }
+    
+    X = energyX/energyClusterTotal;
+    Y = energyY/energyClusterTotal;
+    
+    if(fDebug){
+      cout << energyClusterTotal << " " << X << " " << Y 
+	   << " " << fOrigin.X() << " " << fOrigin.Y() << " " << cluster.GetMult() << endl;
+    }
+    
+    cluster.SetE( energyClusterTotal );
+    cluster.SetX( X+fOrigin.X() );
+    cluster.SetY( Y+fOrigin.Y() );
+    //cluster.SetX( X );
+    //cluster.SetY( Y );
+    
+    if(fMCdata){
+      fEres = cluster.GetE();//-
+      fXres = cluster.GetX();//-
+      fYres = cluster.GetY();//-
+    }
+    
+    AddCluster(cluster);
+    if(fDebug)
+      cout << "Added - we now have " << fNclust << endl;
   }
   
-  AddCluster(cluster);
-  
-  if(fDebug)cout << "Added - we now have " << fNclust << endl;
-  
+  locrowmax.clear();  
+  loccolmax.clear();  
+  locenergy_max.clear();  
   fCoarseProcessed = 1;
   return 0;
 }
@@ -814,13 +863,15 @@ Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
   
   // Fine Shower processing.
   
-  if(fDebug)cout << endl << fNclust << " clusters " << GetName()  << endl;
-  //   for (int i=0;i<fNclust;i++) {
-  //     cout << setw(2) << i << setw(7) << setprecision(1) 
-  // 	 << fClusters[i]->GetE() << setw(8) << setprecision(3) 
-  // 	 << fClusters[i]->GetX() << setw(8) << fClusters[i]->GetY() 
-  // 	 << setw(4) << fClusters[i]->GetMult() << endl;
-  //   }
+  if(fDebug){
+    cout << endl << fNclust << " clusters " << GetName()  << endl;
+    for (int i=0;i<fNclust;i++) {
+      cout << setw(2) << i << setw(7) << setprecision(1) 
+	   << fClusters[i]->GetE() << setw(8) << setprecision(3) 
+	   << fClusters[i]->GetX() << setw(8) << fClusters[i]->GetY() 
+	   << setw(4) << fClusters[i]->GetMult() << endl;
+    }
+  }
   
   TVector3 clusterpoint;
   Double_t Emax = -10.0;
