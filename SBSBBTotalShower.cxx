@@ -42,7 +42,8 @@ ClassImp(SBSBBTotalShower)
 SBSBBTotalShower::SBSBBTotalShower( const char* name, const char* description,
                                    THaApparatus* apparatus ) :
 THaPidDetector(name,description,apparatus), 
-fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0), fE(NULL)
+fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0), 
+  fE(NULL), fX(NULL), fY(NULL), fID(NULL)
 {
     // Constructor. With this method, the subdetectors are created using
     // this detector's prefix followed by "sh" and "ps", respectively,

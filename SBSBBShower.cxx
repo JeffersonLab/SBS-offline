@@ -91,7 +91,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     { "nrows",        &nrows,       kInt      },
     { "xy",           &xy,          kDoubleV, 2 },  // center pos of block 1
     { "dxdy",         &dxy,         kDoubleV, 2 },  // dx and dy block spacings
-    { "thr_adc",      &fThrADC,     kDouble,     0, 1 },
+    { "thr_adc",      &fThrADC,     kDouble,  0, 1 },
     { "emin",         &fEmin,       kFloat,   0, 1 },
     { "clus_rad",     &fClusRadius, kFloat,   0, 1 },
     { "maxclust",     &fMaxNClust,  kInt,     0, 1 },
@@ -645,9 +645,12 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   Int_t colmax=0, rowmax=0;
   Double_t  energy_max = 0.0;
   
-  std::vector<Int_t> locrowmax, loccolmax;
-  std::vector<Double_t> locenergy_max;
+  //std::vector<Int_t> locrowmax, loccolmax;
+  //std::vector<Double_t> locenergy_max;
   
+  std::set<Double_t> locenergy_max;
+  std::map< Double_t, std::pair<Int_t, Int_t> > locrowcol_max;
+
 # if not defined(_WIN32)//Win32 compiler do not support variable as array size
   Double_t energyDep[fNcols][fNrows];
 # else
@@ -684,57 +687,29 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 	  rowmax = row;
 	}
 	
-	if(fDebug)cout << " col " << col << " row " << row << " block ? " << BlockColRowToNumber(col,row) << " Edep ? " << energyDep[col][row] << endl; 
+	if(fDebug)
+	  cout << " col " << col << " row " << row << " block ? " << BlockColRowToNumber(col,row) << " Edep ? " << energyDep[col][row] << endl; 
 	
-	locrowmax.push_back(row);
-	loccolmax.push_back(col);
-	locenergy_max.push_back(energyDep[col][row]);
+	//locrowmax.push_back(row);
+	//loccolmax.push_back(col);
+	//locenergy_max.push_back(energyDep[col][row]);
+	
+	locenergy_max.insert(energyDep[col][row]);
+	locrowcol_max[energyDep[col][row]] = std::make_pair(row, col);
       }//end      
     }
     //      cout << endl;
   }
   
-  /*
-  for( row = 0; row < fNrows; row++ ){
-    for( col = 0; col < fNcols; col++ ){
-      // Main cluster (highest energy)
-      if(energyDep[col][row]>fEmin){
-	if(energyDep[col][row]>energy_max){
-	  energy_max=energyDep[col][row];
-	  colmax = col;
-	  rowmax = row;
-	}
-	
-	locrowmax.push_back(row);
-	loccolmax.push_back(col);
-	locenergy_max.push_back(energyDep[col][row]);
-      }//end 
-    }
-  }
-  */
-  
   if(energy_max < fEmin){
     fCoarseProcessed = 1;
     return 0;
   }
-    
+  
   //clean the extrac cluster seeds
+  /*
   for(size_t i = 0; i<locenergy_max.size(); i++){
-    /*
-    if(locrowmax[i]==rowmax && loccolmax[i]==colmax){
-      locrowmax.erase(locrowmax.begin()+i);
-      loccolmax.erase(loccolmax.begin()+i);
-      locenergy_max.erase(locenergy_max.begin()+i);
-    }
-    */
     for(size_t j = 0; j<i; j++){
-      /*
-      if(locrowmax[j]==rowmax && loccolmax[j]==colmax){
-	locrowmax.erase(locrowmax.begin()+j);
-	loccolmax.erase(loccolmax.begin()+j);
-	locenergy_max.erase(locenergy_max.begin()+j);
-      }
-      */
       if(abs(locrowmax[i]-locrowmax[j])<=fClusBlockRadX &&
 	 abs(loccolmax[i]-loccolmax[j])<=fClusBlockRadY){
 	if(locenergy_max[i]<locenergy_max[j]){
@@ -749,10 +724,48 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
       }
     }
   }
+  */
+  
+  for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
+    Double_t emax_i = *it;
+    if(fDebug)
+      cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
+    for(std::set<Double_t>::iterator jt = locenergy_max.begin(); jt!=it; ++jt){
+      Double_t emax_j = *jt;
+      
+      if(abs(locrowcol_max[emax_i].first-locrowcol_max[emax_j].first)<=fClusBlockRadX &&
+	 abs(locrowcol_max[emax_i].second-locrowcol_max[emax_j].second)<=fClusBlockRadY){
+	if(emax_i<emax_j){
+	  locenergy_max.erase(it);
+	}else{
+	  locenergy_max.erase(jt);
+	}
+      }
+    }
+  }
   
   if(fDebug){
+    cout << "after cleaning neighbors" << endl;//after cleaning
+    for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
+      Double_t emax_i = *it;
+      cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
+    }
+  }
+
+  while(locenergy_max.size()>fMaxNClust){
+    std::set<Double_t>::iterator it = locenergy_max.begin();
+    locenergy_max.erase(it);
+  }
+  
+  if(fDebug){
+    cout << "after cutting tails" << endl;//after cleaning
+    for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
+      Double_t emax_i = *it;
+      cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
+    }
+    
     cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_max << " Emin = " << fEmin << endl;
-    cout << " secondary clusters seeds size " << locrowmax.size() << " " << loccolmax.size() << " " << locenergy_max.size() << endl;
+    cout << " secondary clusters seeds size " << locrowcol_max.size() << " " << locenergy_max.size() << endl;
   }
   
   Int_t i, j;//, k=0;
@@ -761,13 +774,22 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   
   Int_t mnrow, mxrow, mncol, mxcol;
   
-  for(size_t cls = 0; cls<locenergy_max.size(); cls++){
+  //for(size_t cls = 0; cls<locenergy_max.size(); cls++){
+  for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
+    Double_t emax_i = *it;
     energyClusterTotal = 0.0;
     
+    /*
     mnrow=TMath::Max(locrowmax[cls]-fClusBlockRadX,0);
     mxrow=TMath::Min(locrowmax[cls]+fClusBlockRadX,fNrows-1);
     mncol=TMath::Max(loccolmax[cls]-fClusBlockRadY,0);
     mxcol=TMath::Min(loccolmax[cls]+fClusBlockRadY,fNcols-1);
+    */
+    
+    mnrow=TMath::Max(locrowcol_max[emax_i].first-fClusBlockRadX,0);
+    mxrow=TMath::Min(locrowcol_max[emax_i].first+fClusBlockRadX,fNrows-1);
+    mncol=TMath::Max(locrowcol_max[emax_i].second-fClusBlockRadY,0);
+    mxcol=TMath::Min(locrowcol_max[emax_i].second+fClusBlockRadY,fNcols-1);
     
     if(fDebug){
       cout << " Cluster: mnrow " << mnrow << " mxrow " << mxrow 
@@ -848,9 +870,10 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
       cout << "Added - we now have " << fNclust << endl;
   }
   
-  locrowmax.clear();  
-  loccolmax.clear();  
+  // locrowmax.clear();  
+  // loccolmax.clear();  
   locenergy_max.clear();  
+  locrowcol_max.clear();  
   fCoarseProcessed = 1;
   return 0;
 }

@@ -29,12 +29,12 @@ bb.ps.nrows = 26
 bb.ps.ncols = 2
 bb.ps.xsize = 2.34 #m
 bb.ps.ysize = 0.74 #m
-bb.ps.zpos =  2.5319 #m # center of the blocks
+bb.ps.zpos =  2.5177544 #m # Front surface
 bb.ps.xoffset = 0.0 #m
 bb.ps.yoffset = 0.0 #m
 
 ## Positions in [m] where +z is rotated by bb.theta ????
-bb.ps.position = 0 0 2.5319
+bb.ps.position = 0 0 2.5177544
 ## Test settings for one sub-assembly
 bb.ps.size = 0.74  2.34  0.09
 ## Position of first module
@@ -44,8 +44,10 @@ bb.ps.dxdy  =  0.09  0.37
 ## adc thr for individual modules (after ped sub)
 bb.ps.thr_adc = 30.0
 
+## max number of clusters
+bb.ps.maxclust = 20
 ## Mininum energy  for a cluster center (not really used right now)
-bb.ps.emin  = 200.0 # "MeV"
+bb.ps.emin = 200.0 # "MeV"
 bb.ps.clus_rad = 0.10 #
 
 bb.ps.mc_data = 1
