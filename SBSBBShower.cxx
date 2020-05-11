@@ -27,7 +27,6 @@
 #include <cstring>
 #include <iostream>
 #include <iomanip>
-#define CLUSTER_BLOCK_RADIUS 1
 #include <cassert>
 #ifdef HAS_SSTREAM
  #include <sstream>
@@ -47,7 +46,7 @@ SBSBBShower::SBSBBShower( const char* name, const char* description,
 //THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
 THaShower(name,description,apparatus), //fNChan(NULL), fChanMap(NULL)
   fE_cl(0), fX_cl(0), fY_cl(0), fMult_cl(0), fNblk_cl(0), fEblk_cl(0), fE_cl_corr(0), 
-  fBlocks(0), fClusters(0), fMCdata(0)//, fBlkGrid(0)
+  fBlocks(0), fClusters(0), fMultClus(0), fMCdata(0)//, fBlkGrid(0)
 {
   // Constructor.
   fCoarseProcessed = 0;
@@ -103,6 +102,8 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 
   fClusBlockRadX = Int_t(fClusRadius/dxy[0]);
   fClusBlockRadY = Int_t(fClusRadius/dxy[1]);
+  
+  if(fMaxNClust>1)fMultClus = true;
   
   //cout << " nrows  " << nrows << " " <<  ncols << endl;
   // Sanity checks
@@ -681,11 +682,6 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
       
       //cluster seeds
       if(energyDep[col][row]>fEmin){
-	if(energyDep[col][row]>energy_max){
-	  energy_max=energyDep[col][row];
-	  colmax = col;
-	  rowmax = row;
-	}
 	
 	if(fDebug)
 	  cout << " col " << col << " row " << row << " block ? " << BlockColRowToNumber(col,row) << " Edep ? " << energyDep[col][row] << endl; 
@@ -693,9 +689,16 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 	//locrowmax.push_back(row);
 	//loccolmax.push_back(col);
 	//locenergy_max.push_back(energyDep[col][row]);
-	
-	locenergy_max.insert(energyDep[col][row]);
-	locrowcol_max[energyDep[col][row]] = std::make_pair(row, col);
+	if(fMultClus){
+	  locenergy_max.insert(energyDep[col][row]);
+	  locrowcol_max[energyDep[col][row]] = std::make_pair(row, col);
+	}else{
+	  if(energyDep[col][row]>energy_max){
+	    energy_max=energyDep[col][row];
+	    colmax = col;
+	    rowmax = row;
+	  }
+	}
       }//end      
     }
     //      cout << endl;
@@ -726,46 +729,51 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   }
   */
   
-  for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
-    Double_t emax_i = *it;
-    if(fDebug)
-      cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
-    for(std::set<Double_t>::iterator jt = locenergy_max.begin(); jt!=it; ++jt){
-      Double_t emax_j = *jt;
-      
-      if(abs(locrowcol_max[emax_i].first-locrowcol_max[emax_j].first)<=fClusBlockRadX &&
-	 abs(locrowcol_max[emax_i].second-locrowcol_max[emax_j].second)<=fClusBlockRadY){
-	if(emax_i<emax_j){
-	  locenergy_max.erase(it);
-	}else{
-	  locenergy_max.erase(jt);
+  if(fMultClus){
+    for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
+      Double_t emax_i = *it;
+      if(fDebug)
+	cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
+      for(std::set<Double_t>::iterator jt = locenergy_max.begin(); jt!=it; ++jt){
+	Double_t emax_j = *jt;
+	
+	if(abs(locrowcol_max[emax_i].first-locrowcol_max[emax_j].first)<=fClusBlockRadX &&
+	   abs(locrowcol_max[emax_i].second-locrowcol_max[emax_j].second)<=fClusBlockRadY){
+	  if(emax_i<emax_j){
+	    locenergy_max.erase(it);
+	  }else{
+	    locenergy_max.erase(jt);
+	  }
 	}
       }
     }
-  }
-  
-  if(fDebug){
-    cout << "after cleaning neighbors" << endl;//after cleaning
-    for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
-      Double_t emax_i = *it;
-      cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
-    }
-  }
-
-  while(locenergy_max.size()>fMaxNClust){
-    std::set<Double_t>::iterator it = locenergy_max.begin();
-    locenergy_max.erase(it);
-  }
-  
-  if(fDebug){
-    cout << "after cutting tails" << endl;//after cleaning
-    for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
-      Double_t emax_i = *it;
-      cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
+    
+    if(fDebug){
+      cout << "after cleaning neighbors" << endl;//after cleaning
+      for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
+	Double_t emax_i = *it;
+	cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
+      }
     }
     
-    cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_max << " Emin = " << fEmin << endl;
-    cout << " secondary clusters seeds size " << locrowcol_max.size() << " " << locenergy_max.size() << endl;
+    while(locenergy_max.size()>fMaxNClust){
+      std::set<Double_t>::iterator it = locenergy_max.begin();
+      locenergy_max.erase(it);
+    }
+    
+    if(fDebug){
+      cout << "after cutting tails" << endl;//after cleaning
+      for(std::set<Double_t>::iterator it = locenergy_max.begin(); it!=locenergy_max.end(); ++it){
+	Double_t emax_i = *it;
+	cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
+      }
+      
+      cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_max << " Emin = " << fEmin << endl;
+      cout << " secondary clusters seeds size " << locrowcol_max.size() << " " << locenergy_max.size() << endl;
+    }
+  }else{//end if(fMultClus)
+    locenergy_max.insert(energy_max);
+    locrowcol_max[energy_max] = std::make_pair(rowmax, colmax);
   }
   
   Int_t i, j;//, k=0;

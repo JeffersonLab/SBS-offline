@@ -138,6 +138,7 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   
   Double_t tan_angle, sin_angle, cos_angle;
   
+  bool fMultClus;// allow multiple clustering
   bool fMCdata;// easy way to enable/disable the use of MC data.
   
   //void           ClearEvent();

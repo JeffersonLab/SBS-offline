@@ -269,9 +269,14 @@ Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
         return -1;
 
     ClearEvent();
-
-    fPreShower->Decode( evdata );
-    return fShower->Decode( evdata );
+    
+    // EPAF (2020/05/11): Different strategy
+    // Decode shower first (since it is *much* cleaner)
+    fShower->Decode( evdata );
+    // Then set constraints on preshower - provision for a "clustering" asymmetry...
+    
+    // Finally decode shower
+    return fPreshower->Decode( evdata );
 }
 
 //_____________________________________________________________________________
