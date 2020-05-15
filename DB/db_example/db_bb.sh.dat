@@ -55,11 +55,11 @@ bb.sh.xy    =  -1.105  0.255
 ## Space between modules
 bb.sh.dxdy  =  0.085  0.085
 ## adc thr for individual modules (after ped sub)
-bb.ps.thr_adc = 30.0
+bb.sh.thr_adc = 30.0
 
-bb.sh.maxclust = 5
+bb.sh.maxclust = 1
 ## Mininum energy  for a cluster center (not really used right now)
-bb.sh.emin  = 1500.0 # "MeV"
+bb.sh.emin  = 2000.0 # "MeV"
 bb.sh.clus_rad = 0.10 #
 
 bb.sh.mc_data = 1

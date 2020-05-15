@@ -20,6 +20,7 @@
 //                                                                           
 ///////////////////////////////////////////////////////////////////////////////
 
+#include "THaApparatus.h"
 #include "SBSBBTotalShower.h"
 #include "SBSBBShower.h"
 
@@ -41,9 +42,9 @@ ClassImp(SBSBBTotalShower)
 //_____________________________________________________________________________
 SBSBBTotalShower::SBSBBTotalShower( const char* name, const char* description,
                                    THaApparatus* apparatus ) :
-THaPidDetector(name,description,apparatus), 
-fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0), 
-  fE(NULL), fX(NULL), fY(NULL), fID(NULL)
+THaShower(name,description,apparatus), 
+  fShower(NULL), fPreShower(NULL)//, //fMaxDx(0.0), fMaxDy(0.0), 
+//fE(0.0), fX(0.0), fY(0.0)//, fID(NULL)
 {
     // Constructor. With this method, the subdetectors are created using
     // this detector's prefix followed by "sh" and "ps", respectively,
@@ -58,12 +59,13 @@ fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0),
 
 //_____________________________________________________________________________
 SBSBBTotalShower::SBSBBTotalShower( const char* name, 
-                                   const char* shower_name,
+				    const char* shower_name,
                                    const char* preshower_name,
                                    const char* description,
                                    THaApparatus* apparatus ) :
-THaPidDetector(name,description,apparatus),
-fShower(NULL), fPreShower(NULL), fMaxDx(0.0), fMaxDy(0.0), fE(NULL)
+  THaShower(name,description,apparatus),
+  fShower(NULL), fPreShower(NULL)//, //fMaxDx(0.0), fMaxDy(0.0), fE(NULL)
+  //fE(0.0), fX(0.0), fY(0.0)
 {
     // Constructor. With this method, the subdetectors are created using
     // the given names 'shower_name' and 'preshower_name', and variable 
@@ -134,6 +136,9 @@ void SBSBBTotalShower::Setup( const char* name,
         MakeZombie();
         goto exit;
     }
+    //GetApparatus()->AddDetector(fShower);
+    //if(GetApparatus())cout << GetApparatus()->GetName() << endl;
+    //if(fShower->GetApparatus())cout << fShower->GetApparatus()->GetName() << endl;
 
     if( subnames )
         strcpy( subname+nlen+1, preshower_name );
@@ -146,7 +151,8 @@ void SBSBBTotalShower::Setup( const char* name,
         MakeZombie();
         goto exit;
     }
-
+    //GetApparatus()->AddDetector(fShower);
+    
 exit:
     delete [] subname;
     delete [] desc;
@@ -155,13 +161,21 @@ exit:
 
 //_____________________________________________________________________________
 void SBSBBTotalShower::ClearEvent() {
-
+  fShower->Clear();
+  fPreShower->Clear();
+  
+  fNclust = 0;
+  fE = 0.0;
+  fX = 0.0;
+  fY = 0.0;
+  /*
     for (Int_t i=0;i<kMaxNClust;i++) {
         fE[i] = 0.0;
         fX[i] = kBig;
         fY[i] = kBig;
         fID[i] = 0;
     }
+  */
 }
 
 //_____________________________________________________________________________
@@ -170,12 +184,19 @@ SBSBBTotalShower::~SBSBBTotalShower()
     // Destructor. Remove variables from global list.
     if( fIsSetup )
         RemoveVariables();
-
+    
+    /*
     delete [] fE; fE = 0;
     delete [] fX; fX = 0;
     delete [] fY; fY = 0;
     delete [] fID; fID = 0;
-
+    */
+    fPSSHmatchmapX.clear();
+    fPSSHmatchmapY.clear();
+    
+    //delete fPSSHmatchmapX;
+    //delete fPSSHmatchmapY;
+    
     delete fPreShower;
     delete fShower;
 }
@@ -203,37 +224,54 @@ THaAnalysisObject::EStatus SBSBBTotalShower::Init( const TDatime& run_time )
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
 {
-    // Read this detector's parameters from the database file 'fi'.
-    // This function is called by THaDetectorBase::Init() once at the
-    // beginning of the analysis.
-    // 'date' contains the date/time of the run being analyzed.
+  // Read this detector's parameters from the database file 'fi'.
+  // This function is called by THaDetectorBase::Init() once at the
+  // beginning of the analysis.
+  // 'date' contains the date/time of the run being analyzed.
+  
+  static const char* const here = "ReadDatabase()";
+  
+  FILE* file = OpenFile( date );
+  if( !file ) return kFileError;
+  
+  /*
+  // Read fOrigin and fSize (required!) // ou pas
+  Int_t err = ReadGeometry( file, date, true );
+  if( err ) {
+    //cout << " readgeo err" << endl;
+    fclose(file);
+    return err;
+  }
+  */
+  
+  string components_names;
+  std::vector<Int_t> pssh_matchmap_x;
+  std::vector<Int_t> pssh_matchmap_y;
+  
+  DBRequest config_request[] = {
+    { "components",   &components_names,   kString, 0, 1},
+    { "pssh_matchmap_x",   &pssh_matchmap_x,   kIntV, 0, 1},
+    { "pssh_matchmap_y",   &pssh_matchmap_y,   kIntV, 0, 1},
+    { 0 }
+  };
+  
+  Int_t err = LoadDB( file, date, config_request, fPrefix );
 
-    const int LEN = 100;
-    char line[LEN];
+  if( err ) {
+    return kInitError;
+  }
+  
+  for(int i = 0; i<pssh_matchmap_x.size(); i+=3){
+    fPSSHmatchmapX[ pssh_matchmap_x[i] ] = 
+      std::make_pair(pssh_matchmap_x[i+1], pssh_matchmap_x[i+2]);
+  }
 
-    FILE* fi = OpenFile( date );
-    if( !fi ) return kFileError;
-
-    fgets ( line, LEN, fi ); fgets ( line, LEN, fi );          
-    fscanf ( fi, "%f%f", &fMaxDx, &fMaxDy );  // Max diff of shower centers
-
-    fIsInit = true;
-    fclose(fi);
-
-    RemoveVariables();
-    if (fE) {
-        delete [] fE;   fE = 0;
-        delete [] fX;   fX = 0;
-        delete [] fY;   fY = 0;
-        delete [] fID;  fID = 0;
-    }
-
-    fE = new Float_t[kMaxNClust];
-    fX = new Float_t[kMaxNClust];
-    fY = new Float_t[kMaxNClust];
-    fID = new Int_t[kMaxNClust];
-
-    return kOK;
+  for(int i = 0; i<pssh_matchmap_y.size(); i+=3){
+    fPSSHmatchmapY[ pssh_matchmap_y[i] ] = 
+      std::make_pair(pssh_matchmap_y[i+1], pssh_matchmap_y[i+2]);
+  }
+  
+  return kOK;
 }
 
 //_____________________________________________________________________________
@@ -253,7 +291,7 @@ Int_t SBSBBTotalShower::DefineVariables( EMode mode )
         { "e",  "Energy (MeV) of largest cluster",    "fE" },
         { "x",  "Energy (MeV) of largest cluster",    "fX" },
         { "y",  "Energy (MeV) of largest cluster",    "fY" },
-        { "id", "ID of Psh&Sh coincidence (1==good)", "fID" },
+        //{ "id", "ID of Psh&Sh coincidence (1==good)", "fID" },
         { 0 }
     };
     return DefineVarsFromList( vars, mode );
@@ -270,35 +308,71 @@ Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 
     ClearEvent();
     
-    // EPAF (2020/05/11): Different strategy
-    // Decode shower first (since it is *much* cleaner)
     fShower->Decode( evdata );
-    // Then set constraints on preshower - provision for a "clustering" asymmetry...
-    
-    // Finally decode shower
-    return fPreshower->Decode( evdata );
+    return fPreShower->Decode( evdata );
 }
 
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 {
-    // Reconstruct Clusters in shower and preshower detectors.
-    // Then compute total shower energy and cluster ID.
-    //
-    // Valid fIDs:
-    //       1   Matching clusters found.
-    //       0   Clusters found, but separated too far
-    //      -1   No cluster found in either shower or preshower or both
-    //
+  // Reconstruct Clusters in shower and preshower detectors.
+  // Then compute total shower energy and cluster ID.
+  //
+  // Valid fIDs:
+  //       1   Matching clusters found.
+  //       0   Clusters found, but separated too far
+  //      -1   No cluster found in either shower or preshower or both
+  //
+  if( !IsOK() ) 
+    return -1;
 
-    if( !IsOK() ) 
-        return -1;
-
+  // EPAF (2020/05/11): Different strategy
+  // Process shower first (since it is *much* cleaner)
+  fShower->CoarseProcess( tracks );
+  
+  if(fShower->GetNclust()){
+    // Then set constraints on preshower 
+    int rowmin = fPSSHmatchmapX.at(fShower->GetRowMax()).first;
+    int rowmax = fPSSHmatchmapX.at(fShower->GetRowMax()).second;
+    int colmin = fPSSHmatchmapY.at(fShower->GetColMax()).first;
+    int colmax = fPSSHmatchmapY.at(fShower->GetColMax()).second;
+    //fShower->GetY();
+    
+    fPreShower->SetSearchRegion(rowmin, rowmax, colmin, colmax);
+    // Finally process shower
     fPreShower->CoarseProcess(tracks );
-    fShower->CoarseProcess( tracks );
+    
+    if(fShower->GetNclust()){
+      fNclust = 1;
+      /*
+      cout << " fShower->GetE() " << fShower->GetE() 
+	   << " fPreShower->GetE() " << fPreShower->GetE() << endl;
+	   
+      fE = fShower->GetE()+fPreShower->GetE();
+      
+      double w2sh = pow(fShower->GetE()*fShower->GetXSize()/fShower->GetNRows(), 2);
+      double w2ps = pow(fPreShower->GetE()*fPreShower->GetXSize()/fPreShower->GetNRows(), 2);
 
+      fX = (fShower->GetX()*w2sh+fPreShower->GetX()*w2ps)/(w2sh+w2ps);
+      
+      w2sh = pow(fShower->GetE()*fShower->GetYSize()/fShower->GetNCols(), 2);
+      w2ps = pow(fPreShower->GetE()*fPreShower->GetYSize()/fPreShower->GetNCols(), 2);
+
+      fY = (fShower->GetY()*w2sh+fPreShower->GetY()*w2ps)/(w2sh+w2ps);
+      
+      cout << " fNclust " << fNclust << " fE " << fE << " fX " << fX << " fY " << fY << endl;
+      */
+      return 1;
+    }else{
+      return -1;
+    }
+  }else{
+    return -1;
+  }
+  
+  /*
     fNclust = 0;
-
+    
     //  if( ( fShower->GetNclust()+fPreShower->GetNclust() )> kMaxNClust ) cerr << "Error:  Too many clusters ( " << fShower->GetNclust() << " shower and " << fPreShower->GetNclust() << " preshower ).  We are restricted to " << kMaxNClust << endl;
     for (int sh=0;sh<fShower->GetNclust();sh++) {
         Bool_t keep = false;
@@ -342,6 +416,7 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 
 
     return 0;
+  */
 }
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::FineProcess( TClonesArray& tracks )
@@ -354,7 +429,26 @@ Int_t SBSBBTotalShower::FineProcess( TClonesArray& tracks )
         return -1;
 
     fPreShower->FineProcess( tracks );
-    return fShower->FineProcess( tracks );
+    fShower->FineProcess( tracks );
+    
+    if(fNclust){
+      //cout << " fShower->GetE() " << fShower->GetE() << " fPreShower->GetE() " << fPreShower->GetE() << endl;
+      
+      fE = fShower->GetE()+fPreShower->GetE();
+      
+      double w2sh = pow(fShower->GetE()*fShower->GetXSize()/fShower->GetNRows(), 2);
+      double w2ps = pow(fPreShower->GetE()*fPreShower->GetXSize()/fPreShower->GetNRows(), 2);
+      
+      fX = (fShower->GetX()*w2sh+fPreShower->GetX()*w2ps)/(w2sh+w2ps);
+      
+      w2sh = pow(fShower->GetE()*fShower->GetYSize()/fShower->GetNCols(), 2);
+      w2ps = pow(fPreShower->GetE()*fPreShower->GetYSize()/fPreShower->GetNCols(), 2);
+      
+      fY = (fShower->GetY()*w2sh+fPreShower->GetY()*w2ps)/(w2sh+w2ps);
+      
+      //cout << " fNclust " << fNclust << " fE " << fE << " fX " << fX << " fY " << fY << endl;  
+    }
+    return 0;
 }
 
 //_____________________________________________________________________________
@@ -374,9 +468,12 @@ void SBSBBTotalShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {
     ClearEvent();
     fNclust = 0;
-    fE[fNclust] = E;
-    fX[fNclust] = x;
-    fY[fNclust] = y;
+    fE = E;
+    fX = x;
+    fY = y;
+    //fE[fNclust] = E;
+    //fX[fNclust] = x;
+    //fY[fNclust] = y;
     fNclust++;
     if( fShower )
     {

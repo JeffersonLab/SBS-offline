@@ -26,64 +26,70 @@
 #define DEBUG_LEVEL   2
 
 #include    "DebugDef.h"
-//------------------------------------------------------//
-
 #include "THaPidDetector.h"
+#include "THaShower.h"
 
 class SBSBBShower;
 
-class SBSBBTotalShower : public THaPidDetector {
+class SBSBBTotalShower : public THaShower { //THaPidDetector {
+  
+ public:
+  SBSBBTotalShower( const char* name, const char* description = "",
+		    THaApparatus* a = NULL );
+  SBSBBTotalShower( const char* name, const char* shower_name,
+		    const char* preshower_name, const char* description = "",
+		    THaApparatus* a = NULL );
+  virtual ~SBSBBTotalShower();
+  
+  virtual Int_t      Decode( const THaEvData& );
+  virtual Int_t      CoarseProcess( TClonesArray& tracks );
+  virtual Int_t      FineProcess( TClonesArray& tracks );
+  /*
+  Float_t    GetE(Int_t i) const           { return fE[i]; }
+  Float_t    GetY(Int_t i) const           { return fY[i]; }
+  Float_t    GetX(Int_t i) const           { return fX[i]; }
+  Int_t      GetID(Int_t i) const          { return fID[i]; }
+  */
+  SBSBBShower* GetShower() const      { return fShower; }
+  SBSBBShower* GetPreShower() const   { return fPreShower; }
+  virtual EStatus    Init( const TDatime& run_time );
+  virtual void       SetApparatus( THaApparatus* );
+  void               LoadMCHitAt( Double_t x, Double_t y, Double_t E );
+ protected:
+  
+  // Maximum number of clusters
+  static const Int_t kMaxNClust = 16;
+  
+  // Subdetectors
+  SBSBBShower* fShower;      // Shower subdetector
+  SBSBBShower* fPreShower;   // Preshower subdetector
 
-public:
-    SBSBBTotalShower( const char* name, const char* description = "",
-        THaApparatus* a = NULL );
-    SBSBBTotalShower( const char* name, const char* shower_name,
-        const char* preshower_name, const char* description = "",
-        THaApparatus* a = NULL );
-    virtual ~SBSBBTotalShower();
-
-    virtual Int_t      Decode( const THaEvData& );
-    virtual Int_t      CoarseProcess( TClonesArray& tracks );
-    virtual Int_t      FineProcess( TClonesArray& tracks );
-    Float_t    GetE(Int_t i) const           { return fE[i]; }
-    Float_t    GetY(Int_t i) const           { return fY[i]; }
-    Float_t    GetX(Int_t i) const           { return fX[i]; }
-    Int_t      GetID(Int_t i) const          { return fID[i]; }
-    SBSBBShower* GetShower() const      { return fShower; }
-    SBSBBShower* GetPreShower() const   { return fPreShower; }
-    virtual EStatus    Init( const TDatime& run_time );
-    virtual void       SetApparatus( THaApparatus* );
-    void               LoadMCHitAt( Double_t x, Double_t y, Double_t E );
-protected:
-
-    // Maximum number of clusters
-    static const Int_t kMaxNClust = 16;
-
-    // Subdetectors
-    SBSBBShower* fShower;      // Shower subdetector
-    SBSBBShower* fPreShower;   // Preshower subdetector
-
-    // Parameters
-    Float_t    fMaxDx;       // Maximum dx between shower and preshower centers
-    Float_t    fMaxDy;       // Maximum dx between shower and preshower centers
-
-    // Per event data
-    Int_t       fNclust;      // Number of clusters
-    Float_t*    fE;           //[fNClust] Total shower energy
-    Float_t*    fX;           //[fNClust] Total shower X
-    Float_t*    fY;           //[fNClust] Total shower Y
-    Int_t*      fID;          //[fNClust] ID of Presh and Shower coincidence
-
-    void           ClearEvent();
-    virtual Int_t  ReadDatabase( const TDatime& date );
-    virtual Int_t  DefineVariables( EMode mode = kDefine );
-
-private:
-    void           Setup( const char* name,  const char* desc, 
-        const char* shnam, const char* psnam,
-        THaApparatus* app, bool mode );
-
-    ClassDef(SBSBBTotalShower,0)    //A total shower detector (shower plus preshower)
+  /*
+  // Parameters
+  Float_t    fMaxDx;       // Maximum dx between shower and preshower centers
+  Float_t    fMaxDy;       // Maximum dx between shower and preshower centers
+  
+  // Per event data
+  Int_t       fNclust;      // Number of clusters
+  Float_t*    fE;           //[fNClust] Total shower energy
+  Float_t*    fX;           //[fNClust] Total shower X
+  Float_t*    fY;           //[fNClust] Total shower Y
+  Int_t*      fID;          //[fNClust] ID of Presh and Shower coincidence
+  */
+  
+  std::map<int, std::pair<int, int> > fPSSHmatchmapX;
+  std::map<int, std::pair<int, int> > fPSSHmatchmapY;
+  
+  void           ClearEvent();
+  virtual Int_t  ReadDatabase( const TDatime& date );
+  virtual Int_t  DefineVariables( EMode mode = kDefine );
+  
+ private:
+  void           Setup( const char* name,  const char* desc, 
+			const char* shnam, const char* psnam,
+			THaApparatus* app, bool mode );
+  
+  ClassDef(SBSBBTotalShower,0)    //A total shower detector (shower plus preshower)
 };
 
 ///////////////////////////////////////////////////////////////////////////////

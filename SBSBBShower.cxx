@@ -46,7 +46,7 @@ SBSBBShower::SBSBBShower( const char* name, const char* description,
 //THaPidDetector(name,description,apparatus), fNChan(NULL), fChanMap(NULL)
 THaShower(name,description,apparatus), //fNChan(NULL), fChanMap(NULL)
   fE_cl(0), fX_cl(0), fY_cl(0), fMult_cl(0), fNblk_cl(0), fEblk_cl(0), fE_cl_corr(0), 
-  fBlocks(0), fClusters(0), fMultClus(0), fMCdata(0)//, fBlkGrid(0)
+  fBlocks(0), fClusters(0), fSearchRegion(0), fMultClus(0), fMCdata(0)//, fBlkGrid(0)
 {
   // Constructor.
   fCoarseProcessed = 0;
@@ -63,7 +63,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     // beginning of the analysis.
     // 'date' contains the date/time of the run being analyzed.
   
-  //cout << "******readdatabase *******" << endl;
+  cout << "******** Detector " << GetName() << " ReadDatabase ********" << endl;
 
   static const char* const here = "ReadDatabase()";
   
@@ -105,7 +105,8 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   
   if(fMaxNClust>1)fMultClus = true;
   
-  //cout << " nrows  " << nrows << " " <<  ncols << endl;
+  //cout << " nrows  " << nrows << " ncols " <<  ncols << endl;
+  //cout << " Emin "  << fEmin << " thr ADC " << fThrADC << " max clust " << fMaxNClust << " MC data " << fMCdata << endl;
   // Sanity checks
   if( !err && (nrows <= 0 || ncols <= 0) ) {
     Error( Here(here), "Illegal number of rows or columns: %d %d. Must be 0. "
@@ -289,9 +290,9 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   fClusters = new SBSBBShowerCluster*[fMaxNClust];
   fBlocks = new SBSShowerBlock*[fNelem];
   
-  cout << " fEmin " << fEmin << " fClusterRadius " << fClusRadius 
-       << " fClusBlockRadX " << fClusBlockRadX 
-       << " fClusBlockRadY " << fClusBlockRadY << endl;
+  //cout << " fEmin " << fEmin << " fClusterRadius " << fClusRadius 
+  //   << " fClusBlockRadX " << fClusBlockRadX 
+  //   << " fClusBlockRadY " << fClusBlockRadY << endl;
   
   for(int k = 0; k<fNelem;k++){
     int row = k%nrows;
@@ -481,6 +482,8 @@ void SBSBBShower::Clear( Option_t* opt )//Event()//
   fE = 0.0;
   fX = 0.0;
   fY = 0.0;
+  fRowMax = -1;
+  fColMax = -1;
   fMult = 0.0;
   fTRX = 0.0;
   fTRY = 0.0;
@@ -520,7 +523,6 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
   // fA_c[]           -  Array of corrected ADC values of shower blocks;
   // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
   // fAsum_c          -  Sum of shower blocks corrected ADC values;
-
   const char* const here = "Decode";
   // Loop over all modules defined for shower detector
   bool has_warning = false;
@@ -575,7 +577,6 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       }
       
       // Copy the data and apply calibrations
-      //cout << "k ? " << k << " data ? " << data << " fA[k] ???" << fA[k] << endl;
       if( (Float_t)data - fPed[k] > fThrADC ){
 	fA[k]   = (Float_t)data;                   // ADC value
 	fA_p[k] = (Float_t)data - fPed[k];         // ADC minus ped
@@ -588,6 +589,7 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       }else{
 	fA[k] = fA_p[k] = fA_c[k] = 0.0;
       }
+      if(fDebug)cout << "k ? " << k << " data ? " << data << " fA[k] ? " << fA[k] << " fA_c[k] ? " << fA_c[k] << endl;
       //cout << " channel " << k << " data " << data << endl;
     }
   }
@@ -643,7 +645,6 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   if( fCoarseProcessed ) return 0;
 
   Int_t col, row;
-  Int_t colmax=0, rowmax=0;
   Double_t  energy_max = 0.0;
   
   //std::vector<Int_t> locrowmax, loccolmax;
@@ -658,23 +659,68 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   Double_t energyDep[100][100];
 # endif
   
+  Double_t energyX = 0.0;
+  Double_t energyY = 0.0;
   Double_t energyTotal = 0.0;
+  Double_t energyClusterTotal = 0.0;
+  Double_t X, Y;
+  
   SBSBBShowerCluster cluster(fNclublk);
   
+  // much simpler if a search region is defined:
+  // check the blocks in the search region. 
+  // If there is at least one above the defined threshold, build the cluster.
+  // otherwise, return false
+  if(fSearchRegion){
+    if(fDebug)cout << " fSearchColmin "  << fSearchColmin 
+		   << " fSearchColmax "  << fSearchColmax 
+		   << " fSearchRowmin "  << fSearchRowmin 
+		   << " fSearchRowmax "  << fSearchRowmax 
+		   << endl;
+    
+    for(col = fSearchColmin; col <= fSearchColmax; col++){
+      for(row = fSearchRowmin; row <= fSearchRowmax; row++){
+	if(fDebug)cout << " col " << col << " row " << row << " fA_c[BlockColRowToNumber(col,row)] " << fA_c[BlockColRowToNumber(col,row)] << endl;
+	energyDep[col][row] = fA_c[BlockColRowToNumber(col,row)]; 
+	
+	energyX += energyDep[col][row]*fBlockX[BlockColRowToNumber(col,row)];
+	energyY += energyDep[col][row]*fBlockY[BlockColRowToNumber(col,row)];
+	energyClusterTotal+= energyDep[col][row];
+	
+	if(energyDep[col][row]>fEmin){
+	  if(energyDep[col][row]>energy_max){
+	    energy_max=energyDep[col][row];
+	    fColMax = col;
+	    fRowMax = row;
+	  }
+	}
+	
+	cluster.AddBlock( fBlocks[BlockColRowToNumber(col,row)] );
+      }
+    }
+    
+    if(energy_max>=fEmin){
+      X = energyX/energyClusterTotal;
+      Y = energyY/energyClusterTotal;
+      
+      cluster.SetE( energyClusterTotal );
+      cluster.SetX( X+fOrigin.X() );
+      cluster.SetY( Y+fOrigin.Y() );
+      
+      AddCluster(cluster);
+    }
+    
+    fCoarseProcessed = 1;
+    return 0; 
+  }
   
-  //  for( col = 0; col < fNcols; col++ )
-  //     {
-  //       for( row = 0; row < fNrows; row++ )
-  // 	{
-  // 	  energyDep[col][row] = 0.0;
-  // 	}
-  //     }
   
   //  cout << "Energy Deposition:" << endl <<"___________________________________________________" << endl;
   for( row = 0; row < fNrows; row++ ){
     for( col = 0; col < fNcols; col++ ){
       energyDep[col][row] = fA_c[BlockColRowToNumber(col,row)]; 
       
+      //cout << " energy dep ? " << energyDep[col][row] << endl;
 
       if( energyDep[col][row] < 0.0 ) 
 	energyDep[col][row] = 0.0;
@@ -682,6 +728,11 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
       
       //cluster seeds
       if(energyDep[col][row]>fEmin){
+	if(energyDep[col][row]>energy_max){
+	  energy_max=energyDep[col][row];
+	  fColMax = col;
+	  fRowMax = row;
+	}
 	
 	if(fDebug)
 	  cout << " col " << col << " row " << row << " block ? " << BlockColRowToNumber(col,row) << " Edep ? " << energyDep[col][row] << endl; 
@@ -692,12 +743,6 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 	if(fMultClus){
 	  locenergy_max.insert(energyDep[col][row]);
 	  locrowcol_max[energyDep[col][row]] = std::make_pair(row, col);
-	}else{
-	  if(energyDep[col][row]>energy_max){
-	    energy_max=energyDep[col][row];
-	    colmax = col;
-	    rowmax = row;
-	  }
 	}
       }//end      
     }
@@ -768,18 +813,17 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
 	cout << emax_i << " " << locrowcol_max[emax_i].first << " " << locrowcol_max[emax_i].second << endl;
       }
       
-      cout << " col max ? " << colmax << " row max ? " << rowmax << " Emax ? " << energy_max << " Emin = " << fEmin << endl;
+      cout << " col max ? " << fColMax << " row max ? " << fRowMax << " Emax ? " << energy_max << " Emin = " << fEmin << endl;
       cout << " secondary clusters seeds size " << locrowcol_max.size() << " " << locenergy_max.size() << endl;
     }
   }else{//end if(fMultClus)
     locenergy_max.insert(energy_max);
-    locrowcol_max[energy_max] = std::make_pair(rowmax, colmax);
+    locrowcol_max[energy_max] = std::make_pair(fRowMax, fColMax);
   }
   
-  Int_t i, j;//, k=0;
-  Double_t energyClusterTotal = 0.0;
   //  Double_t energyClusterGreatest = 0.0;
   
+  Int_t i, j;//, k=0;
   Int_t mnrow, mxrow, mncol, mxcol;
   
   //for(size_t cls = 0; cls<locenergy_max.size(); cls++){
@@ -812,17 +856,13 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
     }
     
     //Double_t energyCluster = energyClusterTotal;
-    Double_t X, Y;
-    
     //if( energyCluster < 0.0 ) return 0;
     
-    X = fBlockX[BlockColRowToNumber(colmax, rowmax)];
-    Y = fBlockY[BlockColRowToNumber(colmax, rowmax)];
+    X = fBlockX[BlockColRowToNumber(fColMax, fRowMax)];
+    Y = fBlockY[BlockColRowToNumber(fColMax, fRowMax)];
     
     if(fDebug)cout << "Got a cluster! E = " << energyClusterTotal << " X = " << X << " Y = " << Y << endl;
     
-    Double_t energyX = 0.0;
-    Double_t energyY = 0.0;
     
     Int_t  blockcounter = 0;
     for( i = mnrow; i <= mxrow; i++ ){
@@ -1023,5 +1063,16 @@ void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
   fY_cl[fNclust] = fClusters[fNclust]->GetY();
   fMult_cl[fNclust] = fClusters[fNclust]->GetMult();
   fNclust++;
+}
+
+void SBSBBShower::SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax)
+{
+  fSearchRowmin = rowmin;
+  fSearchRowmax = rowmax;
+  fSearchColmin = colmin;
+  fSearchColmax = colmax;
+  
+  fSearchRegion = true;
+  fMultClus = false;
 }
 

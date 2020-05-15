@@ -27,6 +27,8 @@
 #include "THaVarList.h"
 #include "THaDetMap.h"
 #include "THaDetector.h"
+#include "SBSBBShower.h"
+#include "SBSBBTotalShower.h"
 
 //#include <SBSSimFadc250Module.h>// we need not to need this
 #include "TList.h"
@@ -395,8 +397,16 @@ void SBSSimDecoder::SetDetectors()
     while( (det=(TObject*)diter()) ){
       cout << "Setting det " << app->GetName() << "." << det->GetName() 
 	   << " into SBSSimDecoder" << endl;
-      AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
-		  (app->GetDetector(det->GetName()))->GetInitDate());
+      if(strcmp(app->GetDetector(det->GetName())->GetClassName(),"SBSBBTotalShower")==0){
+	SBSBBTotalShower* TS = (SBSBBTotalShower*)app->GetDetector(det->GetName());
+	AddDetector(Form("%s.%s",app->GetName(), TS->GetShower()->GetName()), 
+		    (app->GetDetector(det->GetName()))->GetInitDate());
+	AddDetector(Form("%s.%s",app->GetName(), TS->GetPreShower()->GetName()), 
+		    (app->GetDetector(det->GetName()))->GetInitDate());
+       }else{
+	AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
+		    (app->GetDetector(det->GetName()))->GetInitDate());
+      }
     }
   }
 }
