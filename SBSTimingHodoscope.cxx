@@ -375,7 +375,10 @@ Int_t SBSTimingHodoscope::ReadDatabase(const TDatime& date)
       }
       for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
         THaDetMap::Module *d = fDetMap->GetModule( imod );
-        d->MakeADC();
+        // Only those modules not already marked as TDCs should be marked
+        // as ADCs
+        if(!d->IsTDC())
+          d->MakeADC();
       }
     }
   }
