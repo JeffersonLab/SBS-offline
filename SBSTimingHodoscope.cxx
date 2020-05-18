@@ -373,6 +373,10 @@ Int_t SBSTimingHodoscope::ReadDatabase(const TDatime& date)
             nadc, 2*nbars);
         return kInitError;
       }
+      for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
+        THaDetMap::Module *d = fDetMap->GetModule( imod );
+        d->MakeADC();
+      }
     }
   }
 
