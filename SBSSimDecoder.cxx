@@ -187,11 +187,11 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   event_length = 0;
   
   event_type = 1;
-  event_num = simEvent->EvtID;
+  event_num = simEvent->EvtID;//++;
   recent_event = event_num;
 
   // Event weight
-  fWeight = simEvent->Weight;
+  fWeight = simEvent->ev_sigma*simEvent->ev_solang;
 
   //
   if( fDoBench ) fBench->Begin("physics_decode");
@@ -205,7 +205,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   for(size_t d = 0; d<fDetectors.size(); d++){
     if(fDebug>2)cout << fDetectors[d] << endl;
     //SBSDigSim::UHitData_t* HitData_Det = simEvent->HitDataDet.at(fDetectors[d]);
-    LoadDetector(detmaps[d], fDetectors[d], simEvent->HitDataDet.at(fDetectors[d]));
+    //LoadDetector(detmaps[d], fDetectors[d], simEvent->HitDataDet.at(fDetectors[d]));
   }
   
   // Now call LoadSlot for the different detectors
@@ -252,10 +252,11 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
 }
 */
 
+
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   std::vector<UInt_t> > &map,
 				   const std::string detname, 
-				   SBSDigSim::UHitData_t* HitData_Det)
+				   SBSSimEvent* simev)
 {
   if(fDebug>1)std::cout << "SBSSimDecoder::LoadDectector(" << detname << ")" << std::endl;
   //int detid = detinfo.DetUniqueId();
@@ -270,6 +271,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   // Loop over all raw data in this event
   UInt_t j = 0;
   //FIXME: we don't want that, I just set it up this way for the sake of going forward
+  //Simple fix (might not be ideal): do "if(detname=="xyz")"
+  cout << detname.c_str() << endl;
+  
+  //if(detname.strcmp("")==0)
+  
+  /*
   while(j < HitData_Det->nhits){
     //Decode header first
     lchan = 0;
@@ -350,7 +357,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       std::cout << " } " << std::endl;
     }
   }//end loop on j
-
+  */
   return HED_OK;
 }
 

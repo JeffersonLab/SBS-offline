@@ -330,6 +330,8 @@ Int_t SBSBBShower::DefineVariables( EMode mode )
     { "e_c_m",    "Corrected Energy (MeV) of main (high E) cluster",    "fE_corr" },
     { "x_m",      "x-position (m) of main (high E) cluster", "fX" },
     { "y_m",      "y-position (m) of main (high E) cluster", "fY" },
+    { "col_m",    "column of highest energy deposit", "fColMax" },
+    { "row_m",    "row of highest energy deposit", "fRowMax" },
     { "mult_m",   "Multiplicity of main (high E) cluster",    "fMult" },
     { "nblk_m",   "Numbers of blocks in main (high E) cluster",  "fNblk" },
     { "eblk_m",   "Energies of blocks in main (high E) cluster", "fEblk" },
@@ -580,7 +582,7 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
       if( (Float_t)data - fPed[k] > fThrADC ){
 	fA[k]   = (Float_t)data;                   // ADC value
 	fA_p[k] = (Float_t)data - fPed[k];         // ADC minus ped
-	fA_c[k] = fA_p[k] * fGain[k];//FIXME: should be calibration...     // ADC corrected for simu: SH 6.64734e-01 PS 1.36180e+00
+	fA_c[k] = fA_p[k] * fGain[k];//FIXME: should be calibration... 
 	fAsum_p += fA_p[k];             // Sum of ADC minus ped
 	//if( fA_c[k] > 0.0 )
 	fAsum_c += fA_c[k];             // Sum of ADC corrected

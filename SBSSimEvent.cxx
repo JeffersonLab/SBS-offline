@@ -6,20 +6,20 @@
 // class SBSSimEvent: encapsulation of digsim_tree 
 //
 //_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent() : digsim_tree()
+SBSSimEvent::SBSSimEvent() : gmn_dig_tree()
 {
-  std::cout << "Initializing TSBSSimEvent" << std::endl;
+  std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
-  Weight = 1;
+  //Weight = 1;
   Clear();
 }
 
 //_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent(TTree* tree) : digsim_tree(tree)
+SBSSimEvent::SBSSimEvent(TTree* tree) : gmn_dig_tree(tree)
 {
   std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
-  Weight = 1;
+  //Weight = 1;
   Clear();
 }
 
@@ -32,7 +32,7 @@ void SBSSimEvent::Clear( const Option_t* opt )
 //_____________________________________________________________________________
 void SBSSimEvent::Print( const Option_t* opt ) const
 {
-  std::cout << RunID << " " << RunID << " " << Weight << std::endl;
+  std::cout << RunID << " " << EvtID << " " << ev_sigma*ev_solang << std::endl;
 }
 
 //-----------------------------------------------------------------------------
