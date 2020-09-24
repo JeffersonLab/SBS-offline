@@ -92,7 +92,7 @@ protected:
   Int_t ReadDetectorDB(std::string detname, TDatime date);
   Int_t LoadDetector( std::map<Decoder::THaSlotData*, std::vector<UInt_t> > &map,
 		      const std::string detname, 
-		      SBSSimEvent* simev); 
+		      const SBSSimEvent* simev); 
   
   void CheckForEnabledDetectors();
   //void CheckForDetector(const char *detname, short id);

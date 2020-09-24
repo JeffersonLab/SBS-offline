@@ -58,7 +58,6 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
 {
   // Constructor
   DefineVariables();
-
   fDetectors.clear();
   //fTree = 0;
   // Load detectors: rely on gHaApps (please tell me it works!!!)
@@ -205,7 +204,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   for(size_t d = 0; d<fDetectors.size(); d++){
     if(fDebug>2)cout << fDetectors[d] << endl;
     //SBSDigSim::UHitData_t* HitData_Det = simEvent->HitDataDet.at(fDetectors[d]);
-    //LoadDetector(detmaps[d], fDetectors[d], simEvent->HitDataDet.at(fDetectors[d]));
+    LoadDetector(detmaps[d], fDetectors[d], simEvent);
   }
   
   // Now call LoadSlot for the different detectors
@@ -256,7 +255,7 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   std::vector<UInt_t> > &map,
 				   const std::string detname, 
-				   SBSSimEvent* simev)
+				   const SBSSimEvent* simev)
 {
   if(fDebug>1)std::cout << "SBSSimDecoder::LoadDectector(" << detname << ")" << std::endl;
   //int detid = detinfo.DetUniqueId();

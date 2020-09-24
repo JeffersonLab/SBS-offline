@@ -35,6 +35,15 @@ void SBSSimEvent::Print( const Option_t* opt ) const
   std::cout << RunID << " " << EvtID << " " << ev_sigma*ev_solang << std::endl;
 }
 
+//_____________________________________________________________________________
+Int_t SBSSimEvent::GetEntry( Long64_t entry )
+{
+  EvtID = entry;
+  // Read contents of entry.
+  if (!fChain) return 0;
+  return fChain->GetEntry(entry);
+}
+
 //-----------------------------------------------------------------------------
 ClassImp(SBSSimEvent)
 

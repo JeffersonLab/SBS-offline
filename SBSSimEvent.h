@@ -12,6 +12,7 @@ public:
   
   virtual ~SBSSimEvent(){};
   
+  virtual Int_t    GetEntry(Long64_t entry);
   virtual void Clear( const Option_t* opt="" );
   virtual void Print( const Option_t* opt="" ) const;
 
