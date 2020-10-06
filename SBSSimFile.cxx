@@ -51,6 +51,21 @@ SBSSimFile::SBSSimFile(const char* filename, const char* description) :
 }
 
 //-----------------------------------------------------------------------------
+SBSSimFile::SBSSimFile(const char* filename, const char* description, std::vector<TString> det_list) :
+  THaRunBase(description), fROOTFileName(filename), fROOTFile(0), fTree(0), 
+  fEvent(0), fNEntries(0), fEntry(0), fVerbose(0)
+{
+  // Constructor
+
+  // Use default if no file name given
+  if( fROOTFileName.IsNull() ) {
+    Info( __FUNCTION__, "Using default input file MCdata.root" );
+    fROOTFileName = "MCdata.root";
+  }
+  for(size_t i = 0; i<det_list.size(); i++)fDetList.push_back(det_list[i]);
+}
+
+//-----------------------------------------------------------------------------
 SBSSimFile::SBSSimFile(const SBSSimFile &run)
   : THaRunBase(run), fROOTFileName(run.fROOTFileName), 
     fROOTFile(0), fTree(0), fEvent(0), fNEntries(0), fEntry(0), fVerbose(0)
@@ -162,7 +177,7 @@ Int_t SBSSimFile::Open()
   //fEvent is actually the tree!!!
   // and if it works it turns out to make the thing actually much simpler.
   delete fEvent; fEvent = 0;// really needed anymore ?
-  fEvent = new SBSSimEvent(fTree);
+  fEvent = new SBSSimEvent(fTree, fDetList);
   
   fOpened = kTRUE;
   return 0;

@@ -1,14 +1,15 @@
 #ifndef __SBSSimEvent_h
 #define __SBSSimEvent_h
 
-#include "gmn_dig_tree.h"
+//#include "gmn_dig_tree.h"
+#include "g4sbs_tree.h"
 
 class TTree;
 
-class SBSSimEvent : public gmn_dig_tree {
-public:
-  SBSSimEvent();                 // Default constructor, for ROOT I/O
-  SBSSimEvent(TTree* tree);
+class SBSSimEvent : public g4sbs_tree {
+ public:
+  //SBSSimEvent();                 // Default constructor, for ROOT I/O
+  SBSSimEvent(TTree* tree, std::vector<TString> det_list);
   
   virtual ~SBSSimEvent(){};
   

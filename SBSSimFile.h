@@ -24,6 +24,7 @@ class SBSSimEvent;
 class SBSSimFile : public THaRunBase {
  public:
   SBSSimFile(const char* filename, const char* description = "");
+  SBSSimFile(const char* filename, const char* description, std::vector<TString> det_list);
   SBSSimFile(const SBSSimFile &run);
   virtual ~SBSSimFile();
   virtual SBSSimFile &operator=(const THaRunBase &rhs);
@@ -54,6 +55,8 @@ class SBSSimFile : public THaRunBase {
   TFile* fROOTFile;       //! Input ROOT file
   TTree* fTree;           //! Input Tree with simulation data
   SBSSimEvent* fEvent;   //! Current event
+
+  std::vector<TString> fDetList;
 
   ULong64_t fNEntries;    //! Number of entries in tree
   ULong64_t fEntry;       //! Current entry number

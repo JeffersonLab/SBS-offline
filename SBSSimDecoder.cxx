@@ -266,15 +266,292 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   SimEncoder::mpd_data tmp_mpd;
   UInt_t* mpd_hdr = new UInt_t[2];
   
+  Decoder::THaSlotData *sldat = 0;
   //This should be *general* and work for *every* subsystem
   // Loop over all raw data in this event
   UInt_t j = 0;
   //FIXME: we don't want that, I just set it up this way for the sake of going forward
   //Simple fix (might not be ideal): do "if(detname=="xyz")"
-  cout << detname.c_str() << endl;
+  //cout << detname.c_str() << endl;
   
-  //if(detname.strcmp("")==0)
   
+  if(strcmp(detname.c_str(), "bb.ps")==0){
+    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPS_Dig.nchan << endl;
+    for(int j = 0; j<simev->Earm_BBPS_Dig.nchan; j++){
+      //cout << j << " " << simev->Earm_BBPS_Dig.chan->at(j) << " " << simev->Earm_BBPS_Dig.adc->at(j) << endl;
+      lchan = simev->Earm_BBPS_Dig.chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)];
+      }
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(6, chan, 1));
+   
+      myev->push_back(simev->Earm_BBPS_Dig.adc->at(j));
+      
+      if(fDebug>2){
+	std::cout << " j = " << j << " my ev = {";
+	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	std::cout << " } " << std::endl;
+      }
+    }
+  }
+  if(strcmp(detname.c_str(), "bb.sh")==0){
+    //cout << " ouh " << detname.c_str() << endl;
+    for(int j = 0; j<simev->Earm_BBSH_Dig.nchan; j++){
+      //cout << j << " " << simev->Earm_BBSH_Dig.chan->at(j) << " " << simev->Earm_BBSH_Dig.adc->at(j) << endl;
+      lchan = simev->Earm_BBSH_Dig.chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)];
+      }
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(6, chan, 1));
+   
+      myev->push_back(simev->Earm_BBSH_Dig.adc->at(j));
+      
+      if(fDebug>2){
+	std::cout << " j = " << j << " my ev = {";
+	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	std::cout << " } " << std::endl;
+      }
+    }
+  }
+  if(strcmp(detname.c_str(), "bb.hodo")==0){
+    //cout << " ouh " << detname.c_str() << endl;
+    for(int j = 0; j<simev->Earm_BBHodo_Dig.nchan; j++){
+      //cout << j << " " << simev->Earm_BBHodo_Dig.chan->at(j) << " " << simev->Earm_BBHodo_Dig.adc->at(j) << endl;
+      lchan = simev->Earm_BBHodo_Dig.chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)];
+      }
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(1, chan, 2));
+      
+      myev->push_back(simev->Earm_BBHodo_Dig.tdc_l->at(j));
+      myev->push_back(simev->Earm_BBHodo_Dig.tdc_t->at(j));
+      
+      if(fDebug>2){
+	std::cout << " j = " << j << " my ev = {";
+	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	std::cout << " } " << std::endl;
+      }
+    }
+  }
+  if(strcmp(detname.c_str(), "bb.grinch")==0){
+    //cout << " ouh " << detname.c_str() << endl;
+    for(int j = 0; j<simev->Earm_GRINCH_Dig.nchan; j++){
+      //cout << j << " " << simev->Earm_GRINCH_Dig.chan->at(j) << " " << simev->Earm_GRINCH_Dig.adc->at(j) << endl;
+      lchan = simev->Earm_GRINCH_Dig.chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)];
+      }
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(1, chan, 2));
+      
+      myev->push_back(simev->Earm_GRINCH_Dig.tdc_l->at(j));
+      myev->push_back(simev->Earm_GRINCH_Dig.tdc_t->at(j));
+      
+      if(fDebug>2){
+	std::cout << " j = " << j << " my ev = {";
+	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	std::cout << " } " << std::endl;
+      }
+    }
+  }
+  
+  if(strcmp(detname.c_str(), "bb.gem")==0){
+    //cout << " ouh " << detname.c_str() << endl;
+    /*
+    for(int j = 0; j<simev->Earm_BBGEM_Dig.1x_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_1x_Dig.strip->at(j);
+      
+      tmp_mpd = lchan/128;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_1x_Dig.adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_1x_Dig.adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_1x_Dig.adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_1x_Dig.adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_1x_Dig.adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_1x_Dig.adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_Dig.1y_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_1y_Dig.strip->at(j);
+      
+      tmp_mpd = lchan/128+30;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_1y_Dig.adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_1y_Dig.adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_1y_Dig.adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_1y_Dig.adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_1y_Dig.adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_1y_Dig.adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_Dig.2x_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_2x_Dig.strip->at(j);
+      
+      tmp_mpd = lchan/128+54;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_2x_Dig.adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_2x_Dig.adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_2x_Dig.adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_2x_Dig.adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_2x_Dig.adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_2x_Dig.adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_Dig.2y_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_2y_Dig.strip->at(j);
+      
+      tmp_mpd = lchan/128+84;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_2y_dighit_adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_2y_dighit_adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_2y_dighit_adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_2y_dighit_adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_2y_dighit_adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_2y_dighit_adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_dighit_3x_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_3x_dighit_strip->at(j);
+      
+      tmp_mpd = lchan/128+108;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_3x_dighit_adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_3x_dighit_adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_3x_dighit_adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_3x_dighit_adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_3x_dighit_adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_3x_dighit_adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_dighit_3y_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_3y_dighit_strip->at(j);
+      
+      tmp_mpd = lchan/128+138;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_3y_dighit_adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_3y_dighit_adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_3y_dighit_adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_3y_dighit_adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_3y_dighit_adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_3y_dighit_adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_dighit_4x_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_4x_dighit_strip->at(j);
+      
+      tmp_mpd = lchan/128+162;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_4x_dighit_adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_4x_dighit_adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_4x_dighit_adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_4x_dighit_adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_4x_dighit_adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_4x_dighit_adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_dighit_4y_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_4y_dighit_strip->at(j);
+      
+      tmp_mpd = lchan/128+186;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_4y_dighit_adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_4y_dighit_adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_4y_dighit_adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_4y_dighit_adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_4y_dighit_adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_4y_dighit_adc_5->at(j));
+    }
+    
+  }
+
+    for(int j = 0; j<simev->Earm_BBGEM_dighit_5x_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_5x_dighit_strip->at(j);
+      
+      tmp_mpd = lchan/128+216;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_5x_dighit_adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_5x_dighit_adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_5x_dighit_adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_5x_dighit_adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_5x_dighit_adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_5x_dighit_adc_5->at(j));
+    }
+    
+    for(int j = 0; j<simev->Earm_BBGEM_dighit_5y_nstrips; j++){
+      
+      lchan = simev->Earm_BBGEM_5y_dighit_strip->at(j);
+      
+      tmp_mpd = lchan/128+240;
+      
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(simev->Earm_BBGEM_5y_dighit_adc_0->at(j));
+      myev->push_back(simev->Earm_BBGEM_5y_dighit_adc_1->at(j));
+      myev->push_back(simev->Earm_BBGEM_5y_dighit_adc_2->at(j));
+      myev->push_back(simev->Earm_BBGEM_5y_dighit_adc_3->at(j));
+      myev->push_back(simev->Earm_BBGEM_5y_dighit_adc_4->at(j));
+      myev->push_back(simev->Earm_BBGEM_5y_dighit_adc_5->at(j));
+    }
+    */
+  }
+
+  if(strcmp(detname.c_str(), "sbs.hcal")==0){
+    //cout << " ouh " << detname.c_str() << endl;
+    
+  }
   /*
   while(j < HitData_Det->nhits){
     //Decode header first

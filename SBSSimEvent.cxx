@@ -3,19 +3,20 @@
 #include "TTree.h"
 
 // ----------------------------------------------- 
-// class SBSSimEvent: encapsulation of digsim_tree 
+// class SBSSimEvent: encapsulation of g4sbs_tree 
 //
+/*
 //_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent() : gmn_dig_tree()
+SBSSimEvent::SBSSimEvent() : g4sbs_tree()
 {
   std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
   //Weight = 1;
   Clear();
 }
-
+*/
 //_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent(TTree* tree) : gmn_dig_tree(tree)
+SBSSimEvent::SBSSimEvent(TTree* tree, std::vector<TString> det_list) : g4sbs_tree(tree, det_list)
 {
   std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
