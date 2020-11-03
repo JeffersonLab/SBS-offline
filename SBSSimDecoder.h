@@ -101,19 +101,23 @@ protected:
   
   bool fCheckedForEnabledDetectors;
   std::vector<std::string> fDetectors;
+  
   //bool fTreeIsSet;
   //digsim_tree* fTree;
   
   std::map<std::string, UInt_t> fNChanDet;
   std::map<std::string, UInt_t> fChanMapStartDet;
   std::map<std::string, std::map<UInt_t, detchaninfo> > fInvDetMap;
+  std::vector<std::vector<detchaninfo> > fInvDetMap_secondary;
   //std::map<std::string, std::vector< std::vector<UShort_t> > > fChanMapDet;
   
+  /*
   // again, probably dumb...
   std::map<std::string, uint> fChansPerSlotDetMap;
   std::map<std::string, uint> fSlotsPerCrateDetMap;
   std::map<std::string, uint> fFirstSlotDetMap;
   std::map<std::string, uint> fFirstCrateDetMap;
+  */
   
   void ChanToROC( const std::string detname, Int_t h_chan, 
 		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;
