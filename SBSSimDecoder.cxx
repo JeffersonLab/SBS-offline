@@ -276,7 +276,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   
   
   if(strcmp(detname.c_str(), "bb.ps")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPS_Dig.nchan << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPS_Dig.nchan << endl;
+     //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPS_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_BBPS_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_BBPS_Dig.chan->at(j) << " " << simev->Earm_BBPS_Dig.adc->at(j) << endl;
       lchan = simev->Earm_BBPS_Dig.chan->at(j);
@@ -299,7 +300,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.sh")==0){
-    //cout << " ouh " << detname.c_str() << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Earm_BBSH_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_BBSH_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_BBSH_Dig.chan->at(j) << " " << simev->Earm_BBSH_Dig.adc->at(j) << endl;
       lchan = simev->Earm_BBSH_Dig.chan->at(j);
@@ -322,7 +323,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.hodo")==0){
-    //cout << " ouh " << detname.c_str() << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Earm_BBHodo_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_BBHodo_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_BBHodo_Dig.chan->at(j) << " " << simev->Earm_BBHodo_Dig.adc->at(j) << endl;
       lchan = simev->Earm_BBHodo_Dig.chan->at(j)+1;
@@ -355,7 +356,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.grinch")==0){
-    //cout << " ouh " << detname.c_str() << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Earm_GRINCH_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_GRINCH_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_GRINCH_Dig.chan->at(j) << " " << simev->Earm_GRINCH_Dig.adc->at(j) << endl;
       lchan = simev->Earm_GRINCH_Dig.chan->at(j);
@@ -414,10 +415,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
 
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    //cout << " ouh " << detname.c_str() << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Harm_HCal_Dig.nchan << endl;
     for(int j = 0; j<simev->Harm_HCal_Dig.nchan; j++){
       lchan = simev->Harm_HCal_Dig.chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
+      cout << lchan << " " << crate << " " << slot << " " << chan << endl;
 
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
@@ -445,7 +447,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       myev->push_back(simev->Harm_HCal_Dig.adc_18->at(j));
       myev->push_back(simev->Harm_HCal_Dig.adc_19->at(j));
 
-      ChanToROC(detname, lchan, crate, slot, chan);//+288 ??? that might be the trick
+      ChanToROC(detname, lchan+288, crate, slot, chan);//+288 ??? that might be the trick
+      cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
       }
@@ -618,10 +621,10 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   // digitization specific db can be used to override any values
   FILE* file  = THaAnalysisObject::OpenFile(fileName.c_str(), date);
   
-  std::vector<int> detmap,chanmap;
+  std::vector<int> detmap,chanmap;//, detmap_adc;
   uint nchan, nlogchan = 0, chanmapstart = 0;
   
-  int cps, spc, fs, fc;
+  //int cps, spc, fs, fc;
   
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
@@ -629,10 +632,13 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     {"detmap", &detmap, kIntV, 0, false}, //
     {"chanmap", &chanmap, kIntV, 0, true}, // <- optional
     {"chanmap_start", &chanmapstart, kInt, 0, true}, // <- optional
+    //{"detmap_adc", &detmap_adc, kIntV, 0, true}, // <- optional
+    /*
     {"first_crate", &fc, kInt, 0, true},// <- optional 
     {"first_slot", &fs, kInt, 0, true},//  <- optional
     {"chan_per_slot", &cps, kInt, 0, true},//  <- optional
     {"slot_per_crate", &spc, kInt, 0, true},//  <- optional
+    */
     { 0 }
   };
   Int_t err = THaAnalysisObject::LoadDB(file, date, request, prefix.c_str());
@@ -645,6 +651,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   
   fNChanDet[detname] = nchan;
   fChanMapStartDet[detname] = chanmapstart;
+  (fInvDetMap[detname]).resize(nlogchan);
   int nparam_mod = 4;
   if(detmap[4]==-1)nparam_mod = 5;
   int crate,slot,ch_lo,ch_hi, ch_count = 0, ch_map = 0;
@@ -674,6 +681,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	*/
       }
     }else{
+      
       for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	if(ch_count>nlogchan){
 	  std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;

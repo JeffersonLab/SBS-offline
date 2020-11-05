@@ -107,8 +107,9 @@ protected:
   
   std::map<std::string, UInt_t> fNChanDet;
   std::map<std::string, UInt_t> fChanMapStartDet;
-  std::map<std::string, std::map<UInt_t, detchaninfo> > fInvDetMap;
-  std::vector<std::vector<detchaninfo> > fInvDetMap_secondary;
+  //std::map<std::string, std::map<UInt_t, detchaninfo> > fInvDetMap;
+  std::map<std::string, std::vector<detchaninfo> > fInvDetMap;
+  //std::map<std::string, std::vector<detchaninfo> > fInvDetMap_secondary;
   //std::map<std::string, std::vector< std::vector<UShort_t> > > fChanMapDet;
   
   /*

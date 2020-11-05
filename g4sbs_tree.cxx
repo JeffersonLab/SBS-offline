@@ -47,6 +47,7 @@ Int_t g4sbs_tree::GetEntry(Long64_t entry)
 {
   // Read contents of entry.
   if (!fChain) return 0;
+  cout << "ouh!" <<endl;
   return fChain->GetEntry(entry);
 }
 Long64_t g4sbs_tree::LoadTree(Long64_t entry)
@@ -71,7 +72,7 @@ void g4sbs_tree::Init(TTree *tree, std::vector<TString> det_list)
    // code, but the routine can be extended by the user if needed.
    // Init() will be called many times when running on PROOF
    // (once per file to be processed).
-
+  cout << "initialize SBSSimEvent" << endl;
    
    // Set object pointer
 
@@ -105,12 +106,13 @@ void g4sbs_tree::Init(TTree *tree, std::vector<TString> det_list)
    
    for(int k = 0; k<det_list.size(); k++){
      //GMN/GEN
-     if(det_list[k]=="bbps"){
+     if(det_list[k]=="ps"){
+       printf(" ps  branches set up! \n");
        SetupDetBranch(Earm_BBPSTF1, "Earm.BBPSTF1.hit");
        SetupDetBranch(Earm_BBPS_Dig, "Earm.BBPS.dighit");
      }
-     if(det_list[k]=="bbsh"){
-       printf(" bbsh  branches set up! \n");
+     if(det_list[k]=="sh"){
+       printf(" sh  branches set up! \n");
        SetupDetBranch(Earm_BBSHTF1, "Earm.BBSHTF1.hit");
        SetupDetBranch(Earm_BBSH_Dig, "Earm.BBSH.dighit");
      }
@@ -119,16 +121,19 @@ void g4sbs_tree::Init(TTree *tree, std::vector<TString> det_list)
        SetupDetBranch(Earm_GRINCH, "Earm.GRINCH.hit");
        SetupDetBranch(Earm_GRINCH_Dig, "Earm.GRINCH.dighit");
      }
-     if(det_list[k]=="bbhodo"){
+     if(det_list[k]=="hodo"){
+       printf(" hodo  branches set up! \n");
        SetupDetBranch(Earm_BBHodoScint, "Earm.BBHodoScint.hit");
        SetupDetBranch(Earm_BBHodo_Dig, "Earm.BBHodo.dighit");
      }
      if(det_list[k]=="bbgem"){
+       printf(" bbgem branches set up! \n");
        SetupDetBranch(Earm_BBGEM, "Earm.BBGEM.hit");
        SetupDetBranch(Earm_BBGEM_Track, "Earm.BBGEM.Track");
        SetupDetBranch(Earm_BBGEM_Dig, "Earm.BBGEM.dighit");
      }
      if(det_list[k]=="hcal"){
+       printf(" hcal branches set up! \n");
        SetupDetBranch(Harm_HCalScint,"Harm.HCalScint.hit");
        SetupDetBranch(Harm_HCal_Dig, "Harm.HCal.dighit");
      }

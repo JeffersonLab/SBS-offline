@@ -12,8 +12,12 @@
 //
 /////////////////////////////////////////////////////////////////////
 
+#include "THaGlobals.h"
+#include "THaApparatus.h"
 #include "SBSSimFile.h"
 #include "SBSSimEvent.h"
+#include "SBSBBShower.h"
+#include "SBSBBTotalShower.h"
 //#include "evio.h"     // for S_SUCCESS
 // We really only need S_SUCCESS from evio.h, so why not just define
 // it ourselves so we don't have to pull the whole header file.
@@ -48,8 +52,26 @@ SBSSimFile::SBSSimFile(const char* filename, const char* description) :
     Info( __FUNCTION__, "Using default input file MCdata.root" );
     fROOTFileName = "MCdata.root";
   }
+  fDetList.clear();
+  TIter aiter(gHaApps);
+  THaApparatus* app = 0;
+  while( (app=(THaApparatus*)aiter()) ){
+    TList* listdet = app->GetDetectors();
+    TIter diter(listdet);
+    TObject* det = 0;
+    while( (det=(TObject*)diter()) ){
+      fDetList.push_back(det->GetName() );
+      if(strcmp(app->GetDetector(det->GetName())->GetClassName(),"SBSBBTotalShower")==0){
+	SBSBBTotalShower* TS = (SBSBBTotalShower*)app->GetDetector(det->GetName());
+	fDetList.push_back(TS->GetShower()->GetName());
+	fDetList.push_back(TS->GetPreShower()->GetName());
+	
+      }
+    }
+  }
 }
 
+/*
 //-----------------------------------------------------------------------------
 SBSSimFile::SBSSimFile(const char* filename, const char* description, std::vector<TString> det_list) :
   THaRunBase(description), fROOTFileName(filename), fROOTFile(0), fTree(0), 
@@ -64,7 +86,7 @@ SBSSimFile::SBSSimFile(const char* filename, const char* description, std::vecto
   }
   for(size_t i = 0; i<det_list.size(); i++)fDetList.push_back(det_list[i]);
 }
-
+*/
 //-----------------------------------------------------------------------------
 SBSSimFile::SBSSimFile(const SBSSimFile &run)
   : THaRunBase(run), fROOTFileName(run.fROOTFileName), 
@@ -177,6 +199,7 @@ Int_t SBSSimFile::Open()
   //fEvent is actually the tree!!!
   // and if it works it turns out to make the thing actually much simpler.
   delete fEvent; fEvent = 0;// really needed anymore ?
+  cout << fDetList.size() << endl;
   fEvent = new SBSSimEvent(fTree, fDetList);
   
   fOpened = kTRUE;
@@ -223,7 +246,8 @@ Int_t SBSSimFile::ReadEvent()
     return EOF;
   if( ret < 0 )
     return -128;  // CODA_ERR
-
+  
+  cout << ret << " " << fEntry << endl;
   return S_SUCCESS;
 }
 

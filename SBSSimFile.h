@@ -24,7 +24,7 @@ class SBSSimEvent;
 class SBSSimFile : public THaRunBase {
  public:
   SBSSimFile(const char* filename, const char* description = "");
-  SBSSimFile(const char* filename, const char* description, std::vector<TString> det_list);
+  //SBSSimFile(const char* filename, const char* description, std::vector<TString> det_list);
   SBSSimFile(const SBSSimFile &run);
   virtual ~SBSSimFile();
   virtual SBSSimFile &operator=(const THaRunBase &rhs);
