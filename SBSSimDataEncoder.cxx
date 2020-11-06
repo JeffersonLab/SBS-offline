@@ -199,7 +199,7 @@ bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
   }
 
   if(nsamples_read != nsamples) {
-    std::cerr << "Error, number of samples read (" << nsamples_read
+    std::cerr << "DecodeFADC: Error, number of samples read (" << nsamples_read
       << "), does not match number of expected samples (" << nsamples
       << ")." << std::endl;
     return false;

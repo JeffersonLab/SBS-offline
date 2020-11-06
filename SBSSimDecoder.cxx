@@ -414,11 +414,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
 
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Harm_HCalScint.nhits << " " << simev->Harm_HCal_Dig.nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Harm_HCalScint.nhits << " " << simev->Harm_HCal_Dig.nchan << endl;
     for(int j = 0; j<simev->Harm_HCal_Dig.nchan; j++){
       lchan = simev->Harm_HCal_Dig.chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
-      cout << lchan << " " << crate << " " << slot << " " << chan << endl;
+      //cout << lchan << " " << crate << " " << slot << " " << chan << endl;
 
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
@@ -447,7 +447,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       myev->push_back(simev->Harm_HCal_Dig.adc_19->at(j));
 
       ChanToROC(detname, lchan+288, crate, slot, chan);//+288 ??? that might be the trick
-      cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
+      //cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
       }
@@ -686,12 +686,11 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	    return THaAnalysisObject::kInitError;
 	}
-	if(fDebug>=2)
-	  std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map] << " (+" << nchan << ") " << std::endl;
+	if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-1 << " (+" << nchan << ") " << std::endl;
 	if(chanmap[ch_map]>=0){
 	  if(ch_count<nchan){
 	    (fInvDetMap[detname])[chanmap[ch_map]-1]=detchaninfo(crate, slot, i);
-	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]-1) << std::endl;
+	    if(fDebug>=3)std::cout << chanmap[ch_map]-1 << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-1) << std::endl;
 	  }else{
 	    (fInvDetMap[detname])[chanmap[ch_map]+nchan-1]=detchaninfo(crate, slot, i);
 	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-1) << std::endl;

@@ -250,8 +250,6 @@ Int_t SBSSimFile::ReadEvent()
     return EOF;
   if( ret < 0 )
     return -128;  // CODA_ERR
-  
-  cout << ret << " " << fEntry << endl;
   return S_SUCCESS;
 }
 
