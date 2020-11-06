@@ -237,44 +237,8 @@ namespace TSBSGeant4 {
     ret += SetupBranch(tree,prefix,"tdc_l",tdc_l);
     ret += SetupBranch(tree,prefix,"tdc_t",tdc_t);
     return (ret==0);
-    /*
-    if(!tree)return(false);
-    chan = new std::vector<int>;
-    adc = new std::vector<int>;
-    tdc_l = new std::vector<int>;
-    tdc_t = new std::vector<int>;
-    
-    b_nchan = tree->Branch(Form("%s.nchan", prefix), &nchan);
-    b_chan = tree->Branch(Form("%s.chan", prefix), &chan);
-    b_adc = tree->Branch(Form("%s.adc", prefix), &adc);
-    b_tdc_l = tree->Branch(Form("%s.tdc_l", prefix), &tdc_l);
-    b_tdc_t = tree->Branch(Form("%s.tdc_t", prefix), &tdc_t);
-    return true;
-    */
   }
-  /*
-  void DigTimingData_t::ClearBranches()
-  {
-    if(chan){
-      nchan = 0;
-      chan->clear();
-      adc->clear();
-      tdc_l->clear();
-      tdc_t->clear();
-    }
-  }
-  
-  void DigTimingData_t::FillBranches()
-  {
-    if(b_nchan){
-      b_nchan->Fill();
-      b_chan->Fill();
-      b_adc->Fill();
-      b_tdc_l->Fill();
-      b_tdc_t->Fill();
-    }
-  }
-  */
+
   bool DigSampCalData_t::SetupBranches(TTree* tree, const char *prefix)
   {
     int ret = 0;
@@ -302,117 +266,8 @@ namespace TSBSGeant4 {
     ret += SetupBranch(tree,prefix,"adc_19",adc_19);
     ret += SetupBranch(tree,prefix,"tdc",tdc);
     return (ret==0);
-    
-    /*
-    if(!tree)return(false);
-    chan = new std::vector<int>;
-    adc_0 = new std::vector<int>;
-    adc_1 = new std::vector<int>;
-    adc_2 = new std::vector<int>;
-    adc_3 = new std::vector<int>;
-    adc_4 = new std::vector<int>;
-    adc_5 = new std::vector<int>;
-    adc_6 = new std::vector<int>;
-    adc_7 = new std::vector<int>;
-    adc_8 = new std::vector<int>;
-    adc_9 = new std::vector<int>;
-    adc_10 = new std::vector<int>;
-    adc_11 = new std::vector<int>;
-    adc_12 = new std::vector<int>;
-    adc_13 = new std::vector<int>;
-    adc_14 = new std::vector<int>;
-    adc_15 = new std::vector<int>;
-    adc_16 = new std::vector<int>;
-    adc_17 = new std::vector<int>;
-    adc_18 = new std::vector<int>;
-    adc_19 = new std::vector<int>;
-    tdc = new std::vector<int>;
-    
-    b_nchan = tree->Branch(Form("%s.nchan", prefix), &nchan);
-    b_chan = tree->Branch(Form("%s.chan", prefix), &chan);
-    b_adc_0 = tree->Branch(Form("%s.adc_0", prefix), &adc_0);
-    b_adc_1 = tree->Branch(Form("%s.adc_1", prefix), &adc_1);
-    b_adc_2 = tree->Branch(Form("%s.adc_2", prefix), &adc_2);
-    b_adc_3 = tree->Branch(Form("%s.adc_3", prefix), &adc_3);
-    b_adc_4 = tree->Branch(Form("%s.adc_4", prefix), &adc_4);
-    b_adc_5 = tree->Branch(Form("%s.adc_5", prefix), &adc_5);
-    b_adc_6 = tree->Branch(Form("%s.adc_6", prefix), &adc_6);
-    b_adc_7 = tree->Branch(Form("%s.adc_7", prefix), &adc_7);
-    b_adc_8 = tree->Branch(Form("%s.adc_8", prefix), &adc_8);
-    b_adc_9 = tree->Branch(Form("%s.adc_9", prefix), &adc_9);
-    b_adc_10 = tree->Branch(Form("%s.adc_10", prefix), &adc_10);
-    b_adc_11 = tree->Branch(Form("%s.adc_11", prefix), &adc_11);
-    b_adc_12 = tree->Branch(Form("%s.adc_12", prefix), &adc_12);
-    b_adc_13 = tree->Branch(Form("%s.adc_13", prefix), &adc_13);
-    b_adc_14 = tree->Branch(Form("%s.adc_14", prefix), &adc_14);
-    b_adc_15 = tree->Branch(Form("%s.adc_15", prefix), &adc_15);
-    b_adc_16 = tree->Branch(Form("%s.adc_16", prefix), &adc_16);
-    b_adc_17 = tree->Branch(Form("%s.adc_17", prefix), &adc_17);
-    b_adc_18 = tree->Branch(Form("%s.adc_18", prefix), &adc_18);
-    b_adc_19 = tree->Branch(Form("%s.adc_19", prefix), &adc_19);
-    b_tdc = tree->Branch(Form("%s.tdc", prefix), &tdc);
-    return true;
-    */
   }
-  /*
-  void DigSampCalData_t::ClearBranches()
-  {
-    if(chan){
-      nchan = 0;
-      chan->clear();
-      adc_0->clear();
-      adc_1->clear();
-      adc_2->clear();
-      adc_3->clear();
-      adc_4->clear();
-      adc_5->clear();
-      adc_6->clear();
-      adc_7->clear();
-      adc_8->clear();
-      adc_9->clear();
-      adc_10->clear();
-      adc_11->clear();
-      adc_12->clear();
-      adc_13->clear();
-      adc_14->clear();
-      adc_15->clear();
-      adc_16->clear();
-      adc_17->clear();
-      adc_18->clear();
-      adc_19->clear();
-      tdc->clear();
-    }
-  }
-  
-  void DigSampCalData_t::FillBranches()
-  {
-    if(b_nchan){
-      b_nchan->Fill();
-      b_chan->Fill();
-      b_adc_0->Fill();
-      b_adc_1->Fill();
-      b_adc_2->Fill();
-      b_adc_3->Fill();
-      b_adc_4->Fill();
-      b_adc_5->Fill();
-      b_adc_6->Fill();
-      b_adc_7->Fill();
-      b_adc_8->Fill();
-      b_adc_9->Fill();
-      b_adc_10->Fill();
-      b_adc_11->Fill();
-      b_adc_12->Fill();
-      b_adc_13->Fill();
-      b_adc_14->Fill();
-      b_adc_15->Fill();
-      b_adc_16->Fill();
-      b_adc_17->Fill();
-      b_adc_18->Fill();
-      b_adc_19->Fill();
-      b_tdc->Fill();
-    }
-  }
-  */
+
   bool DigGEMData_t::SetupBranches(TTree* tree, const char *prefix)
   {
     int ret = 0;
@@ -426,51 +281,6 @@ namespace TSBSGeant4 {
     ret += SetupBranch(tree,prefix,"adc_4",adc_4);
     ret += SetupBranch(tree,prefix,"adc_5",adc_5);
     return (ret==0);
-   
-    /*
-    if(!tree)return(false);
-    b_nstrips = tree->Branch(Form("%s.nstrips", prefix), &nstrips);
-    b_module = tree->Branch(Form("%s.module", prefix), &module);
-    b_strip = tree->Branch(Form("%s.strip", prefix), &strip);
-    b_adc_0 = tree->Branch(Form("%s.adc_0", prefix), &adc_0);
-    b_adc_1 = tree->Branch(Form("%s.adc_1", prefix), &adc_1);
-    b_adc_2 = tree->Branch(Form("%s.adc_2", prefix), &adc_2);
-    b_adc_3 = tree->Branch(Form("%s.adc_3", prefix), &adc_3);
-    b_adc_4 = tree->Branch(Form("%s.adc_4", prefix), &adc_4);
-    b_adc_5 = tree->Branch(Form("%s.adc_5", prefix), &adc_5);
-    return true;
-    */
   }
-  /*
-  void DigGEMData_t::ClearBranches()
-  {
-    if(strip){
-      nstrips = 0;
-      strip->clear();
-      module->clear();
-      adc_0->clear();
-      adc_1->clear();
-      adc_2->clear();
-      adc_3->clear();
-      adc_4->clear();
-      adc_5->clear();
-    }
-  }
-  
-  void DigGEMData_t::FillBranches()
-  {
-    if(b_nstrips){
-      b_nstrips->Fill();
-      b_module->Fill();
-      b_strip->Fill();
-      b_adc_0->Fill();
-      b_adc_1->Fill();
-      b_adc_2->Fill();
-      b_adc_3->Fill();
-      b_adc_4->Fill();
-      b_adc_5->Fill();
-    }
-  } 
-  */
 }
 

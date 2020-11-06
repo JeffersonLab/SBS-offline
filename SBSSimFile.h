@@ -56,7 +56,7 @@ class SBSSimFile : public THaRunBase {
   TTree* fTree;           //! Input Tree with simulation data
   SBSSimEvent* fEvent;   //! Current event
 
-  std::vector<TString> fDetList;
+  //std::vector<TString> fDetList;
 
   ULong64_t fNEntries;    //! Number of entries in tree
   ULong64_t fEntry;       //! Current entry number

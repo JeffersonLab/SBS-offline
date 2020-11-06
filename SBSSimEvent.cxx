@@ -16,14 +16,24 @@ SBSSimEvent::SBSSimEvent() : g4sbs_tree()
 }
 */
 //_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent(TTree* tree, std::vector<TString> det_list) : g4sbs_tree(tree, det_list)
+SBSSimEvent::SBSSimEvent(TTree* tree) : g4sbs_tree(tree)
 {
   std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
   //Weight = 1;
   Clear();
 }
-
+/*
+//_____________________________________________________________________________
+SBSSimEvent::SBSSimEvent(TTree* tree, std::vector<TString> det_list) : g4sbs_tree(tree, det_list)
+{
+  std::cout << "Initializing SBSSimEvent" << std::endl;
+  cout << det_list.size() << endl;
+  RunID = EvtID = 0;
+  //Weight = 1;
+  Clear();
+}
+*/
 //_____________________________________________________________________________
 void SBSSimEvent::Clear( const Option_t* opt )
 {
@@ -42,7 +52,9 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
   EvtID = entry;
   // Read contents of entry.
   if (!fChain) return 0;
-  return fChain->GetEntry(entry);
+  int ret = fChain->GetEntry(entry); 
+  //cout << Earm_BBPSTF1.nhits << " " << Earm_BBSHTF1.nhits << " " << Earm_BBHodoScint.nhits <<  " " << Earm_GRINCH.nhits << " " << Earm_BBGEM.nhits << " " << Harm_HCalScint.nhits << endl;
+  return ret;
 }
 
 //-----------------------------------------------------------------------------

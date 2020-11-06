@@ -276,8 +276,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   
   
   if(strcmp(detname.c_str(), "bb.ps")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPS_Dig.nchan << endl;
-     //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPS_Dig.nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPSTF1.nhits << " " << simev->Earm_BBPS_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_BBPS_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_BBPS_Dig.chan->at(j) << " " << simev->Earm_BBPS_Dig.adc->at(j) << endl;
       lchan = simev->Earm_BBPS_Dig.chan->at(j);
@@ -300,7 +299,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.sh")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Earm_BBSH_Dig.nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBSHTF1.nhits << " " << simev->Earm_BBSH_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_BBSH_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_BBSH_Dig.chan->at(j) << " " << simev->Earm_BBSH_Dig.adc->at(j) << endl;
       lchan = simev->Earm_BBSH_Dig.chan->at(j);
@@ -323,7 +322,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.hodo")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Earm_BBHodo_Dig.nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBHodoScint.nhits << " " << simev->Earm_BBHodo_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_BBHodo_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_BBHodo_Dig.chan->at(j) << " " << simev->Earm_BBHodo_Dig.adc->at(j) << endl;
       lchan = simev->Earm_BBHodo_Dig.chan->at(j)+1;
@@ -338,7 +337,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       myev->push_back(simev->Earm_BBHodo_Dig.tdc_l->at(j));
       myev->push_back(simev->Earm_BBHodo_Dig.tdc_t->at(j));
-      
+      /*
       ChanToROC(detname, lchan, crate, slot, chan);//+91 ??? that might be the trick
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
@@ -347,7 +346,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       myev->push_back(SBSSimDataEncoder::EncodeHeader(8, chan, 1));
       myev->push_back(simev->Earm_BBHodo_Dig.adc->at(j));
-      
+      */
       if(fDebug>2){
 	std::cout << " j = " << j << " my ev = {";
 	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
@@ -356,7 +355,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.grinch")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Earm_GRINCH_Dig.nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Earm_GRINCH.nhits << " " << simev->Earm_GRINCH_Dig.nchan << endl;
     for(int j = 0; j<simev->Earm_GRINCH_Dig.nchan; j++){
       //cout << j << " " << simev->Earm_GRINCH_Dig.chan->at(j) << " " << simev->Earm_GRINCH_Dig.adc->at(j) << endl;
       lchan = simev->Earm_GRINCH_Dig.chan->at(j);
@@ -371,7 +370,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       myev->push_back(simev->Earm_GRINCH_Dig.tdc_l->at(j));
       myev->push_back(simev->Earm_GRINCH_Dig.tdc_t->at(j));
-      
+      /*
       ChanToROC(detname, lchan, crate, slot, chan);//+288 ??? that might be the trick
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
@@ -380,7 +379,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       myev->push_back(SBSSimDataEncoder::EncodeHeader(8, chan, 1));
       myev->push_back(simev->Earm_GRINCH_Dig.adc->at(j));
-      
+      */
       if(fDebug>2){
 	std::cout << " j = " << j << " my ev = {";
 	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
@@ -415,7 +414,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
 
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Harm_HCal_Dig.nchan << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Harm_HCalScint.nhits << " " << simev->Harm_HCal_Dig.nchan << endl;
     for(int j = 0; j<simev->Harm_HCal_Dig.nchan; j++){
       lchan = simev->Harm_HCal_Dig.chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);

@@ -52,6 +52,7 @@ SBSSimFile::SBSSimFile(const char* filename, const char* description) :
     Info( __FUNCTION__, "Using default input file MCdata.root" );
     fROOTFileName = "MCdata.root";
   }
+  /*
   fDetList.clear();
   TIter aiter(gHaApps);
   THaApparatus* app = 0;
@@ -69,6 +70,7 @@ SBSSimFile::SBSSimFile(const char* filename, const char* description) :
       }
     }
   }
+  */
 }
 
 /*
@@ -199,8 +201,10 @@ Int_t SBSSimFile::Open()
   //fEvent is actually the tree!!!
   // and if it works it turns out to make the thing actually much simpler.
   delete fEvent; fEvent = 0;// really needed anymore ?
-  cout << fDetList.size() << endl;
-  fEvent = new SBSSimEvent(fTree, fDetList);
+  fEvent = new SBSSimEvent(fTree);
+  //cout << fDetList.size() << endl;
+  //fTree->Print();
+  //fEvent = new SBSSimEvent(fTree, fDetList);
   
   fOpened = kTRUE;
   return 0;

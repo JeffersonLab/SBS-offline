@@ -5,27 +5,34 @@
 #include <TCanvas.h>
 #include <iostream>
 
+//to read the detector list
+#include "THaGlobals.h"
+#include "THaApparatus.h"
+#include "SBSBBShower.h"
+#include "SBSBBTotalShower.h"
+
 // g4sbs_tree constructor: the tree will be the 
 // the boolean is a flag to consider(true) or ignore(false) the ECal_box and HCal_box data
 //g4sbs_tree::g4sbs_tree(TTree *tree, Exp_t expt, bool pythia)
 //, bool ecalbox, bool have_hcalbox) 
-g4sbs_tree::g4sbs_tree(TTree *tree, std::vector<TString> det_list)
+g4sbs_tree::g4sbs_tree(TTree *tree)//, std::vector<TString> det_list)
   : fChain(0) 
 {
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
-   if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/volatile/halla/sbs/efuchey/gmn13.5_elastic_20200228_17/elastic_0.root");
-      if (!f || !f->IsOpen()) {
-         f = new TFile("/volatile/halla/sbs/efuchey/gmn13.5_elastic_20200228_17/elastic_0.root");
-      }
-      f->GetObject("T",tree);
-   }
-   // fExpt = expt;
-   // fPythia = pythia;
-   // fEcalBox = ecalbox;
-   // fHcalBox = have_hcalbox;
-   Init(tree, det_list);
+  if (tree == 0) {
+    TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/volatile/halla/sbs/efuchey/gmn13.5_elastic_20200228_17/elastic_0.root");
+    if (!f || !f->IsOpen()) {
+      f = new TFile("/volatile/halla/sbs/efuchey/gmn13.5_elastic_20200228_17/elastic_0.root");
+    }
+    f->GetObject("T",tree);
+  }
+  // fExpt = expt;
+  // fPythia = pythia;
+  // fEcalBox = ecalbox;
+  // fHcalBox = have_hcalbox;
+  Init(tree);
+  //Init(tree, det_list);
 }
 
 //default destructor
@@ -47,7 +54,6 @@ Int_t g4sbs_tree::GetEntry(Long64_t entry)
 {
   // Read contents of entry.
   if (!fChain) return 0;
-  cout << "ouh!" <<endl;
   return fChain->GetEntry(entry);
 }
 Long64_t g4sbs_tree::LoadTree(Long64_t entry)
@@ -63,7 +69,7 @@ Long64_t g4sbs_tree::LoadTree(Long64_t entry)
    return centry;
 }
 
-void g4sbs_tree::Init(TTree *tree, std::vector<TString> det_list)
+void g4sbs_tree::Init(TTree *tree)//, std::vector<TString> det_list)
 {
    // The Init() function is called when the selector needs to initialize
    // a new tree or chain. Typically here the branch addresses and branch
@@ -72,8 +78,28 @@ void g4sbs_tree::Init(TTree *tree, std::vector<TString> det_list)
    // code, but the routine can be extended by the user if needed.
    // Init() will be called many times when running on PROOF
    // (once per file to be processed).
-  cout << "initialize SBSSimEvent" << endl;
-   
+  cout << "initialize g4sbs_tree" << endl;
+
+  std::vector<TString> det_list;
+  det_list.clear();
+  
+  TIter aiter(gHaApps);
+  THaApparatus* app = 0;
+  while( (app=(THaApparatus*)aiter()) ){
+    TList* listdet = app->GetDetectors();
+    TIter diter(listdet);
+    TObject* det = 0;
+    while( (det=(TObject*)diter()) ){
+      det_list.push_back(det->GetName() );
+      if(strcmp(app->GetDetector(det->GetName())->GetClassName(),"SBSBBTotalShower")==0){
+	SBSBBTotalShower* TS = (SBSBBTotalShower*)app->GetDetector(det->GetName());
+	det_list.push_back(TS->GetShower()->GetName());
+	det_list.push_back(TS->GetPreShower()->GetName());
+	
+      }
+    }
+  }
+
    // Set object pointer
 
    Primaries_PID = 0;
@@ -101,39 +127,41 @@ void g4sbs_tree::Init(TTree *tree, std::vector<TString> det_list)
    // SetBranchStatus for matches.
    //fChain->SetMakeClass(1);
    
+   //fChain->Print();
+   
    //Setup "Event branch": can be useful
    fChain->SetBranchAddress("ev", &ev_count, &b_ev);
    
    for(int k = 0; k<det_list.size(); k++){
      //GMN/GEN
      if(det_list[k]=="ps"){
-       printf(" ps  branches set up! \n");
+       //printf(" ps  branches set up! \n");
        SetupDetBranch(Earm_BBPSTF1, "Earm.BBPSTF1.hit");
        SetupDetBranch(Earm_BBPS_Dig, "Earm.BBPS.dighit");
      }
      if(det_list[k]=="sh"){
-       printf(" sh  branches set up! \n");
+       //printf(" sh  branches set up! \n");
        SetupDetBranch(Earm_BBSHTF1, "Earm.BBSHTF1.hit");
        SetupDetBranch(Earm_BBSH_Dig, "Earm.BBSH.dighit");
      }
      if(det_list[k]=="grinch"){
-       printf(" grinch  branches set up! \n");
+       //printf(" grinch  branches set up! \n");
        SetupDetBranch(Earm_GRINCH, "Earm.GRINCH.hit");
        SetupDetBranch(Earm_GRINCH_Dig, "Earm.GRINCH.dighit");
      }
      if(det_list[k]=="hodo"){
-       printf(" hodo  branches set up! \n");
+       //printf(" hodo  branches set up! \n");
        SetupDetBranch(Earm_BBHodoScint, "Earm.BBHodoScint.hit");
        SetupDetBranch(Earm_BBHodo_Dig, "Earm.BBHodo.dighit");
      }
      if(det_list[k]=="bbgem"){
-       printf(" bbgem branches set up! \n");
+       //printf(" bbgem branches set up! \n");
        SetupDetBranch(Earm_BBGEM, "Earm.BBGEM.hit");
        SetupDetBranch(Earm_BBGEM_Track, "Earm.BBGEM.Track");
        SetupDetBranch(Earm_BBGEM_Dig, "Earm.BBGEM.dighit");
      }
      if(det_list[k]=="hcal"){
-       printf(" hcal branches set up! \n");
+       //printf(" hcal branches set up! \n");
        SetupDetBranch(Harm_HCalScint,"Harm.HCalScint.hit");
        SetupDetBranch(Harm_HCal_Dig, "Harm.HCal.dighit");
      }
