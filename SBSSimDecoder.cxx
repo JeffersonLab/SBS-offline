@@ -399,7 +399,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	sldat = crateslot[idx(crate,slot)];
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
-            
+      
       //tmp_mpd = lchan/128+simev->Earm_BBGEM_Dig.module->at(j)*12;
       fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
       myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
@@ -625,6 +625,9 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   
   //int cps, spc, fs, fc;
   
+  bool isgem = (detname.find("gem")!=std::string::npos);
+  int apv_num = -1;
+  
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
     {"nlog_chan", &nlogchan, kInt, 0, true},// <- optional
@@ -666,11 +669,15 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     */
     if(chanmap.empty()){
       for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
+	if(isgem && i%128==0){
+	  apv_num++;
+	  cout << crate << " " << slot << " " << i << " " << apv_num << endl;
+	}
 	if(ch_count>nlogchan){
 	  std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	  return THaAnalysisObject::kInitError;
 	}
-	(fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
+	(fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i, apv_num);
 	/*
 	if(detname.find("hodo")!=std::string::npos){
 	  cout << " crate " << crate << " slot " << slot 
@@ -746,6 +753,12 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   crate = ((fInvDetMap.at(detname)).at(h_chan)).crate;
   slot = ((fInvDetMap.at(detname)).at(h_chan)).slot;
   chan = ((fInvDetMap.at(detname)).at(h_chan)).chan;
+  
+}
+
+int APVnum(const std::string detname, 
+	   Int_t crate, Int_t slot, Int_t chan)
+{
   
 }
 

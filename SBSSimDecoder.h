@@ -54,8 +54,9 @@ class SBSSimDecoder : public Podd::SimDecoder {
     uint crate;
     uint slot;
     uint chan;
-  detchaninfo(int cr = 0, int sl = 0, int ch = 0) : 
-    crate(cr), slot(sl), chan(ch)
+    uint apvnum;
+  detchaninfo(int cr = 0, int sl = 0, int ch = 0, int apv = 0) : 
+    crate(cr), slot(sl), chan(ch), apvnum(apv)
     {}
     virtual ~detchaninfo(){};
   };
@@ -122,6 +123,9 @@ protected:
   
   void ChanToROC( const std::string detname, Int_t h_chan, 
 		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;
+  
+  void APVnum( const std::string detname, 
+	       Int_t crate, Int_t slot, Int_t chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
   
