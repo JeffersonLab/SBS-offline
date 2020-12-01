@@ -91,6 +91,7 @@ namespace Decoder {
     while(evbuffer < pstop) {
       // First, decode the header
       SBSSimDataEncoder::DecodeHeader(*evbuffer++,type,chan,nwords);
+      //cout << type << " " << chan << " " << nwords << endl;
       SBSSimDataEncoder *enc = SBSSimDataEncoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find ADC decoder of type: " << type

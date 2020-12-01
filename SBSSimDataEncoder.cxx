@@ -162,8 +162,8 @@ bool SBSSimADCEncoder::DecodeADC(SimEncoder::adc_data &data,
   if(nwords>1)
     return false;
   unsigned short nread = 0;
-
   data.integral = enc_data[nread++]&fBitMask;
+  //std::cout << enc_data[0] << " " << data.integral << std::endl; 
   return nread==nwords;
 }
 
@@ -182,8 +182,16 @@ bool SBSSimTDCEncoder::DecodeTDC(SimEncoder::tdc_data &data,
 bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
     const unsigned int *enc_data,unsigned short nwords)
 {
+  for(unsigned short i = 0; i<nwords; i++){
+    data.samples.push_back(enc_data[i]);
+  }
+  
+  //OK, so the stuff below is flat-out out of date with the new digitization paradigm
+  /*
   int nsamples = enc_data[0]&0xFFF;
   int nsamples_read = 0;
+
+  std::cout << enc_data[0] << " " << nsamples << std::endl;
 
   unsigned int buff[2] = {0,0};
   bool overflow[2] = { false, false};
@@ -204,6 +212,7 @@ bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
       << ")." << std::endl;
     return false;
   }
+  */
   return true;
 
 }

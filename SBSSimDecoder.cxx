@@ -424,6 +424,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	sldat = crateslot[idx(crate,slot)];
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
+      //cout << SBSSimDataEncoder::EncodeHeader(5, chan, 20) << endl;
+      //cout << SBSSimDataEncoder::EncodeHeader(5, chan, 1) << endl;
       myev->push_back(SBSSimDataEncoder::EncodeHeader(5, chan, 20));
       myev->push_back(simev->Harm_HCal_Dig.adc_0->at(j));
       myev->push_back(simev->Harm_HCal_Dig.adc_1->at(j));
@@ -447,6 +449,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       myev->push_back(simev->Harm_HCal_Dig.adc_19->at(j));
 
       ChanToROC(detname, lchan+288, crate, slot, chan);//+288 ??? that might be the trick
+
       //cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
