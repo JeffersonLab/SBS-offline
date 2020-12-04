@@ -154,8 +154,8 @@ void g4sbs_tree::Init(TTree *tree)//, std::vector<TString> det_list)
        SetupDetBranch(Earm_BBHodoScint, "Earm.BBHodoScint.hit");
        SetupDetBranch(Earm_BBHodo_Dig, "Earm.BBHodo.dighit");
      }
-     if(det_list[k]=="bbgem"){
-       //printf(" bbgem branches set up! \n");
+     if(det_list[k]=="gem"){
+       printf(" bbgem branches set up! \n");
        SetupDetBranch(Earm_BBGEM, "Earm.BBGEM.hit");
        SetupDetBranch(Earm_BBGEM_Track, "Earm.BBGEM.Track");
        SetupDetBranch(Earm_BBGEM_Dig, "Earm.BBGEM.dighit");

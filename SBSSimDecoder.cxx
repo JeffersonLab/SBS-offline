@@ -29,6 +29,7 @@
 #include "THaDetector.h"
 #include "SBSBBShower.h"
 #include "SBSBBTotalShower.h"
+#include "THaCrateMap.h"
 
 //#include <SBSSimFadc250Module.h>// we need not to need this
 #include "TList.h"
@@ -36,6 +37,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string>
 #include <fstream>
 #include <utility>
 #include <stdexcept>
@@ -209,7 +211,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   // Now call LoadSlot for the different detectors
   for(size_t d = 0; d < fDetectors.size(); d++) {
-    if(fDebug>2)cout << " " << fDetectors[d] << endl;
+    //if(fDebug>2)
+cout << " " << fDetectors[d] << endl;
     for( std::map<Decoder::THaSlotData*, std::vector<UInt_t> >::iterator it =
 	   detmaps[d].begin(); it != detmaps[d].end(); ++it) {
       if(it->first->GetModule()==0) {
@@ -223,7 +226,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 	  for(size_t k = 0; k<it->second.size(); k++)std::cout << it->second[k] << " ; ";
 	  std::cout << " } " << std::endl;
 	}
-        it->first->GetModule()->LoadSlot(it->first,
+	it->first->GetModule()->LoadSlot(it->first,
 					 it->second.data(),0,it->second.size() );
       }
     }
@@ -263,6 +266,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   unsigned int nwords = 0;
   unsigned short data_type = 0, chan = 0, chan_mult = 0;
   int lchan;
+  int mod, apvnum;
   SimEncoder::mpd_data tmp_mpd;
   UInt_t* mpd_hdr = new UInt_t[2];
   
@@ -389,20 +393,23 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   
   if(strcmp(detname.c_str(), "bb.gem")==0){
-    //cout << " ouh " << detname.c_str() << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBGEM_Dig.nstrips << endl;
     for(int j = 0; j<simev->Earm_BBGEM_Dig.nstrips; j++){
+      mod = simev->Earm_BBGEM_Dig.module->at(j);
       lchan = simev->Earm_BBGEM_Dig.strip->at(j);
       //???
-      ChanToROC(detname, lchan, crate, slot, chan);
-      
+      //ChanToROC(detname, lchan, crate, slot, chan);
+      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
       //tmp_mpd = lchan/128+simev->Earm_BBGEM_Dig.module->at(j)*12;
-      fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+      //fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
       myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      cout << SBSSimDataEncoder::EncodeHeader(9, chan, 6) << endl;
       myev->push_back(simev->Earm_BBGEM_Dig.adc_0->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_1->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_2->at(j));
@@ -629,7 +636,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   //int cps, spc, fs, fc;
   
   bool isgem = (detname.find("gem")!=std::string::npos);
-  int apv_num = -1;
+  int apv_num = -1, mod = 0;
   
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
@@ -646,71 +653,169 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     */
     { 0 }
   };
-  Int_t err = THaAnalysisObject::LoadDB(file, date, request, prefix.c_str());
-  // Could close the common file already
-  fclose(file);
-  
-  if(nlogchan==0)nlogchan = nchan;
-  
-  if(err)return THaAnalysisObject::kInitError;
-  
-  fNChanDet[detname] = nchan;
-  fChanMapStartDet[detname] = chanmapstart;
-  (fInvDetMap[detname]).resize(nlogchan);
+  Int_t err;
   int nparam_mod = 4;
-  if(detmap[4]==-1)nparam_mod = 5;
   int crate,slot,ch_lo,ch_hi, ch_count = 0, ch_map = 0;
-  for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
-    crate  = detmap[k];
-    slot   = detmap[k+1];
-    ch_lo  = detmap[k+2];
-    ch_hi  = detmap[k+3];
-    /*
-    if(detname.find("hodo")!=std::string::npos)
-      cout << " crate " << crate << " slot " << slot 
-	   << " ch_lo " << ch_lo << " ch_hi " << ch_hi << endl;
-    */
-    if(chanmap.empty()){
-      for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
-	if(isgem && i%128==0){
-	  apv_num++;
-	  cout << crate << " " << slot << " " << i << " " << apv_num << endl;
-	}
-	if(ch_count>nlogchan){
-	  std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
-	  return THaAnalysisObject::kInitError;
-	}
-	(fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i, apv_num);
-	/*
-	if(detname.find("hodo")!=std::string::npos){
-	  cout << " crate " << crate << " slot " << slot 
-	       << " i " << i << " ch_count " << ch_count << endl;
-	  cout << &(fInvDetMap.at(detname)).at(ch_count) << endl;
-	}
-	*/
-      }
-    }else{
-      
-      for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
-	if(ch_count>nlogchan){
-	  std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
-	    return THaAnalysisObject::kInitError;
-	}
-	if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-1 << " (+" << nchan << ") " << std::endl;
-	if(chanmap[ch_map]>=0){
-	  if(ch_count<nchan){
-	    (fInvDetMap[detname])[chanmap[ch_map]-1]=detchaninfo(crate, slot, i);
-	    if(fDebug>=3)std::cout << chanmap[ch_map]-1 << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-1) << std::endl;
-	  }else{
-	    (fInvDetMap[detname])[chanmap[ch_map]+nchan-1]=detchaninfo(crate, slot, i);
-	    if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-1) << std::endl;
-	  }
-	  ch_count++;
-	}
-      }
-    }
-  }
   
+  if(isgem){//it's easier if gems are their own thing
+    std::string chambers;
+    DBRequest req_chambers[] = {
+      {"chambers", &chambers, kString, 0, false}, //
+      { 0 }
+    };
+    err = THaAnalysisObject::LoadDB(file, date, req_chambers, prefix.c_str());
+    
+    //cout << " prefix " << prefix.c_str() << " err " << err << " chambers " << chambers.c_str() << " size ? " << chambers.size() << endl;
+    
+    std::vector<std::string> chambers_names;
+    if(err==0)chambers_names = THaAnalysisObject::vsplit(chambers);
+    
+    if(!chambers_names.empty()){
+      for (std::vector<std::string>::iterator it = chambers_names.begin() ; it != chambers_names.end(); ++it){
+	std::string modules;
+	std::string pref_cham = prefix+(*it)+".";
+	//cout << "prefix chamber "  << pref_cham.c_str() << endl;
+	DBRequest req_modules[] = {
+	  {"modules", &modules, kString, 0, false}, //
+	  { 0 }
+	};
+	err+= THaAnalysisObject::LoadDB(file, date, req_modules, pref_cham.c_str());
+	
+	//cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
+	
+	std::vector<std::string> modules_names;
+	if(err==0)modules_names = THaAnalysisObject::vsplit(modules);
+	if(!modules_names.empty()){
+	  for (std::vector<std::string>::iterator jt = modules_names.begin() ; jt != modules_names.end(); ++jt){
+	    std::string planeconfig;
+	    std::string pref_mod = pref_cham+(*jt)+".";
+	    //cout << "prefix module "  << pref_mod.c_str() << endl;
+	    DBRequest req_planeconfig[] = {
+	      {"planeconfig", &planeconfig, kString, 0, false}, //
+	      { 0 }
+	    };
+	    err+= THaAnalysisObject::LoadDB(file, date, req_planeconfig, pref_mod.c_str());
+	    //cout << " prefix " << pref_mod.c_str() << " err " << err << " planeconfig " << planeconfig.c_str() << " size ? " << planeconfig.size() << endl;
+	    std::vector<std::string> plane_readouts;
+	    if(err==0)plane_readouts = THaAnalysisObject::vsplit(planeconfig);
+	    if(!plane_readouts.empty()){
+	      for (std::vector<std::string>::iterator kt = plane_readouts.begin() ; kt != plane_readouts.end(); ++kt){
+		//mod++;
+		std::string pref_ro = pref_mod+(*kt)+".";
+		ch_count = 0;
+		fInvGEMDetMap[detname].resize(fInvGEMDetMap[detname].size()+1);
+
+		if(fDebug>=2)cout << fInvGEMDetMap[detname].size() << " module number " << mod << endl;
+		
+		err+= THaAnalysisObject::LoadDB(file, date, request, pref_ro.c_str());
+		//if(nlogchan==0)
+		nlogchan = nchan;
+		if(fDebug>=2)cout << " prefix " << pref_ro.c_str() << " err " << err << endl;
+		
+		if(err==0)fInvGEMDetMap[detname][mod].resize(nchan);
+		
+		int nparam_mod = 4;
+		for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
+		  crate  = detmap[k];
+		  slot   = detmap[k+1];
+		  ch_lo  = detmap[k+2];
+		  ch_hi  = detmap[k+3];
+		  
+		  for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
+		    if(i%128==0){
+		      apv_num++;
+		      if(fDebug>=3)cout << crate << " " << slot << " " << i << " " << apv_num << endl;
+		    }
+		    if(ch_count>nlogchan){
+		      std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+		      return THaAnalysisObject::kInitError;
+		    }
+		    (fInvGEMDetMap[detname])[mod][ch_count]=gemstripinfo(crate, slot, i, apv_num);
+		    /*
+		      if(detname.find("hodo")!=std::string::npos){
+		      cout << " crate " << crate << " slot " << slot 
+		      << " i " << i << " ch_count " << ch_count << endl;
+		      cout << &(fInvDetMap.at(detname)).at(ch_count) << endl;
+		      }
+		    */
+		  }
+
+		}
+		mod++;
+	      }//end loop on kt
+	    }//end if !plane_readouts
+	  }//end loop on jt
+	}//end if !modules_names
+      }//end loop on it
+    }//end if !chambers_names
+    
+  }else{
+   err = THaAnalysisObject::LoadDB(file, date, request, prefix.c_str());
+   //}
+   // Could close the common file already
+   fclose(file);
+  
+   if(nlogchan==0)nlogchan = nchan;
+  
+   if(err)return THaAnalysisObject::kInitError;
+  
+   fNChanDet[detname] = nchan;
+   fChanMapStartDet[detname] = chanmapstart;
+   (fInvDetMap[detname]).resize(nlogchan);
+   if(detmap[4]==-1)nparam_mod = 5;
+   for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
+     crate  = detmap[k];
+     slot   = detmap[k+1];
+     ch_lo  = detmap[k+2];
+     ch_hi  = detmap[k+3];
+     /*
+       if(detname.find("hodo")!=std::string::npos)
+       cout << " crate " << crate << " slot " << slot 
+       << " ch_lo " << ch_lo << " ch_hi " << ch_hi << endl;
+     */
+     if(chanmap.empty()){
+       for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
+	 /*
+	 if(isgem && i%128==0){
+	   apv_num++;
+	   cout << crate << " " << slot << " " << i << " " << apv_num << endl;
+	 }
+	 */
+	 if(ch_count>nlogchan){
+	   std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	   return THaAnalysisObject::kInitError;
+	 }
+	 (fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
+	 /*
+	   if(detname.find("hodo")!=std::string::npos){
+	   cout << " crate " << crate << " slot " << slot 
+	   << " i " << i << " ch_count " << ch_count << endl;
+	   cout << &(fInvDetMap.at(detname)).at(ch_count) << endl;
+	   }
+	 */
+       }
+     }else{
+      
+       for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
+	 if(ch_count>nlogchan){
+	   std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	   return THaAnalysisObject::kInitError;
+	 }
+	 if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-1 << " (+" << nchan << ") " << std::endl;
+	 if(chanmap[ch_map]>=0){
+	   if(ch_count<nchan){
+	     (fInvDetMap[detname])[chanmap[ch_map]-1]=detchaninfo(crate, slot, i);
+	     if(fDebug>=3)std::cout << chanmap[ch_map]-1 << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-1) << std::endl;
+	   }else{
+	     (fInvDetMap[detname])[chanmap[ch_map]+nchan-1]=detchaninfo(crate, slot, i);
+	     if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-1) << std::endl;
+	   }
+	   ch_count++;
+	 }
+       }
+     }
+   }
+  }//end else (if isgem)
   /*
   fChansPerSlotDetMap[detname] = cps;
   fSlotsPerCrateDetMap[detname] = spc;
@@ -759,10 +864,13 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   
 }
 
-int APVnum(const std::string detname, 
-	   Int_t crate, Int_t slot, Int_t chan)
+int SBSSimDecoder::APVnum(const std::string detname, Int_t mod, Int_t h_chan, 
+			  Int_t &crate, Int_t &slot, UShort_t &chan) const
 {
-  
+  crate = ((fInvGEMDetMap.at(detname))[mod][h_chan]).crate;
+  slot = ((fInvGEMDetMap.at(detname))[mod][h_chan]).slot;
+  chan = ((fInvGEMDetMap.at(detname))[mod][h_chan]).chan;
+  return ((fInvGEMDetMap.at(detname))[mod][h_chan]).apvnum;
 }
 
 /*

@@ -54,11 +54,23 @@ class SBSSimDecoder : public Podd::SimDecoder {
     uint crate;
     uint slot;
     uint chan;
-    uint apvnum;
-  detchaninfo(int cr = 0, int sl = 0, int ch = 0, int apv = 0) : 
-    crate(cr), slot(sl), chan(ch), apvnum(apv)
+    //uint apvnum;
+  detchaninfo(int cr = 0, int sl = 0, int ch = 0) ://, int apv = 0) : 
+    crate(cr), slot(sl), chan(ch)//, apvnum(apv)
     {}
     virtual ~detchaninfo(){};
+  };
+
+  //strips have their own struc this way we can add as many parameters as we see fit
+  struct gemstripinfo{
+    uint crate;
+    uint slot;
+    uint chan;
+    uint apvnum;
+  gemstripinfo(int cr = 0, int sl = 0, int ch = 0, int apv = 0) : 
+    crate(cr), slot(sl), chan(ch), apvnum(apv)
+    {}
+    virtual ~gemstripinfo(){};
   };
   
   //Utilities
@@ -110,6 +122,7 @@ protected:
   std::map<std::string, UInt_t> fChanMapStartDet;
   //std::map<std::string, std::map<UInt_t, detchaninfo> > fInvDetMap;
   std::map<std::string, std::vector<detchaninfo> > fInvDetMap;
+  std::map<std::string, std::vector<std::vector<gemstripinfo>> > fInvGEMDetMap;
   //std::map<std::string, std::vector<detchaninfo> > fInvDetMap_secondary;
   //std::map<std::string, std::vector< std::vector<UShort_t> > > fChanMapDet;
   
@@ -124,8 +137,8 @@ protected:
   void ChanToROC( const std::string detname, Int_t h_chan, 
 		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
-  void APVnum( const std::string detname, 
-	       Int_t crate, Int_t slot, Int_t chan ) const;
+  int APVnum( const std::string detname, Int_t mod, Int_t h_chan, 
+	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
   
