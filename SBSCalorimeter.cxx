@@ -98,7 +98,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   DBRequest config_request[] = {
     { "detmap",       &detmap,  kIntV }, ///< Detector map
     { "chanmap",      &chanmap, kIntV,    0, true }, ///< Optional channel map
-    { "chanmap_start",&fChanMapStart, kInt, 0, true}, ///< Optional start of channel numbering
+    { "start_chanmap",&fChanMapStart, kInt, 0, true}, ///< Optional start of channel numbering
     { "ncols",        &ncols,   kInt, 1, true }, ///< Number of columns in detector
     { "nrows",        &nrows,   kInt, 1, true }, ///< Number of rows in detector
     { "nlayers",       &nlayers,  kInt,1,true }, ///< [Optional] Number of layers/divisions in each module/block of the detector
