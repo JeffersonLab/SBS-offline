@@ -96,8 +96,10 @@ namespace Decoder {
     Int_t isamp;
     while(evbuffer < pstop) {
       // First, decode the header
+      //cout << *evbuffer << endl;
       SBSSimDataEncoder::DecodeHeader(*evbuffer++,type,chan,nwords);
       SBSSimDataEncoder *enc = SBSSimDataEncoder::GetEncoder(type);
+      //cout << enc->GetName() << " " << type << " " << chan << " " << nwords << endl;
       if(!enc) {
         std::cerr << "Could not find ADC decoder of type: " << type
           << ", is_first: " << is_first << std::endl;
@@ -106,8 +108,12 @@ namespace Decoder {
           std::cerr << "Encoder " << enc->GetName() << " of type " << type
             << " is not an MPD!" << std::endl;
         } else if ( nwords > 0 ) {
+	  //cout << mpd_data.nsamples << " " << mpd_data.nstrips << " " << mpd_data.mpd_id << " " << mpd_data.gem_id << " " << mpd_data.adc_id << " " << mpd_data.pos << " " << mpd_data.samples.size() << endl;
+	  //cout << enc->GetName() << " " << type << " " << nwords << endl;
           enc->DecodeMPD(mpd_data, evbuffer, nwords);
-          effCh = (mpd_data.mpd_id<<8)|mpd_data.adc_id;
+	  //cout << mpd_data.nsamples << " " << mpd_data.nstrips << " " << mpd_data.mpd_id << " " << mpd_data.gem_id << " " << mpd_data.adc_id << " " << mpd_data.pos << " " << mpd_data.samples.size() << endl;
+          /*
+	  effCh = (mpd_data.mpd_id<<8)|mpd_data.adc_id;
           // Well, because of this weird multiplexer thing and the
           // fact that SBS-offline expects the data this way, we are
           // going to have to re-arrange the data so that it maps
@@ -129,6 +135,7 @@ namespace Decoder {
                 +adc_samp];
             }
           }
+	  */
           for(size_t i = 0; i < tmp_data.size(); i++) {
             raw_buff = tmp_data[i];
             if(raw_buff>4095) {
@@ -136,7 +143,9 @@ namespace Decoder {
                << i << ", " << raw_buff
                 << std::endl;
             }
-            sldat->loadData("adc",effCh,raw_buff,raw_buff);
+	    //cout << "chan " << chan << " " <<  tmp_data.size() << " " << raw_buff << endl;
+            //sldat->loadData("adc",effCh,raw_buff,raw_buff);
+	    sldat->loadData("adc",chan,raw_buff,raw_buff);
           }
         }
       }

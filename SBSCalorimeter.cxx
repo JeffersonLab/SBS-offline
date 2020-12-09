@@ -467,6 +467,7 @@ Int_t SBSCalorimeter::DecodeADC( const THaEvData& evdata,
     SBSCalorimeterBlock *blk, THaDetMap::Module *d, Int_t chan)
 {
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
+  std::cout << d->crate << " " << d->slot << " " << chan << std::endl;
   if(nhit <= 0 )
     return 0;
   if(fWithADC && !fWithADCSamples && blk->ADC()) {

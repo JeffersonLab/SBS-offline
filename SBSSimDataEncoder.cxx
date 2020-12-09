@@ -377,13 +377,14 @@ void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
 bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
     const unsigned int *enc_data,unsigned short nwords)
 {
-  std::cout << "nwords " << nwords << std::endl;
+  data.samples.clear(); // Clear out any samples already in the data
+  //std::cout << "nwords " << nwords << std::endl;
   for(unsigned short i = 0; i<nwords; i++){
-    std::cout << enc_data[i] << " ";
+    //std::cout << enc_data[i] << " ";
     
     data.samples.push_back(enc_data[i]);
   }
-  std::cout << std::endl;
+  //std::cout << std::endl;
   /*
   if(nwords<=1) {
     std::cerr << "Error, not enough words to read. Expected more than one,"

@@ -211,8 +211,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   // Now call LoadSlot for the different detectors
   for(size_t d = 0; d < fDetectors.size(); d++) {
-    //if(fDebug>2)
-cout << " " << fDetectors[d] << endl;
+    if(fDebug>2)
+      cout << " " << fDetectors[d] << endl;
     for( std::map<Decoder::THaSlotData*, std::vector<UInt_t> >::iterator it =
 	   detmaps[d].begin(); it != detmaps[d].end(); ++it) {
       if(it->first->GetModule()==0) {
@@ -400,7 +400,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       //???
       //ChanToROC(detname, lchan, crate, slot, chan);
       apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
-      cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
+      if(fDebug>3)cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)];
       }
@@ -409,7 +409,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       //tmp_mpd = lchan/128+simev->Earm_BBGEM_Dig.module->at(j)*12;
       //fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
       myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
-      cout << SBSSimDataEncoder::EncodeHeader(9, chan, 6) << endl;
+      if(fDebug>3)cout << SBSSimDataEncoder::EncodeHeader(9, chan, 6) << endl;
       myev->push_back(simev->Earm_BBGEM_Dig.adc_0->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_1->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_2->at(j));
