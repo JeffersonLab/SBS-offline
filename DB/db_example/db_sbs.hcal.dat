@@ -77,7 +77,8 @@ sbs.hcal.chanmap =  ## The number entered here is the module-number (1-288)
   254 257 260 263 255 258 261 264 265 268 271 274 266 269 272 275  # C:04,S:14
   267 270 273 276 277 280 283 286 278 281 284 287 279 282 285 288  # C:04,S:14
 
-sbs.hcal.chanmap_start = 1
+#sbs.hcal.chanmap_start = 1
+sbs.hcal.start_chanmap = 1
 
 ## Positions in [m] where +z is rotated by sbs.theta
 sbs.hcal.position = 0 0 17.77785
