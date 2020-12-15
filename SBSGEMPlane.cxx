@@ -176,7 +176,8 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
         Int_t nchan = evdata.GetNumChan( it->crate, it->slot );
 
 //        printf("nchan = %d\n", nchan );
-
+	if(nchan)std::cout << it->crate << " " << it->slot << " " << nchan << std::endl;
+	
         for( Int_t ichan = 0; ichan < nchan; ++ichan ) {
             Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
             if( chan != effChan ) continue; // not part of this detector
