@@ -408,7 +408,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       //tmp_mpd = lchan/128+simev->Earm_BBGEM_Dig.module->at(j)*12;
       //fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      //myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
+      myev->push_back(SBSSimDataEncoder::EncodeHeader(5, chan, 6));
       if(fDebug>3)cout << SBSSimDataEncoder::EncodeHeader(9, chan, 6) << endl;
       myev->push_back(simev->Earm_BBGEM_Dig.adc_0->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_1->at(j));

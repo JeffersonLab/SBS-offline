@@ -54,7 +54,7 @@ namespace Decoder {
     */
 
   private:
-    static const size_t NADCCHAN = 64; // Max ADC channels
+    static const size_t NADCCHAN = 2048; // Max ADC channels
     static TypeIter_t fgThisType;
     std::vector<SimEncoder::fadc_data> fadc_data;
 

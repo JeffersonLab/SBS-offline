@@ -104,9 +104,13 @@ namespace Decoder {
           if(enc->IsFADC()) { // FADC with samples
             SimEncoder::fadc_data tmp_fadc_data;
             enc->DecodeFADC(tmp_fadc_data,evbuffer,nwords);
+	    //std::cout << tmp_fadc_data.samples.size() << std::endl;
+	    //std::cout << chan << " " << fadc_data[chan].samples.size() << std::endl;
             for(size_t i = 0; i < tmp_fadc_data.samples.size(); i++) {
               raw_buff = tmp_fadc_data.samples[i];
+	      //std::cout << i << " " << tmp_fadc_data.samples[i] << endl;
               fadc_data[chan].samples.push_back(tmp_fadc_data.samples[i]);
+	      //std::cout << i << " " << fadc_data[chan].samples.size() << " " << raw_buff << endl;
               sldat->loadData("adc",chan,raw_buff,raw_buff);
             }
           } else if (enc->IsADC()) { // Integral of ADC
