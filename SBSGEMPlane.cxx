@@ -231,28 +231,41 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 #ifdef MCDATA
     Int_t nmodules = fDetMap->GetSize();
     //std::cout << "nmodules " << nmodules << std::endl;
+    int strip0 = 0;
     for( Int_t i = 0; i < nmodules; i++ ) {
       THaDetMap::Module* d = fDetMap->GetModule( i );
       //if(evdata.GetNumChan( d->crate, d->slot )>0)std::cout << fName << " " << d->crate << " " << d->slot << " " << evdata.GetNumChan( d->crate, d->slot ) << std::endl;
       
       for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
 	
-	Int_t strip = evdata.GetNextChan( d->crate, d->slot, j );
-	//std::cout << j << " strip " << strip << std::endl;
-	if( strip > d->hi || strip < d->lo ) continue;    // Not one of my channels.
+	Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+	//std::cout << j << " chan " << chan << " first " << d->first << " lo " << d->lo << " hi " << d->hi << std::endl;
+	if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
+	int strip = strip0 + chan-d->lo;
+	assert(strip<fNch);
 	
-	Int_t nsamps = evdata.GetNumHits(d->crate, d->slot, strip);
+	Int_t nsamps = evdata.GetNumHits(d->crate, d->slot, chan);
+	if(nsamps!=N_MPD_TIME_SAMP)continue;
 	//std::cout << nsamps << std::endl;
 	
+	fadc0[strip] = evdata.GetData(d->crate, d->slot, chan, 0) - fPedestal[strip];
+	fadc1[strip] = evdata.GetData(d->crate, d->slot, chan, 1) - fPedestal[strip];
+	fadc2[strip] = evdata.GetData(d->crate, d->slot, chan, 2) - fPedestal[strip];
+	fadc3[strip] = evdata.GetData(d->crate, d->slot, chan, 3) - fPedestal[strip];
+	fadc4[strip] = evdata.GetData(d->crate, d->slot, chan, 4) - fPedestal[strip];
+	fadc5[strip] = evdata.GetData(d->crate, d->slot, chan, 5) - fPedestal[strip];
+	/*
 	for( Int_t isamp = 0; isamp < nsamps; ++isamp ) {
-	  Int_t adc = evdata.GetData(d->crate, d->slot, strip, isamp);
-	  if(strip>=fNch)std::cout << fName << " Nch " << fNch << " crate " << d->crate << " slot " << d->slot << " j " << j << " strip " << strip << " isamp " << isamp << " adc? " << adc << std::endl;
+	  //std::cout << strip0 << " " << chan-d->lo << std::endl;
+	  //Int_t adc = evdata.GetData(d->crate, d->slot, chan, isamp)-fPedestal[strip];
+	  //if(strip>=fNch)
+	  //std::cout << fName << " Nch " << fNch << " crate " << d->crate << " slot " << d->slot << " j " << j << " chan " << chan << " strip " << strip << " isamp " << isamp << " adc " << adc << std::endl;
+	  
 	  //std::cout 
-	  //assert(strip<fNch);
-	  //fadc[isamp][strip] =  evdata.GetData(d->crate, d->slot, strip, isamp) - fPedestal[strip];
-	  
+	  //
+	  fadc[isamp][strip] = evdata.GetData(d->crate, d->slot, chan, isamp) - fPedestal[strip];
 	}
-	  
+	*/
 	  //std::cout << GetName() << " " << d->crate << " " << d->slot << " " << chan << " " << nchan << std::endl;
 	/*
         for( Int_t ichan = 0; ichan < nchan; ++ichan ) {
@@ -275,9 +288,17 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 	  }
 	}//end loop on chan
 	*/
-      }
-    }
+      }// end loop on j
+      strip0+= d->hi-d->lo;
+    }//end loop on modules
     
+    // fadc0 = fadc[0];
+    // fadc1 = fadc[1];
+    // fadc2 = fadc[2];
+    // fadc3 = fadc[3];
+    // fadc4 = fadc[4];
+    // fadc5 = fadc[5];
+ 
 #else
     
     fNch = 0;
