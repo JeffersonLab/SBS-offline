@@ -410,7 +410,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       //fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
       //myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
       myev->push_back(SBSSimDataEncoder::EncodeHeader(5, chan, 6));
-      if(fDebug>3)cout << SBSSimDataEncoder::EncodeHeader(9, chan, 6) << endl;
+      //if(fDebug>3)cout << SBSSimDataEncoder::EncodeHeader(9, chan, 6) << endl;
       myev->push_back(simev->Earm_BBGEM_Dig.adc_0->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_1->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_2->at(j));
@@ -760,8 +760,8 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   
    if(err)return THaAnalysisObject::kInitError;
   
-   fNChanDet[detname] = nchan;
-   fChanMapStartDet[detname] = chanmapstart;
+   //fNChanDet[detname] = nchan;
+   //fChanMapStartDet[detname] = chanmapstart;
    (fInvDetMap[detname]).resize(nlogchan);
    if(detmap[4]==-1)nparam_mod = 5;
    for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {

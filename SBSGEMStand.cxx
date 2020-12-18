@@ -109,7 +109,7 @@ Int_t SBSGEMStand::Decode(const THaEvData& evdata ){
 //    std::cout << "[SBSGEMStand::Decode]" << std::endl;
 
     for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
-        (*it)->Decode(evdata);
+      (*it)->Decode(evdata);
     }
 
     return 0;
