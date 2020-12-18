@@ -13,8 +13,8 @@ SBSGEMStand::SBSGEMStand( const char* name, const char* desc, THaApparatus* app 
     THaTrackingDetector(name,desc,app) {
 
         fPlanes.clear();
-
-        fCrateMap = 0;
+	fIsMC = false;//by default!
+        fCrateMap = 0;	
 }
 
 SBSGEMStand::~SBSGEMStand(){
@@ -62,6 +62,7 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
     DBRequest request[] = {
         { "planeconfig",       &planeconfig,       kString   },
         { "cratemap",          cmap,               kIntV     },
+        { "is_mc",             &fIsMC,             kInt, 0, 1},
         {0}
     };
 
@@ -75,7 +76,7 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
     }
 
     for (std::vector<std::string>::iterator it = planes.begin() ; it != planes.end(); ++it){
-        fPlanes.push_back(new SBSGEMPlane( (*it).c_str(), (*it).c_str(), this));
+      fPlanes.push_back(new SBSGEMPlane( (*it).c_str(), (*it).c_str(), this, fIsMC));
     }
 
     status = kOK;

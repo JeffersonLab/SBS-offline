@@ -33,7 +33,9 @@ class SBSGEMStand : public THaTrackingDetector {
 
     private:
         std::vector <SBSGEMPlane *> fPlanes;
-
+	
+	bool fIsMC;
+	
         THaCrateMap *fCrateMap;
         ClassDef(SBSGEMStand ,0)
 };

@@ -24,7 +24,7 @@ class SBSGEMPlane : public THaSubDetector {
     public:
 
         SBSGEMPlane( const char *name, const char *description = "",
-                THaDetectorBase* parent = 0 );
+		     THaDetectorBase* parent = 0, bool ismc = false );
 
         virtual ~SBSGEMPlane();
 
@@ -58,7 +58,9 @@ class SBSGEMPlane : public THaSubDetector {
         Int_t *fadc5; // [fNch]
         Double_t *fPedestal; 
         Double_t *fRMS; 
-
+	
+	bool fIsMC;
+	
         ClassDef(SBSGEMPlane,0)
 
 };
