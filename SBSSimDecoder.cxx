@@ -138,6 +138,15 @@ Int_t SBSSimDecoder::DoLoadEvent(const UInt_t* evbuffer )
 Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 #endif
 {
+  // Uncommenting the three lines below, 
+  // SBS-offline processes 5000 simulated GMn events with no background within ~60s
+  // instead of the ~85s it takes without.
+  // commenting "event type = 1;", those 5000 events take ~3s
+  /* 
+  event_type = 1;
+  event_num++;
+  return HED_OK;
+  */
   // Fill crateslot structures with Monte Carlo event data in 'evbuffer'
   static const char* const here = "SBSSimDecoder::LoadEvent";
 
@@ -187,7 +196,9 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   evscaler = 0;
   event_length = 0;
   
-  event_type = 1;
+  //event_type = 1;//not smart to set event_type to 1 automatically...
+  event_type = 0;//event_type set to 0 by default 
+  // only set it to 1 if there is some signal in at least one detector...
   event_num = simEvent->EvtID;//++;
   recent_event = event_num;
 
@@ -221,6 +232,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 		    << fDetectors[d] << std::endl;
         }
       } else {
+	event_type = 1;
+	//if there is data in at least one detector, event_type set to 1 
 	if(fDebug>2){
 	  std::cout << "load crate/slot: " << it->first->getCrate() << "/" << it->first->getSlot() << " it->second = {";
 	  for(size_t k = 0; k<it->second.size(); k++)std::cout << it->second[k] << " ; ";

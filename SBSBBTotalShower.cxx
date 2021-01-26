@@ -23,6 +23,7 @@
 #include "THaApparatus.h"
 #include "SBSBBTotalShower.h"
 #include "SBSBBShower.h"
+#include "SBSCalorimeter.h"
 
 #include "VarType.h"
 #include "VarDef.h"
@@ -132,6 +133,7 @@ void SBSBBTotalShower::Setup( const char* name,
     strcat( desc, " shower subdetector" );
 
     fShower = new SBSBBShower( sname, desc, apparatus );
+    //fShower = new SBSCalorimeter( sname, desc, apparatus );
     if( !fShower || fShower->IsZombie() ) {
         MakeZombie();
         goto exit;
@@ -147,6 +149,7 @@ void SBSBBTotalShower::Setup( const char* name,
     strcpy( desc+dlen, " preshower subdetector" );
 
     fPreShower = new SBSBBShower( sname, desc, apparatus );
+    //fPreShower = new SBSCalorimeter( sname, desc, apparatus );
     if( !fPreShower && fPreShower->IsZombie() ) {
         MakeZombie();
         goto exit;

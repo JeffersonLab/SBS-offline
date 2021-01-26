@@ -1,7 +1,7 @@
 950101
 
 ## A chamber is a "Tracker-Plane" composed of vertically stacked modules
-#bb.gem.is_mc = 1
+bb.gem.is_mc = 1
 bb.gem.chambers = ft0 ft1 ft2 ft3 bt0
 
 ## A module is a pair of 2 GEMs (x and y)

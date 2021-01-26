@@ -8,7 +8,7 @@ class TTree;
 
 class SBSSimEvent : public g4sbs_tree {
  public:
-  SBSSimEvent();                 // Default constructor, for ROOT I/O
+  //SBSSimEvent(){};                 // Default constructor, for ROOT I/O
   SBSSimEvent(TTree* tree);//, std::vector<TString> det_list);
   
   virtual ~SBSSimEvent(){};

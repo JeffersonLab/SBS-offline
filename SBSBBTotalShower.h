@@ -30,6 +30,7 @@
 #include "THaShower.h"
 
 class SBSBBShower;
+class SBSCalorimeter;
 
 class SBSBBTotalShower : public THaShower { //THaPidDetector {
   
@@ -52,6 +53,10 @@ class SBSBBTotalShower : public THaShower { //THaPidDetector {
   */
   SBSBBShower* GetShower() const      { return fShower; }
   SBSBBShower* GetPreShower() const   { return fPreShower; }
+
+  //SBSCalorimeter* GetShower() const      { return fShower; }
+  //SBSCalorimeter* GetPreShower() const   { return fPreShower; }
+  
   virtual EStatus    Init( const TDatime& run_time );
   virtual void       SetApparatus( THaApparatus* );
   void               LoadMCHitAt( Double_t x, Double_t y, Double_t E );
@@ -63,7 +68,10 @@ class SBSBBTotalShower : public THaShower { //THaPidDetector {
   // Subdetectors
   SBSBBShower* fShower;      // Shower subdetector
   SBSBBShower* fPreShower;   // Preshower subdetector
-
+  
+  //SBSCalorimeter* fShower;
+  //SBSCalorimeter* fPreShower;
+  
   /*
   // Parameters
   Float_t    fMaxDx;       // Maximum dx between shower and preshower centers
