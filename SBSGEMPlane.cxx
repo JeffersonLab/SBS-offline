@@ -332,11 +332,9 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 	    strip = RstripPos;
 
 	    fStrip[strip] = strip;
-
+	    fNchEff++;
 	    fStrip_.push_back(strip);
 	    for(Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++) {
-	      
-	      
 	      fadc[adc_samp][strip] =  evdata.GetData(it->crate, it->slot,
 						     chan, isamp++) - fPedestal[strip];
 

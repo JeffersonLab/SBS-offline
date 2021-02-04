@@ -36,6 +36,7 @@ ClassImp(SBSCalorimeter);
 SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
     THaApparatus* apparatus ) :
   THaNonTrackingDetector(name,description,apparatus), fNrows(0), fNcols(0),
+  //THaShower(name,description,apparatus), fNrows(0), fNcols(0),
   fNlayers(0), fWithTDC(false), fWithADCSamples(false), fWithADC(true),
   fMaxNclus(10), fConst(1.0), fSlope(0.0), fAccCharge(0.0)
 {

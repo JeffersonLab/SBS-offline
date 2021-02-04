@@ -15,6 +15,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "THaNonTrackingDetector.h"
+//#include "THaShower.h"
 #include "SBSCalorimeterCluster.h"
 #include "SBSCalorimeterBlock.h"
 #include "TRotation.h"
@@ -23,6 +24,7 @@
 
 
 class SBSCalorimeter : public THaNonTrackingDetector {
+  //class SBSCalorimeter : public THaShower {
 
 public:
   SBSCalorimeter( const char* name, const char* description = "",
