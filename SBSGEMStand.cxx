@@ -107,7 +107,8 @@ void SBSGEMStand::Clear( Option_t *opt ){
 }
 
 Int_t SBSGEMStand::Decode(const THaEvData& evdata ){
-//    std::cout << "[SBSGEMStand::Decode]" << std::endl;
+  //return 0;
+  //std::cout << "[SBSGEMStand::Decode]" << std::endl;
 
     for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
       (*it)->Decode(evdata);

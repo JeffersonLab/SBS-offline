@@ -32,6 +32,48 @@ SBSBigBite::~SBSBigBite()
 }
 
 //_____________________________________________________________________________
+Int_t SBSBigBite::CoarseTrack()
+{
+  // Coarse track Reconstruction
+
+  // TODO
+
+  return 0;
+}
+
+//_____________________________________________________________________________
+Int_t SBSBigBite::CoarseReconstruct()
+{
+  // Coarse Reconstruction of particles in spectrometer
+
+  // TODO
+
+  return 0;
+}
+
+//_____________________________________________________________________________
+Int_t SBSBigBite::Track()
+{
+  // Fine track Reconstruction
+
+  // TODO
+
+  return 0;
+  
+}
+
+//_____________________________________________________________________________
+Int_t SBSBigBite::Reconstruct()
+{
+  // Fine Reconstruction of particles in spectrometer
+
+  // TODO
+
+  return 0;
+  
+}
+
+//_____________________________________________________________________________
   Int_t SBSBigBite::FindVertices( TClonesArray& /* tracks */ )
 {
   // Reconstruct target coordinates for all tracks found.
@@ -50,6 +92,3 @@ Int_t SBSBigBite::TrackCalc()
 
   return 0;
 }
-
-//_____________________________________________________________________________
-

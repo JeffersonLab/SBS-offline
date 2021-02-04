@@ -195,14 +195,23 @@ Int_t SBSGEMPlane::DefineVariables( EMode mode ) {
       fIsSetup = ( mode == kDefine );
 
       RVarDef vars[] = {
-          { "nch",   "Number of channels",   "fNch" },
+          { "nch",   "Number of channels",   "fNchEff" },
+          { "strip", "Strip number mapping", "fStrip_" },
+          { "adc0", "ADC sample 0", "fadc_0" },
+          { "adc1", "ADC sample 1", "fadc_1" },
+          { "adc2", "ADC sample 2", "fadc_2" },
+          { "adc3", "ADC sample 3", "fadc_3" },
+          { "adc4", "ADC sample 4", "fadc_4" },
+          { "adc5", "ADC sample 5", "fadc_5" },
+	  /*
           { "strip", "Strip number mapping", "fStrip" },
-          { "adc0", "Strip number mapping", "fadc0" },
-          { "adc1", "Strip number mapping", "fadc1" },
-          { "adc2", "Strip number mapping", "fadc2" },
-          { "adc3", "Strip number mapping", "fadc3" },
-          { "adc4", "Strip number mapping", "fadc4" },
-          { "adc5", "Strip number mapping", "fadc5" },
+          { "adc0", "ADC sample 0", "fadc0" },
+          { "adc1", "ADC sample 1", "fadc1" },
+          { "adc2", "ADC sample 2", "fadc2" },
+          { "adc3", "ADC sample 3", "fadc3" },
+          { "adc4", "ADC sample 4", "fadc4" },
+          { "adc5", "ADC sample 5", "fadc5" },
+	  */
           { 0 },
       };
 
@@ -217,13 +226,31 @@ Int_t SBSGEMPlane::DefineVariables( EMode mode ) {
 }
 
 void    SBSGEMPlane::Clear( Option_t* opt){
-  //fNch = 0;
-    return;
+  fNchEff = 0;
+  memset(fStrip, 0, fNch*sizeof(Int_t));
+  for(int i = 0; i<N_MPD_TIME_SAMP; i++){
+    memset(fadc[i], 0, fNch*sizeof(Int_t));
+  }
+  memset(fadc0, 0, fNch*sizeof(Int_t));
+  memset(fadc1, 0, fNch*sizeof(Int_t));
+  memset(fadc2, 0, fNch*sizeof(Int_t));
+  memset(fadc3, 0, fNch*sizeof(Int_t));
+  memset(fadc4, 0, fNch*sizeof(Int_t));
+  memset(fadc5, 0, fNch*sizeof(Int_t));
+  
+  fStrip_.clear();
+  fadc_0.clear();
+  fadc_1.clear();
+  fadc_2.clear();
+  fadc_3.clear();
+  fadc_4.clear();
+  fadc_5.clear();
+  
+  return;
 }
 
 Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
-//    std::cout << "[SBSGEMPlane::Decode " << fName << "]" << std::endl;
-
+  //std::cout << "[SBSGEMPlane::Decode " << fName << "]" << std::endl;
     int i;
     
     //#ifdef MCDATA
@@ -245,7 +272,16 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 	  Int_t nsamps = evdata.GetNumHits(d->crate, d->slot, chan);
 	  if(nsamps!=N_MPD_TIME_SAMP)continue;
 	  //std::cout << nsamps << std::endl;
-	
+	  
+	  fStrip_.push_back(strip);
+	  fadc_0.push_back( evdata.GetData(d->crate, d->slot, chan, 0) - fPedestal[strip] );
+	  fadc_1.push_back( evdata.GetData(d->crate, d->slot, chan, 1) - fPedestal[strip] );
+	  fadc_2.push_back( evdata.GetData(d->crate, d->slot, chan, 2) - fPedestal[strip] );
+	  fadc_3.push_back( evdata.GetData(d->crate, d->slot, chan, 3) - fPedestal[strip] );
+	  fadc_4.push_back( evdata.GetData(d->crate, d->slot, chan, 4) - fPedestal[strip] );
+	  fadc_5.push_back( evdata.GetData(d->crate, d->slot, chan, 5) - fPedestal[strip] );
+
+	  fNchEff++;
 	  fadc0[strip] = evdata.GetData(d->crate, d->slot, chan, 0) - fPedestal[strip];
 	  fadc1[strip] = evdata.GetData(d->crate, d->slot, chan, 1) - fPedestal[strip];
 	  fadc2[strip] = evdata.GetData(d->crate, d->slot, chan, 2) - fPedestal[strip];
@@ -295,16 +331,25 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 	    Int_t RstripPos = RstripNb + 128*it->pos;
 	    strip = RstripPos;
 
-	    fStrip[fNch] = strip;
-	    for(Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++) {
+	    fStrip[strip] = strip;
 
-	      fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot,
+	    fStrip_.push_back(strip);
+	    for(Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++) {
+	      
+	      
+	      fadc[adc_samp][strip] =  evdata.GetData(it->crate, it->slot,
 						     chan, isamp++) - fPedestal[strip];
 
 	      assert( ((UInt_t) fNch) < fMPDmap.size()*N_APV25_CHAN );
 	    }
 	    assert(strip>=0); // Make sure we don't end up with negative strip numbers!
-
+	    fadc_0.push_back(fadc[0][strip]);
+	    fadc_1.push_back(fadc[1][strip]);
+	    fadc_2.push_back(fadc[2][strip]);
+	    fadc_3.push_back(fadc[3][strip]);
+	    fadc_4.push_back(fadc[4][strip]);
+	    fadc_5.push_back(fadc[5][strip]);
+	    
 	    // Zero suppression
 	    if(!fZeroSuppress ||
 	       ( fRMS[strip] > 0.0 && fabs(fadc[2][fNch])/

@@ -11,7 +11,7 @@
 //#include "TSBSSimEvent.h"
 #include "ha_compiledata.h"
 #include "SBSSimFile.h"//needed for SBSSimEvent
-//#include "TTree.h"
+#include "TH1D.h"
 //#include "digsim_tree.h"
 #include "THaApparatus.h"
 
@@ -143,6 +143,8 @@ protected:
   
   // TODO: function(s) that load(s) the MC track hit
   
+  //TH1D* h1_sizeHCal;
+  //TH1D* h1_sizeGEMs;
   
   //Int_t ChanFromROC( std::string detname, Int_t crate, Int_t slot, Int_t chan ) const;
   /*

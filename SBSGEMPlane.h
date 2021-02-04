@@ -47,6 +47,7 @@ class SBSGEMPlane : public THaSubDetector {
 
         // Output variables
         Int_t  fNch;
+        Int_t  fNchEff;
         Int_t *fStrip; // [fNch]
         Int_t *fadc[N_MPD_TIME_SAMP]; 
         // Being obnoxious so we match the stand alone more closely
@@ -56,6 +57,13 @@ class SBSGEMPlane : public THaSubDetector {
         Int_t *fadc3; // [fNch]
         Int_t *fadc4; // [fNch]
         Int_t *fadc5; // [fNch]
+	std::vector<Int_t> fStrip_; 
+	std::vector<Int_t> fadc_0; 
+	std::vector<Int_t> fadc_1;
+	std::vector<Int_t> fadc_2;
+	std::vector<Int_t> fadc_3;
+	std::vector<Int_t> fadc_4;
+	std::vector<Int_t> fadc_5;
         Double_t *fPedestal; 
         Double_t *fRMS; 
 	

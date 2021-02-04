@@ -9,9 +9,14 @@ class SBSBigBite : public THaSpectrometer {
     SBSBigBite( const char *name, const char *description );
     virtual ~SBSBigBite();
 
+    virtual Int_t	CoarseReconstruct();
+    virtual Int_t	CoarseTrack();
+    virtual Int_t	Reconstruct();
+    virtual Int_t	Track();
+    
     virtual Int_t FindVertices( TClonesArray& tracks );
     virtual Int_t TrackCalc();
-
+    
     protected:
     ClassDef(SBSBigBite,0) // BigBite spectrometer
 };

@@ -67,6 +67,9 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   cout << " Make sure you have already declared your apparatuses and detectors, and added these to gHaApps" << endl;
   SetDetectors();
   
+  // h1_sizeHCal = new TH1D("h1_sizeHCal", "", 500, 0, 5000);
+  // h1_sizeGEMs = new TH1D("h1_sizeGEMs", "", 500, 0, 5000);
+  
   gSystem->Load("libEG.so");  // for TDatabasePDG
   // Get MPD encoder for GEMs
   fEncoderMPD = dynamic_cast<SBSSimMPDEncoder*>
@@ -75,8 +78,11 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
 
 //-----------------------------------------------------------------------------
 SBSSimDecoder::~SBSSimDecoder() {
-
+  // h1_sizeHCal->Write();
+  // h1_sizeGEMs->Write();
   DefineVariables( THaAnalysisObject::kDelete );
+  // h1_sizeHCal->Delete();
+  // h1_sizeGEMs->Delete();
   
 }
 
@@ -210,7 +216,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   //Bool_t newclus;
   //Int_t crate, slot, chan,lchan;
-
+  
   std::vector<std::map<Decoder::THaSlotData*, std::vector<UInt_t> > > detmaps;
   detmaps.resize(fDetectors.size());
   
@@ -222,6 +228,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   // Now call LoadSlot for the different detectors
   for(size_t d = 0; d < fDetectors.size(); d++) {
+    //int size_det = 0;
     if(fDebug>2)
       cout << " " << fDetectors[d] << endl;
     for( std::map<Decoder::THaSlotData*, std::vector<UInt_t> >::iterator it =
@@ -242,7 +249,11 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 	it->first->GetModule()->LoadSlot(it->first,
 					 it->second.data(),0,it->second.size() );
       }
+      //cout << fDetectors[d].c_str() << " " << it->first->getCrate() << " " << it->first->getSlot() << " " << it->second.size() << endl;
+      //size_det+=it->second.size();
     }
+    //if(strcmp(fDetectors[d].c_str(), "sbs.hcal")==0)h1_sizeHCal->Fill(size_det);
+    //if(strcmp(fDetectors[d].c_str(), "bb.gem")==0)h1_sizeGEMs->Fill(size_det);
   }
   
   return HED_OK;
@@ -431,9 +442,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       myev->push_back(simev->Earm_BBGEM_Dig.adc_4->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_5->at(j));
     }
-    
   }
-
+  
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
     //cout << " ouh " << detname.c_str() << " " << simev->Harm_HCalScint.nhits << " " << simev->Harm_HCal_Dig.nchan << endl;
     for(int j = 0; j<simev->Harm_HCal_Dig.nchan; j++){

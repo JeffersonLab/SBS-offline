@@ -318,6 +318,8 @@ Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 {
+  cout << "SBSBBTotalShower::CoarseProcess " << endl;
+  
   // Reconstruct Clusters in shower and preshower detectors.
   // Then compute total shower energy and cluster ID.
   //
