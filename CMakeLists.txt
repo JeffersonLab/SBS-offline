@@ -62,7 +62,7 @@ set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
   SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
   SBSCalorimeterCluster.cxx SBSSimDataEncoder.cxx 
   SBSSimMPD.cxx SBSSimADC.cxx SBSSimTDC.cxx
-  SBSSimFile.cxx SBSSimEvent.cxx SBSSimDecoder.cxx 
+  SBSSimFile.cxx SBSSimEvent.cxx SBSSimDecoder.cxx SBSHCalLEDModule.cxx
   g4sbs_data.cxx g4sbs_tree.cxx
   )
 #gmn_dig_tree.cxx

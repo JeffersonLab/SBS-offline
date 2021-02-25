@@ -42,6 +42,7 @@
 #pragma link C++ class Decoder::SBSSimMPD+;
 #pragma link C++ class Decoder::SBSSimADC+;
 #pragma link C++ class Decoder::SBSSimTDC+;
+#pragma link C++ class Decoder::HCalLED+;
 #pragma link C++ class SBSSimFile+;
 #pragma link C++ class SBSSimEvent+;
 #pragma link C++ class SBSSimDecoder+;
