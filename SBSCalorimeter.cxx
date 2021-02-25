@@ -20,6 +20,8 @@
 #include "TClonesArray.h"
 #include "TDatime.h"
 #include "TMath.h"
+#include "SBSManager.h"
+#include "THaCrateMap.h"
 
 #include <cstring>
 #include <iostream>
@@ -92,12 +94,14 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   std::vector<Float_t> xyz, dxyz;
   Int_t ncols = 1, nrows = 1, nlayers = 1;
   Float_t angle = 0.0;
+  Int_t nchan_per_element = 1, model_in_detmap = 0;
   std::vector<Int_t> cluster_dim; // Default is 3x3 if none specified
 
   // Read mapping/geometry/configuration parameters
   fChanMapStart = 0;
   DBRequest config_request[] = {
     { "detmap",       &detmap,  kIntV }, ///< Detector map
+    { "model_in_detmap", &model_in_detmap,  kInt, 0, true }, ///< Does detector map have module numbers?
     { "chanmap",      &chanmap, kIntV,    0, true }, ///< Optional channel map
     { "start_chanmap",&fChanMapStart, kInt, 0, true}, ///< Optional start of channel numbering
     { "ncols",        &ncols,   kInt, 1, true }, ///< Number of columns in detector
@@ -160,12 +164,25 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   if(err)
     return err;
 
+  // Find out how many channels got skipped:
+  int nskipped = 0;
+  if( !chanmap.empty() ) {
+    for(auto i : chanmap) {
+      if (i < 0)
+        nskipped++;
+    }
+  }
+
   // Clear out the old channel map before reading a new one
   fChanMap.clear();
-  if( FillDetMap(detmap, 0, here) <= 0 ) {
+  Int_t detmap_flags = THaDetMap::kFillRefChan;
+  if(model_in_detmap) {
+    detmap_flags |= THaDetMap::kFillModel;
+  }
+  if( FillDetMap(detmap, detmap_flags, here) <= 0 ) {
     err = kInitError;  // Error already printed by FillDetMap
   } else {
-    nelem = fDetMap->GetTotNumChan();
+    nelem = fDetMap->GetTotNumChan() - nskipped; // Exclude skipped channels in count
     if( fWithTDC ) {
       if(nelem != 2*fNelem ) {
         Error( Here(here), "Number of crate module channels (%d) "
@@ -186,14 +203,14 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   if( !chanmap.empty() ) {
     // If a map is found in the database, ensure it has the correct size
     Int_t cmapsize = chanmap.size();
-    if( fWithTDC  ) {
-      if(cmapsize != 2*fNelem ) {
+    if( fWithTDC && (fWithADC || fWithADCSamples) ) {
+      if(cmapsize - nskipped != 2*fNelem ) {
         Error( Here(here), "Number of logical channel to detector block map (%d) "
             "inconsistent with 2 channels per block (%d, expected)", cmapsize,
             2*fNelem );
         err = kInitError;
       }
-    } else if ( cmapsize != fNelem) {
+    } else if ( cmapsize - nskipped != fNelem) {
       Error( Here(here), "Number of logical channel to detector block map (%d) "
           "inconsistent with number of blocks (%d)", cmapsize, fNelem );
       err = kInitError;
@@ -210,37 +227,58 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     Int_t nmodules = GetDetMap()->GetSize();
     assert( nmodules > 0 );
     fChanMap.resize(nmodules);
-    Bool_t makeADC = true;
-    for( Int_t i = 0, k = 0; i < nmodules && !err; i++) {
+    Decoder::THaCrateMap *cratemap = SBSManager::GetInstance()->GetCrateMap();
+    Int_t ka = 0, kt = 0, km = 0, k = 0;
+    for( Int_t i = 0; i < nmodules && !err; i++) {
       THaDetMap::Module *d = GetDetMap()->GetModule(i);
+      // If the model number was not listed in the detmap section, fill it
+      // in from the crate map
+      if(!model_in_detmap) {
+        d->SetModel(cratemap->getModel(d->crate,d->slot));
+      }
+      if(!d->IsADC() && !d->IsTDC()) {
+        // An unknown module was specified, complain and exit
+        Error( Here(here), "Unknown module specified for module %d.", i);
+        err = kInitError;
+        continue;
+      }
       Int_t nchan = d->GetNchan();
       if( nchan > 0 ) {
         fChanMap[i].resize(nchan);
-        // To simplify finding out which channels are ADCs and which are TDCs
-        // we'll just require that the user make the first fNelem channels
-        // correspond to the ADCs, and the other fNelem to the TDCs (if in use).
-        if(makeADC) {
-          d->MakeADC();
-        } else {
-          d->MakeTDC();
-        }
-        for(Int_t chan = 0; chan < nchan; chan++) {
-          assert( k < fNelem );
-          fChanMap[i][chan] = chanmap.empty() ? k : chanmap[k] - fChanMapStart;
-          k++;
+        for(Int_t chan = 0; chan < nchan && !err; chan++,k++) {
+          if(!chanmap.empty() ) {
+            // Skip disabled channels
+            if(chanmap[k]<0) {
+              fChanMap[i][chan] = -1;
+              continue;
+            }
+            km = chanmap[k] - fChanMapStart;
+          } else {
+            km = d->IsADC() ? ka : kt;
+          }
+          // Count ADC and TDC channels separately
+          if(d->IsADC()) {
+            ka++;
+          } else {
+            kt++;
+          }
+          assert( km < fNelem );
+          assert( km >= 0);
+          fChanMap[i][chan] = km;
         }
       } else {
         Error( Here(here), "No channels defined for module %d.", i);
         fChanMap.clear();
         err = kInitError;
       }
-      // The check for TDC was done above already. So if we reach fNelem,
-      // then it means that we are now labeling the TDC channels for remaining
-      // modules.
-      if(k>=fNelem) {
-        k = 0;
-        makeADC = false;
-      }
+    }
+    if((fWithADC||fWithADCSamples) && ka != fNelem) {
+        Error( Here(here), "Insufficient ADC channels, found %d, expected %d.", ka,fNelem);
+        return kInitError;
+    }
+    if(fWithTDC && kt != fNelem) {
+        Error( Here(here), "Insufficient TDC channels, found %d, expected %d.", kt,fNelem);
+        return kInitError;
     }
   }
   if(err)
@@ -430,7 +468,7 @@ Int_t SBSCalorimeter::Decode( const THaEvData& evdata )
   // fASamplesPed[][] - 2D Array of ped subtracted fASamples[][]
   // fASamplesCal[][] - 2D array of ped subtracted and calibrated fASamples[][]
   //
-  // (The following are presently now being used)
+  // (The following are presently not being used)
   // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
   // fAsum_c          -  Sum of shower blocks corrected ADC values;
 
@@ -449,7 +487,8 @@ Int_t SBSCalorimeter::Decode( const THaEvData& evdata )
       // Get the next available channel, skipping the ones that do not belong
       // to our detector
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
-      if( chan > d->hi || chan < d->lo ) continue;
+      if( chan > d->hi || chan < d->lo || fChanMap[imod][chan - d->lo] == -1 )
+        continue;
 
       // Get the block index for this crate,slot,channel combo
       blk = fBlocks[fChanMap[imod][chan - d->lo]];
