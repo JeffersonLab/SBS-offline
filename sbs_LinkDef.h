@@ -10,6 +10,8 @@
 //#pragma link C++ namespace SBSDigSim;
 
 #pragma link C++ class Decoder::SBSDecodeF1TDCModule+;
+#pragma link C++ class Decoder::SBSDecodeF1TDCLowResModule+;
+#pragma link C++ class Decoder::SBSDecodeF1TDCHighResModule+;
 #pragma link C++ class Decoder::MPDModule+;
 #pragma link C++ class SBSBigBite+;
 #pragma link C++ class SBSGEMStand+;
