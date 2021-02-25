@@ -8,6 +8,9 @@
 //
 /////////////////////////////////////////////////////////////////////
 //
+// - 2021/02/24 Juan Carlos Cornejo
+//   * Modify it to support both high and low res in the same class
+//   * Module 3204 is high res, and 6401 is low res
 // - Version 1 - 2017/12/13 (Marco Carmignotto)
 //    * Tested for High Resolution only
 //    * Work with multiple modules in the same bank
