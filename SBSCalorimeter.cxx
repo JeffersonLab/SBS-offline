@@ -40,7 +40,7 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
   THaNonTrackingDetector(name,description,apparatus), fNrows(0), fNcols(0),
   //THaShower(name,description,apparatus), fNrows(0), fNcols(0),
   fNlayers(0), fWithTDC(false), fWithADCSamples(false), fWithADC(true),
-  fMaxNclus(10), fConst(1.0), fSlope(0.0), fAccCharge(0.0)
+  fMaxNclus(10), fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawData(true)
 {
   // Constructor.
   fCoarseProcessed = 0;
@@ -183,7 +183,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     err = kInitError;  // Error already printed by FillDetMap
   } else {
     nelem = fDetMap->GetTotNumChan() - nskipped; // Exclude skipped channels in count
-    if( fWithTDC ) {
+    if( fWithTDC && (fWithADC || fWithADCSamples) ) {
       if(nelem != 2*fNelem ) {
         Error( Here(here), "Number of crate module channels (%d) "
             "inconsistent with 2 channels per block (%d, expected)", nelem,
@@ -273,11 +273,11 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
       }
     }
     if((fWithADC||fWithADCSamples) && ka != fNelem) {
-        Error( Here(here), "Insufficient ADC channels, found %d, expected %d.", ka,fNelem);
+        Error( Here(here), "Inconsistent ADC channels, found %d, expected %d.", ka,fNelem);
         return kInitError;
     }
     if(fWithTDC && kt != fNelem) {
-        Error( Here(here), "Insufficient TDC channels, found %d, expected %d.", kt,fNelem);
+        Error( Here(here), "Inconsistent TDC channels, found %d, expected %d.", kt,fNelem);
         return kInitError;
     }
   }
@@ -418,26 +418,45 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
   if(fWithADC||fWithADCSamples) {
     // Register variables in global list
     RVarDef vars_adc[] = {
-      { "a",   "Raw ADC amplitudes",  "fA" },
-      { "a_p", "Ped-subtracted ADC amplitudes",  "fA_p" },
       { "a_c", "Calibrated ADC amplitudes",  "fA_c" },
       { 0 }
     };
     err = DefineVarsFromList( vars_adc, mode );
     if( err != kOK)
       return err;
+
+    if(fStoreRawData) {
+      RVarDef vars_adc_raw[] = {
+        { "a",   "Raw ADC amplitudes",  "fA" },
+        { "a_p", "Ped-subtracted ADC amplitudes",  "fA_p" },
+        { 0 }
+      };
+      err = DefineVarsFromList( vars_adc_raw, mode );
+      if( err != kOK)
+        return err;
+    }
   }
 
   // Are we using TDCs? If so, define variables for TDCs
   if(fWithTDC) {
     RVarDef vars_tdc[] = {
-      { "tdc", "Raw TDC value", "fTDC" },
       { "tdc_c", "Calibrated TDC value", "fTDC_c" },
       { 0 }
     };
     err = DefineVarsFromList( vars_tdc, mode );
     if( err != kOK)
       return err;
+
+    if(fStoreRawData) {
+      RVarDef vars_tdc_raw[] = {
+        { "tdc", "Raw TDC value", "fTDC" },
+        { 0 }
+      };
+      err = DefineVarsFromList( vars_tdc_raw, mode );
+      if( err != kOK)
+        return err;
+    }
+
   }
 
   // Are we using multi-valued ADCs? Then define the samples variables

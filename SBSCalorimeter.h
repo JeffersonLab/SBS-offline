@@ -38,6 +38,7 @@ public:
   void SetWithADC(Bool_t var);
   void SetWithADCSamples(Bool_t var);
   void SetWithTDC(Bool_t var)        { fWithTDC = var; }
+  void SetStoreRawData(Bool_t var) { fStoreRawData = var; }
 
   // Standard apparatus re-implemented functions
   virtual Int_t      Decode( const THaEvData& );
@@ -48,6 +49,8 @@ public:
       THaDetMap::Module *d, Int_t chan);
   virtual Int_t      DecodeTDC( const THaEvData&, SBSCalorimeterBlock *blk,
       THaDetMap::Module *d, Int_t chan);
+
+
 
   // Utility functions
   // Get index of block
@@ -137,6 +140,9 @@ protected:
 
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
+
+  // Flags for enabling and disabling various features
+  Bool_t    fStoreRawData; ///< Store the raw data in the root tree?
 
 /*
      Int_t      GetNclust() const { return fNclust; }
