@@ -61,11 +61,11 @@ set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
   SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx
   SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
   SBSCalorimeterCluster.cxx SBSSimDataEncoder.cxx 
-  SBSSimMPD.cxx SBSSimADC.cxx SBSSimTDC.cxx
-  SBSSimFile.cxx SBSSimEvent.cxx SBSSimDecoder.cxx 
+  SBSSimDecoder.cxx SBSSimADC.cxx SBSSimTDC.cxx
+  SBSSimFile.cxx SBSSimEvent.cxx
   g4sbs_data.cxx g4sbs_tree.cxx
   )
-#gmn_dig_tree.cxx
+#gmn_dig_tree.cxx  SBSSimMPD.cxx 
 
 ## Make corresponding header files
 string(REGEX REPLACE .cxx .h headers "${sources}")

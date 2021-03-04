@@ -13,6 +13,8 @@
 #define SBS_APV25_NCH 128 // Number of channels per APV25
 #define SBS_MPD_NAPV25 15 // Number of AVP25's per MPD
 
+//TODO: simplify this... I'm not convinced such a complexity is required anymore...
+
 namespace SimEncoder {
   struct data {
     unsigned int channel;
@@ -25,7 +27,7 @@ namespace SimEncoder {
   struct fadc_data : adc_data {
     std::vector<unsigned int> samples;
   };
-
+  
   struct mpd_data : data {
     unsigned short nsamples; ///< Number of samples per channel
     unsigned short nstrips; ///< Number of strips in this block (128 for APV25)
@@ -50,7 +52,8 @@ class SBSSimDataEncoder {
 public:
   SBSSimDataEncoder(const char *enc_name, unsigned short enc_id);
   virtual ~SBSSimDataEncoder() {};
-
+  
+  /*
   // Encoders
   virtual bool EncodeADC(SimEncoder::adc_data data, unsigned int *enc_data,
       unsigned short &nwords) { return false; };
@@ -60,6 +63,7 @@ public:
       unsigned short &nwords) { return false; };
   virtual bool EncodeMPD(SimEncoder::mpd_data data, unsigned int *enc_data,
       unsigned short &nwords) { return false; };
+  */
   // Decoders
   virtual bool DecodeADC(SimEncoder::adc_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; }
@@ -107,8 +111,8 @@ public:
   virtual ~SBSSimTDCEncoder() {};
 
   // Overloaded functions
-  virtual bool EncodeTDC(SimEncoder::tdc_data data, unsigned int *enc_data,
-      unsigned short &nwords);
+  //virtual bool EncodeTDC(SimEncoder::tdc_data data, unsigned int *enc_data,
+  //  unsigned short &nwords);
   virtual bool DecodeTDC(SimEncoder::tdc_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsTDC() { return true; }
@@ -126,8 +130,8 @@ public:
       unsigned short bits);
   virtual ~SBSSimADCEncoder() {};
 
-  virtual bool EncodeADC(SimEncoder::adc_data data, unsigned int *enc_data,
-      unsigned short &nwords);
+  //virtual bool EncodeADC(SimEncoder::adc_data data, unsigned int *enc_data,
+  //  unsigned short &nwords);
   virtual bool DecodeADC(SimEncoder::adc_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsADC() { return true; }
@@ -143,16 +147,16 @@ public:
   SBSSimFADC250Encoder(const char *enc_name, unsigned short enc_id);
   virtual ~SBSSimFADC250Encoder() {};
 
-  virtual bool EncodeFADC(SimEncoder::fadc_data data, unsigned int *enc_data,
-      unsigned short &nwords);
+  //virtual bool EncodeFADC(SimEncoder::fadc_data data, unsigned int *enc_data,
+  //  unsigned short &nwords);
   virtual bool DecodeFADC(SimEncoder::fadc_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsFADC() { return true; }
 
-private:
-  unsigned int EncodeSingleSample(unsigned int dat);
-  void UnpackSamples(unsigned int enc_data,unsigned int *buff,
-      bool *overflow, bool *valid);
+  //private:
+  //unsigned int EncodeSingleSample(unsigned int dat);
+  //void UnpackSamples(unsigned int enc_data,unsigned int *buff,
+  //  bool *overflow, bool *valid);
 };
 
 // MPD
@@ -161,15 +165,15 @@ public:
   SBSSimMPDEncoder(const char *enc_name, unsigned short enc_id);
   virtual ~SBSSimMPDEncoder() {};
 
-  virtual bool EncodeMPD(SimEncoder::mpd_data data, unsigned int *enc_data,
-      unsigned short &nwords);
+  //virtual bool EncodeMPD(SimEncoder::mpd_data data, unsigned int *enc_data,
+  //  unsigned short &nwords);
   virtual bool DecodeMPD(SimEncoder::mpd_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsMPD() { return true; }
 
-  void EncodeMPDHeader(SimEncoder::mpd_data data, unsigned int *enc_data,
-      unsigned short &nwords);
-  void DecodeMPDHeader(const unsigned int *hdr, SimEncoder::mpd_data &data);
+  //void EncodeMPDHeader(SimEncoder::mpd_data data, unsigned int *enc_data,
+  //  unsigned short &nwords);
+  //void DecodeMPDHeader(const unsigned int *hdr, SimEncoder::mpd_data &data);
 
 protected:
   unsigned int fChannelBitMask;
@@ -178,10 +182,10 @@ protected:
   unsigned int fSampleBitMask;
   unsigned int fValidBitMask;
 
-protected:
-  unsigned int EncodeSingleSample(unsigned int dat);
-  void UnpackSamples(unsigned int enc_data,unsigned int *buff,
-      bool *overflow, bool *valid);
+  //protected:
+  //unsigned int EncodeSingleSample(unsigned int dat);
+  //void UnpackSamples(unsigned int enc_data,unsigned int *buff,
+  //  bool *overflow, bool *valid);
 
 };
 

@@ -98,6 +98,7 @@ unsigned int SBSSimDataEncoder::MakeBitMask(unsigned short bits)
   return mask;
 }
 
+/*
 bool SBSSimADCEncoder::EncodeADC(SimEncoder::adc_data data,
     unsigned int *enc_data,unsigned short &nwords)
 {
@@ -105,7 +106,8 @@ bool SBSSimADCEncoder::EncodeADC(SimEncoder::adc_data data,
   enc_data[nwords++] = data.integral&fBitMask;
   return (nwords>0);
 }
-
+*/
+/*
 bool SBSSimTDCEncoder::EncodeTDC(SimEncoder::tdc_data data,
     unsigned int *enc_data,unsigned short &nwords)
 {
@@ -119,7 +121,8 @@ bool SBSSimTDCEncoder::EncodeTDC(SimEncoder::tdc_data data,
   }
   return (nwords>0);
 }
-
+*/
+/*
 bool SBSSimFADC250Encoder::EncodeFADC(SimEncoder::fadc_data data,
     unsigned int *enc_data, unsigned short &nwords)
 {
@@ -155,6 +158,7 @@ bool SBSSimFADC250Encoder::EncodeFADC(SimEncoder::fadc_data data,
   }
   return (nwords>1);
 }
+*/
 
 bool SBSSimADCEncoder::DecodeADC(SimEncoder::adc_data &data,
       const unsigned int *enc_data,unsigned short nwords)
@@ -217,6 +221,7 @@ bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
 
 }
 
+/*
 unsigned int SBSSimFADC250Encoder::EncodeSingleSample(unsigned int dat)
 {
   if(dat&0xFFFFF000) { // Data too large, turn on overflow
@@ -224,7 +229,8 @@ unsigned int SBSSimFADC250Encoder::EncodeSingleSample(unsigned int dat)
   }
   return dat&0x1FFF;
 }
-
+*/
+/*
 void SBSSimFADC250Encoder::UnpackSamples(unsigned int enc_data,
     unsigned int *buff, bool *overflow, bool *valid)
 {
@@ -236,7 +242,7 @@ void SBSSimFADC250Encoder::UnpackSamples(unsigned int enc_data,
     valid[k] = !(tmp&0x2000);
   }
 }
-
+*/
 
 unsigned int SBSSimDataEncoder::EncodeHeader(unsigned short type,
     unsigned short mult, unsigned int nwords)
@@ -280,7 +286,7 @@ SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
   fSampleBitMask   = fDataBitMask|fOverflowBitMask;
   fValidBitMask    = (1<<13);
 }
-
+/*
 bool SBSSimMPDEncoder::EncodeMPD(SimEncoder::mpd_data data,
     unsigned int *enc_data, unsigned short &nwords)
 {
@@ -321,8 +327,8 @@ bool SBSSimMPDEncoder::EncodeMPD(SimEncoder::mpd_data data,
   }
   return (nwords>1);
 }
-
-
+*/
+/*
 unsigned int SBSSimMPDEncoder::EncodeSingleSample(unsigned int dat)
 {
   if(dat>fDataBitMask) { // Data too large, turn on overflow
@@ -330,7 +336,8 @@ unsigned int SBSSimMPDEncoder::EncodeSingleSample(unsigned int dat)
   }
   return dat&fSampleBitMask;
 }
-
+*/
+/*
 void SBSSimMPDEncoder::UnpackSamples(unsigned int enc_data,
     unsigned int *buff, bool *overflow, bool *valid)
 {
@@ -342,7 +349,8 @@ void SBSSimMPDEncoder::UnpackSamples(unsigned int enc_data,
     valid[k] = !(tmp&fValidBitMask);
   }
 }
-
+*/
+/*
 void SBSSimMPDEncoder::EncodeMPDHeader(SimEncoder::mpd_data data,
     unsigned int *enc_data, unsigned short &nwords)
 {
@@ -357,8 +365,8 @@ void SBSSimMPDEncoder::EncodeMPDHeader(SimEncoder::mpd_data data,
     ((data.mpd_id<<SBS_MPD_MPD_ID_BIT)&SBS_MPD_MPD_ID_MASK) |
     (data.gem_id&SBS_MPD_GEM_ID_BIT);
 }
-
-
+*/
+/*
 void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
     SimEncoder::mpd_data &data)
 {
@@ -373,6 +381,7 @@ void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
   data.mpd_id   = (*hdr&SBS_MPD_MPD_ID_MASK)>>SBS_MPD_MPD_ID_BIT;
   data.gem_id   = (*hdr&SBS_MPD_GEM_ID_MASK)>>SBS_MPD_GEM_ID_BIT;
 }
+*/
 
 bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
     const unsigned int *enc_data,unsigned short nwords)
