@@ -29,7 +29,8 @@ using namespace std;
 namespace Decoder {
 
   Module::TypeIter_t SBSSimTDC::fgThisType =
-    DoRegister( ModuleType( "Decoder::SBSSimTDC" , 53204 ));
+    //DoRegister( ModuleType( "Decoder::SBSSimTDC" , 53204 ));
+    DoRegister( ModuleType( "Decoder::SBSSimTDC" , -3204 ));
 
   SBSSimTDC::SBSSimTDC()
   {

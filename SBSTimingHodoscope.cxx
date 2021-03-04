@@ -1778,7 +1778,6 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
 		{ "trHitIndex",  "the index of THaTriggerPlaneHit associated with track, -1 means no match",  "fTrackProj.THaTrackProj.fChannel" },
 
 
-
 		{ 0 }
 	};
 
