@@ -23,7 +23,14 @@ namespace SimEncoder {
   struct adc_data : data {
     unsigned int integral;
   };
+  
+  //standard sample ADC structure
+  struct sadc_data : adc_data {
+    unsigned int integral;
+    std::vector<unsigned int> samples;
+  };
 
+  /*
   struct fadc_data : adc_data {
     std::vector<unsigned int> samples;
   };
@@ -39,7 +46,8 @@ namespace SimEncoder {
     unsigned short invert;
     std::vector<unsigned int> samples;
   };
-
+  */
+  
   struct tdc_data : data {
     std::vector<unsigned int> time;
     unsigned int getTime(unsigned int t) { return time[t]&0x7FFFFFFF; }
@@ -69,16 +77,24 @@ public:
       const unsigned int *enc_data,unsigned short nwords) { return false; }
   virtual bool DecodeTDC(SimEncoder::tdc_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; };
+  virtual bool DecodeSADC(SimEncoder::sadc_data &data,
+      const unsigned int *enc_data,unsigned short nwords) { return false; }
+  /*
+  virtual bool DecodeFADC(SimEncoder::sadc_data &data,
+      const unsigned int *enc_data,unsigned short nwords) { return false; }
+  virtual bool DecodeMPD(SimEncoder::sadc_data &data,
+      const unsigned int *enc_data,unsigned short nwords) { return false; }
   virtual bool DecodeFADC(SimEncoder::fadc_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; }
   virtual bool DecodeMPD(SimEncoder::mpd_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; }
-
+  */
   // Capabilities
   virtual bool IsADC() { return false; }
   virtual bool IsTDC() { return false; }
-  virtual bool IsFADC() { return false; }
-  virtual bool IsMPD() { return false; }
+  virtual bool IsSADC() { return false; }
+  //virtual bool IsFADC() { return false; }
+  //virtual bool IsMPD() { return false; }
 
   unsigned short GetId() { return fEncId; }
   std::string GetName() { return fName; }
@@ -141,6 +157,18 @@ protected:
   unsigned short fBitMask;
 };
 
+//generic sample ADC encoder, meant to replace FADC250 and MPD
+class SBSSimSADCEncoder : public SBSSimADCEncoder {
+public:
+  SBSSimSADCEncoder(const char *enc_name, unsigned short enc_id);
+  virtual ~SBSSimSADCEncoder() {};
+
+  virtual bool DecodeSADC(SimEncoder::sadc_data &data,
+      const unsigned int *enc_data,unsigned short nwords);
+  virtual bool IsSADC() { return true; }
+};
+
+/*
 // JLab FADC 250 in multi sample ADC mode
 class SBSSimFADC250Encoder : public SBSSimADCEncoder {
 public:
@@ -149,7 +177,8 @@ public:
 
   //virtual bool EncodeFADC(SimEncoder::fadc_data data, unsigned int *enc_data,
   //  unsigned short &nwords);
-  virtual bool DecodeFADC(SimEncoder::fadc_data &data,
+  //virtual bool DecodeFADC(SimEncoder::fadc_data &data,
+  virtual bool DecodeFADC(SimEncoder::sadc_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsFADC() { return true; }
 
@@ -158,7 +187,8 @@ public:
   //void UnpackSamples(unsigned int enc_data,unsigned int *buff,
   //  bool *overflow, bool *valid);
 };
-
+*/
+/*
 // MPD
 class SBSSimMPDEncoder : public SBSSimDataEncoder {
 public:
@@ -167,7 +197,8 @@ public:
 
   //virtual bool EncodeMPD(SimEncoder::mpd_data data, unsigned int *enc_data,
   //  unsigned short &nwords);
-  virtual bool DecodeMPD(SimEncoder::mpd_data &data,
+  //virtual bool DecodeMPD(SimEncoder::mpd_data &data,
+  virtual bool DecodeMPD(SimEncoder::sadc_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsMPD() { return true; }
 
@@ -188,6 +219,6 @@ protected:
   //  bool *overflow, bool *valid);
 
 };
-
+*/
 
 #endif // SBSSIMDATAENCODER_H

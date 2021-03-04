@@ -37,11 +37,13 @@ SBSSimDataEncoder* SBSSimDataEncoder::GetEncoderByName(
     fEncoders.push_back(new SBSSimTDCEncoder("vetroc",ids++,16,26));
     fEncoders.push_back(new SBSSimTDCEncoder("f1tdc",ids++,16,31));
     // ADCs
-    fEncoders.push_back(new SBSSimFADC250Encoder("fadc250",ids++));
+    //fEncoders.push_back(new SBSSimFADC250Encoder("fadc250",ids++));
+    fEncoders.push_back(new SBSSimSADCEncoder("fadc250",ids++));
     fEncoders.push_back(new SBSSimADCEncoder("adc",ids++,12));
     fEncoders.push_back(new SBSSimADCEncoder("lecroy1881",ids++,14));
     fEncoders.push_back(new SBSSimADCEncoder("caen792",ids++,12));
-    fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
+    fEncoders.push_back(new SBSSimSADCEncoder("mpd",ids++));
+    //fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
   }
 
   TString name(enc_name);
@@ -83,11 +85,17 @@ SBSSimADCEncoder::SBSSimADCEncoder(const char *enc_name,
   fBitMask = MakeBitMask(fBits);
 }
 
-SBSSimFADC250Encoder::SBSSimFADC250Encoder(const char *enc_name,
+SBSSimSADCEncoder::SBSSimSADCEncoder(const char *enc_name,
     unsigned short enc_id) : SBSSimADCEncoder(enc_name,enc_id,12)
 {
 }
 
+/*
+SBSSimFADC250Encoder::SBSSimFADC250Encoder(const char *enc_name,
+    unsigned short enc_id) : SBSSimADCEncoder(enc_name,enc_id,12)
+{
+}
+*/
 
 unsigned int SBSSimDataEncoder::MakeBitMask(unsigned short bits)
 {
@@ -183,7 +191,21 @@ bool SBSSimTDCEncoder::DecodeTDC(SimEncoder::tdc_data &data,
   return !data.time.empty();
 }
 
-bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
+bool SBSSimSADCEncoder::DecodeSADC(SimEncoder::sadc_data &data,
+    const unsigned int *enc_data,unsigned short nwords)
+{
+  data.integral = 0;
+  data.samples.clear(); // Clear out any samples already in the data
+  
+  for(unsigned short i = 0; i<nwords; i++){
+    data.integral+=enc_data[i];
+    data.samples.push_back(enc_data[i]);
+  }
+}
+
+/*
+bool SBSSimFADC250Encoder::DecodeFADC(//SimEncoder::fadc_data &data,
+				      SimEncoder::sadc_data &data,
     const unsigned int *enc_data,unsigned short nwords)
 {
   for(unsigned short i = 0; i<nwords; i++){
@@ -191,7 +213,7 @@ bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
   }
   
   //OK, so the stuff below is flat-out out of date with the new digitization paradigm
-  /*
+
   int nsamples = enc_data[0]&0xFFF;
   int nsamples_read = 0;
 
@@ -216,11 +238,11 @@ bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
       << ")." << std::endl;
     return false;
   }
-  */
+
   return true;
 
 }
-
+*/
 /*
 unsigned int SBSSimFADC250Encoder::EncodeSingleSample(unsigned int dat)
 {
@@ -276,7 +298,7 @@ unsigned short SBSSimDataEncoder::DecodeNwords(unsigned int hdr) {
   return hdr&SBS_NWORDS_MASK;
 }
 
-
+/*
 SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
     unsigned short enc_id) : SBSSimDataEncoder(enc_name,enc_id)
 {
@@ -286,6 +308,7 @@ SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
   fSampleBitMask   = fDataBitMask|fOverflowBitMask;
   fValidBitMask    = (1<<13);
 }
+*/
 /*
 bool SBSSimMPDEncoder::EncodeMPD(SimEncoder::mpd_data data,
     unsigned int *enc_data, unsigned short &nwords)
@@ -382,8 +405,9 @@ void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
   data.gem_id   = (*hdr&SBS_MPD_GEM_ID_MASK)>>SBS_MPD_GEM_ID_BIT;
 }
 */
-
-bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
+/*
+bool SBSSimMPDEncoder::DecodeMPD(//SimEncoder::mpd_data &data,
+				 SimEncoder::sadc_data &data,
     const unsigned int *enc_data,unsigned short nwords)
 {
   data.samples.clear(); // Clear out any samples already in the data
@@ -394,7 +418,7 @@ bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
     data.samples.push_back(enc_data[i]);
   }
   //std::cout << std::endl;
-  /*
+
   if(nwords<=1) {
     std::cerr << "Error, not enough words to read. Expected more than one,"
       << " got only: " << nwords << std::endl;
@@ -425,8 +449,7 @@ bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
       << data.nstrips*data.nsamples << ")." << std::endl;
     return false;
   }
-  */
   return true;
 
 }
-
+*/

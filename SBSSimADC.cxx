@@ -42,13 +42,13 @@ namespace Decoder {
   
   SBSSimADC::SBSSimADC()
   {
-    fadc_data.resize(NADCCHAN);
+    sadc_data.resize(NADCCHAN);
   }
 
   SBSSimADC::SBSSimADC(Int_t crate, Int_t slot)
     : PipeliningModule(crate, slot)//EPAF: I think we need that don't we ?
   {
-    fadc_data.resize(NADCCHAN);
+    sadc_data.resize(NADCCHAN);
     IsInit = kFALSE;
     Init();
   }
@@ -68,10 +68,10 @@ namespace Decoder {
   // Clear all data vectors
   void SBSSimADC::ClearDataVectors() {
     // Clear all data objects
-    assert(fadc_data.size() == NADCCHAN);  // Initialization error in constructor
+    assert(sadc_data.size() == NADCCHAN);  // Initialization error in constructor
     for (uint32_t i = 0; i < NADCCHAN; i++) {
-      fadc_data[i].integral = 0;
-      fadc_data[i].samples.clear();
+      sadc_data[i].integral = 0;
+      sadc_data[i].samples.clear();
     }
   }
 
@@ -111,16 +111,18 @@ namespace Decoder {
           std::cerr << "Encoder " << enc->GetName() << " of type " << type
             << " is not an ADC!" << std::endl;
         } else if ( nwords > 0 ) {
-          if(enc->IsFADC()) { // FADC with samples
-            SimEncoder::fadc_data tmp_fadc_data;
-            enc->DecodeFADC(tmp_fadc_data,evbuffer,nwords);
-	    //std::cout << tmp_fadc_data.samples.size() << std::endl;
-	    //std::cout << chan << " " << fadc_data[chan].samples.size() << std::endl;
-            for(size_t i = 0; i < tmp_fadc_data.samples.size(); i++) {
-              raw_buff = tmp_fadc_data.samples[i];
-	      //std::cout << i << " " << tmp_fadc_data.samples[i] << endl;
-              fadc_data[chan].samples.push_back(tmp_fadc_data.samples[i]);
-	      //std::cout << i << " " << fadc_data[chan].samples.size() << " " << raw_buff << endl;
+          //if(enc->IsFADC() || enc->IsMPD()) { // FADC with samples
+	  if(enc->IsSADC()) { // FADC with samples
+            SimEncoder::sadc_data tmp_sadc_data;
+            //enc->DecodeFADC(tmp_sadc_data,evbuffer,nwords);
+	    enc->DecodeSADC(tmp_sadc_data,evbuffer,nwords);
+	    //std::cout << tmp_sadc_data.samples.size() << std::endl;
+	    //std::cout << chan << " " << sadc_data[chan].samples.size() << std::endl;
+            for(size_t i = 0; i < tmp_sadc_data.samples.size(); i++) {
+              raw_buff = tmp_sadc_data.samples[i];
+	      //std::cout << i << " " << tmp_sadc_data.samples[i] << endl;
+              sadc_data[chan].samples.push_back(tmp_sadc_data.samples[i]);
+	      //std::cout << i << " " << sadc_data[chan].samples.size() << " " << raw_buff << endl;
               sldat->loadData("adc",chan,raw_buff,raw_buff);
             }
           } else if (enc->IsADC()) { // Integral of ADC
@@ -128,7 +130,7 @@ namespace Decoder {
             enc->DecodeADC(tmp_adc_data,evbuffer,nwords);
             raw_buff = tmp_adc_data.integral;
 	    //std::cout << " raw_buff " << raw_buff << endl;
-            fadc_data[chan].integral = raw_buff;
+            sadc_data[chan].integral = raw_buff;
             sldat->loadData("adc",chan,raw_buff,raw_buff);
           }
         }

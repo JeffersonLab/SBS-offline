@@ -72,7 +72,9 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   
   gSystem->Load("libEG.so");  // for TDatabasePDG
   // Get MPD encoder for GEMs
-  fEncoderMPD = dynamic_cast<SBSSimMPDEncoder*>
+  // FIXME: a bit of a kludge... 
+  // we shouldn't have to do that to initialize all encoders... shall we?
+  fDecoderMPD = dynamic_cast<SBSSimSADCEncoder*>
     (SBSSimDataEncoder::GetEncoderByName("mpd"));
 }
 
@@ -291,8 +293,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   unsigned short data_type = 0, chan = 0, chan_mult = 0;
   int lchan;
   int mod, apvnum;
-  SimEncoder::mpd_data tmp_mpd;
-  UInt_t* mpd_hdr = new UInt_t[2];
+  //SimEncoder::mpd_data tmp_mpd;
+  //UInt_t* mpd_hdr = new UInt_t[2];
   
   Decoder::THaSlotData *sldat = 0;
   //This should be *general* and work for *every* subsystem
