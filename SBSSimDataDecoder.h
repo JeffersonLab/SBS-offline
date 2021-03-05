@@ -1,5 +1,5 @@
-#ifndef SBSSIMDATAENCODER_H
-#define SBSSIMDATAENCODER_H
+#ifndef SBSSIMDATADECODER_H
+#define SBSSIMDATADECODER_H
 
 #include <vector>
 #include <string>
@@ -56,10 +56,10 @@ namespace SimEncoder {
   };
 };
 
-class SBSSimDataEncoder {
+class SBSSimDataDecoder {
 public:
-  SBSSimDataEncoder(const char *enc_name, unsigned short enc_id);
-  virtual ~SBSSimDataEncoder() {};
+  SBSSimDataDecoder(const char *enc_name, unsigned short enc_id);
+  virtual ~SBSSimDataDecoder() {};
   
   /*
   // Encoders
@@ -99,8 +99,8 @@ public:
   unsigned short GetId() { return fEncId; }
   std::string GetName() { return fName; }
 
-  static SBSSimDataEncoder* GetEncoderByName(const char *enc_name);
-  static SBSSimDataEncoder* GetEncoder(unsigned short id);
+  static SBSSimDataDecoder* GetEncoderByName(const char *enc_name);
+  static SBSSimDataDecoder* GetEncoder(unsigned short id);
   static unsigned int MakeBitMask(unsigned short bits);
 
   static unsigned int EncodeHeader(unsigned short type, unsigned short mult,
@@ -116,11 +116,11 @@ protected:
   unsigned short fEncId;
 
 private:
-  static std::vector<SBSSimDataEncoder*> fEncoders;
+  static std::vector<SBSSimDataDecoder*> fEncoders;
 };
 
 // Generic TDC encoder
-class SBSSimTDCEncoder : public SBSSimDataEncoder {
+class SBSSimTDCEncoder : public SBSSimDataDecoder {
 public:
   SBSSimTDCEncoder(const char *enc_name, unsigned short enc_id,
       unsigned short bits, unsigned short edge_bit);
@@ -140,7 +140,7 @@ protected:
 };
 
 // Generic ADC encoder
-class SBSSimADCEncoder : public SBSSimDataEncoder {
+class SBSSimADCEncoder : public SBSSimDataDecoder {
 public:
   SBSSimADCEncoder(const char *enc_name, unsigned short enc_id,
       unsigned short bits);
@@ -190,7 +190,7 @@ public:
 */
 /*
 // MPD
-class SBSSimMPDEncoder : public SBSSimDataEncoder {
+class SBSSimMPDEncoder : public SBSSimDataDecoder {
 public:
   SBSSimMPDEncoder(const char *enc_name, unsigned short enc_id);
   virtual ~SBSSimMPDEncoder() {};

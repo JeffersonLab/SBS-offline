@@ -3,7 +3,7 @@
 //   SBSSimTDC
 
 #include "SBSSimTDC.h"
-#include "SBSSimDataEncoder.h"
+#include "SBSSimDataDecoder.h"
 #include "THaEvData.h"
 #include "THaSlotData.h"
 #include "TMath.h"
@@ -99,9 +99,9 @@ namespace Decoder {
     while(evbuffer < pstop) {
       // First, decode the header
       chan = type = nwords = 0;
-      SBSSimDataEncoder::DecodeHeader(*evbuffer++,type,chan,nwords);
+      SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
       //std::cout << " nwords " << nwords << " chan " << chan << " type " << type << std::endl; 
-      SBSSimDataEncoder *enc = SBSSimDataEncoder::GetEncoder(type);
+      SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find TDC decoder of type: " << type
           << std::endl;

@@ -13,7 +13,7 @@
 #include "PipeliningModule.h"
 #include "stdint.h"
 #include <vector>
-#include "SBSSimDataEncoder.h"
+#include "SBSSimDataDecoder.h"
 
 namespace Decoder {
 

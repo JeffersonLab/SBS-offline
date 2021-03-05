@@ -100,9 +100,9 @@ namespace Decoder {
     //std::cout << "load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
     while(evbuffer < pstop) {
       // First, decode the header
-      SBSSimDataEncoder::DecodeHeader(*evbuffer++,type,chan,nwords);
+      SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
       //cout << type << " " << chan << " " << nwords << endl;
-      SBSSimDataEncoder *enc = SBSSimDataEncoder::GetEncoder(type);
+      SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find ADC decoder of type: " << type
           << ", is_first: " << is_first << std::endl;

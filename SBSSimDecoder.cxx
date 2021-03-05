@@ -13,7 +13,7 @@
 /////////////////////////////////////////////////////////////////////
 
 #include "SBSSimDecoder.h"
-#include "SBSSimDataEncoder.h"
+#include "SBSSimDataDecoder.h"
 #include "THaCrateMap.h"
 #include "THaBenchmark.h"
 #include "VarDef.h"
@@ -75,7 +75,7 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   // FIXME: a bit of a kludge... 
   // we shouldn't have to do that to initialize all encoders... shall we?
   fDecoderMPD = dynamic_cast<SBSSimSADCEncoder*>
-    (SBSSimDataEncoder::GetEncoderByName("mpd"));
+    (SBSSimDataDecoder::GetEncoderByName("mpd"));
 }
 
 //-----------------------------------------------------------------------------
@@ -317,7 +317,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(6, chan, 1));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(6, chan, 1));
    
       myev->push_back(simev->Earm_BBPS_Dig.adc->at(j));
       
@@ -340,7 +340,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(6, chan, 1));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(6, chan, 1));
    
       myev->push_back(simev->Earm_BBSH_Dig.adc->at(j));
       
@@ -363,7 +363,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(1, chan, 2));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
       
       myev->push_back(simev->Earm_BBHodo_Dig.tdc_l->at(j));
       myev->push_back(simev->Earm_BBHodo_Dig.tdc_t->at(j));
@@ -374,7 +374,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(8, chan, 1));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(8, chan, 1));
       myev->push_back(simev->Earm_BBHodo_Dig.adc->at(j));
       */
       if(fDebug>2){
@@ -396,7 +396,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(1, chan, 2));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
       
       myev->push_back(simev->Earm_GRINCH_Dig.tdc_l->at(j));
       myev->push_back(simev->Earm_GRINCH_Dig.tdc_t->at(j));
@@ -407,7 +407,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(8, chan, 1));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(8, chan, 1));
       myev->push_back(simev->Earm_GRINCH_Dig.adc->at(j));
       */
       if(fDebug>2){
@@ -434,9 +434,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       //tmp_mpd = lchan/128+simev->Earm_BBGEM_Dig.module->at(j)*12;
       //fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
-      //myev->push_back(SBSSimDataEncoder::EncodeHeader(9, chan, 6));
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(5, chan, 6));
-      //if(fDebug>3)cout << SBSSimDataEncoder::EncodeHeader(9, chan, 6) << endl;
+      //myev->push_back(SBSSimDataDecoder::EncodeHeader(9, chan, 6));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, 6));
+      //if(fDebug>3)cout << SBSSimDataDecoder::EncodeHeader(9, chan, 6) << endl;
       myev->push_back(simev->Earm_BBGEM_Dig.adc_0->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_1->at(j));
       myev->push_back(simev->Earm_BBGEM_Dig.adc_2->at(j));
@@ -457,9 +457,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	sldat = crateslot[idx(crate,slot)];
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
-      //cout << SBSSimDataEncoder::EncodeHeader(5, chan, 20) << endl;
-      //cout << SBSSimDataEncoder::EncodeHeader(5, chan, 1) << endl;
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(5, chan, 20));
+      //cout << SBSSimDataDecoder::EncodeHeader(5, chan, 20) << endl;
+      //cout << SBSSimDataDecoder::EncodeHeader(5, chan, 1) << endl;
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, 20));
       myev->push_back(simev->Harm_HCal_Dig.adc_0->at(j));
       myev->push_back(simev->Harm_HCal_Dig.adc_1->at(j));
       myev->push_back(simev->Harm_HCal_Dig.adc_2->at(j));
@@ -489,7 +489,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataEncoder::EncodeHeader(4, chan, 1));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, 1));
       myev->push_back(simev->Harm_HCal_Dig.tdc->at(j));
     }
 
@@ -501,7 +501,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     if(HitData_Det->chan->at(j)<0){
       if(fDebug>2)
 	std::cout << "j = " << j << " header = " << HitData_Det->dataword->at(j) << std::endl;
-      SBSSimDataEncoder::DecodeHeader(HitData_Det->dataword->at(j),
+      SBSSimDataDecoder::DecodeHeader(HitData_Det->dataword->at(j),
 				       data_type,chan_mult,nwords);
       
       //if header if from GEM detector, also decode the MPD header
@@ -536,7 +536,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     
     //save the header
     std::vector<UInt_t> *myev = &(map[sldat]);
-    myev->push_back(SBSSimDataEncoder::EncodeHeader(data_type,chan,nwords));
+    myev->push_back(SBSSimDataDecoder::EncodeHeader(data_type,chan,nwords));
     if(detname.find("gem")!=std::string::npos){
       for(int k = 0; k<2;k++){ myev->push_back(mpd_hdr[k]);
       }

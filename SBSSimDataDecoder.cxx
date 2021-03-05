@@ -1,4 +1,4 @@
-#include "SBSSimDataEncoder.h"
+#include "SBSSimDataDecoder.h"
 #include <TString.h>
 #include <iostream>
 
@@ -24,9 +24,9 @@
 #define SBS_MPD_GEM_ID_MASK   0x000003FF
 
 // This one is static, so define it again here
-std::vector<SBSSimDataEncoder*> SBSSimDataEncoder::fEncoders;
+std::vector<SBSSimDataDecoder*> SBSSimDataDecoder::fEncoders;
 
-SBSSimDataEncoder* SBSSimDataEncoder::GetEncoderByName(
+SBSSimDataDecoder* SBSSimDataDecoder::GetEncoderByName(
     const char *enc_name)
 {
   if(fEncoders.empty()) { // First generate the list of known encoders!!
@@ -47,7 +47,7 @@ SBSSimDataEncoder* SBSSimDataEncoder::GetEncoderByName(
   }
 
   TString name(enc_name);
-  for(std::vector<SBSSimDataEncoder*>::iterator it = fEncoders.begin();
+  for(std::vector<SBSSimDataDecoder*>::iterator it = fEncoders.begin();
       it != fEncoders.end(); it++) {
     if(name.CompareTo((*it)->GetName(),TString::kIgnoreCase)==0)
       return *it;
@@ -56,9 +56,9 @@ SBSSimDataEncoder* SBSSimDataEncoder::GetEncoderByName(
   return 0;
 }
 
-SBSSimDataEncoder* SBSSimDataEncoder::GetEncoder(unsigned short id)
+SBSSimDataDecoder* SBSSimDataDecoder::GetEncoder(unsigned short id)
 {
-  for(std::vector<SBSSimDataEncoder*>::iterator it = fEncoders.begin();
+  for(std::vector<SBSSimDataDecoder*>::iterator it = fEncoders.begin();
       it != fEncoders.end(); it++) {
     if((*it)->GetId() == id)
       return *it;
@@ -66,21 +66,21 @@ SBSSimDataEncoder* SBSSimDataEncoder::GetEncoder(unsigned short id)
   return 0;
 }
 
-SBSSimDataEncoder::SBSSimDataEncoder(const char *enc_name,
+SBSSimDataDecoder::SBSSimDataDecoder(const char *enc_name,
     unsigned short enc_id) : fName(enc_name), fEncId(enc_id)
 {
 }
 
 SBSSimTDCEncoder::SBSSimTDCEncoder(const char *enc_name,
     unsigned short enc_id, unsigned short bits, unsigned short edge_bit)
-  : SBSSimDataEncoder(enc_name,enc_id), fBits(bits), fEdgeBit(edge_bit)
+  : SBSSimDataDecoder(enc_name,enc_id), fBits(bits), fEdgeBit(edge_bit)
 {
   fBitMask = MakeBitMask(fBits);
 }
 
 SBSSimADCEncoder::SBSSimADCEncoder(const char *enc_name,
     unsigned short enc_id, unsigned short bits)
-  : SBSSimDataEncoder(enc_name,enc_id), fBits(bits)
+  : SBSSimDataDecoder(enc_name,enc_id), fBits(bits)
 {
   fBitMask = MakeBitMask(fBits);
 }
@@ -97,7 +97,7 @@ SBSSimFADC250Encoder::SBSSimFADC250Encoder(const char *enc_name,
 }
 */
 
-unsigned int SBSSimDataEncoder::MakeBitMask(unsigned short bits)
+unsigned int SBSSimDataDecoder::MakeBitMask(unsigned short bits)
 {
   unsigned int mask = 0;
   for(unsigned short b = 0; b < bits; b++) {
@@ -266,7 +266,7 @@ void SBSSimFADC250Encoder::UnpackSamples(unsigned int enc_data,
 }
 */
 
-unsigned int SBSSimDataEncoder::EncodeHeader(unsigned short type,
+unsigned int SBSSimDataDecoder::EncodeHeader(unsigned short type,
     unsigned short mult, unsigned int nwords)
 {
   // First word bits
@@ -278,7 +278,7 @@ unsigned int SBSSimDataEncoder::EncodeHeader(unsigned short type,
     (nwords&SBS_NWORDS_MASK);
 }
 
-void SBSSimDataEncoder::DecodeHeader(unsigned int hdr, unsigned short &type, unsigned short &ch,
+void SBSSimDataDecoder::DecodeHeader(unsigned int hdr, unsigned short &type, unsigned short &ch,
     unsigned int &nwords)
 {
   type = DecodeType(hdr);
@@ -286,21 +286,21 @@ void SBSSimDataEncoder::DecodeHeader(unsigned int hdr, unsigned short &type, uns
   nwords = DecodeNwords(hdr);
 }
 
-unsigned short SBSSimDataEncoder::DecodeChannel(unsigned int hdr) {
+unsigned short SBSSimDataDecoder::DecodeChannel(unsigned int hdr) {
   return (hdr>>SBS_CHANNEL_FIRST_BIT)&SBS_CHANNEL_MASK;
 }
 
-unsigned short SBSSimDataEncoder::DecodeType(unsigned int hdr) {
+unsigned short SBSSimDataDecoder::DecodeType(unsigned int hdr) {
   return (hdr>>SBS_TYPE_FIRST_BIT)&SBS_TYPE_MASK;
 }
 
-unsigned short SBSSimDataEncoder::DecodeNwords(unsigned int hdr) {
+unsigned short SBSSimDataDecoder::DecodeNwords(unsigned int hdr) {
   return hdr&SBS_NWORDS_MASK;
 }
 
 /*
 SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
-    unsigned short enc_id) : SBSSimDataEncoder(enc_name,enc_id)
+    unsigned short enc_id) : SBSSimDataDecoder(enc_name,enc_id)
 {
   fChannelBitMask  = MakeBitMask(8);
   fDataBitMask     = MakeBitMask(12);

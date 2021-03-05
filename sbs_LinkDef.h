@@ -38,7 +38,7 @@
 #pragma link C++ class SBSAdcHit+;
 #pragma link C++ class SBSScintPartialHit+;
 #pragma link C++ class SBSScintPlane+;
-#pragma link C++ class SBSSimDataEncoder+;
+#pragma link C++ class SBSSimDataDecoder+;
 #pragma link C++ class Decoder::SBSSimADC+;
 #pragma link C++ class Decoder::SBSSimTDC+;
 #pragma link C++ class SBSSimFile+;
