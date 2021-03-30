@@ -1,3 +1,10 @@
+R__ADD_INCLUDE_PATH($SBS/include)
+R__ADD_LIBRARY_PATH($SBS/lib64)
+R__ADD_LIBRARY_PATH($SBS/lib)
+R__LOAD_LIBRARY(libsbs.so)
+
+#if !defined(__CLING__) || defined(__ROOTCLING__)
+#include <iostream>
 
 #include "TSystem.h"
 #include "TList.h"
@@ -8,9 +15,9 @@
 
 //#include "SBSGEMStand.h"
 //#include "SBSBigBite.h"
-R__LOAD_LIBRARY(../libsbs)
 #include "SBSEArm.h"
 #include "SBSHCal.h"
+#endif
 
 void replay_hcal_test(Int_t runnum = 931, Int_t lastEvent = -1){
 

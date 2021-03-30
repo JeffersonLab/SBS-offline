@@ -40,8 +40,7 @@
 #pragma link C++ class SBSAdcHit+;
 #pragma link C++ class SBSScintPartialHit+;
 #pragma link C++ class SBSScintPlane+;
-#pragma link C++ class SBSSimDataEncoder+;
-#pragma link C++ class Decoder::SBSSimMPD+;
+#pragma link C++ class SBSSimDataDecoder+;
 #pragma link C++ class Decoder::SBSSimADC+;
 #pragma link C++ class Decoder::SBSSimTDC+;
 #pragma link C++ class Decoder::HCalLED+;
@@ -50,6 +49,7 @@
 #pragma link C++ class SBSSimDecoder+;
 #pragma link C++ class g4sbs_tree+;
 #pragma link C++ class SBSManager+;
+//#pragma link C++ class Decoder::SBSSimMPD+;
 //#pragma link C++ class gmn_dig_tree+;
 //#pragma link C++ class VDetData_t+;
 //#pragma link C++ class MCTrack_t+;

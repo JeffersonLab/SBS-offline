@@ -291,11 +291,11 @@ Int_t SBSBBTotalShower::DefineVariables( EMode mode )
     //The variables defined here blow everything up
 
     RVarDef vars[] = {
-        { "e",  "Energy (MeV) of largest cluster",    "fE" },
-        { "x",  "Energy (MeV) of largest cluster",    "fX" },
-        { "y",  "Energy (MeV) of largest cluster",    "fY" },
-        //{ "id", "ID of Psh&Sh coincidence (1==good)", "fID" },
-        { 0 }
+      { "e",  "Energy (MeV) of largest cluster",    "fE" },
+      { "x",  "Energy (MeV) of largest cluster",    "fX" },
+      { "y",  "Energy (MeV) of largest cluster",    "fY" },
+      //{ "id", "ID of Psh&Sh coincidence (1==good)", "fID" },
+      { 0 }
     };
     return DefineVarsFromList( vars, mode );
 }

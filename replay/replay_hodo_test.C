@@ -1,3 +1,11 @@
+R__ADD_INCLUDE_PATH($SBS/include)
+R__ADD_LIBRARY_PATH($SBS/lib64)
+R__ADD_LIBRARY_PATH($SBS/lib)
+R__LOAD_LIBRARY(libsbs.so)
+
+#if !defined(__CLING__) || defined(__ROOTCLING__)
+#include <iostream>
+
 #include "TSystem.h"
 #include "TList.h"
 #include "THaRun.h"
@@ -5,14 +13,10 @@
 #include "THaAnalyzer.h"
 #include "THaApparatus.h"
 
-//#include "SBSGEMStand.h"
-//#include "SBSBigBite.h"
-R__ADD_INCLUDE_PATH($SBSOFFLINE/include)
-R__LOAD_LIBRARY(libsbs)
-
 #include "SBSEArm.h"
 #include "SBSHCal.h"
 #include "SBSTimingHodoscope.h"
+#endif
 
 void replay_hodo_test(Int_t runnum = 931, Int_t lastEvent = -1){
 

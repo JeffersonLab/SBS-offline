@@ -107,9 +107,7 @@ Int_t SBSECal::ReadDatabase( const TDatime& date )
         fgets ( buf, LEN, fi );
         if( crate < 0 ) break;
         if( fDetMap->AddModule( crate, slot, first, last ) < 0 ) {
-            Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-                THaDetMap::kDetMapSize);
-            fclose(fi);
+          //TODO: Switch to using FillDetmap
             return kInitError;
         }
     }

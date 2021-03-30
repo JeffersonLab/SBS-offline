@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 class THaDetMap;
-class SBSSimMPDEncoder; // For decoding simulation GEMs
+class SBSSimSADCEncoder; // For decoding simulation GEMs
 //class TDetInfo;
 
 //-----------------------------------------------------------------------------
@@ -110,7 +110,7 @@ protected:
   void CheckForEnabledDetectors();
   //void CheckForDetector(const char *detname, short id);
 
-  SBSSimMPDEncoder *fEncoderMPD;
+  SBSSimSADCEncoder *fDecoderMPD;//FIXME: a bit of a kludge... 
   
   bool fCheckedForEnabledDetectors;
   std::vector<std::string> fDetectors;

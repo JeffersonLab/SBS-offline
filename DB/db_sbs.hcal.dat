@@ -71,6 +71,8 @@ sbs.hcal.chanmap =  ## The number entered here is the module-number (1-288)
 
 sbs.hcal.chanmap_start = 1
 
+sbs.hcal.ledmap = 2 30
+
 ## Positions in [m] where +z is roated by sbs.theta
 sbs.hcal.position = 0 0 0
 

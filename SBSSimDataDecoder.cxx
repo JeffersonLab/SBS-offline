@@ -1,4 +1,4 @@
-#include "SBSSimDataEncoder.h"
+#include "SBSSimDataDecoder.h"
 #include <TString.h>
 #include <iostream>
 
@@ -24,9 +24,9 @@
 #define SBS_MPD_GEM_ID_MASK   0x000003FF
 
 // This one is static, so define it again here
-std::vector<SBSSimDataEncoder*> SBSSimDataEncoder::fEncoders;
+std::vector<SBSSimDataDecoder*> SBSSimDataDecoder::fEncoders;
 
-SBSSimDataEncoder* SBSSimDataEncoder::GetEncoderByName(
+SBSSimDataDecoder* SBSSimDataDecoder::GetEncoderByName(
     const char *enc_name)
 {
   if(fEncoders.empty()) { // First generate the list of known encoders!!
@@ -37,15 +37,17 @@ SBSSimDataEncoder* SBSSimDataEncoder::GetEncoderByName(
     fEncoders.push_back(new SBSSimTDCEncoder("vetroc",ids++,16,26));
     fEncoders.push_back(new SBSSimTDCEncoder("f1tdc",ids++,16,31));
     // ADCs
-    fEncoders.push_back(new SBSSimFADC250Encoder("fadc250",ids++));
+    //fEncoders.push_back(new SBSSimFADC250Encoder("fadc250",ids++));
+    fEncoders.push_back(new SBSSimSADCEncoder("fadc250",ids++));
     fEncoders.push_back(new SBSSimADCEncoder("adc",ids++,12));
     fEncoders.push_back(new SBSSimADCEncoder("lecroy1881",ids++,14));
     fEncoders.push_back(new SBSSimADCEncoder("caen792",ids++,12));
-    fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
+    fEncoders.push_back(new SBSSimSADCEncoder("mpd",ids++));
+    //fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
   }
 
   TString name(enc_name);
-  for(std::vector<SBSSimDataEncoder*>::iterator it = fEncoders.begin();
+  for(std::vector<SBSSimDataDecoder*>::iterator it = fEncoders.begin();
       it != fEncoders.end(); it++) {
     if(name.CompareTo((*it)->GetName(),TString::kIgnoreCase)==0)
       return *it;
@@ -54,9 +56,9 @@ SBSSimDataEncoder* SBSSimDataEncoder::GetEncoderByName(
   return 0;
 }
 
-SBSSimDataEncoder* SBSSimDataEncoder::GetEncoder(unsigned short id)
+SBSSimDataDecoder* SBSSimDataDecoder::GetEncoder(unsigned short id)
 {
-  for(std::vector<SBSSimDataEncoder*>::iterator it = fEncoders.begin();
+  for(std::vector<SBSSimDataDecoder*>::iterator it = fEncoders.begin();
       it != fEncoders.end(); it++) {
     if((*it)->GetId() == id)
       return *it;
@@ -64,32 +66,38 @@ SBSSimDataEncoder* SBSSimDataEncoder::GetEncoder(unsigned short id)
   return 0;
 }
 
-SBSSimDataEncoder::SBSSimDataEncoder(const char *enc_name,
+SBSSimDataDecoder::SBSSimDataDecoder(const char *enc_name,
     unsigned short enc_id) : fName(enc_name), fEncId(enc_id)
 {
 }
 
 SBSSimTDCEncoder::SBSSimTDCEncoder(const char *enc_name,
     unsigned short enc_id, unsigned short bits, unsigned short edge_bit)
-  : SBSSimDataEncoder(enc_name,enc_id), fBits(bits), fEdgeBit(edge_bit)
+  : SBSSimDataDecoder(enc_name,enc_id), fBits(bits), fEdgeBit(edge_bit)
 {
   fBitMask = MakeBitMask(fBits);
 }
 
 SBSSimADCEncoder::SBSSimADCEncoder(const char *enc_name,
     unsigned short enc_id, unsigned short bits)
-  : SBSSimDataEncoder(enc_name,enc_id), fBits(bits)
+  : SBSSimDataDecoder(enc_name,enc_id), fBits(bits)
 {
   fBitMask = MakeBitMask(fBits);
 }
 
-SBSSimFADC250Encoder::SBSSimFADC250Encoder(const char *enc_name,
+SBSSimSADCEncoder::SBSSimSADCEncoder(const char *enc_name,
     unsigned short enc_id) : SBSSimADCEncoder(enc_name,enc_id,12)
 {
 }
 
+/*
+SBSSimFADC250Encoder::SBSSimFADC250Encoder(const char *enc_name,
+    unsigned short enc_id) : SBSSimADCEncoder(enc_name,enc_id,12)
+{
+}
+*/
 
-unsigned int SBSSimDataEncoder::MakeBitMask(unsigned short bits)
+unsigned int SBSSimDataDecoder::MakeBitMask(unsigned short bits)
 {
   unsigned int mask = 0;
   for(unsigned short b = 0; b < bits; b++) {
@@ -98,6 +106,7 @@ unsigned int SBSSimDataEncoder::MakeBitMask(unsigned short bits)
   return mask;
 }
 
+/*
 bool SBSSimADCEncoder::EncodeADC(SimEncoder::adc_data data,
     unsigned int *enc_data,unsigned short &nwords)
 {
@@ -105,7 +114,8 @@ bool SBSSimADCEncoder::EncodeADC(SimEncoder::adc_data data,
   enc_data[nwords++] = data.integral&fBitMask;
   return (nwords>0);
 }
-
+*/
+/*
 bool SBSSimTDCEncoder::EncodeTDC(SimEncoder::tdc_data data,
     unsigned int *enc_data,unsigned short &nwords)
 {
@@ -119,7 +129,8 @@ bool SBSSimTDCEncoder::EncodeTDC(SimEncoder::tdc_data data,
   }
   return (nwords>0);
 }
-
+*/
+/*
 bool SBSSimFADC250Encoder::EncodeFADC(SimEncoder::fadc_data data,
     unsigned int *enc_data, unsigned short &nwords)
 {
@@ -155,6 +166,7 @@ bool SBSSimFADC250Encoder::EncodeFADC(SimEncoder::fadc_data data,
   }
   return (nwords>1);
 }
+*/
 
 bool SBSSimADCEncoder::DecodeADC(SimEncoder::adc_data &data,
       const unsigned int *enc_data,unsigned short nwords)
@@ -179,7 +191,21 @@ bool SBSSimTDCEncoder::DecodeTDC(SimEncoder::tdc_data &data,
   return !data.time.empty();
 }
 
-bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
+bool SBSSimSADCEncoder::DecodeSADC(SimEncoder::sadc_data &data,
+    const unsigned int *enc_data,unsigned short nwords)
+{
+  data.integral = 0;
+  data.samples.clear(); // Clear out any samples already in the data
+  
+  for(unsigned short i = 0; i<nwords; i++){
+    data.integral+=enc_data[i];
+    data.samples.push_back(enc_data[i]);
+  }
+}
+
+/*
+bool SBSSimFADC250Encoder::DecodeFADC(//SimEncoder::fadc_data &data,
+				      SimEncoder::sadc_data &data,
     const unsigned int *enc_data,unsigned short nwords)
 {
   for(unsigned short i = 0; i<nwords; i++){
@@ -187,7 +213,7 @@ bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
   }
   
   //OK, so the stuff below is flat-out out of date with the new digitization paradigm
-  /*
+
   int nsamples = enc_data[0]&0xFFF;
   int nsamples_read = 0;
 
@@ -212,11 +238,12 @@ bool SBSSimFADC250Encoder::DecodeFADC(SimEncoder::fadc_data &data,
       << ")." << std::endl;
     return false;
   }
-  */
+
   return true;
 
 }
-
+*/
+/*
 unsigned int SBSSimFADC250Encoder::EncodeSingleSample(unsigned int dat)
 {
   if(dat&0xFFFFF000) { // Data too large, turn on overflow
@@ -224,7 +251,8 @@ unsigned int SBSSimFADC250Encoder::EncodeSingleSample(unsigned int dat)
   }
   return dat&0x1FFF;
 }
-
+*/
+/*
 void SBSSimFADC250Encoder::UnpackSamples(unsigned int enc_data,
     unsigned int *buff, bool *overflow, bool *valid)
 {
@@ -236,9 +264,9 @@ void SBSSimFADC250Encoder::UnpackSamples(unsigned int enc_data,
     valid[k] = !(tmp&0x2000);
   }
 }
+*/
 
-
-unsigned int SBSSimDataEncoder::EncodeHeader(unsigned short type,
+unsigned int SBSSimDataDecoder::EncodeHeader(unsigned short type,
     unsigned short mult, unsigned int nwords)
 {
   // First word bits
@@ -250,7 +278,7 @@ unsigned int SBSSimDataEncoder::EncodeHeader(unsigned short type,
     (nwords&SBS_NWORDS_MASK);
 }
 
-void SBSSimDataEncoder::DecodeHeader(unsigned int hdr, unsigned short &type, unsigned short &ch,
+void SBSSimDataDecoder::DecodeHeader(unsigned int hdr, unsigned short &type, unsigned short &ch,
     unsigned int &nwords)
 {
   type = DecodeType(hdr);
@@ -258,21 +286,21 @@ void SBSSimDataEncoder::DecodeHeader(unsigned int hdr, unsigned short &type, uns
   nwords = DecodeNwords(hdr);
 }
 
-unsigned short SBSSimDataEncoder::DecodeChannel(unsigned int hdr) {
+unsigned short SBSSimDataDecoder::DecodeChannel(unsigned int hdr) {
   return (hdr>>SBS_CHANNEL_FIRST_BIT)&SBS_CHANNEL_MASK;
 }
 
-unsigned short SBSSimDataEncoder::DecodeType(unsigned int hdr) {
+unsigned short SBSSimDataDecoder::DecodeType(unsigned int hdr) {
   return (hdr>>SBS_TYPE_FIRST_BIT)&SBS_TYPE_MASK;
 }
 
-unsigned short SBSSimDataEncoder::DecodeNwords(unsigned int hdr) {
+unsigned short SBSSimDataDecoder::DecodeNwords(unsigned int hdr) {
   return hdr&SBS_NWORDS_MASK;
 }
 
-
+/*
 SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
-    unsigned short enc_id) : SBSSimDataEncoder(enc_name,enc_id)
+    unsigned short enc_id) : SBSSimDataDecoder(enc_name,enc_id)
 {
   fChannelBitMask  = MakeBitMask(8);
   fDataBitMask     = MakeBitMask(12);
@@ -280,7 +308,8 @@ SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
   fSampleBitMask   = fDataBitMask|fOverflowBitMask;
   fValidBitMask    = (1<<13);
 }
-
+*/
+/*
 bool SBSSimMPDEncoder::EncodeMPD(SimEncoder::mpd_data data,
     unsigned int *enc_data, unsigned short &nwords)
 {
@@ -321,8 +350,8 @@ bool SBSSimMPDEncoder::EncodeMPD(SimEncoder::mpd_data data,
   }
   return (nwords>1);
 }
-
-
+*/
+/*
 unsigned int SBSSimMPDEncoder::EncodeSingleSample(unsigned int dat)
 {
   if(dat>fDataBitMask) { // Data too large, turn on overflow
@@ -330,7 +359,8 @@ unsigned int SBSSimMPDEncoder::EncodeSingleSample(unsigned int dat)
   }
   return dat&fSampleBitMask;
 }
-
+*/
+/*
 void SBSSimMPDEncoder::UnpackSamples(unsigned int enc_data,
     unsigned int *buff, bool *overflow, bool *valid)
 {
@@ -342,7 +372,8 @@ void SBSSimMPDEncoder::UnpackSamples(unsigned int enc_data,
     valid[k] = !(tmp&fValidBitMask);
   }
 }
-
+*/
+/*
 void SBSSimMPDEncoder::EncodeMPDHeader(SimEncoder::mpd_data data,
     unsigned int *enc_data, unsigned short &nwords)
 {
@@ -357,8 +388,8 @@ void SBSSimMPDEncoder::EncodeMPDHeader(SimEncoder::mpd_data data,
     ((data.mpd_id<<SBS_MPD_MPD_ID_BIT)&SBS_MPD_MPD_ID_MASK) |
     (data.gem_id&SBS_MPD_GEM_ID_BIT);
 }
-
-
+*/
+/*
 void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
     SimEncoder::mpd_data &data)
 {
@@ -373,8 +404,10 @@ void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
   data.mpd_id   = (*hdr&SBS_MPD_MPD_ID_MASK)>>SBS_MPD_MPD_ID_BIT;
   data.gem_id   = (*hdr&SBS_MPD_GEM_ID_MASK)>>SBS_MPD_GEM_ID_BIT;
 }
-
-bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
+*/
+/*
+bool SBSSimMPDEncoder::DecodeMPD(//SimEncoder::mpd_data &data,
+				 SimEncoder::sadc_data &data,
     const unsigned int *enc_data,unsigned short nwords)
 {
   data.samples.clear(); // Clear out any samples already in the data
@@ -385,7 +418,7 @@ bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
     data.samples.push_back(enc_data[i]);
   }
   //std::cout << std::endl;
-  /*
+
   if(nwords<=1) {
     std::cerr << "Error, not enough words to read. Expected more than one,"
       << " got only: " << nwords << std::endl;
@@ -416,8 +449,7 @@ bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
       << data.nstrips*data.nsamples << ")." << std::endl;
     return false;
   }
-  */
   return true;
 
 }
-
+*/

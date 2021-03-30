@@ -1,3 +1,10 @@
+R__ADD_INCLUDE_PATH($SBS/include)
+R__ADD_LIBRARY_PATH($SBS/lib64)
+R__ADD_LIBRARY_PATH($SBS/lib)
+R__LOAD_LIBRARY(libsbs.so)
+
+#if !defined(__CLING__) || defined(__ROOTCLING__)
+#include <iostream>
 
 #include "TSystem.h"
 #include "TList.h"
@@ -5,7 +12,7 @@
 #include "THaEvent.h"
 #include "THaAnalyzer.h"
 #include "THaApparatus.h"
-
+#endif
 
 void replay_pff(){
 

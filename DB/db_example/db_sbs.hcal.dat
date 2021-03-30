@@ -9,6 +9,8 @@ sbs.hcal.nlog_chan = 576
 #sbs.hcal.first_crate = 16
 #sbs.hcal.first_slot = 3
 
+sbs.hcal.ledmap = 2 30
+
 ## Detector map
 sbs.hcal.detmap =
 ## FADCs (x16)

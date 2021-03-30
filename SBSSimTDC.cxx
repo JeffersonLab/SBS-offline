@@ -3,7 +3,7 @@
 //   SBSSimTDC
 
 #include "SBSSimTDC.h"
-#include "SBSSimDataEncoder.h"
+#include "SBSSimDataDecoder.h"
 #include "THaEvData.h"
 #include "THaSlotData.h"
 #include "TMath.h"
@@ -29,7 +29,15 @@ using namespace std;
 namespace Decoder {
 
   Module::TypeIter_t SBSSimTDC::fgThisType =
-    DoRegister( ModuleType( "Decoder::SBSSimTDC" , 53204 ));
+    //DoRegister( ModuleType( "Decoder::SBSSimTDC" , 53204 ));
+    DoRegister( ModuleType( "Decoder::SBSSimTDC" , -3204 ));
+  
+  Module::TypeIter_t SBSSimTDC::fgType1 =
+    DoRegister( ModuleType( "Decoder::SBSSimTDC" , -1877 ));
+  Module::TypeIter_t SBSSimTDC::fgType2 =
+    DoRegister( ModuleType( "Decoder::SBSSimTDC" , -1190 ));
+  Module::TypeIter_t SBSSimTDC::fgType3 =
+    DoRegister( ModuleType( "Decoder::SBSSimTDC" , -3201 ));
 
   SBSSimTDC::SBSSimTDC()
   {
@@ -91,9 +99,9 @@ namespace Decoder {
     while(evbuffer < pstop) {
       // First, decode the header
       chan = type = nwords = 0;
-      SBSSimDataEncoder::DecodeHeader(*evbuffer++,type,chan,nwords);
+      SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
       //std::cout << " nwords " << nwords << " chan " << chan << " type " << type << std::endl; 
-      SBSSimDataEncoder *enc = SBSSimDataEncoder::GetEncoder(type);
+      SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find TDC decoder of type: " << type
           << std::endl;

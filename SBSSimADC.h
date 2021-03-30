@@ -13,7 +13,7 @@
 #include "PipeliningModule.h"
 #include "stdint.h"
 #include <vector>
-#include "SBSSimDataEncoder.h"
+#include "SBSSimDataDecoder.h"
 
 namespace Decoder {
 
@@ -56,7 +56,11 @@ namespace Decoder {
   private:
     static const size_t NADCCHAN = 2048; // Max ADC channels
     static TypeIter_t fgThisType;
-    std::vector<SimEncoder::fadc_data> fadc_data;
+    static TypeIter_t fgType1;
+    static TypeIter_t fgType2;
+    static TypeIter_t fgType3;
+    //static std::vector<TypeIter_t> fgTypeVec;//Let's try something...
+    std::vector<SimEncoder::sadc_data> sadc_data;
 
     ClassDef(SBSSimADC,0)  //  Generic SimADC module
 

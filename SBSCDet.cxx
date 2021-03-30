@@ -355,8 +355,7 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 			int first = prev_first + prev_nPMTs;
 			// Add module to the detector map
 			if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
-				Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-					THaDetMap::kDetMapSize);
+        //TODO: Switch to using FillDetmap
 				fclose(file);
 				return kInitError;
 			}
@@ -386,8 +385,7 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				int first = prev_first + prev_nPMTs;
 				// Add module to the detector map
 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
-					Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-						THaDetMap::kDetMapSize);
+          //TODO: Switch to using FillDetmap
 					fclose(file);
 					return kInitError;
 				}
@@ -399,8 +397,6 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				while (lolo>=hi) {
 					int first = prev_first + prev_nPMTs;
 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model, refindex) < 0 ) {
-						Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-							THaDetMap::kDetMapSize);
 						fclose(file);
 						return kInitError;
 					}
@@ -433,8 +429,6 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				int first = prev_first + prev_nPMTs;
 				// Add module to the detector map
 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
-					Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-						THaDetMap::kDetMapSize);
 					fclose(file);
 					return kInitError;
 				}
@@ -446,8 +440,6 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				while (lolo>=hi) {
 					int first = prev_first + prev_nPMTs;
 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model, refindex) < 0 ) {
-						Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-							THaDetMap::kDetMapSize);
 						fclose(file);
 						return kInitError;
 					}
@@ -559,8 +551,6 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				int first = prev_first + prev_nPMTs;
 				// Add module to the detector map
 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model ) < 0 ) {
-					Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-						THaDetMap::kDetMapSize);
 					fclose(file);
 					return kInitError;
 				}
@@ -572,8 +562,6 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				while (lolo>=hi) {
 					int first = prev_first + prev_nPMTs;
 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model) < 0 ) {
-						Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-							THaDetMap::kDetMapSize);
 						fclose(file);
 						return kInitError;
 					}
@@ -606,8 +594,6 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				int first = prev_first + prev_nPMTs;
 				// Add module to the detector map
 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model ) < 0 ) {
-					Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-						THaDetMap::kDetMapSize);
 					fclose(file);
 					return kInitError;
 				}
@@ -619,8 +605,6 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 				while (lolo>=hi) {
 					int first = prev_first + prev_nPMTs;
 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model ) < 0 ) {
-						Error( Here(here), "Too many DetMap modules (maximum allowed - %d).", 
-							THaDetMap::kDetMapSize);
 						fclose(file);
 						return kInitError;
 					}
