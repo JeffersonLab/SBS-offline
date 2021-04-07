@@ -58,8 +58,8 @@ set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
   SBSScintPartialHit.cxx SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx
   SBSScintPlane.cxx SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx
-  SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx
-  SBSCalorimeterBlock.cxx SBSCalorimeterBlockData.cxx
+  SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx SBSGenericDetector.cxx
+  SBSData.cxx SBSElement.cxx
   SBSCalorimeterCluster.cxx SBSSimDataDecoder.cxx 
   SBSSimDecoder.cxx SBSSimADC.cxx SBSSimTDC.cxx
   SBSHCalLEDModule.cxx SBSManager.cxx

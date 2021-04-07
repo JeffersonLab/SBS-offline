@@ -1,37 +1,37 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// SBSCalorimeterBlock                                                       //
+// SBSElement                                                                //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#include "SBSCalorimeterBlock.h"
+#include "SBSElement.h"
 
-//const double SBSCalorimeterBlock::kBig = 1.e15;
+//const double SBSElement::kBig = 1.e15;
 
-ClassImp(SBSCalorimeterBlock);
+ClassImp(SBSElement);
 
 ///////////////////////////////////////////////////////////////////////////////
-// Constructor for generic CalorimeterBlock (no-data)
-SBSCalorimeterBlock::SBSCalorimeterBlock(Float_t x, Float_t y,
+// Constructor for generic Element (no-data)
+SBSElement::SBSElement(Float_t x, Float_t y,
     Float_t z, Int_t row, Int_t col, Int_t layer) :
   fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0),
-  fADC(0), fTDC(0), fSamples(0)
+  fADC(0), fTDC(0), fWaveform(0)
 {
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // Check if this block has any data
-Bool_t SBSCalorimeterBlock::HasData()
+Bool_t SBSElement::HasData()
 {
   return ( ( fADC && fADC->HasData() ) || ( fTDC && fTDC->HasData() ) ||
-      ( fSamples && fSamples->HasData() ) );
+      ( fWaveform && fWaveform->HasData() ) );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Clear event from generic CalorimeterBlock (with no data)
-void SBSCalorimeterBlock::ClearEvent()
+// Clear event from generic Element (with no data)
+void SBSElement::ClearEvent()
 {
   fE = 0; // Reset calibrated energy for given event
   fStat = 0; // Reset status to 0, unseen
@@ -39,47 +39,54 @@ void SBSCalorimeterBlock::ClearEvent()
     fADC->Clear();
   if(fTDC)
     fTDC->Clear();
-  if(fSamples)
-    fSamples->Clear();
+  if(fWaveform)
+    fWaveform->Clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create a single-valued ADC data structure
-void SBSCalorimeterBlock::SetADC(Float_t ped, Float_t gain)
+void SBSElement::SetADC(Float_t ped, Float_t gain)
 {
   if(fADC)
     delete fADC;
-  fADC = new SBSCalorimeterBlockData::ADC(ped,gain);
+  fADC = new SBSData::ADC(ped,gain);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create a TDC data structure
-void SBSCalorimeterBlock::SetTDC(Float_t offset, Float_t cal)
+void SBSElement::SetTDC(Float_t offset, Float_t cal)
 {
   if(fTDC)
     delete fTDC;
-  fTDC = new SBSCalorimeterBlockData::TDC(offset,cal);
+  fTDC = new SBSData::TDC(offset,cal);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create a multi-valued ADC data structure
-void SBSCalorimeterBlock::SetSamples(Float_t ped, Float_t gain)
+void SBSElement::SetWaveform(Float_t ped, Float_t gain)
 {
-  if(fSamples)
-    delete fSamples;
-  fSamples = new SBSCalorimeterBlockData::Samples(ped,gain);
+  if(fWaveform)
+    delete fWaveform;
+  fWaveform = new SBSData::Waveform(ped,gain);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Coarse process this event
-void SBSCalorimeterBlock::CoarseProcess()
+void SBSElement::CoarseProcess()
 {
   // Compute the energy
-  if(fSamples) {
-    fE = fSamples->GetDataSumCal();
+  if(fWaveform) {
+    // TODO: Implement the same logic as the FADC firmware logic.
+    fE = fWaveform->GetIntegral().val;
   } else if ( fADC) {
-    fE = fADC->GetDataCal();
+    // For ADCs with multiple hits, one should mark the "good" hit like so
+    // with fADC->SetGoodHit( idx );
+    // TODO: Find out how to determine the "good" hit. For now, take the first one.
+    fE = fADC->GetIntegral(0).val;
   } else {
     fE = 0;
   }
+
+  // For the TDCs one should mark the "good" hit
+  // with fTDC->SetGoodHit( idx );
 }

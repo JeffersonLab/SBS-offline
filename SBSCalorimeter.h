@@ -14,16 +14,15 @@
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
-#include "THaNonTrackingDetector.h"
+#include "SBSGenericDetector.h"
 //#include "THaShower.h"
 #include "SBSCalorimeterCluster.h"
-#include "SBSCalorimeterBlock.h"
 #include "TRotation.h"
 #include "TVector3.h"
 #include "THaDetMap.h"
 
 
-class SBSCalorimeter : public THaNonTrackingDetector {
+class SBSCalorimeter : public SBSGenericDetector {
   //class SBSCalorimeter : public THaShower {
 
 public:
@@ -34,29 +33,9 @@ public:
   virtual void ClearEvent();
   virtual void ClearOutputVariables();
 
-  //  Note: we can either have single-valued ADC or multi-valued ADC, not both
-  void SetWithADC(Bool_t var);
-  void SetWithADCSamples(Bool_t var);
-  void SetWithTDC(Bool_t var)        { fWithTDC = var; }
-  void SetStoreRawData(Bool_t var) { fStoreRawData = var; }
-
   // Standard apparatus re-implemented functions
-  virtual Int_t      Decode( const THaEvData& );
   virtual Int_t      CoarseProcess(TClonesArray& tracks);
   virtual Int_t      FineProcess(TClonesArray& tracks);
-
-  virtual Int_t      DecodeADC( const THaEvData&, SBSCalorimeterBlock *blk,
-      THaDetMap::Module *d, Int_t chan);
-  virtual Int_t      DecodeTDC( const THaEvData&, SBSCalorimeterBlock *blk,
-      THaDetMap::Module *d, Int_t chan);
-
-
-
-  // Utility functions
-  // Get index of block
-  Int_t blkidx(Int_t row, Int_t col, Int_t layer = 0);
-  // Get corresponding row, col, layer of block from index
-  void blkrcl(Int_t index, Int_t &row, Int_t &col, Int_t &layer);
 
 protected:
 
@@ -67,37 +46,12 @@ protected:
   Int_t  fNclublk;      ///< Max number of blocks composing a cluster
   Int_t  fNclubr;       ///< Max number of row-blocks composing a cluster
   Int_t  fNclubc;       ///< Max number of col-blocks composing a cluster
-  Int_t  fNrows;        ///< Number of rows
-  Int_t  fNcols;        ///< Number of columns
-  Int_t  fNlayers;      ///< Number of layers (in z-direction)
-  Bool_t fWithTDC;      ///< Does this calorimeter have TDC readout?
-  Bool_t fWithADCSamples; ///< Does this calorimeter have multi-valued ADC readout?
-  Bool_t fWithADC;      ///< Does this calorimeter have single-valued ADC readout?
 
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
-  std::vector<std::vector<UShort_t> > fChanMap;
-  //std::map<UShort_t,std::map<UShort_t,std::vector<UShort_t> > > fChanMap;
+  std::vector<std::vector<UShort_t> > fChanMap; //< Maps modules in THaDetMap to calorimeter block number
 
   // Output variables
-  // Note [] means it is a vector with variable width
-  std::vector<Int_t> fRow;        //< [] row number for given block
-  std::vector<Int_t> fCol;        //< [] col number for given block
-  std::vector<Int_t> fLayer;      //< [] layer number for given block
-  // ADC Integral
-  std::vector<Float_t> fA;        //< [] ADC amplitudes of blocks
-  std::vector<Float_t> fA_p;      //< [] ADC minus pedestal values of blocks
-  std::vector<Float_t> fA_c;      //< [] ADC corrected amplidues of blocks
-  // ADC Samples
-  std::vector<Int_t> fNsamps;     //< [] Number of samples for each block
-  std::vector<Int_t> fSampsIdx;   //< []*fNsamps Index of the corresponding block
-  std::vector<Float_t> fSamps;    //< []*fNsamps ADC samples for each block
-  std::vector<Float_t> fSamps_p;  //< []*fNsamps ADC samples minus pedestal for each block
-
-  std::vector<Float_t> fSamps_c;  //< []*fNsamps ADC corrected samples for each block
-  // TDC values
-  std::vector<Float_t> fTDC;      //< [] TDC values for each block
-  std::vector<Float_t> fTDC_c;    //< [] TDC corrected values for each block
   // Cluster output
   std::vector<Float_t> fEclus;    //< [] Energy (MeV) of clusters
   std::vector<Float_t> fEclus_c;  //< [] Corrected energy (MeV) of clusters
@@ -122,8 +76,6 @@ protected:
   Int_t   fColblk;                //< col of block with highest energy in highest E cluster
 
   // Blocks, where the grid is just for easy axis to the blocks by row,col,layer
-  std::vector<SBSCalorimeterBlock*> fBlocks;
-  std::vector<std::vector<std::vector<SBSCalorimeterBlock*> > > fBlocksGrid;
   // Clusters for this event
   std::vector<SBSCalorimeterCluster*> fClusters; //[] Cluster
 
@@ -138,11 +90,7 @@ protected:
   Float_t   fSlope;     // slope for gain correction
   Float_t   fAccCharge; // accumulated charge
 
-  // Per event data
-  Int_t      fNhits;     ///< Number of hits in event
-
   // Flags for enabling and disabling various features
-  Bool_t    fStoreRawData; ///< Store the raw data in the root tree?
 
 /*
      Int_t      GetNclust() const { return fNclust; }
@@ -239,20 +187,6 @@ private:
 
   ClassDef(SBSCalorimeter,0)     //Generic shower detector class
 };
-
-inline Int_t SBSCalorimeter::blkidx(Int_t row, Int_t col, Int_t layer)
-{
-  return fNlayers*(fNcols*row + col) + layer;
-}
-
-inline void SBSCalorimeter::blkrcl(Int_t index, Int_t &row, Int_t &col,
-    Int_t &layer)
-{
-  row = index/(fNlayers*fNcols);
-  index -= row*fNlayers*fNcols;
-  col = index/fNlayers;
-  layer = index%fNlayers;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Specify some default sub-classes available to the user

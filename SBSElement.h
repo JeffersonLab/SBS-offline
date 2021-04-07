@@ -1,25 +1,25 @@
-#ifndef ROOT_SBSCalorimeterBlock
-#define ROOT_SBSCalorimeterBlock
+#ifndef ROOT_SBSElement
+#define ROOT_SBSElement
 
 ////////////////////////////////////////////////////////////////////////////
 //                                                                        //
-// SBSCalorimeterBlock                                                       //
+// SBSElement                                                       //
 //                                                                        //
 ////////////////////////////////////////////////////////////////////////////
 
 #include <TObject.h>
-#include "SBSCalorimeterBlockData.h"
+#include "SBSData.h"
 
 
 ///////////////////////////////////////////////////////////////////////////////
 // Generic Calorimeter Block
-class SBSCalorimeterBlock : public TObject {
+class SBSElement : public TObject {
 
 public:
-  SBSCalorimeterBlock() : fADC(0), fTDC(0), fSamples(0) {};
-  SBSCalorimeterBlock(Float_t x, Float_t y, Float_t z,
+  SBSElement() : fADC(0), fTDC(0), fWaveform(0) {};
+  SBSElement(Float_t x, Float_t y, Float_t z,
       Int_t row, Int_t col, Int_t layer);
-  virtual ~SBSCalorimeterBlock() {}
+  virtual ~SBSElement() {}
 
   // Getters
   Float_t GetX()     const { return fX; }
@@ -30,9 +30,9 @@ public:
   Int_t   GetCol()   const { return fCol; }
   Int_t   GetLayer() const { return fLayer; }
   Int_t   GetStat()  const { return fStat; }
-  virtual SBSCalorimeterBlockData::ADC* ADC()         { return fADC; }
-  virtual SBSCalorimeterBlockData::TDC* TDC()         { return fTDC; }
-  virtual SBSCalorimeterBlockData::Samples* Samples() { return fSamples; }
+  virtual SBSData::ADC* ADC()         { return fADC; }
+  virtual SBSData::TDC* TDC()         { return fTDC; }
+  virtual SBSData::Waveform* Waveform() { return fWaveform; }
 
   // Setters
   void SetX(Float_t var)    { fX = var; }
@@ -45,7 +45,7 @@ public:
   void SetStat(Int_t var)   { fStat = var; }
   void SetADC(Float_t ped, Float_t gain);
   void SetTDC(Float_t offset, Float_t cal);
-  void SetSamples(Float_t ped, Float_t gain);
+  void SetWaveform(Float_t ped, Float_t gain);
 
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();
@@ -67,11 +67,11 @@ protected:
   Int_t   fLayer;   ///< Layer of the block
   Int_t   fStat;    ///< Status: 0: not seen, 1: seen, 2: local max
 
-  SBSCalorimeterBlockData::ADC *fADC;
-  SBSCalorimeterBlockData::TDC *fTDC;
-  SBSCalorimeterBlockData::Samples *fSamples;
+  SBSData::ADC *fADC; //< All ADC hits
+  SBSData::TDC *fTDC; //< All TDC hits
+  SBSData::Waveform *fWaveform;
 
-  ClassDef(SBSCalorimeterBlock,1) ///< Generic shower block class (no data)
+  ClassDef(SBSElement,1) ///< Generic shower block class (no data)
 };
 
 #endif

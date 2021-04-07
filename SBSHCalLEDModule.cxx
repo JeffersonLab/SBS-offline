@@ -50,7 +50,7 @@ namespace Decoder {
 		}
 	
 		
-		Int_t HCalLED::LoadSlot(THaSlotData *sldat, const UInt_t* evbuffer, Int_t pos, Int_t len) {
+		Int_t HCalLED::LoadSlot(THaSlotData *sldat, const UInt_t* evbuffer, Int_t pos, Int_t ) {
 			const UInt_t *p = &evbuffer[pos];
 			fWordsSeen=0;
 			UInt_t j = 0;
@@ -72,9 +72,7 @@ namespace Decoder {
 return fWordsSeen;
 }
 
-Int_t HCalLED::Decode(const UInt_t *pdat) {
-	
-		
+Int_t HCalLED::Decode(const UInt_t* ) {
 		return 0;
 }
 

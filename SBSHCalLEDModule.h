@@ -40,10 +40,8 @@ namespace Decoder {
     HCalLED(Int_t crate, Int_t slot);
     virtual ~HCalLED();
 
-    /*
     using Module::GetData;
     using Module::LoadSlot;
-    */
 
     //virtual Int_t GetData(Int_t adc, Int_t sample, Int_t chan) const;
     virtual void Init();

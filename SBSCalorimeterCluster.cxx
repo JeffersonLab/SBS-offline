@@ -15,11 +15,11 @@ using namespace std;
 const Float_t SBSCalorimeterCluster::kBig =(Float_t)1e15;
 
 //_____________________________________________________________
-SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSCalorimeterBlock* block) 
-: fNMaxBlocks(nmaxblk)
+SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block) 
+: fNMaxElements(nmaxblk)
 {
-    fBlocks = new SBSCalorimeterBlock*[fNMaxBlocks];
-    fBlocks[0] = block;
+    fElements = new SBSElement*[fNMaxElements];
+    fElements[0] = block;
     fX = block->GetX();
     fY = block->GetY();
     fE = block->GetE();
@@ -32,9 +32,9 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSCalorimeterBlock*
 
 //_____________________________________________________________
 SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk) 
-: fNMaxBlocks(nmaxblk)
+: fNMaxElements(nmaxblk)
 {
-    fBlocks = new SBSCalorimeterBlock*[fNMaxBlocks];
+    fElements = new SBSElement*[fNMaxElements];
     fX = 0;
     fY = 0;
     fE = 0;
@@ -64,10 +64,10 @@ SBSCalorimeterCluster::~SBSCalorimeterCluster() {
 }
 
 //_____________________________________________________________
-void SBSCalorimeterCluster::AddBlock(SBSCalorimeterBlock* block) {
+void SBSCalorimeterCluster::AddElement(SBSElement* block) {
 
-    if (fMult<fNMaxBlocks) {
-        fBlocks[fMult] = block;
+    if (fMult<fNMaxElements) {
+        fElements[fMult] = block;
         block->SetStat(1);
         fMult++;
         //     cout << fX << " " << fE << " " << fMult << " " 
@@ -99,12 +99,12 @@ void SBSCalorimeterCluster::ClearEvent() {
     fEblk=0;
     fRow=fCol=-1;
     DeleteArrays();
-    fBlocks = new SBSCalorimeterBlock*[fNMaxBlocks];
+    fElements = new SBSElement*[fNMaxElements];
 }
 
 //_____________________________________________________________
 void SBSCalorimeterCluster::DeleteArrays() {
-    delete [] fBlocks; fBlocks = 0;
+    delete [] fElements; fElements = 0;
 }
 
 ClassImp(SBSCalorimeterCluster)

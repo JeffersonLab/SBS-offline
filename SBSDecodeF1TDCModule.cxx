@@ -60,7 +60,7 @@ void SBSDecodeF1TDCModule::CommonInit() {
   //fTdcData = new Int_t[NTDCCHAN*MAXHIT];
   //fNumHits = new Int_t[NTDCCHAN*MAXHIT];
   fDebugFile=0;
-  fDebugFile = new std::ofstream("hcal_tdc_test_decoder.log");
+  //fDebugFile = new std::ofstream("hcal_tdc_test_decoder.log");
   Clear();
   IsInit = kTRUE;
   nF1=0;
