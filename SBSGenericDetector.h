@@ -115,10 +115,11 @@ public:
       THaDetMap::Module *d, Int_t chan);
 
   // Utility functions
-  // Get index of element
-  //Int_t blkidx(Int_t row, Int_t col, Int_t layer = 0);
-  // Get corresponding row, col, layer of element from index
-  //void blkrcl(Int_t index, Int_t &row, Int_t &col, Int_t &layer);
+  // Can be re-implemented by other classes to specify a different
+  // SBSElement sub-class (i.e. useful when one wants to change the logic
+  // in SBSElement::CoarseProcess()
+  virtual SBSElement* MakeElement(Float_t x, Float_t y, Float_t z, Int_t row,
+      Int_t col, Int_t layer);
 
 protected:
 

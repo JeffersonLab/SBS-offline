@@ -302,7 +302,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       // of reference elements that will contain their data.
       if( d->refindex == -1) {
         for(Int_t chan = 0; chan < nchan; chan++) {
-          SBSElement *el = new SBSElement(0,0,0,0,0,0);
+          SBSElement *el = MakeElement(0,0,0,0,0,0);
           if(d->IsADC()) {
             el->SetADC(0.,1.);
           } else {
@@ -440,7 +440,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
           x = xyz[0] - c*dxyz[0];
           y = xyz[1] - r*dxyz[1];
           z = xyz[2] - l*dxyz[2];
-          SBSElement *e = new SBSElement(x,y,z,rr,cc,ll);
+          SBSElement *e = MakeElement(x,y,z,rr,cc,ll);
           if( WithADC() ) {
             if( fModeADC == SBSModeADC::kWaveform ) {
               e->SetWaveform(adc_ped[k],adc_gain[k]);
@@ -767,4 +767,13 @@ void SBSGenericDetector::ClearOutputVariables()
 {
   fGood.clear();
   fRaw.clear();
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+/// SBSGenericDetector constructor
+SBSElement* SBSGenericDetector::MakeElement(Float_t x, Float_t y, Float_t z,
+    Int_t row, Int_t col, Int_t layer)
+{
+  return new SBSElement(x,y,z,row,col,layer);
 }
