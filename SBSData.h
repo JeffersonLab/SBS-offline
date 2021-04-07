@@ -80,10 +80,12 @@ namespace SBSData {
       SingleData GetTime(UInt_t i)      const { return GetHit(i).time;      }
       SingleData GetAmplitude(UInt_t i) const { return GetHit(i).amplitude; }
       ADCData GetADC()                  const { return fADC;                }
+      Int_t GetNHits()                        { return fADC.hits.size();    }
 
       // Some additional helper functions for easy access to the ADC integral
       Float_t GetDataRaw(UInt_t i)      const { return GetHit(i).integral.raw; }
       Float_t GetData(UInt_t i)         const { return GetHit(i).integral.val; }
+      std::vector<PulseADCData> GetAllHits()  const { return  fADC.hits; }
 
       // Setters
       void SetPed(Float_t var)  { fADC.ped = var; }
@@ -122,7 +124,9 @@ namespace SBSData {
       TDCHit GetHit(UInt_t i)       const { return fTDC.hits[i];    }
       SingleData GetLead(UInt_t i)  const { return GetHit(i).le;    }
       SingleData GetTrail(UInt_t i) const { return GetHit(i).te;    }
-      TDCHit GetGoodHit()          const { return fTDC.hits[fTDC.good_hit]; }
+      TDCHit GetGoodHit()           const { return fTDC.hits[fTDC.good_hit]; }
+      Int_t GetNHits()                    { return fTDC.hits.size();    }
+      std::vector<TDCHit> GetAllHits() const { return  fTDC.hits; }
 
       // Helper functions to get leading edge info
       Float_t GetData(UInt_t i)     const { return GetLead(i).val;  }

@@ -70,6 +70,7 @@ protected:
   SBSData::ADC *fADC; //< All ADC hits
   SBSData::TDC *fTDC; //< All TDC hits
   SBSData::Waveform *fWaveform;
+  Bool_t fCoarseProcessed; //< Did we already process this block in another class?
 
   ClassDef(SBSElement,1) ///< Generic shower block class (no data)
 };

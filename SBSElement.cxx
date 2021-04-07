@@ -16,7 +16,7 @@ ClassImp(SBSElement);
 SBSElement::SBSElement(Float_t x, Float_t y,
     Float_t z, Int_t row, Int_t col, Int_t layer) :
   fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0),
-  fADC(0), fTDC(0), fWaveform(0)
+  fADC(0), fTDC(0), fWaveform(0), fCoarseProcessed(0)
 {
 }
 
@@ -41,6 +41,7 @@ void SBSElement::ClearEvent()
     fTDC->Clear();
   if(fWaveform)
     fWaveform->Clear();
+  fCoarseProcessed = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -74,6 +75,10 @@ void SBSElement::SetWaveform(Float_t ped, Float_t gain)
 // Coarse process this event
 void SBSElement::CoarseProcess()
 {
+
+  if(fCoarseProcessed)
+    return;
+
   // Compute the energy
   if(fWaveform) {
     // TODO: Implement the same logic as the FADC firmware logic.
@@ -86,6 +91,8 @@ void SBSElement::CoarseProcess()
   } else {
     fE = 0;
   }
+
+  fCoarseProcessed = true;
 
   // For the TDCs one should mark the "good" hit
   // with fTDC->SetGoodHit( idx );

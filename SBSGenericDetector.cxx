@@ -1,14 +1,9 @@
-///////////////////////////////////////////////////////////////////////////////
-//                                                                           //
-// SBSGenericDetector                                                               //
-//                                                                           //
-// Shower counter class, describing a generic segmented shower detector      //
-// (preshower or shower).                                                    //
-// Currently, only the "main" cluster, i.e. cluster with the largest energy  //
-// deposition is considered. Units of measurements are MeV for energy of     //
-// shower and centimeters for coordinates.                                   //
-//                                                                           //
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// SBSGenericDetector
+//
+//
+////////////////////////////////////////////////////////////////////////////////
 
 #include "SBSGenericDetector.h"
 
@@ -39,7 +34,7 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   THaNonTrackingDetector(name,description,apparatus), fNrows(0),
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(false),fDisableRefTDC(false),
-  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawData(true),
+  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
   fStoreEmptyElements(true)
 {
   // Constructor.
@@ -451,7 +446,6 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
               e->SetWaveform(adc_ped[k],adc_gain[k]);
             } else {
               e->SetADC(adc_ped[k],adc_gain[k]);
-              fA_all.push_back(e->ADC());
             }
           }
           if( WithTDC() ) { // TDC info
@@ -485,10 +479,9 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   // them here to preserve old analysis macros people may have written.
   // This includes things like fE, fNblk, fE_c, etc...
   RVarDef vars[] = {
-    { "row", "Row for block in data vectors",  "fRow" },
-    { "col", "Col for block in data vectors",  "fCol" },
-    { "layer", "Layer for block in data vectors",  "fLayer" },
-    { "nhit",   "Number of hits",                     "fNhits" },
+    { "row", "Row for block in data vectors",  "fGood.row" },
+    { "col", "Col for block in data vectors",  "fGood.col" },
+    { "layer", "Layer for block in data vectors",  "fGood.layer" },
     { 0 }
   };
 
@@ -501,44 +494,43 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   // Do we have an ADC? Then define ADC variables
   if(WithADC()) {
     // Register variables in global list
-    ve.push_back( {"a","ADC integral", "fA"} );
+    ve.push_back( {"a","ADC integral", "fGood.a"} );
     if(fModeADC != SBSModeADC::kADCSimple) {
-      ve.push_back( {"a_amp","ADC pulse amplitude", "fA_amp"} );
-      ve.push_back( {"a_time","ADC pulse time", "fA_time"} );
+      ve.push_back( {"a_amp","ADC pulse amplitude", "fGood.a_amp"} );
+      ve.push_back( {"a_time","ADC pulse time", "fGood.a_time"} );
     }
-    if(fStoreRawData) {
-      ve.push_back({ "a_all",   "All ADC amplitudes",  "fA_all" });
-      //ve.push_back({ "a_raw",   "Raw ADC amplitudes",  "fA_raw" });
-      //ve.push_back({ "a_p", "Ped-subtracted ADC amplitudes",  "fA_p" });
-      if( err != kOK)
-        return err;
+    if(fStoreRawHits) {
+      ve.push_back({ "hits.a",   "All ADC inntegrals",  "fRaw.a" });
+      ve.push_back({ "hits.a_amp",   "All ADC amplitudes",  "fRaw.a_amp" });
+      ve.push_back({ "hits.a_time",   "All ADC pulse times",  "fRaw.a_time" });
     }
   }
 
   // Are we using TDCs? If so, define variables for TDCs
   if(WithTDC()) {
-    ve.push_back({ "tdc", "Calibrated TDC value", "fTDC" });
+    ve.push_back({ "tdc", "Calibrated TDC value", "fGood.t" });
     if(fModeTDC != SBSModeTDC::kTDCSimple) {
       // We have trailing edge and Time-Over-Threshold info to store
-      ve.push_back({"tdc_te","Calibrated TDC trailing info","fTDC_te"});
-      ve.push_back({"tdc_tot","Time Over Threshold","fTDC_ToT"});
+      ve.push_back({"tdc_te","Calibrated TDC trailing info","fGood.t_te"});
+      ve.push_back({"tdc_tot","Time Over Threshold","fGood.t_ToT"});
     }
 
-    if(fStoreRawData) {
-      ve.push_back({ "tdc_all", "All TDC data", "fTDC_all" });
+    if(fStoreRawHits) {
+      ve.push_back({ "hits.t",   "All TDC leading edge times",  "fRaw.t" });
+      if(fModeTDC != SBSModeTDC::kTDCSimple) {
+        ve.push_back({ "hits.t_te",   "All TDC trailing edge times",  "fRaw.t_te" });
+        ve.push_back({ "hits.t_tot",  "All TDC Time-over-threshold",  "fRaw.t_ToT" });
+      }
     }
   }
 
   // Are we using multi-valued ADCs? Then define the samples variables
   if(fModeADC == SBSModeADC::kWaveform) {
     ve.push_back({ "samps_idx", "Index in samples vector for given row-col module",
-        "fSampsIdx" });
+        "fGood.sidx" });
     ve.push_back({ "nsamps" , "Number of samples for given row-col",
-        "fNsamps"});
-    ve.push_back({ "samps", "Calibrated ADC samples",  "fSamps_c" });
-    if(fStoreRawData) {
-      ve.push_back({ "samps_raw",   "RAW ADC samples",  "fSamps" });
-    }
+        "fGood.nsamps"});
+    ve.push_back({ "samps", "Calibrated ADC samples",  "fGood.samps" });
   }
   
   ve.push_back({0}); // Needed to specify the end of list
@@ -548,16 +540,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
 //_____________________________________________________________________________
 Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
 {
-  // Decode data and store into the following local data structure:
-  //
-  // fNhits           - Number of hits on HCal
-  // fASamples[][]    - 2D Array of ADC samples/values for each block
-  // fASamplesPed[][] - 2D Array of ped subtracted fASamples[][]
-  // fASamplesCal[][] - 2D array of ped subtracted and calibrated fASamples[][]
-  //
-  // (The following are presently not being used)
-  // fAsum_p          -  Sum of shower blocks ADC minus pedestal values;
-  // fAsum_c          -  Sum of shower blocks corrected ADC values;
+  // Decode data
 
   // Clear last event
   ClearEvent();
@@ -598,15 +581,19 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
   if(nhit <= 0  || !WithADC() || !blk)
     return 0;
 
-  Int_t mode = evdata.GetModule(d->crate, d->slot)->GetMode();
+  // TODO: Get the mode from the data stream (whenever that is implemented).
+  // For now, we'll just use the user-specified fModeADC
+  //Int_t mode = evdata.GetModule(d->crate, d->slot)->GetMode();
+  
 
   if(fModeADC != SBSModeADC::kWaveform) {
     // Process all hits in this channel
-    if(mode==0 || mode == 1) { // Single ADC value
+    if(fModeADC == SBSModeADC::kADCSimple) { // Single ADC value (FADC250 mode 1)
       for(Int_t ihit = 0; ihit < nhit; ihit++) {
         blk->ADC()->Process( evdata.GetData(d->crate, d->slot, chan, ihit));
       }
-    } else if (mode==7) { // integral, time, peak, and pedestal provided
+    } else if (fModeADC == SBSModeADC::kADC) { // mode==7 in FADC250
+      // here integral, time, peak, and pedestal are provided
       Float_t integral,time,peak,pedestal;
       Int_t lnhit = nhit/4; // Real number of hits
       for(Int_t ihit = 0; ihit < lnhit; ihit++) {
@@ -652,10 +639,8 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 
   Int_t edge = 0;
   for(Int_t ihit = 0; ihit < nhit; ihit++) {
-    // Use any information from the reference channel, if specified.
-    // TODO: Find out what to do about multiple hits on the reference channel
     edge = 0; // Default is to not have any trailing info
-    if(fModeTDC != SBSModeTDC::kTDCSimple) { // No trailing edge info
+    if(fModeTDC != SBSModeTDC::kTDCSimple) { // trailing edge info stored on raw data variable
       edge = evdata.GetRawData(d->crate, d->slot, chan, ihit);
     }
     blk->TDC()->Process(
@@ -683,7 +668,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
   // Make sure we haven't already been called in this event
   if(fCoarseProcessed) return 0;
 
-  // Pack simple data for output to the tree, and call CoarseProcess on blocks
+  // Pack simple data for output to the tree, and call CoarseProcess on all elements
   SBSElement *blk = 0;
   size_t nsamples;
   size_t idx;
@@ -694,50 +679,75 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 
     blk->CoarseProcess();
 
-    // TODO: Make this configurable
-    // Skip blocks that have no new data
+    // Skip blocks that have no new data (unless allowed by the user)
     if(!blk->HasData() && !fStoreEmptyElements)
       continue;
 
-
-    fRow.push_back(blk->GetRow());
-    fCol.push_back(blk->GetCol());
-    fLayer.push_back(blk->GetLayer());
+    fGood.row.push_back(blk->GetRow());
+    fGood.col.push_back(blk->GetCol());
+    fGood.layer.push_back(blk->GetLayer());
     if(WithTDC() && blk->TDC()) {
       if(blk->TDC()->HasData()) {
-        // TODO: Store multiple hits on rootfile
-        //fTDC_raw.push_back(blk->TDC()->GetDataRaw(0));
-        fTDC.push_back(blk->TDC()->GetData(0));
+        const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
+        fGood.t.push_back(hit.le.val);
+        if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
+          fGood.t_te.push_back(hit.te.val);
+          fGood.t_ToT.push_back(hit.ToT.val);
+        }
       } else if ( fStoreEmptyElements ) {
-        //fTDC_raw.push_back(blk->TDC()->GetDataRaw(0));
-        fTDC.push_back(0.0);
+        fGood.t.push_back(0.0);
+        if(fModeTDC == SBSModeTDC::kTDC) {
+          fGood.t_te.push_back(0.0);
+          fGood.t_ToT.push_back(0.0);
+        }
       }
     }
 
     if(WithADC()) {
       if(fModeADC != SBSModeADC::kWaveform) {
-        // TODO: Store multiple hits on rootfile
-        // TODO: Store more than just the integral if more info is available!
-        //fA.push_back(blk->ADC()->GetDataRaw(0));
-        fA.push_back(blk->ADC()->GetData(0));
+        if(blk->ADC()->HasData()){
+          const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
+          fGood.a.push_back(hit.integral.val);
+          if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
+            fGood.a_amp.push_back(hit.amplitude.val);
+            fGood.a_time.push_back(hit.time.val);
+          }
+
+          // Now store all the hits if specified the by user
+          if(fStoreRawHits) {
+            const std::vector<SBSData::PulseADCData> &hits = blk->ADC()->GetAllHits();
+            for( const auto &hit : hits) {
+              fRaw.a.push_back(hit.integral.val);
+              fRaw.a_amp.push_back(hit.amplitude.val);
+              fRaw.a_time.push_back(hit.time.val);
+              // Do the same for the raw data
+              //fRaw_raw.a.push_back(hit.integral.raw);
+              //fRaw_raw.a_amp.push_back(hit.amplitude.raw);
+              //fRaw_raw.a_time.push_back(hit.time.raw);
+            }
+          }
+        } else if (fStoreEmptyElements) {
+          fGood.a.push_back(0.0);
+          if(fModeADC == SBSModeADC::kADC) {
+            fGood.a_amp.push_back(0.0);
+            fGood.a_time.push_back(0.0);
+          }
+        }
       } else { // Waveform mode
         SBSData::Waveform *wave = blk->Waveform();
         std::vector<Float_t> &s_r =wave->GetDataRaw();
         std::vector<Float_t> &s_c = wave->GetData();
         nsamples = s_r.size();
-        idx = fSamps.size();
-        fSampsIdx.push_back(idx);
-        fNsamps.push_back(nsamples);
-        fSamps.resize(idx+nsamples);
-        fSamps_c.resize(idx+nsamples);
+        idx = fGood.samps.size();
+        fGood.sidx.push_back(idx);
+        fGood.nsamps.push_back(nsamples);
+        fGood.samps.resize(idx+nsamples);
         for(size_t s = 0; s < nsamples; s++) {
-          fSamps[idx+s]   = s_r[s];
-          fSamps_c[idx+s] = s_c[s];
+          fGood.samps[idx+s]   = s_c[s];
         }
-        //fA.push_back(blk->Waveform()->GetIntegral().raw);
-        fA.push_back(wave->GetIntegral().val);
-        fA_amp.push_back(wave->GetAmplitude().val);
-        fA_time.push_back(wave->GetTime().val);
+        fGood.a.push_back(wave->GetIntegral().val);
+        fGood.a_amp.push_back(wave->GetAmplitude().val);
+        fGood.a_time.push_back(wave->GetTime().val);
       }
     }
   }
@@ -755,16 +765,6 @@ Int_t SBSGenericDetector::FineProcess(TClonesArray&)//tracks)
 
 void SBSGenericDetector::ClearOutputVariables()
 {
-  fRow.clear();
-  fCol.clear();
-  fLayer.clear();
-  fA.clear();
-  fA_amp.clear();
-  fA_time.clear();
-  //fTDC_raw.clear();
-  fTDC.clear();
-  fSampsIdx.clear();
-  fNsamps.clear();
-  fSamps.clear();
-  fSamps_c.clear();
+  fGood.clear();
+  fRaw.clear();
 }

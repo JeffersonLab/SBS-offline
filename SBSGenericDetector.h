@@ -44,6 +44,45 @@ namespace SBSModeTDC {
   };
 }
 
+
+// This structure has output data when the user wants every hit to be stored
+// in the rootfile.
+struct SBSGenericOutputData {
+  // Note [] means it can be variable sized data per event/module
+  // Module info
+  std::vector<Int_t> row;         //< [] row
+  std::vector<Int_t> col;         //< [] col
+  std::vector<Int_t> layer;       //< [] col
+  // ADC variables
+  std::vector<Float_t> a;         //< [] ADC integral
+  std::vector<Float_t> a_amp;     //< [] ADC pulse amplitude
+  std::vector<Float_t> a_time;    //< [] ADC pulse time
+  // TDC variables
+  std::vector<Float_t> t;         //< [] TDC (leading edge) time
+  std::vector<Float_t> t_te;      //< [] TDC trailing edge time
+  std::vector<Float_t> t_ToT;     //< [] TDC Time-Over-Threshold
+  // Waveform variables
+  std::vector<Int_t> nsamps;      //< [] Number of ADC samples
+  std::vector<Int_t> sidx;        //< [] Index of start of ADC samples in for this row-col-layer
+  std::vector<Float_t> samps;     //< []*nsamps ADC samples
+
+  // Quick clear class
+  void clear() {
+    row.clear();
+    col.clear();
+    layer.clear();
+    a.clear();
+    a_amp.clear();
+    a_time.clear();
+    t.clear();
+    t_te.clear();
+    t_ToT.clear();
+    nsamps.clear();
+    sidx.clear();
+    samps.clear();
+  }
+};
+
 class SBSGenericDetector : public THaNonTrackingDetector {
   //class SBSGenericDetector : public THaShower {
 
@@ -59,7 +98,7 @@ public:
   void SetModeTDC(SBSModeTDC::Mode mode) { fModeTDC = mode; }
   void SetDisableRefADC(Bool_t b) { fDisableRefADC = b; }
   void SetDisableRefTDC(Bool_t b) { fDisableRefTDC = b; }
-  void SetStoreRawData(Bool_t var) { fStoreRawData = var; }
+  void SetStoreRawHits(Bool_t var) { fStoreRawHits = var; }
   void SetStoreEmptyElements(Bool_t b) { fStoreEmptyElements = b; }
 
   Bool_t WithTDC() { return fModeTDC != SBSModeTDC::kNone; };
@@ -100,29 +139,13 @@ protected:
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)
   std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to calorimeter element number
 
-  // Output variables
-  // Note [] means it is a vector with variable width
-  std::vector<Int_t> fRow;        //< [] row number for given element
-  std::vector<Int_t> fCol;        //< [] col number for given element
-  std::vector<Int_t> fLayer;      //< [] layer number for given element
-  // ADC Integral
-  std::vector<SBSData::ADC*> fA_all;        //< [] ADC structures
-  std::vector<Float_t> fA;      //< [] ADC pulse integral
-  std::vector<Float_t> fA_amp;  //< [] ADC pulse amplitude (i.e. peak value)
-  std::vector<Float_t> fA_time; //< [] ADC pulse time
-  // ADC Samples
-  std::vector<Int_t> fNsamps;     //< [] Number of samples for each element
-  std::vector<Int_t> fSampsIdx;   //< []*fNsamps Index of the corresponding element
-  std::vector<Float_t> fSamps;    //< []*fNsamps ADC samples for each element
-  std::vector<Float_t> fSamps_c;  //< []*fNsamps ADC calibrated samples for each element
-  // TDC values
-  std::vector<Float_t> fTDC;    //< [] TDC good hit times
-  std::vector<Float_t> fTDC_te; //< [] TDC good hit  trailing edge times
-  std::vector<Float_t> fTDC_ToT; //< [] TDC good hit Time-Over-Threshold
+  // Output variable containers
+  SBSGenericOutputData fGood;     //< Good data output
+  SBSGenericOutputData fRaw;      //< All hits
 
-  // Blocks, where the grid is just for easy axis to the elements by row,col,layer
+  // Blocks, where the grid is just for easy access to the elements by row,col,layer
   std::vector<SBSElement*> fElements;
-  std::vector<SBSElement*> fRefElements; //< Reference elements (for TDCs)
+  std::vector<SBSElement*> fRefElements; //< Reference elements (for TDCs and multi-function ADCs)
   std::vector<std::vector<std::vector<SBSElement*> > > fElementGrid;
   // Clusters for this event
 
@@ -139,7 +162,7 @@ protected:
   Int_t      fNhits;     ///< Number of hits in event
 
   // Flags for enabling and disabling various features
-  Bool_t    fStoreRawData; ///< Store the raw data in the root tree?
+  Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
 
 private:
   // Simple and quick routine to init and clear most vectors
