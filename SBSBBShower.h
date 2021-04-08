@@ -74,21 +74,21 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   //Int_t fNclusters;
   // Mapping (see also fDetMap)
   //UShort_t*  fNChan;     // Number of channels for each module
-  //std::vector< std::vector<UShort_t> > fChanMap; 
+  std::vector< std::vector<UShort_t> > fChanMap; 
   // Logical channel   UShort_t** fChanMap;   // Logical channel numbers 
   Int_t chanmap_start;
   // Configuration
-  //Int_t      fNclublk;   // Max. number of blocks composing a cluster
+  Int_t      fNclublk;   // Max. number of blocks composing a cluster
   //Int_t      fNrows;     // Number of rows
   Int_t      fNcols;     // Number of columns
   
   // Geometry
-  //Float_t*   fBlockX;    // [fNelem] x positions (cm) of block centers
-  //Float_t*   fBlockY;    // [fNelem] y positions (cm) of block centers
+  Float_t*   fBlockX;    // [fNelem] x positions (cm) of block centers
+  Float_t*   fBlockY;    // [fNelem] y positions (cm) of block centers
 
   // Calibration
-  //Float_t*   fPed;       // [fNelem] Pedestals for each block
-  //Float_t*   fGain;      // [fNelem] Gains for each block
+  Float_t*   fPed;       // [fNelem] Pedestals for each block
+  Float_t*   fGain;      // [fNelem] Gains for each block
 
   //Gain correction 
   Float_t   gconst;     // const from gain correction 
@@ -103,10 +103,10 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   // Per-event data
   Int_t fRowMax;
   Int_t fColMax;
-  //Int_t      fNhits;     // Number of hits
-  //Float_t*   fA;         // [fNelem] Array of ADC amplitudes of blocks
-  //Float_t*   fA_p;       // [fNelem] Array of ADC minus pedestal values of blocks
-  //Float_t*   fA_c;       // [fNelem] Array of corrected ADC amplitudes of blocks
+  Int_t      fNhits;     // Number of hits
+  Float_t*   fA;         // [fNelem] Array of ADC amplitudes of blocks
+  Float_t*   fA_p;       // [fNelem] Array of ADC minus pedestal values of blocks
+  Float_t*   fA_c;       // [fNelem] Array of corrected ADC amplitudes of blocks
   //Float_t    fAsum_p;    // Sum of blocks ADC minus pedestal values
   //Float_t    fAsum_c;    // Sum of blocks corrected ADC amplitudes
   //Int_t      fNclust;    // Number of clusters
@@ -120,6 +120,10 @@ class SBSBBShower : public THaShower {//THaPidDetector {
   Int_t**    fNblk_cl;     // [fNclublk] Block numbers composing main cluster
   Float_t**  fEblk_cl;     // [fNclublk] Block energies composing main cluster
   
+  Int_t     fMult;     // [fNClust]  Number of blocks in all clusters
+  Int_t*    fNblk;     // [fNclublk] Block numbers composing main cluster
+  Float_t*  fEblk;     // [fNclublk] Block energies composing main cluster
+
   Float_t    fTRX;       // x position of track cross point
   Float_t    fTRY;       // y position of track cross point
 
