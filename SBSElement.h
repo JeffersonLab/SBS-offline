@@ -18,7 +18,7 @@ class SBSElement : public TObject {
 public:
   SBSElement() : fADC(0), fTDC(0), fWaveform(0) {};
   SBSElement(Float_t x, Float_t y, Float_t z,
-      Int_t row, Int_t col, Int_t layer);
+      Int_t row, Int_t col, Int_t layer, Int_t id = 0);
   virtual ~SBSElement() {}
 
   // Getters
@@ -30,6 +30,7 @@ public:
   Int_t   GetCol()   const { return fCol; }
   Int_t   GetLayer() const { return fLayer; }
   Int_t   GetStat()  const { return fStat; }
+  Int_t   GetID()    const { return fID; }
   virtual SBSData::ADC* ADC()         { return fADC; }
   virtual SBSData::TDC* TDC()         { return fTDC; }
   virtual SBSData::Waveform* Waveform() { return fWaveform; }
@@ -43,6 +44,7 @@ public:
   void SetCol(Int_t var)    { fCol = var; }
   void SetLayer(Int_t var)  { fLayer = var; }
   void SetStat(Int_t var)   { fStat = var; }
+  void SetID(Int_t var)     { fID = var; }
   void SetADC(Float_t ped, Float_t gain);
   void SetTDC(Float_t offset, Float_t cal);
   void SetWaveform(Float_t ped, Float_t gain);
@@ -66,6 +68,7 @@ protected:
   Int_t   fCol;     ///< Column of the block
   Int_t   fLayer;   ///< Layer of the block
   Int_t   fStat;    ///< Status: 0: not seen, 1: seen, 2: local max
+  Int_t   fID;      ///< [Optional] Could specify a logical number to this element
 
   SBSData::ADC *fADC; //< All ADC hits
   SBSData::TDC *fTDC; //< All TDC hits

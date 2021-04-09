@@ -14,8 +14,8 @@ ClassImp(SBSElement);
 ///////////////////////////////////////////////////////////////////////////////
 // Constructor for generic Element (no-data)
 SBSElement::SBSElement(Float_t x, Float_t y,
-    Float_t z, Int_t row, Int_t col, Int_t layer) :
-  fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0),
+    Float_t z, Int_t row, Int_t col, Int_t layer, Int_t id) :
+  fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0), fID(id),
   fADC(0), fTDC(0), fWaveform(0), fCoarseProcessed(0)
 {
 }
@@ -90,6 +90,10 @@ void SBSElement::CoarseProcess()
     fE = fADC->GetIntegral(0).val;
   } else {
     fE = 0;
+  }
+
+  if(fE < 0 ) { // Do not allowe negative energy!
+    fE = 0.0;
   }
 
   fCoarseProcessed = true;

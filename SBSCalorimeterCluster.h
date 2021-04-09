@@ -26,6 +26,8 @@ public:
     Int_t   GetMult() const {return fMult;}
     Int_t   GetRow()  const {return fRow; }
     Int_t   GetCol()  const {return fCol; }
+    SBSElement* GetMaxElement() { return fMaxElement; }
+    Float_t GetMaxE() const {if(fMaxElement) return fMaxElement->GetE(); return 0; }
 
     Int_t GetNMaxElements() const {return fNMaxElements;}
 
@@ -37,14 +39,14 @@ public:
     void SetRow(Int_t var) { fRow=var; }
     void SetCol(Int_t var) { fCol=var; }
 
-    SBSElement** GetElements() {return fElements;}
+    SBSElement* GetElement(UInt_t i);
+    std::vector<SBSElement*>& GetElements() {return fElements;}
 
     Int_t GetSize() {return fMult;}
 
     void AddElement(SBSElement* block);
 
     void ClearEvent();
-    void DeleteArrays();
 
 private:
 
@@ -60,9 +62,9 @@ private:
 
     Int_t fMult;      // Number of blocks in the cluster
     Int_t fNMaxElements;// Max number of blocks
+    SBSElement* fMaxElement;  // Element with maximum in the cluster
 
-
-    SBSElement** fElements; //[fNMaxElements] List of blocks in cluster
+    std::vector<SBSElement*> fElements; //[fNMaxElements] List of blocks in cluster
 
     ClassDef(SBSCalorimeterCluster,1)   // Generic shower cluster class
 };

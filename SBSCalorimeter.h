@@ -21,9 +21,20 @@
 #include "TVector3.h"
 #include "THaDetMap.h"
 
+struct SBSCalorimeterOutput {
+  std::vector<Float_t> e;   // Energy
+  std::vector<Float_t> e_c;   // Energy
+  std::vector<Float_t> x;   // X
+  std::vector<Float_t> y;   // Y
+  std::vector<Float_t> row; //
+  std::vector<Float_t> col; //
+  std::vector<Int_t>   n;   // Number of elements
+  std::vector<Float_t> blk_e;   // block energy of max energy block
+  std::vector<Float_t> blk_e_c; // block corrected energy of max energy block
+  std::vector<Int_t>   id;      // block id of max energy block
+};
 
 class SBSCalorimeter : public SBSGenericDetector {
-  //class SBSCalorimeter : public THaShower {
 
 public:
   SBSCalorimeter( const char* name, const char* description = "",
@@ -33,14 +44,36 @@ public:
   virtual void ClearEvent();
   virtual void ClearOutputVariables();
 
+  // Get information from the main cluster
+  Float_t GetE();             //< Main cluster energy
+  Float_t GetECorrected();    //< Main cluster corrected energy
+  Float_t GetX();             //< Main cluster energy average x
+  Float_t GetY();             //< Main cluster energy average y
+  Float_t GetEBlk();          //< Main cluster energy of max block in cluster
+  Float_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster
+  Int_t GetNblk();            //< Number of blocks in main cluster
+  Int_t GetBlkID();           //< ID/block number of max energy block in cluster
+  Int_t GetRow();             //< Main cluster row of max block
+  Int_t GetCol();             //< Main cluster col of max block
+
+  Int_t    GetNRows() {return fNrows;}
+  Int_t    GetNCols(Int_t r = 0);
+
   // Standard apparatus re-implemented functions
   virtual Int_t      CoarseProcess(TClonesArray& tracks);
   virtual Int_t      FineProcess(TClonesArray& tracks);
+
+  Int_t GetNclust() const { return fNclus; }
+
+  void SetDataOutputLevel(int var) { fDataOutputLevel = var; }
 
 protected:
 
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
+  void ClearCaloOutput(SBSCalorimeterOutput &var);
+
+  Int_t  fNclus;        ///< Size of clusters in the output tree
 
   // Configuration
   Int_t  fNclublk;      ///< Max number of blocks composing a cluster
@@ -52,28 +85,10 @@ protected:
   std::vector<std::vector<UShort_t> > fChanMap; //< Maps modules in THaDetMap to calorimeter block number
 
   // Output variables
-  // Cluster output
-  std::vector<Float_t> fEclus;    //< [] Energy (MeV) of clusters
-  std::vector<Float_t> fEclus_c;  //< [] Corrected energy (MeV) of clusters
-  std::vector<Float_t> fEclusBlk; //< [] Energy (MeV) of block with highest E in clusters
-  std::vector<Float_t> fEclusBlk_c;//< [] Corrected energy (MeV) of block with highest E in clusters
-  std::vector<Float_t> fXclus;    //< [] x position (m) of clusters
-  std::vector<Float_t> fYclus;    //< [] y position (m) of clusters
-  std::vector<Float_t> fNblkclus; //< [] number of blocks in clusters
-  std::vector<Int_t> fRowblkclus; //< [] row of blocks in clusters
-  std::vector<Int_t> fColblkclus; //< [] col of blocks in clusters
-  // Single valued variables for the cluster with highest energy
-  Float_t fE;                     //< Energy (MeV) of cluster with highest energy
-  Float_t fE_c;                   //< Corrected energy (MeV) of cluster with highest energy
-  Float_t fEblk;                  //< Energy (MeV) of largest block in cluster with highest energy
-  Float_t fEblk_c;                //< Corrected energy (MeV) of largest block in cluster with highest energy
-  Float_t fX;                     //< x position (m) of cluster with highest energy
-  Float_t fY;                     //< y position (m) of cluster with highest energy
-  Float_t fNblk;                  //< number of blocks in cluster with highest energy
-  // If only storing highest energy cluster, info on other clusters may be useful
-  Float_t fNclus;                 //< Number of clusters meeting threshold
-  Int_t   fRowblk;                //< row of block with highest energy in highest E cluster
-  Int_t   fColblk;                //< col of block with highest energy in highest E cluster
+  SBSCalorimeterOutput fMainclus;    //< Main cluster output
+  SBSCalorimeterOutput fMainclusblk; //< Detailed info on blocks in main cluster
+  SBSCalorimeterOutput fOutclus;     //< Output for all clusters
+  SBSCalorimeterOutput fOutblk;      //< Output for all blocks
 
   // Blocks, where the grid is just for easy axis to the blocks by row,col,layer
   // Clusters for this event
@@ -90,66 +105,11 @@ protected:
   Float_t   fSlope;     // slope for gain correction
   Float_t   fAccCharge; // accumulated charge
 
-  // Flags for enabling and disabling various features
+  // ROOTFile output level
+  Int_t fDataOutputLevel;   //  0: default only main cluster info, 1: include also blocks in main cluster, 2: all clusters,  3: all blocks regardless if they are in a cluster or not
 
-/*
-     Int_t      GetNclust() const { return fNclust; }
-     Int_t      GetNhits() const  { return fNhits; }
-     Float_t    GetE(int i) const { return fE[i]; }
-     Float_t    GetX(int i) const { return fX[i]; }
-     Float_t    GetY(int i) const { return fY[i]; }
-
-     Int_t      GetNBlocks() { return (fNrows * fNcols);}
-     Float_t    GetBlockX( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetX(); else return 0.0;}
-     Float_t    GetBlockY( Int_t i )  { if(i < fNrows*fNcols) return fBlocks[i]->GetY(); else  return 0.0;}
-
-     Float_t    GetBlockdX()  {return fdX;}
-     Float_t    GetBlockdY()  {return fdY;}
-     Float_t    GetBlockdZ()  {return fdZ;}
-
-
-     Float_t    GetBlockA_c( Int_t i ) const { return fA_c[i]; }
-
-     Int_t    GetNRows() {return fNrows;}
-     Int_t    GetNCols() {return fNcols;}
-     Int_t    BlockColRowToNumber( Int_t col, Int_t row );
-
-  // Blocks should have a Z!!!
-
-  SBSCalorimeterCluster* GetClust(Int_t i) { return fClusters[i]; }
-
-  void       AddCluster(SBSCalorimeterCluster* clus);
-  void       RemoveCluster(int i);
-  void       AddCluster(SBSCalorimeterCluster& clus);
-
-  void       LoadMCHitAt( Double_t x, Double_t y, Double_t E );
-
-  protected:
-
-  // Per-event data
-  //Float_t*   fXtarg;     // [fNClust] x position (m) of clusters in target coords
-  //Float_t*   fYtarg;     // [fNClust] y position (m) of clusters in target coords
-  //Float_t*   fZtarg;     // [fNClust] z position (m) of clusters in target coords
-  Float_t    fTRX;       // x position of track cross point
-  Float_t    fTRY;       // y position of track cross point
-
-
-  Double_t   fdX;
-  Double_t   fdY;
-  Double_t   fdZ;
-
-  SBSShowerBlock** fBlocks; //[fNelem] Array of blocks
-  SBSShowerBlock*** fBlkGrid; //[fNrows]
-
-  //TRotation  fDetToTarg;
-  //TVector3   fDetOffset;
-
-  // Useful derived quantities for internal usage.
-
-  Double_t tan_angle, sin_angle, cos_angle;
-
-  void           DeleteArrays();
-  */
+  Float_t GetVVal(std::vector<Float_t> &v, UInt_t i = 0 );
+  Int_t GetVVal(std::vector<Int_t> &v, UInt_t i = 0 );
 
 private:
   // Simple and quick routine to init and clear most vectors
@@ -187,6 +147,67 @@ private:
 
   ClassDef(SBSCalorimeter,0)     //Generic shower detector class
 };
+
+inline Float_t SBSCalorimeter::GetVVal(std::vector<Float_t> &v, UInt_t i)
+{
+  if (v.size() > i) {
+    return v[i];
+  }
+  return 0.0;
+}
+
+inline Int_t SBSCalorimeter::GetVVal(std::vector<Int_t> &v, UInt_t i)
+{
+  if (v.size() > i) {
+    return v[i];
+  }
+  return 0.0;
+}
+
+inline Float_t SBSCalorimeter::GetE() {
+  return GetVVal(fMainclus.e);
+}
+
+inline Float_t SBSCalorimeter::GetECorrected() {
+  return GetVVal(fMainclus.e_c);
+}
+
+inline Float_t SBSCalorimeter::GetEBlk() {
+  return GetVVal(fMainclus.blk_e);
+}
+
+inline Float_t SBSCalorimeter::GetEBlkCorrected() {
+  return GetVVal(fMainclus.blk_e_c);
+}
+
+inline Float_t SBSCalorimeter::GetX() {
+  return GetVVal(fMainclus.x);
+}
+
+inline Float_t SBSCalorimeter::GetY() {
+  return GetVVal(fMainclus.y);
+}
+
+inline Int_t SBSCalorimeter::GetRow() {
+  return GetVVal(fMainclus.row);
+}
+
+inline Int_t SBSCalorimeter::GetCol() {
+  return GetVVal(fMainclus.col);
+}
+
+inline Int_t SBSCalorimeter::GetNblk() {
+  return GetVVal(fMainclus.n);
+}
+
+inline Int_t SBSCalorimeter::GetBlkID() {
+  return GetVVal(fMainclus.id);
+}
+
+inline Int_t SBSCalorimeter::GetNCols(Int_t r) {
+  return GetVVal(fNcols,r);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Specify some default sub-classes available to the user

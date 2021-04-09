@@ -31,7 +31,7 @@ ClassImp(SBSGenericDetector);
 /// Sub-classes can change this accordingly.
 SBSGenericDetector::SBSGenericDetector( const char* name, const char* description,
     THaApparatus* apparatus ) :
-  THaNonTrackingDetector(name,description,apparatus), fNrows(0),
+  THaNonTrackingDetector(name,description,apparatus), fNrows(0),fNcolsMax(0),
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(false),fDisableRefTDC(false),
   fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
@@ -202,6 +202,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fNcols.clear();
     for(int r = 0; r < nrows; r++) {
       fNcols.push_back(ncols[r]);
+      if(ncols[r]>fNcolsMax)
+        fNcolsMax = ncols[r];
     }
     fNlayers = nlayers;
   }
@@ -302,7 +304,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       // of reference elements that will contain their data.
       if( d->refindex == -1) {
         for(Int_t chan = 0; chan < nchan; chan++) {
-          SBSElement *el = MakeElement(0,0,0,0,0,0);
+          SBSElement *el = MakeElement(0,0,0,0,0,0,-1);
           if(d->IsADC()) {
             el->SetADC(0.,1.);
           } else {
@@ -397,14 +399,19 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // Read adc pedestal and gains, and tdc offset and calibration
   // (should be organized by logical channel number, according to channel map)
-  DBRequest calib_request[] = {
-    { "adc.pedestal", &adc_ped,    kFloatV, UInt_t(fNelem), 1 },
-    { "adc.gain",     &adc_gain,   kFloatV, UInt_t(fNelem), 1 },
-    { "tdc.offset",   &tdc_offset, kFloatV, UInt_t(fNelem), 1 },
-    { "tdc.calib",    &tdc_cal,    kFloatV, UInt_t(fNelem), 1 },
-    { 0 }
+  std::vector<DBRequest> vr;
+  if(WithADC()) {
+    vr.push_back({ "adc.pedestal", &adc_ped,    kFloatV, UInt_t(fNelem), 1 });
+    vr.push_back({ "adc.gain",     &adc_gain,   kFloatV, UInt_t(fNelem), 1 });
+  }
+  if(WithTDC()) {
+    vr.push_back({ "tdc.offset",   &tdc_offset, kFloatV, UInt_t(fNelem), 1 });
+    vr.push_back({ "tdc.calib",    &tdc_cal,    kFloatV, UInt_t(fNelem), 1 });
   };
-  err = LoadDB( file, date, calib_request, fPrefix );
+  vr.push_back({0});
+  err = LoadDB( file, date, vr.data(), fPrefix );
+
+  // We are done reading from the file, so we can safely close it now
   fclose(file);
 
   // Again, no need to continue on errors
@@ -413,6 +420,19 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // What does this do again?!?!
   DefineAxes( angle*TMath::DegToRad() );
+
+  // Check that there were either only 1 calibratoin value specified per key
+  // or fNelements
+  if(adc_ped.size() == 1) { // expand vector to specify calibration for all elements
+    InitVector(adc_ped,adc_ped[0]);
+  } else if ( adc_ped.size() != fNelem ) {
+    Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
+        "%d but got %d",int(adc_ped.size()),fNelem);
+    return kInitError;
+  }
+
+  // The user could have specified a single value for all calibrations,
+  // in which case, we should propogate that
 
   // Before finishing, prepare vectors that will hold variable output data
   if( !fIsInit ) {
@@ -440,7 +460,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
           x = xyz[0] - c*dxyz[0];
           y = xyz[1] - r*dxyz[1];
           z = xyz[2] - l*dxyz[2];
-          SBSElement *e = MakeElement(x,y,z,rr,cc,ll);
+          SBSElement *e = MakeElement(x,y,z,rr,cc,ll,k);
           if( WithADC() ) {
             if( fModeADC == SBSModeADC::kWaveform ) {
               e->SetWaveform(adc_ped[k],adc_gain[k]);
@@ -532,7 +552,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
         "fGood.nsamps"});
     ve.push_back({ "samps", "Calibrated ADC samples",  "fGood.samps" });
   }
-  
+
   ve.push_back({0}); // Needed to specify the end of list
   return DefineVarsFromList( ve.data(), mode );
 }
@@ -678,6 +698,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
       continue;
 
     blk->CoarseProcess();
+    // If the above did not define the good hit, the sub-class is expected
+    // to use re-implement the following function to find the good hit.
+    FindGoodHit(blk);
 
     // Skip blocks that have no new data (unless allowed by the user)
     if(!blk->HasData() && !fStoreEmptyElements)
@@ -773,7 +796,7 @@ void SBSGenericDetector::ClearOutputVariables()
 ///////////////////////////////////////////////////////////////////////////////
 /// SBSGenericDetector constructor
 SBSElement* SBSGenericDetector::MakeElement(Float_t x, Float_t y, Float_t z,
-    Int_t row, Int_t col, Int_t layer)
+    Int_t row, Int_t col, Int_t layer, Int_t id)
 {
-  return new SBSElement(x,y,z,row,col,layer);
+  return new SBSElement(x,y,z,row,col,layer, id);
 }

@@ -119,16 +119,18 @@ public:
   // SBSElement sub-class (i.e. useful when one wants to change the logic
   // in SBSElement::CoarseProcess()
   virtual SBSElement* MakeElement(Float_t x, Float_t y, Float_t z, Int_t row,
-      Int_t col, Int_t layer);
+      Int_t col, Int_t layer, Int_t id = 0);
 
 protected:
 
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
+  virtual Int_t  FindGoodHit(SBSElement *){ return 0; } // Optionally implemented by derived classes
 
   // Configuration
   Int_t  fNrows;        ///< Number of rows
   std::vector<Int_t>  fNcols; ///< Number of columns per row
+  Int_t fNcolsMax;      ///< Max number of columns out of all rows
   Int_t  fNlayers;      ///< Number of layers (in z-direction)
   SBSModeADC::Mode fModeADC;      //< ADC Mode
   SBSModeTDC::Mode fModeTDC;      //< TDC Mode

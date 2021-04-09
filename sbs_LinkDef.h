@@ -27,7 +27,9 @@
 #pragma link C++ class SBSElement+;
 #pragma link C++ class SBSCalorimeter+;
 #pragma link C++ class SBSCalorimeterCluster+;
-#pragma link C++ class SBSCalorimeterBlock+;
+#pragma link C++ class SBSData::ADC+;
+#pragma link C++ class SBSData::TDC+;
+#pragma link C++ class SBSData::Waveform+;
 #pragma link C++ class SBSData+;
 #pragma link C++ class SBSCDet+;
 #pragma link C++ class SBSTimingHodoscope+;
