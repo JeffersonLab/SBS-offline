@@ -53,11 +53,11 @@ endif()
 ##----------------------------------------------------------------------------
 ## Set the sources which have a corresponding .h file here
 set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
-  SBSBBShowerCluster.cxx SBSBBShower.cxx SBSBBTotalShower.cxx
-  SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx
+  SBSBBShower.cxx SBSBBTotalShower.cxx
+  SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
   SBSScintPartialHit.cxx SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx
-  SBSScintPlane.cxx SBSECal.cxx SBSECalCluster.cxx SBSEArm.cxx
+  SBSScintPlane.cxx SBSEArm.cxx
   SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx SBSGenericDetector.cxx
   SBSData.cxx SBSElement.cxx
   SBSCalorimeterCluster.cxx SBSSimDataDecoder.cxx 
