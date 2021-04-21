@@ -7,12 +7,12 @@
 
 #include "SBSCalorimeterCluster.h"
 #include <iostream>
+#include <DataType.h>
 
 ClassImp(SBSCalorimeterCluster)   // Generic shower cluster class
 
 using namespace std;
 
-const Float_t SBSCalorimeterCluster::kBig =(Float_t)1e15;
 
 //_____________________________________________________________
 SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block) 

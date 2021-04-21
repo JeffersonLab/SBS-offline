@@ -24,7 +24,6 @@ const double m_el = 0.5110034e-3; // electron mas in GeV
 // const double m_pi = 0.5110034e-3; // FC: NOT TRUE, JUST FOR TESTING!
 const double m_ka = 493.677e-3;   // kaon mass in GeV
 const double m_pr = 938.272e-3;   // proton mass in GeV
-static const Float_t kBig = 1e38;
 
 class SBSGRINCH : public THaPidDetector {
   
