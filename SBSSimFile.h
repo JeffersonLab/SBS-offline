@@ -16,6 +16,8 @@
 #include "SBSSimEvent.h"
 #include "ha_compiledata.h"
 
+#include <set>
+
 class TFile;
 class TTree;
 class TBranch;
@@ -23,7 +25,7 @@ class SBSSimEvent;
 
 class SBSSimFile : public THaRunBase {
  public:
-  SBSSimFile(const char* filename, const char* description = "");
+  SBSSimFile(const char* filename, const char *experiment="gmn", const char* description = "");
   //SBSSimFile(const char* filename, const char* description, std::vector<TString> det_list);
   SBSSimFile(const SBSSimFile &run);
   virtual ~SBSSimFile();
@@ -63,6 +65,9 @@ class SBSSimFile : public THaRunBase {
 
   Int_t fVerbose;       //! Current entry number
 
+  TString fExperiment;
+  std::set<TString> fValidExperiments;
+  
   ClassDef(SBSSimFile,1) // Interface to input file with simulated SoLID data
 };
 

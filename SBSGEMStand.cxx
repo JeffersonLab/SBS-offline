@@ -24,7 +24,8 @@ SBSGEMStand::~SBSGEMStand(){
 
 THaAnalysisObject::EStatus SBSGEMStand::Init( const TDatime& date ){
     assert( fCrateMap == 0 );
-
+ 
+    // Why THaTrackingDetector::Init() here? THaTrackingDetector doesn't implement its own Init() method
     THaAnalysisObject::EStatus status = THaTrackingDetector::Init(date);
 
     if( status == kOK ){
@@ -50,6 +51,7 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
     FILE* file = OpenFile( date );
     if( !file ) return kFileError;
 
+    //As far as I can tell, this doesn't do anything yet (AJRP):
     Int_t err = ReadGeometry( file, date );
     if( err ) {
         fclose(file);
@@ -58,6 +60,7 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
 
     std::string planeconfig;
     std::vector<Int_t> *cmap = new std::vector<Int_t>;
+    //it appears that cmap is not actually used yet in any way. TBD
 
     DBRequest request[] = {
         { "planeconfig",       &planeconfig,       kString   },
@@ -70,6 +73,7 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
     err = LoadDB( file, date, request, fPrefix );
     fclose(file);
 
+    //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
     std::vector<std::string> planes = vsplit(planeconfig);
     if( planes.empty()) {
             Error("", "[SBSGEMStand::ReadDatabase] No planes defined");

@@ -31,7 +31,7 @@ R__LOAD_LIBRARY(libsbs.so)
 #include "SBSSimDecoder.h"
 #endif
 
-void replay_gmn_test(const char* filebase, uint nev = -1)
+void replay_gmn_test(const char* filebase, uint nev = -1, TString experiment="gmn")
 {
   SBSBigBite* bigbite = new SBSBigBite("bb", "BigBite spectrometer" );
   //bigbite->AddDetector( new SBSBBShower("ps", "BigBite preshower") );
