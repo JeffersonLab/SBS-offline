@@ -16,10 +16,33 @@ SBSSimEvent::SBSSimEvent() : g4sbs_tree()
 }
 */
 //_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent(TTree* tree) : g4sbs_tree(tree)
-{
+SBSSimEvent::SBSSimEvent(TTree* tree, TString experiment) {
   std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
+
+  fExperiment = experiment;
+
+  //Now we need to initialize the appropriate Tree structure based on experiment:
+  //We should probably use an enum or something simple to make this less clunky than doing a string comparison each time we open the file
+  //or load the event:
+  switch( fExperiment ){
+  case "genrp":
+    //do nothing for now; eventually we will allocate the genrp_tree and store the pointer in the data member of this class:
+    //Tgenrp = new genrp_tree_digitized(tree);
+    break;
+  case "gep":
+    //Tgep = new gep_tree_digitized(tree);
+    break;
+  case "sidis":
+    //Tsidis = new sidis_tree_digitized(tree);
+    break;
+  case "gmn":
+  case "gen":
+  default:
+    Tgmn = new gmn_tree_digitized(tree);
+    break;
+  }
+  
   //Weight = 1;
   Clear();
 }
@@ -43,16 +66,42 @@ void SBSSimEvent::Clear( const Option_t* opt )
 //_____________________________________________________________________________
 void SBSSimEvent::Print( const Option_t* opt ) const
 {
-  std::cout << RunID << " " << EvtID << " " << ev_sigma*ev_solang << std::endl;
+  //std::cout << RunID << " " << EvtID << " " << ev_sigma*ev_solang << std::endl;
 }
 
 //_____________________________________________________________________________
 Int_t SBSSimEvent::GetEntry( Long64_t entry )
 {
   EvtID = entry;
+
+  std::cout << "SBSSimEvent::GetEntry(" << entry << "): " << std::endl;
   // Read contents of entry.
   if (!fChain) return 0;
-  int ret = fChain->GetEntry(entry); 
+
+  fChain->Print();
+  
+  //int ret = fChain->GetEntry(entry);
+
+  int ret=-1;
+  
+  switch( fExperiment ){
+  case "genrp":
+    //do nothing for now; eventually we will invoke the "GetEntry" methods of the various classes:
+    //ret = Tgenrp->GetEntry(entry);
+    break;
+  case "gep":
+    //ret = Tgep->GetEntry(entry);
+    break;
+  case "sidis":
+    //ret = Tsidis->GetEntry(entry);
+    break;
+  case "gmn":
+  case "gen":
+  default:
+    ret = Tgmn->GetEntry(entry);
+    break;
+  }
+  
   //cout << Earm_BBPSTF1.nhits << " " << Earm_BBSHTF1.nhits << " " << Earm_BBHodoScint.nhits <<  " " << Earm_GRINCH.nhits << " " << Earm_BBGEM.nhits << " " << Harm_HCalScint.nhits << endl;
   return ret;
 }

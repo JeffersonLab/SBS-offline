@@ -41,8 +41,8 @@
 using namespace std;
 
 //-----------------------------------------------------------------------------
-SBSSimFile::SBSSimFile(const char* filename, const char* description) :
-  THaRunBase(description), fROOTFileName(filename), fROOTFile(0), fTree(0), 
+SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char* description) :
+  THaRunBase(description), fROOTFileName(filename), fExperiment(experiment), fROOTFile(0), fTree(0), 
   fEvent(0), fNEntries(0), fEntry(0), fVerbose(0)
 {
   // Constructor
@@ -71,6 +71,20 @@ SBSSimFile::SBSSimFile(const char* filename, const char* description) :
     }
   }
   */
+  fValidExperiments.insert("gmn");
+  fValidExperiments.insert("genrp");
+  fValidExperiments.insert("gep");
+  fValidExperiments.insert("sidis");
+
+  if( fValidExperiments.find( fExperiment ) == fValidExperiments.end() ){ //This is not a valid experiment. Default to gmn and print a warning:
+    TString fWarn;
+    fWarn.Form( "SBSSimFile(%s, %s, %s)", filename, experiment, description );
+    
+    Warning(Here(fWarn.Data()), "Invalid simulated experiment choice... defaulting to gmn");
+
+    fExperiment = "gmn";
+  }
+  
 }
 
 /*
@@ -201,7 +215,7 @@ Int_t SBSSimFile::Open()
   //fEvent is actually the tree!!!
   // and if it works it turns out to make the thing actually much simpler.
   delete fEvent; fEvent = 0;// really needed anymore ?
-  fEvent = new SBSSimEvent(fTree);
+  fEvent = new SBSSimEvent(fTree, fExperiment);
   //cout << fDetList.size() << endl;
   //fTree->Print();
   //fEvent = new SBSSimEvent(fTree, fDetList);
@@ -236,6 +250,7 @@ Int_t SBSSimFile::ReadEvent()
 
   Int_t ret;
   if( !IsOpen() ) {
+    std::cout << " Warning: file not open when ReadEvent() called... unintended consequences?" << std::endl;
     ret = Open();
     if( ret ) return ret;
   }
@@ -245,6 +260,9 @@ Int_t SBSSimFile::ReadEvent()
 
   // Read input file
   //ret = fTree->GetEntry(fEntry++);
+
+  std::cout << "trying to load event " << fEntry << std::endl;
+  
   ret = fEvent->GetEntry(fEntry++);
   if( ret == 0 )
     return EOF;
@@ -292,6 +310,8 @@ void SBSSimFile::Print( Option_t* opt ) const
     cout << "Initialized:           " << fIsInit << endl;
     cout << "Opened:                " << fOpened << endl;
   }
+
+  if( fVerbose > 3 && fTree ) fTree->Print();
 
 }
 

@@ -12,6 +12,7 @@ bb.gem.ft3.modules = m0 m1 m2
 bb.gem.bt0.modules = m0 m1 m2 m3
 
 ## Configure the planes in each module
+## This does not appear to do anything wrt the DBrequest in SBSGEMStand.cxx
 bb.gem.ft0.m0.planeconfig = x y
 bb.gem.ft0.m1.planeconfig = x y
 bb.gem.ft0.m2.planeconfig = x y
@@ -31,6 +32,7 @@ bb.gem.bt0.m3.planeconfig = x y
 
 ## It does something similar to the lines above that are used
 ## in the simulation
+## This is the relevant "planeconfig" line for SBS-offline:
 bb.gem.planeconfig =
   ft0.m0.x ft0.m0.y
   ft0.m1.x ft0.m1.y
