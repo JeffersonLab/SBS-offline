@@ -16,7 +16,8 @@ SBSSimEvent::SBSSimEvent() : g4sbs_tree()
 }
 */
 //_____________________________________________________________________________
-SBSSimEvent::SBSSimEvent(TTree* tree, TString experiment) {
+//SBSSimEvent::SBSSimEvent(TTree* tree, TString experiment) {
+SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
   std::cout << "Initializing SBSSimEvent" << std::endl;
   RunID = EvtID = 0;
 
@@ -26,18 +27,18 @@ SBSSimEvent::SBSSimEvent(TTree* tree, TString experiment) {
   //We should probably use an enum or something simple to make this less clunky than doing a string comparison each time we open the file
   //or load the event:
   switch( fExperiment ){
-  case "genrp":
+  case kGEnRP://"genrp":
     //do nothing for now; eventually we will allocate the genrp_tree and store the pointer in the data member of this class:
     //Tgenrp = new genrp_tree_digitized(tree);
     break;
-  case "gep":
+  case kGEp://"gep":
     //Tgep = new gep_tree_digitized(tree);
     break;
-  case "sidis":
+  case kSIDIS://"sidis":
     //Tsidis = new sidis_tree_digitized(tree);
     break;
-  case "gmn":
-  case "gen":
+  case kGMN://"gmn":
+    //case //"gen":
   default:
     Tgmn = new gmn_tree_digitized(tree);
     break;
@@ -76,27 +77,28 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
 
   std::cout << "SBSSimEvent::GetEntry(" << entry << "): " << std::endl;
   // Read contents of entry.
-  if (!fChain) return 0;
+  //if (!fChain) return 0;
 
-  fChain->Print();
+  //fChain->Print();
   
   //int ret = fChain->GetEntry(entry);
 
   int ret=-1;
+  //switch is not actually capable of taking strings... use a "enum"
   
   switch( fExperiment ){
-  case "genrp":
+  case kGEnRP://"genrp":
     //do nothing for now; eventually we will invoke the "GetEntry" methods of the various classes:
     //ret = Tgenrp->GetEntry(entry);
     break;
-  case "gep":
+  case kGEp://"gep":
     //ret = Tgep->GetEntry(entry);
     break;
-  case "sidis":
+  case kSIDIS://"sidis":
     //ret = Tsidis->GetEntry(entry);
     break;
-  case "gmn":
-  case "gen":
+  case kGMN://"gmn":
+    //case "gen":
   default:
     ret = Tgmn->GetEntry(entry);
     break;

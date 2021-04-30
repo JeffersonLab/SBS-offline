@@ -42,7 +42,8 @@ using namespace std;
 
 //-----------------------------------------------------------------------------
 SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char* description) :
-  THaRunBase(description), fROOTFileName(filename), fExperiment(experiment), fROOTFile(0), fTree(0), 
+  THaRunBase(description), fROOTFileName(filename), //fExperiment(experiment), 
+  fROOTFile(0), fTree(0), 
   fEvent(0), fNEntries(0), fEntry(0), fVerbose(0)
 {
   // Constructor
@@ -71,10 +72,29 @@ SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char*
     }
   }
   */
-  fValidExperiments.insert("gmn");
-  fValidExperiments.insert("genrp");
-  fValidExperiments.insert("gep");
-  fValidExperiments.insert("sidis");
+  
+  if(experiment=="gmn" || experiment=="gen"){
+    fExperiment = kGMN;
+  }
+  if(experiment=="genrp"){
+    fExperiment = kGEnRP;
+  }
+  if(experiment=="gep"){
+    fExperiment = kGEp;
+  }
+  if(experiment=="sidis"){
+    fExperiment = kSIDIS;
+  }
+  
+  // fValidExperiments.insert("gmn");
+  // fValidExperiments.insert("genrp");
+  // fValidExperiments.insert("gep");
+  // fValidExperiments.insert("sidis");
+  
+  fValidExperiments.insert(kGMN);
+  fValidExperiments.insert(kGEnRP);
+  fValidExperiments.insert(kGEp);
+  fValidExperiments.insert(kSIDIS);
 
   if( fValidExperiments.find( fExperiment ) == fValidExperiments.end() ){ //This is not a valid experiment. Default to gmn and print a warning:
     TString fWarn;
@@ -82,7 +102,7 @@ SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char*
     
     Warning(Here(fWarn.Data()), "Invalid simulated experiment choice... defaulting to gmn");
 
-    fExperiment = "gmn";
+    fExperiment = kGMN;//"gmn";
   }
   
 }

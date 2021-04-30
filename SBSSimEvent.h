@@ -6,13 +6,16 @@
 
 #include "gmn_tree_digitized.h"
 
+enum Exp_t    { kGEp, kGEnRP, kGMN, kSIDIS};
+
 class TTree;
 
 class SBSSimEvent {
  public:
   //SBSSimEvent(){};                 // Default constructor, for ROOT I/O
   //Now we want to initialize the ROOT tree the same way 
-  SBSSimEvent(TTree* tree, TString experiment="gmn");//, std::vector<TString> det_list);
+  //SBSSimEvent(TTree* tree, TString experiment="gmn");//, std::vector<TString> det_list);
+  SBSSimEvent(TTree* tree, Exp_t experiment=kGMN);//, std::vector<TString> det_list);
   
   virtual ~SBSSimEvent(){};
   
@@ -26,11 +29,16 @@ class SBSSimEvent {
   //AJRP: redesign for simplicity/portability/maintainability:
 
   //We probably don't actually need these getter and setter functions, but it doesn't hurt to have them.
-  void SetExperiment( TString expname ){ fExperiment = expname; }
-  TString GetExperiment() const { return fExperiment; }
+  //void SetExperiment( TString expname ){ fExperiment = expname; }
+  //TString GetExperiment() const { return fExperiment; }
   
-  TString fExperiment; //string that tells us which simulated experiment we are doing
-
+  //TString fExperiment; //string that tells us which simulated experiment we are doing
+  
+  void SetExperiment( Exp_t exp ){ fExperiment = exp; }
+  Exp_t GetExperiment() const { return fExperiment; }
+  
+  Exp_t fExperiment;
+  
   //Auto-generated ROOT Tree classes for each experiment ROOT tree; generated using TTree::MakeClass()
   
   //Later on, any time we want to analyze a g4sbs root file whose format has changed, we can just run TTree::MakeClass on that root file with the appropriate
