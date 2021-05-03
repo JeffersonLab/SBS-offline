@@ -207,13 +207,13 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     // the numbering of the blocks starts on the top left corner when standing
     // behind the detector and facing the target. We turn this into a row
     // and column, layer as appropriate.
-    Int_t nmodules = GetDetMap()->GetSize();
+    UInt_t nmodules = GetDetMap()->GetSize();
     assert( nmodules > 0 );
     fChanMap.resize(nmodules);
     Bool_t makeADC = true;
-    for( Int_t i = 0, k = 0; i < nmodules && !err; i++) {
+    for( UInt_t i = 0, k = 0; i < nmodules && !err; i++) {
       THaDetMap::Module *d = GetDetMap()->GetModule(i);
-      Int_t nchan = d->GetNchan();
+      UInt_t nchan = d->GetNchan();
       if( nchan > 0 ) {
         fChanMap[i].resize(nchan);
         // To simplify finding out which channels are ADCs and which are TDCs
@@ -224,7 +224,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
         } else {
           d->MakeTDC();
         }
-        for(Int_t chan = 0; chan < nchan; chan++) {
+        for(UInt_t chan = 0; chan < nchan; chan++) {
           assert( k < fNelem );
           fChanMap[i][chan] = chanmap.empty() ? k : chanmap[k] - fChanMapStart;
           k++;
@@ -440,15 +440,15 @@ Int_t SBSCalorimeter::Decode( const THaEvData& evdata )
 
   SBSCalorimeterBlock *blk = 0;
   // Loop over all modules in the calorimeter and decode accordingly
-  for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
+  for( UInt_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
     THaDetMap::Module *d = fDetMap->GetModule( imod );
 
-    for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
+    for(UInt_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       fNhits++;
 
       // Get the next available channel, skipping the ones that do not belong
       // to our detector
-      Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
+      UInt_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
       if( chan > d->hi || chan < d->lo ) continue;
 
       // Get the block index for this crate,slot,channel combo
@@ -467,7 +467,7 @@ Int_t SBSCalorimeter::Decode( const THaEvData& evdata )
 Int_t SBSCalorimeter::DecodeADC( const THaEvData& evdata,
     SBSCalorimeterBlock *blk, THaDetMap::Module *d, Int_t chan)
 {
-  Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
+  UInt_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   //std::cout << d->crate << " " << d->slot << " " << chan << std::endl;
   if(nhit <= 0 )
     return 0;
@@ -499,7 +499,7 @@ Int_t SBSCalorimeter::DecodeTDC( const THaEvData& evdata,
 
   // TODO: Again, no clue what to do for multiple hits
   // For now, just take the first one
-  Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
+  UInt_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   if(nhit > 0 ) {
     blk->TDC()->Process( evdata.GetData(d->crate, d->slot, chan, 0) );
   }

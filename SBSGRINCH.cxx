@@ -26,15 +26,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
-#if defined(HAS_SSTREAM) || (defined(__GNUC__)&&(__GNUC__ >= 3))
 #include <sstream>
-#define HAS_SSTREAM
-#define ISTR istringstream
-#else
-#include <strstream>
-#undef HAS_SSTREAM
-#define ISTR istrstream
-#endif
 #include "THaBenchmark.h"
 
 using namespace std;
@@ -346,7 +338,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   SBSGRINCH_Hit* theHit;
   
   bool edge;
-  short channel;
+  Int_t channel;
   ushort tdctime_raw;
   bool col0_ismaxsize = false;
   
@@ -360,7 +352,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   double ADC;
   
   if(fDebug)cout << fDetMap->GetSize() << endl;
-  for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
+  for( UInt_t i = 0; i < fDetMap->GetSize(); i++ ) {
     THaDetMap::Module* d = fDetMap->GetModule( i );
     
     if(fDebug)
@@ -374,12 +366,12 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	col_ismaxsize = false;
       }
       
-      Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+      UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
       
       if( chan > d->hi || chan < d->lo ) continue; // Not one of my channels
       
       // Get the data.
-      Int_t nhit = evdata.GetNumHits( d->crate, d->slot, chan );
+      UInt_t nhit = evdata.GetNumHits( d->crate, d->slot, chan );
       
       if( GetNumHits()+nhit > fMaxNumHits ) {
 	Warning("Decode", "Too many hits! Should never ever happen! "
@@ -393,7 +385,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
       if(fDebug)
 	cout << "chan " << chan << " nhits = " << nhit << endl;
       
-      for (int hit = 0; hit < nhit; hit++) {
+      for (UInt_t hit = 0; hit < nhit; hit++) {
 	
 	// Fill hit array
 	// UInt_t data = evdata.GetData(d->crate,d->slot,chan,hit);

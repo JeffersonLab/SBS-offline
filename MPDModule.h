@@ -42,10 +42,10 @@ namespace Decoder {
 
     /*
     using Module::GetData;
-    using Module::LoadSlot;
     */
+    using Module::LoadSlot;
 
-    virtual Int_t GetData(Int_t adc, Int_t sample, Int_t chan) const;
+    virtual UInt_t GetData( UInt_t adc, UInt_t sample, UInt_t chan) const;
     virtual void Init();
     virtual void Clear(const Option_t *opt);
     virtual Int_t Decode(const UInt_t *p); // { return 0; };
@@ -75,7 +75,7 @@ namespace Decoder {
     
 //#ifdef LIKEV792x
     // Loads slot data.  if you don't define this, the base class's method is used
-    virtual Int_t LoadSlot(THaSlotData *sldat,  const UInt_t *evbuffer, Int_t pos, Int_t len);
+    virtual UInt_t LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len);
 //#endif
 
   private:
@@ -109,7 +109,7 @@ namespace Decoder {
       return adc*fNumSample + sample;
     };
 
-    inline Int_t asc2i(Int_t adc, Int_t sample, Int_t chan) const {
+    inline UInt_t asc2i(UInt_t adc, UInt_t sample, UInt_t chan) const {
       return adc*fNumSample*fNumChan + sample*fNumChan + chan;
     };
     
