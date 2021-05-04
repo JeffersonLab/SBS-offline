@@ -2064,7 +2064,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 				Warning(Here(here),"%s",s.str().c_str());
 			}
 #endif//#if DEBUG_LEVEL>=2
-			data = 2^31 ;//new error value to 
+			data = (1LL << 31);//new error value to
 			return (0);//Jin Huang
 		} else {
 			if (nHits>1) {

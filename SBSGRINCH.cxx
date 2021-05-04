@@ -341,14 +341,14 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   Int_t channel;
   ushort tdctime_raw;
   bool col0_ismaxsize = false;
-  
-  if(fabs((-fPMTmatrixHext/2.0-fY_TCPMT)/fY_TCPMT)<1.0e-4)col0_ismaxsize = true;
-  bool col_ismaxsize;
+
+  if( fabs((-fPMTmatrixHext / 2.0 - fY_TCPMT) / fY_TCPMT) < 1.0e-4 )
+    col0_ismaxsize = true;
 
   //int gchannel;
   int row, col;
   double X, Y;
-  double TDC_r, TDC_f;
+  double TDC_r = kBig, TDC_f = kBig;
   double ADC;
   
   if(fDebug)cout << fDetMap->GetSize() << endl;
@@ -360,12 +360,8 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	   << " num chans " << evdata.GetNumChan(d->crate, d->slot) << endl;
     
     for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
-      if(col0_ismaxsize){
-	col_ismaxsize = true;
-      }else{
-	col_ismaxsize = false;
-      }
-      
+      bool col_ismaxsize = col0_ismaxsize;
+
       UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
       
       if( chan > d->hi || chan < d->lo ) continue; // Not one of my channels
