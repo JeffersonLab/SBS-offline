@@ -1731,13 +1731,13 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 	// and we need one line (=one module) per reference channel
 	// otherwise only the first will be used
 	Int_t i=0;
-	Int_t data;
-	while ((i < fDetMap->GetSize())&&(  i < GetNRefCh() )) {
+	UInt_t data;
+  while( (i < (Int_t)fDetMap->GetSize()) && (i < GetNRefCh()) ) {
 		THaDetMap::Module * d = fDetMap->GetModule(i);
 
 		// Get number of channels with hits
-		Int_t chan=d->lo;
-		Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+		UInt_t chan=d->lo;
+		UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
 #if DEBUG_THIS
 		cout << "Found " << nHits << "  hits in the reference channel for " << GetName()
@@ -1779,7 +1779,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 				Warning(Here(here),"%s",s.str().c_str());
 			}
 #endif//#if DEBUG_LEVEL>=2
-			data = 2^31 ;//new error value to 
+			data = (1LL << 31);//new error value to
 			return (0);//Jin Huang
 		} else {
 			if (nHits>1) {
@@ -1823,7 +1823,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 	// two ways to process the data -- one is good for densely packed data in only
 	// one module, the second better for more scattered out data
 
-	while (i < fDetMap->GetSize()){
+	while (i < (Int_t)fDetMap->GetSize()){
 		THaDetMap::Module * d = fDetMap->GetModule(i);
 		Bool_t isAdc=fDetMap->IsADC(d);
 
@@ -1848,7 +1848,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 			if (chan < d->lo || chan > d->hi) 
 				continue; //Not part of this detector
 #else         /* Better for sparse cabling */
-		for (Int_t chan=d->lo; chan<=d->hi; chan++) {
+		for (UInt_t chan=d->lo; chan<=d->hi; chan++) {
 #endif
 
 			DEBUG_MASSINFO(Here(here),
@@ -1857,7 +1857,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 			DEBUG_LINE_MASSINFO(evdata.PrintSlotData(d->crate, d->slot));
 
 			// Get number of hits for this channel and loop through hits
-			Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+			UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
 			if (nHits<=0) continue;
 #if DEBUG_THIS
@@ -1878,7 +1878,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 			// PMTNum is kind of artificial, since it comes from the 
 			// way the detector map is read in: so the first GetNbars are 
 			// left TDC channels, the next right TDC channels and so on
-			Int_t PMTNum  = d->first + chan - d->lo;
+			UInt_t PMTNum  = d->first + chan - d->lo;
 
 			// due to numbering, the first channels are timing reference channels,
 			// so remove them
@@ -1935,7 +1935,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 			for (Int_t hit = 0; hit < nHits; hit++) {
 				// Loop through all hits for this channel, and store the
 				// TDC/ADC  data for this hit
-				Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
+				UInt_t data = evdata.GetData(d->crate, d->slot, chan, hit);
 				if (isAdc) {  // it is an ADC module
 					if (isLeft) {              
 						new( (*fLaHits)[nextLaHit++] )  SBSAdcHit( pmt, data );

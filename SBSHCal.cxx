@@ -67,7 +67,7 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
 {
   Int_t err = SBSCalorimeter::Decode(evdata);
   if(fWithLED) {
-    Int_t ihit = evdata.GetNumChan(fLEDCrate,fLEDSlot);
+    UInt_t ihit = evdata.GetNumChan(fLEDCrate,fLEDSlot);
     if(ihit!=2 ) {
       //std::cerr << "ihit=" << ihit << std::endl;
       return 0;
