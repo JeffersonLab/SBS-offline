@@ -251,25 +251,23 @@ void    SBSGEMPlane::Clear( Option_t* opt){
 
 Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
   //std::cout << "[SBSGEMPlane::Decode " << fName << "]" << std::endl;
-    int i;
-    
     //#ifdef MCDATA
     if(fIsMC){
-      Int_t nmodules = fDetMap->GetSize();
+      UInt_t nmodules = fDetMap->GetSize();
       //std::cout << "nmodules " << nmodules << std::endl;
       int strip0 = 0;
       for( Int_t i = 0; i < nmodules; i++ ) {
 	THaDetMap::Module* d = fDetMap->GetModule( i );
 	//if(evdata.GetNumChan( d->crate, d->slot )>0)std::cout << fName << " " << d->crate << " " << d->slot << " " << evdata.GetNumChan( d->crate, d->slot ) << std::endl;
-	for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+	for( UInt_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
 	
-	  Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+    UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
 	  //std::cout << j << " chan " << chan << " first " << d->first << " lo " << d->lo << " hi " << d->hi << std::endl;
 	  if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
 	  int strip = strip0 + chan-d->lo;
 	  assert(strip<fNch);
 	
-	  Int_t nsamps = evdata.GetNumHits(d->crate, d->slot, chan);
+	  UInt_t nsamps = evdata.GetNumHits(d->crate, d->slot, chan);
 	  if(nsamps!=N_MPD_TIME_SAMP)continue;
 	  //std::cout << nsamps << std::endl;
 	  
@@ -299,26 +297,26 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
         Int_t effChan = it->mpd_id << 8 | it->adc_id;
         // Find channel for this crate/slot
 
-        Int_t nchan = evdata.GetNumChan( it->crate, it->slot );
+        UInt_t nchan = evdata.GetNumChan( it->crate, it->slot );
 
 	//        printf("nchan = %d\n", nchan );
 	//if(nchan)std::cout << GetName() << " " << it->crate << " " << it->slot << " " << nchan << std::endl;
 	  
 	
-        for( Int_t ichan = 0; ichan < nchan; ++ichan ) {
-	  Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
-	  if( chan != effChan ) continue; // not part of this detector
+        for( UInt_t ichan = 0; ichan < nchan; ++ichan ) {
+          UInt_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
+          if( chan != effChan ) continue; // not part of this detector
 
 
-	  Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
-	  assert(nsamp%N_MPD_TIME_SAMP==0);
-	  Int_t nstrips = nsamp/N_MPD_TIME_SAMP;
+          UInt_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
+          assert(nsamp%N_MPD_TIME_SAMP==0);
+          UInt_t nstrips = nsamp/N_MPD_TIME_SAMP;
 
 	  // Loop over all the strips and samples in the data
 	  Int_t isamp = 0;
-	  for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
+	  for( UInt_t istrip = 0; istrip < nstrips; ++istrip ) {
 	    assert(isamp<nsamp);
-	    Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, isamp);
+      UInt_t strip = evdata.GetRawData(it->crate, it->slot, chan, isamp);
 	    assert(strip>=0&&strip<128);
 	    // Madness....   copy pasted from stand alone decoder
 	    // I bet there's a more elegant way to express this
@@ -334,7 +332,7 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 	    fStrip[strip] = strip;
 	    fNchEff++;
 	    fStrip_.push_back(strip);
-	    for(Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++) {
+	    for(UInt_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++) {
 	      fadc[adc_samp][strip] =  evdata.GetData(it->crate, it->slot,
 						     chan, isamp++) - fPedestal[strip];
 

@@ -62,7 +62,7 @@ namespace Decoder {
   }
 
   
-  Int_t MPDModule::LoadSlot(THaSlotData *sldat, const UInt_t* evbuffer, Int_t pos, Int_t len) {
+  UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t* evbuffer, UInt_t pos, UInt_t len) {
       const UInt_t *p = &evbuffer[pos];
       //UInt_t data;
       fWordsSeen = 0;
@@ -78,10 +78,10 @@ namespace Decoder {
       UInt_t data_count = 0;
 
       //  v5 decoder (with SSP online zero suppression)
-      int ii,jj,kk,ll,mm; // loop indices: ii (event), jj(word), kk(mpd), mm (block)
-      int thesewords;
+      UInt_t ii,jj,kk,mm; // loop indices: ii (event), jj(word), kk(mpd), mm (block)
+      UInt_t thesewords;
       UInt_t hit[3] = {0};
-      int sample_dat[6] = {0}; // loadData in PODD/Analyzer uses int
+      UInt_t sample_dat[6] = {0U};
 
       jj =  0;
       while( jj < len ){
@@ -102,7 +102,7 @@ namespace Decoder {
           return -1;
         }
 
-        int nevent = (thesewords&0xFF);
+        UInt_t nevent = (thesewords&0xFF);
         // Ensure we have enough data
         // (need at least 4 per event: 1 event header + 2 trigger words +
         // 1 event trailer
@@ -478,10 +478,10 @@ namespace Decoder {
       return fWordsSeen;
   }
   
-  Int_t MPDModule::GetData(Int_t adc, Int_t sample, Int_t chan) const {
+  UInt_t MPDModule::GetData( UInt_t adc, UInt_t sample, UInt_t chan) const {
     printf("MPD GET DATA\n");
-    Int_t idx = asc2i(adc, sample, chan);
-    if ((idx < 0 ) || (idx >= fNumChan*fNumSample*fNumADC)) { return 0; }
+    UInt_t idx = asc2i(adc, sample, chan);
+    if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
     return fData[idx];
   }
   
