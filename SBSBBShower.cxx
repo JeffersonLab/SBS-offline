@@ -21,7 +21,7 @@ SBSBBShower::SBSBBShower( const char* name, const char* description,
   fSearchRegion(0), fSearchRowmin(0), fSearchRowmax(0), fSearchColmin(0),
   fSearchColmax(0)
 {
-  SetModeADC(SBSModeADC::kADC); //< Multi-function ADC
+  SetModeADC(SBSModeADC::kWaveform); //< Multi-function ADC
   SetModeTDC(SBSModeTDC::kNone); //< No TDC information
 }
 
@@ -30,9 +30,10 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 {
   cout << "******** Detector " << GetName() << " ReadDatabase ********" << endl;
   //static const char* const here = "ReadDatabase()";
-
+  SBSGenericDetector::SetDisableRefADC(kTRUE);
   // Call the parent class ReadDatabase first
   Int_t err = SBSCalorimeter::ReadDatabase(date);
+  std::cout << " return from SBSCal " << std::endl;
   if(err) {
     return err;
   }
@@ -43,13 +44,15 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   std::vector<Double_t> dxyz;
   // Readout components needed by BBShower
   DBRequest config_request[] = {
-    { "thr_adc",      &fThrADC,     kDouble,  0, 1 },
-    { "clus_rad",     &fClusRadius, kFloat,   0, 1 },
-    { "mc_data",      &fMCdata,     kInt,     0, 1 },// flag for MC data
+    { "thr_adc",      &fThrADC,     kDouble,  0, true },
+    { "clus_rad",     &fClusRadius, kFloat,   0, true },
+    { "mc_data",      &fMCdata,     kInt,     0, true },// flag for MC data
     { "dxdydz",         &dxyz,         kDoubleV, 3 },  // dx and dy block spacings
+    { 0 } ///< Request must end in a NULL
   };
-
+  std::cout << " loading DB  " << fPrefix << std::endl;
   err = LoadDB( file, date, config_request, fPrefix );
+  std::cout << " " << dxyz[0]<< " " << dxyz[1]<< " " << dxyz[2] << " " << std::endl;
   if(err) {
     return err;
   }
@@ -92,15 +95,34 @@ Int_t SBSBBShower::DefineVariables( EMode mode )
   return err;
 };
 
-
+//_____________________________________________________________________________
+Int_t SBSBBShower::FindGoodHit(SBSElement *blk) {
+  if (blk->ADC() && blk->HasData() ) {
+    //std::cout << " findGOOHIt Row = " << blk->GetRow() << " " << " " << blk->GetCol() << " " << std::endl;
+    // std::cout << " Num hits = " << blk->ADC()->GetNHits() << std::endl;
+    Int_t bnhits = blk->ADC()->GetNHits();
+    UInt_t GoodHitIndex = 999;
+    Float_t CentTime = 300. ;
+    Float_t WidthTime = 50. ;    
+    for (Int_t ih=0;ih<bnhits;ih++) {
+          const SBSData::PulseADCData &hit = blk->ADC()->GetHit(ih);
+	  //	  std::cout << "ih = "<< ih << " "  << abs(hit.time.val- CentTime) << " " << hit.time.val << std::endl;
+	  if ( abs(hit.time.val- CentTime) < WidthTime) GoodHitIndex=ih;
+    }
+    blk->ADC()->SetGoodHit(GoodHitIndex);
+  }
+  return 0;
+}
 //_____________________________________________________________________________
 Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks) 
 {
   // Someone already called us for this event
-  if(fCoarseProcessed)
-    return 0;
+  // std::cout << "BBshower  Coarse process = " << fCoarseProcessed << std::endl;
+  
+  if(fCoarseProcessed)    return 0;
 
   // Call the parent's parent class coarse process to start filling out output variables
+  //std::cout << "SBSGen  Coarse process " << std::endl;
   SBSGenericDetector::CoarseProcess(tracks);
   Int_t col, row;
   Double_t  energy_max = 0.0;
@@ -149,7 +171,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
       fNclus = fClusters.size();
     }
 
-    fCoarseProcessed = 1;
+     fCoarseProcessed = 1;
     return 0; 
   }
 
