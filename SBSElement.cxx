@@ -5,6 +5,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
+#include <iostream>
 #include "SBSElement.h"
 
 ClassImp(SBSElement);
@@ -81,7 +82,7 @@ void SBSElement::CoarseProcess()
   if(fWaveform) {
     // TODO: Implement the same logic as the FADC firmware logic.
     fE = fWaveform->GetIntegral().val;
-  } else if ( fADC) {
+  } else if ( fADC && fADC->HasData()) {
     // For ADCs with multiple hits, one should mark the "good" hit like so
     // with fADC->SetGoodHit( idx );
     // TODO: Find out how to determine the "good" hit. For now, take the first one.
