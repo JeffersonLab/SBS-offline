@@ -74,6 +74,9 @@ namespace SBSData {
       // Getters
       Float_t GetPed()                  const { return fADC.ped;            }
       Float_t GetGain()                 const { return fADC.cal;            }
+      Float_t GetTimeCal()                 const { return fADC.tcal; }
+      Float_t GetAmpCal()                  const { return fADC.acal; }
+      Float_t GetGoodHitIndex()            const { return fADC.good_hit; }
       PulseADCData GetHit(UInt_t i)     const { return fADC.hits[i];        }
       PulseADCData GetGoodHit()         const { return fADC.hits[fADC.good_hit]; }
       SingleData GetIntegral(UInt_t i)  const { return GetHit(i).integral;  }

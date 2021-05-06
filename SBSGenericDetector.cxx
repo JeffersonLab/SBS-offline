@@ -499,9 +499,11 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   // them here to preserve old analysis macros people may have written.
   // This includes things like fE, fNblk, fE_c, etc...
   RVarDef vars[] = {
+    { "nhits", "Nhits",  "fNhits" },
     { "row", "Row for block in data vectors",  "fGood.row" },
     { "col", "Col for block in data vectors",  "fGood.col" },
     { "layer", "Layer for block in data vectors",  "fGood.layer" },
+    { "ped", "Pedestal for block in data vectors",  "fGood.ped" },
     { 0 }
   };
 
@@ -515,8 +517,11 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   if(WithADC()) {
     // Register variables in global list
     ve.push_back( {"a","ADC integral", "fGood.a"} );
+    ve.push_back( {"a_p","ADC integral - ped", "fGood.a_p"} );
+    ve.push_back( {"a_c","(ADC integral - ped)*gain", "fGood.a_c"} );
     if(fModeADC != SBSModeADC::kADCSimple) {
       ve.push_back( {"a_amp","ADC pulse amplitude", "fGood.a_amp"} );
+      ve.push_back( {"a_amp_p","ADC pulse amplitude -ped", "fGood.a_amp_p"} );
       ve.push_back( {"a_time","ADC pulse time", "fGood.a_time"} );
     }
     if(fStoreRawHits) {
@@ -572,13 +577,13 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
     THaDetMap::Module *d = fDetMap->GetModule( imod );
 
     for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
-      fNhits++;
-
+ 
       // Get the next available channel, skipping the ones that do not belong
       // to our detector
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
       if( chan > d->hi || chan < d->lo || fChanMap[imod][chan - d->lo] == -1)
         continue;
+       fNhits++;
 
       // Get the block index for this crate,slot,channel combo
       blk = fElements[ fChanMap[imod][chan - d->lo] ];
@@ -597,7 +602,6 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     SBSElement *blk, THaDetMap::Module *d, Int_t chan)
 {
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
-  //std::cout << d->crate << " " << d->slot << " " << chan << std::endl;
   if(nhit <= 0  || !WithADC() || !blk)
     return 0;
 
@@ -618,10 +622,11 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
       Int_t lnhit = nhit/4; // Real number of hits
       for(Int_t ihit = 0; ihit < lnhit; ihit++) {
         integral = evdata.GetData(d->crate, d->slot, chan,           ihit);
-        time     = evdata.GetData(d->crate, d->slot, chan,   lnhit + ihit);
+        time     = 0.0625*evdata.GetData(d->crate, d->slot, chan,   lnhit + ihit);
         peak     = evdata.GetData(d->crate, d->slot, chan, 2*lnhit + ihit);
         pedestal = evdata.GetData(d->crate, d->slot, chan, 3*lnhit + ihit);
         blk->ADC()->Process(integral,time,peak,pedestal);
+	blk->ADC()->SetPed(pedestal);
       }
     }
   } else {
@@ -635,7 +640,6 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     blk->Waveform()->Process(samples);
     samples.clear();
   }
-
   return nhit;
 }
 
@@ -683,6 +687,19 @@ void SBSGenericDetector::ClearEvent()
   }
 }
 
+//_____________________________________________________________________________
+void SBSGenericDetector::Clear(Option_t* opt)
+{
+  // Call our version in case sub-classes have re-implemented it
+  SBSGenericDetector::ClearOutputVariables();
+  fNhits = 0;
+  fCoarseProcessed = 0;
+  fFineProcessed = 0;
+  for(size_t k = 0; k < fElements.size(); k++) {
+    fElements[k]->ClearEvent();
+  }
+}
+
 Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 {
   // Make sure we haven't already been called in this event
@@ -696,8 +713,8 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     blk = fElements[k];
     if(!blk)
       continue;
-
-    blk->CoarseProcess();
+ 
+     blk->CoarseProcess(); 
     // If the above did not define the good hit, the sub-class is expected
     // to use re-implement the following function to find the good hit.
     FindGoodHit(blk);
@@ -728,14 +745,21 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 
     if(WithADC()) {
       if(fModeADC != SBSModeADC::kWaveform) {
-        if(blk->ADC()->HasData()){
+        if(blk->ADC()->HasData() ){
+	  // std::cout << " goodhitindex = " << blk->ADC()->GetGoodHitIndex() << std::endl;
+	  if (blk->ADC()->GetGoodHitIndex() != 999) {
+          Float_t ped=blk->ADC()->GetPed();
+          fGood.ped.push_back(ped);
           const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
-          fGood.a.push_back(hit.integral.val);
+          fGood.a.push_back(hit.integral.raw);
+          fGood.a_p.push_back(hit.integral.val-ped*15);
+          fGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
-            fGood.a_amp.push_back(hit.amplitude.val);
+            fGood.a_amp.push_back(hit.amplitude.raw*2000./4096.);
+            fGood.a_amp_p.push_back((hit.amplitude.val-ped)*2000./4096.);
             fGood.a_time.push_back(hit.time.val);
           }
-
+	  }
           // Now store all the hits if specified the by user
           if(fStoreRawHits) {
             const std::vector<SBSData::PulseADCData> &hits = blk->ADC()->GetAllHits();
