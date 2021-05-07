@@ -37,7 +37,7 @@ class SBSGEMStand : public THaTrackingDetector {
 	bool fIsMC;
 	
         THaCrateMap *fCrateMap;
-        ClassDef(SBSGEMStand ,0)
+        ClassDef(SBSGEMStand ,0);
 };
 
 #endif
