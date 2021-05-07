@@ -109,7 +109,7 @@ Int_t SBSBBShower::FindGoodHit(SBSElement *blk) {
 	  //	  std::cout << "ih = "<< ih << " "  << abs(hit.time.val- CentTime) << " " << hit.time.val << std::endl;
 	  if ( abs(hit.time.val- CentTime) < WidthTime) GoodHitIndex=ih;
     }
-    blk->ADC()->SetGoodHit(GoodHitIndex);
+    blk->ADC()->SetGoodHit(0);
   }
   return 0;
 }
@@ -119,7 +119,7 @@ Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks)
   // Someone already called us for this event
   // std::cout << "BBshower  Coarse process = " << fCoarseProcessed << std::endl;
   
-  if(fCoarseProcessed)    return 0;
+  // if(fCoarseProcessed)    return 0;
 
   // Call the parent's parent class coarse process to start filling out output variables
   //std::cout << "SBSGen  Coarse process " << std::endl;
