@@ -31,6 +31,7 @@ namespace SBSData {
     SingleData t_time     = { time, time*fADC.tcal };
     SingleData t_amp     = { amp, amp*fADC.acal };
     fADC.hits.push_back({t_integral,t_time,t_amp } );
+    SetPed(ped);
     fHasData = true;
     fMode = SBS_ADC_MODE_MULTI; //< Mode gets set to multi if this function is called
   }
