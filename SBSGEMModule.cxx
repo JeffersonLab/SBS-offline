@@ -20,7 +20,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //Set default values for decode map parameters:
   fN_APV25_CHAN = 128;
   fN_MPD_TIME_SAMP = 6;
-  fMPDMAP_ROW_SIZE = 8;
+  fMPDMAP_ROW_SIZE = 9;
     
   // for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
   //     fadc[i] = NULL;
@@ -82,6 +82,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     thisdata.i2c    = fChanMapData[5+mapline*MPDMAP_ROW_SIZE];
     thisdata.pos    = fChanMapData[6+mapline*MPDMAP_ROW_SIZE];
     thisdata.invert = fChanMapData[7+mapline*MPDMAP_ROW_SIZE];
+    thisdata.axis   = fChanMapData[8+mapline*MPDMAP_ROW_SIZE];
     fMPDmap.push_back(thisdata);
   }
 

@@ -22,6 +22,7 @@ struct mpdmap_t {
   UInt_t i2c;
   UInt_t pos;
   UInt_t invert;
+  UInt_t axis; //needed to add axis to the decode map
 };
 
 //Clustering results can be held in a simple C struct, as a cluster is just a collection of basic data types (not even arrays):
@@ -144,7 +145,7 @@ class SBSGEMModule : public THaSubDetector {
 
   UChar_t fN_APV25_CHAN;     //number of APV25 channels, default 128
   UChar_t fN_MPD_TIME_SAMP;  //number of MPD time samples, default = 6
-  UShort_t fMPDMAP_ROW_SIZE; //MPDMAP_ROW_SIZE: default = 8, let's not hardcode
+  UShort_t fMPDMAP_ROW_SIZE; //MPDMAP_ROW_SIZE: default = 9, let's not hardcode
 
   UShort_t fNumberofChannelInFrame; //default 129
 	
