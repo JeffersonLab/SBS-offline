@@ -97,7 +97,8 @@ Int_t SBSBBShower::DefineVariables( EMode mode )
 
 //_____________________________________________________________________________
 Int_t SBSBBShower::FindGoodHit(SBSElement *blk) {
-  if (blk->ADC() && blk->HasData() ) {
+  Int_t GoodHit=0;
+  if (blk->ADC() && blk->HasData() && fModeADC != SBSModeADC::kWaveform) {
     //std::cout << " findGOOHIt Row = " << blk->GetRow() << " " << " " << blk->GetCol() << " " << std::endl;
     // std::cout << " Num hits = " << blk->ADC()->GetNHits() << std::endl;
     Int_t bnhits = blk->ADC()->GetNHits();
@@ -110,8 +111,14 @@ Int_t SBSBBShower::FindGoodHit(SBSElement *blk) {
 	  if ( abs(hit.time.val- CentTime) < WidthTime) GoodHitIndex=ih;
     }
     blk->ADC()->SetGoodHit(0);
+    GoodHit=1;
   }
-  return 0;
+  //  if (blk->ADC()&& fModeADC == SBSModeADC::kWaveform) {
+        SBSData::Waveform *wave = blk->Waveform();
+	if (wave->GetTime().val > 0) GoodHit=1;
+	//	std::cout << " findg = " << GoodHit << std::endl;
+	// }
+  return GoodHit;
 }
 //_____________________________________________________________________________
 Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks) 

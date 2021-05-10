@@ -63,11 +63,11 @@ void SBSElement::SetTDC(Float_t offset, Float_t cal)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create a multi-valued ADC data structure
-void SBSElement::SetWaveform(Float_t ped, Float_t gain)
+void SBSElement::SetWaveform(Float_t ped, Float_t gain, Float_t ChanToMv)
 {
   if(fWaveform)
     delete fWaveform;
-  fWaveform = new SBSData::Waveform(ped,gain);
+  fWaveform = new SBSData::Waveform(ped,gain,ChanToMv);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

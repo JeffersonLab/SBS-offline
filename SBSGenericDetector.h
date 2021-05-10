@@ -172,6 +172,7 @@ protected:
 
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
+  Int_t      fNGoodhits;     ///< Number of good hits in event
 
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
