@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Thu Apr 29 16:41:01 2021 by ROOT version 6.14/04
+// Thu May 13 08:26:25 2021 by ROOT version 6.14/04
 // from TTree T/Geant4 SBS Simulation
-// found on file: /volatile/halla/sbs/efuchey/digitized_files/simdigtest_2.root
+// found on file: simdigtest_2.root
 //////////////////////////////////////////////////////////
 
 #ifndef gmn_tree_digitized_h
@@ -57,10 +57,16 @@ public :
    Double_t        ev_phperp;
    Double_t        ev_phih;
    Double_t        ev_phiS;
+   Double_t        ev_thetaS;
    Double_t        ev_MX2;
    Double_t        ev_Sx;
    Double_t        ev_Sy;
    Double_t        ev_Sz;
+   Double_t        ev_s;
+   Double_t        ev_t;
+   Double_t        ev_u;
+   Double_t        ev_costhetaCM;
+   Double_t        ev_Egamma;
    Int_t           ev_nucl;
    Int_t           ev_fnucl;
    Int_t           ev_hadr;
@@ -370,41 +376,28 @@ public :
    std::vector<double>  *SDTrack_polz;
    std::vector<double>  *SDTrack_Etot;
    std::vector<double>  *SDTrack_T;
+   std::vector<double>  *SDTrack_vx;
+   std::vector<double>  *SDTrack_vy;
+   std::vector<double>  *SDTrack_vz;
+   std::vector<double>  *SDTrack_vnx;
+   std::vector<double>  *SDTrack_vny;
+   std::vector<double>  *SDTrack_vnz;
+   std::vector<double>  *SDTrack_vEkin;
    Int_t           Harm_HCal_dighit_nchan;
    std::vector<int>     *Harm_HCal_dighit_chan;
-   std::vector<int>     *Harm_HCal_dighit_adc_0;
-   std::vector<int>     *Harm_HCal_dighit_adc_1;
-   std::vector<int>     *Harm_HCal_dighit_adc_2;
-   std::vector<int>     *Harm_HCal_dighit_adc_3;
-   std::vector<int>     *Harm_HCal_dighit_adc_4;
-   std::vector<int>     *Harm_HCal_dighit_adc_5;
-   std::vector<int>     *Harm_HCal_dighit_adc_6;
-   std::vector<int>     *Harm_HCal_dighit_adc_7;
-   std::vector<int>     *Harm_HCal_dighit_adc_8;
-   std::vector<int>     *Harm_HCal_dighit_adc_9;
-   std::vector<int>     *Harm_HCal_dighit_adc_10;
-   std::vector<int>     *Harm_HCal_dighit_adc_11;
-   std::vector<int>     *Harm_HCal_dighit_adc_12;
-   std::vector<int>     *Harm_HCal_dighit_adc_13;
-   std::vector<int>     *Harm_HCal_dighit_adc_14;
-   std::vector<int>     *Harm_HCal_dighit_adc_15;
-   std::vector<int>     *Harm_HCal_dighit_adc_16;
-   std::vector<int>     *Harm_HCal_dighit_adc_17;
-   std::vector<int>     *Harm_HCal_dighit_adc_18;
-   std::vector<int>     *Harm_HCal_dighit_adc_19;
+   std::vector<int>     *Harm_HCal_dighit_adc;
+   std::vector<int>     *Harm_HCal_dighit_samp;
    std::vector<int>     *Harm_HCal_dighit_tdc;
    Int_t           Earm_BBPS_dighit_nchan;
    std::vector<int>     *Earm_BBPS_dighit_chan;
    std::vector<int>     *Earm_BBPS_dighit_adc;
+   std::vector<int>     *Earm_BBPS_dighit_samp;
    std::vector<int>     *Earm_BBPS_dighit_tdc;
-   std::vector<int>     *Earm_BBPS_dighit_amp;
-   std::vector<int>     *Earm_BBPS_dighit_ped;
    Int_t           Earm_BBSH_dighit_nchan;
    std::vector<int>     *Earm_BBSH_dighit_chan;
    std::vector<int>     *Earm_BBSH_dighit_adc;
+   std::vector<int>     *Earm_BBSH_dighit_samp;
    std::vector<int>     *Earm_BBSH_dighit_tdc;
-   std::vector<int>     *Earm_BBSH_dighit_amp;
-   std::vector<int>     *Earm_BBSH_dighit_ped;
    Int_t           Earm_GRINCH_dighit_nchan;
    std::vector<int>     *Earm_GRINCH_dighit_chan;
    std::vector<int>     *Earm_GRINCH_dighit_adc;
@@ -731,41 +724,28 @@ public :
    TBranch        *b_SDTrack_polz;   //!
    TBranch        *b_SDTrack_Etot;   //!
    TBranch        *b_SDTrack_T;   //!
+   TBranch        *b_SDTrack_vx;   //!
+   TBranch        *b_SDTrack_vy;   //!
+   TBranch        *b_SDTrack_vz;   //!
+   TBranch        *b_SDTrack_vnx;   //!
+   TBranch        *b_SDTrack_vny;   //!
+   TBranch        *b_SDTrack_vnz;   //!
+   TBranch        *b_SDTrack_vEkin;   //!
    TBranch        *b_Harm_HCal_dighit_nchan;   //!
    TBranch        *b_Harm_HCal_dighit_chan;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_0;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_1;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_2;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_3;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_4;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_5;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_6;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_7;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_8;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_9;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_10;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_11;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_12;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_13;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_14;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_15;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_16;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_17;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_18;   //!
-   TBranch        *b_Harm_HCal_dighit_adc_19;   //!
+   TBranch        *b_Harm_HCal_dighit_adc;   //!
+   TBranch        *b_Harm_HCal_dighit_samp;   //!
    TBranch        *b_Harm_HCal_dighit_tdc;   //!
    TBranch        *b_Earm_BBPS_dighit_nchan;   //!
    TBranch        *b_Earm_BBPS_dighit_chan;   //!
    TBranch        *b_Earm_BBPS_dighit_adc;   //!
+   TBranch        *b_Earm_BBPS_dighit_samp;   //!
    TBranch        *b_Earm_BBPS_dighit_tdc;   //!
-   TBranch        *b_Earm_BBPS_dighit_amp;   //!
-   TBranch        *b_Earm_BBPS_dighit_ped;   //!
    TBranch        *b_Earm_BBSH_dighit_nchan;   //!
    TBranch        *b_Earm_BBSH_dighit_chan;   //!
    TBranch        *b_Earm_BBSH_dighit_adc;   //!
+   TBranch        *b_Earm_BBSH_dighit_samp;   //!
    TBranch        *b_Earm_BBSH_dighit_tdc;   //!
-   TBranch        *b_Earm_BBSH_dighit_amp;   //!
-   TBranch        *b_Earm_BBSH_dighit_ped;   //!
    TBranch        *b_Earm_GRINCH_dighit_nchan;   //!
    TBranch        *b_Earm_GRINCH_dighit_chan;   //!
    TBranch        *b_Earm_GRINCH_dighit_adc;   //!
@@ -805,9 +785,9 @@ gmn_tree_digitized::gmn_tree_digitized(TTree *tree) : fChain(0)
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
    if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/volatile/halla/sbs/efuchey/digitized_files/simdigtest_2.root");
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("simdigtest_2.root");
       if (!f || !f->IsOpen()) {
-         f = new TFile("/volatile/halla/sbs/efuchey/digitized_files/simdigtest_2.root");
+         f = new TFile("simdigtest_2.root");
       }
       f->GetObject("T",tree);
 
@@ -1138,38 +1118,25 @@ void gmn_tree_digitized::Init(TTree *tree)
    SDTrack_polz = 0;
    SDTrack_Etot = 0;
    SDTrack_T = 0;
+   SDTrack_vx = 0;
+   SDTrack_vy = 0;
+   SDTrack_vz = 0;
+   SDTrack_vnx = 0;
+   SDTrack_vny = 0;
+   SDTrack_vnz = 0;
+   SDTrack_vEkin = 0;
    Harm_HCal_dighit_chan = 0;
-   Harm_HCal_dighit_adc_0 = 0;
-   Harm_HCal_dighit_adc_1 = 0;
-   Harm_HCal_dighit_adc_2 = 0;
-   Harm_HCal_dighit_adc_3 = 0;
-   Harm_HCal_dighit_adc_4 = 0;
-   Harm_HCal_dighit_adc_5 = 0;
-   Harm_HCal_dighit_adc_6 = 0;
-   Harm_HCal_dighit_adc_7 = 0;
-   Harm_HCal_dighit_adc_8 = 0;
-   Harm_HCal_dighit_adc_9 = 0;
-   Harm_HCal_dighit_adc_10 = 0;
-   Harm_HCal_dighit_adc_11 = 0;
-   Harm_HCal_dighit_adc_12 = 0;
-   Harm_HCal_dighit_adc_13 = 0;
-   Harm_HCal_dighit_adc_14 = 0;
-   Harm_HCal_dighit_adc_15 = 0;
-   Harm_HCal_dighit_adc_16 = 0;
-   Harm_HCal_dighit_adc_17 = 0;
-   Harm_HCal_dighit_adc_18 = 0;
-   Harm_HCal_dighit_adc_19 = 0;
+   Harm_HCal_dighit_adc = 0;
+   Harm_HCal_dighit_samp = 0;
    Harm_HCal_dighit_tdc = 0;
    Earm_BBPS_dighit_chan = 0;
    Earm_BBPS_dighit_adc = 0;
+   Earm_BBPS_dighit_samp = 0;
    Earm_BBPS_dighit_tdc = 0;
-   Earm_BBPS_dighit_amp = 0;
-   Earm_BBPS_dighit_ped = 0;
    Earm_BBSH_dighit_chan = 0;
    Earm_BBSH_dighit_adc = 0;
+   Earm_BBSH_dighit_samp = 0;
    Earm_BBSH_dighit_tdc = 0;
-   Earm_BBSH_dighit_amp = 0;
-   Earm_BBSH_dighit_ped = 0;
    Earm_GRINCH_dighit_chan = 0;
    Earm_GRINCH_dighit_adc = 0;
    Earm_GRINCH_dighit_tdc_l = 0;
@@ -1497,41 +1464,28 @@ void gmn_tree_digitized::Init(TTree *tree)
    fChain->SetBranchAddress("SDTrack.polz", &SDTrack_polz, &b_SDTrack_polz);
    fChain->SetBranchAddress("SDTrack.Etot", &SDTrack_Etot, &b_SDTrack_Etot);
    fChain->SetBranchAddress("SDTrack.T", &SDTrack_T, &b_SDTrack_T);
+   fChain->SetBranchAddress("SDTrack.vx", &SDTrack_vx, &b_SDTrack_vx);
+   fChain->SetBranchAddress("SDTrack.vy", &SDTrack_vy, &b_SDTrack_vy);
+   fChain->SetBranchAddress("SDTrack.vz", &SDTrack_vz, &b_SDTrack_vz);
+   fChain->SetBranchAddress("SDTrack.vnx", &SDTrack_vnx, &b_SDTrack_vnx);
+   fChain->SetBranchAddress("SDTrack.vny", &SDTrack_vny, &b_SDTrack_vny);
+   fChain->SetBranchAddress("SDTrack.vnz", &SDTrack_vnz, &b_SDTrack_vnz);
+   fChain->SetBranchAddress("SDTrack.vEkin", &SDTrack_vEkin, &b_SDTrack_vEkin);
    fChain->SetBranchAddress("Harm.HCal.dighit.nchan", &Harm_HCal_dighit_nchan, &b_Harm_HCal_dighit_nchan);
    fChain->SetBranchAddress("Harm.HCal.dighit.chan", &Harm_HCal_dighit_chan, &b_Harm_HCal_dighit_chan);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_0", &Harm_HCal_dighit_adc_0, &b_Harm_HCal_dighit_adc_0);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_1", &Harm_HCal_dighit_adc_1, &b_Harm_HCal_dighit_adc_1);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_2", &Harm_HCal_dighit_adc_2, &b_Harm_HCal_dighit_adc_2);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_3", &Harm_HCal_dighit_adc_3, &b_Harm_HCal_dighit_adc_3);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_4", &Harm_HCal_dighit_adc_4, &b_Harm_HCal_dighit_adc_4);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_5", &Harm_HCal_dighit_adc_5, &b_Harm_HCal_dighit_adc_5);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_6", &Harm_HCal_dighit_adc_6, &b_Harm_HCal_dighit_adc_6);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_7", &Harm_HCal_dighit_adc_7, &b_Harm_HCal_dighit_adc_7);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_8", &Harm_HCal_dighit_adc_8, &b_Harm_HCal_dighit_adc_8);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_9", &Harm_HCal_dighit_adc_9, &b_Harm_HCal_dighit_adc_9);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_10", &Harm_HCal_dighit_adc_10, &b_Harm_HCal_dighit_adc_10);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_11", &Harm_HCal_dighit_adc_11, &b_Harm_HCal_dighit_adc_11);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_12", &Harm_HCal_dighit_adc_12, &b_Harm_HCal_dighit_adc_12);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_13", &Harm_HCal_dighit_adc_13, &b_Harm_HCal_dighit_adc_13);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_14", &Harm_HCal_dighit_adc_14, &b_Harm_HCal_dighit_adc_14);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_15", &Harm_HCal_dighit_adc_15, &b_Harm_HCal_dighit_adc_15);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_16", &Harm_HCal_dighit_adc_16, &b_Harm_HCal_dighit_adc_16);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_17", &Harm_HCal_dighit_adc_17, &b_Harm_HCal_dighit_adc_17);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_18", &Harm_HCal_dighit_adc_18, &b_Harm_HCal_dighit_adc_18);
-   fChain->SetBranchAddress("Harm.HCal.dighit.adc_19", &Harm_HCal_dighit_adc_19, &b_Harm_HCal_dighit_adc_19);
+   fChain->SetBranchAddress("Harm.HCal.dighit.adc", &Harm_HCal_dighit_adc, &b_Harm_HCal_dighit_adc);
+   fChain->SetBranchAddress("Harm.HCal.dighit.samp", &Harm_HCal_dighit_samp, &b_Harm_HCal_dighit_samp);
    fChain->SetBranchAddress("Harm.HCal.dighit.tdc", &Harm_HCal_dighit_tdc, &b_Harm_HCal_dighit_tdc);
    fChain->SetBranchAddress("Earm.BBPS.dighit.nchan", &Earm_BBPS_dighit_nchan, &b_Earm_BBPS_dighit_nchan);
    fChain->SetBranchAddress("Earm.BBPS.dighit.chan", &Earm_BBPS_dighit_chan, &b_Earm_BBPS_dighit_chan);
    fChain->SetBranchAddress("Earm.BBPS.dighit.adc", &Earm_BBPS_dighit_adc, &b_Earm_BBPS_dighit_adc);
+   fChain->SetBranchAddress("Earm.BBPS.dighit.samp", &Earm_BBPS_dighit_samp, &b_Earm_BBPS_dighit_samp);
    fChain->SetBranchAddress("Earm.BBPS.dighit.tdc", &Earm_BBPS_dighit_tdc, &b_Earm_BBPS_dighit_tdc);
-   fChain->SetBranchAddress("Earm.BBPS.dighit.amp", &Earm_BBPS_dighit_amp, &b_Earm_BBPS_dighit_amp);
-   fChain->SetBranchAddress("Earm.BBPS.dighit.ped", &Earm_BBPS_dighit_ped, &b_Earm_BBPS_dighit_ped);
    fChain->SetBranchAddress("Earm.BBSH.dighit.nchan", &Earm_BBSH_dighit_nchan, &b_Earm_BBSH_dighit_nchan);
    fChain->SetBranchAddress("Earm.BBSH.dighit.chan", &Earm_BBSH_dighit_chan, &b_Earm_BBSH_dighit_chan);
    fChain->SetBranchAddress("Earm.BBSH.dighit.adc", &Earm_BBSH_dighit_adc, &b_Earm_BBSH_dighit_adc);
+   fChain->SetBranchAddress("Earm.BBSH.dighit.samp", &Earm_BBSH_dighit_samp, &b_Earm_BBSH_dighit_samp);
    fChain->SetBranchAddress("Earm.BBSH.dighit.tdc", &Earm_BBSH_dighit_tdc, &b_Earm_BBSH_dighit_tdc);
-   fChain->SetBranchAddress("Earm.BBSH.dighit.amp", &Earm_BBSH_dighit_amp, &b_Earm_BBSH_dighit_amp);
-   fChain->SetBranchAddress("Earm.BBSH.dighit.ped", &Earm_BBSH_dighit_ped, &b_Earm_BBSH_dighit_ped);
    fChain->SetBranchAddress("Earm.GRINCH.dighit.nchan", &Earm_GRINCH_dighit_nchan, &b_Earm_GRINCH_dighit_nchan);
    fChain->SetBranchAddress("Earm.GRINCH.dighit.chan", &Earm_GRINCH_dighit_chan, &b_Earm_GRINCH_dighit_chan);
    fChain->SetBranchAddress("Earm.GRINCH.dighit.adc", &Earm_GRINCH_dighit_adc, &b_Earm_GRINCH_dighit_adc);
