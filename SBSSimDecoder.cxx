@@ -370,7 +370,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     samps.clear();
         
     for(int j = 0; j<simev->Tgmn->Earm_BBSH_dighit_nchan; j++){
-      lchan = simev->Tgmn->Earm_BBPS_dighit_chan->at(j);
+      lchan = simev->Tgmn->Earm_BBSH_dighit_chan->at(j);
       if(cur_chan!=lchan){
 	//ADC
 	ChanToROC(detname, lchan, crate, slot, chan);
@@ -389,12 +389,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	samps.clear();
 	cur_chan = lchan;
 	
-	if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)>=0){
-	  samps.push_back(simev->Tgmn->Earm_BBPS_dighit_adc->at(j));
+	if(simev->Tgmn->Earm_BBSH_dighit_samp->at(j)>=0){
+	  samps.push_back(simev->Tgmn->Earm_BBSH_dighit_adc->at(j));
 	}
       }else{
-	if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)>=0){
-	  samps.push_back(simev->Tgmn->Earm_BBPS_dighit_adc->at(j));
+	if(simev->Tgmn->Earm_BBSH_dighit_samp->at(j)>=0){
+	  samps.push_back(simev->Tgmn->Earm_BBSH_dighit_adc->at(j));
 	}
       }
       /*
