@@ -44,7 +44,8 @@
 #pragma link C++ class SBSSimFile+;
 #pragma link C++ class SBSSimEvent+;
 #pragma link C++ class SBSSimDecoder+;
-#pragma link C++ class g4sbs_tree+;
+#pragma link C++ class gmn_tree_digitized+;
+//#pragma link C++ class g4sbs_tree+;
 //#pragma link C++ class Decoder::SBSSimMPD+;
 //#pragma link C++ class gmn_dig_tree+;
 //#pragma link C++ class VDetData_t+;

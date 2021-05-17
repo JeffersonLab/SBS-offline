@@ -63,8 +63,10 @@ set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
   SBSCalorimeterCluster.cxx SBSSimDataDecoder.cxx 
   SBSSimDecoder.cxx SBSSimADC.cxx SBSSimTDC.cxx
   SBSSimFile.cxx SBSSimEvent.cxx
-  g4sbs_data.cxx g4sbs_tree.cxx
+  gmn_tree_digitized.cxx
   )
+#gmn_tree_digitized.C
+#g4sbs_data.cxx g4sbs_tree.cxx
 #gmn_dig_tree.cxx  SBSSimMPD.cxx 
 
 ## Make corresponding header files
