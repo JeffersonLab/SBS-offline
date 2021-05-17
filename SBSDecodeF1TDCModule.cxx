@@ -104,7 +104,7 @@ void SBSDecodeF1TDCModule::Clear(const Option_t* opt) {
   for(Int_t i=0; i<fNumHits.size(); i++) fNumHits[i]=0;
 }
 
-Int_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer, Int_t pos, Int_t len) {
+UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer, Int_t pos, Int_t len) {
 // the 4-arg version of LoadSlot.  Let it call the 3-arg version.
 // I'm not sure we need both (historical)
 
@@ -112,7 +112,7 @@ Int_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
 
   }
 
-Int_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer, const UInt_t *pstop) {
+UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer, const UInt_t *pstop) {
 // This is the 3-arg version of LoadSlot
 // Note, this increments evbuffer
   if (fDebugFile) *fDebugFile << "SBSDecodeF1TDCModule:: loadslot "<<endl;

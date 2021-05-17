@@ -88,7 +88,7 @@ namespace Decoder {
   void SBSSimTDC::CheckDecoderStatus() const {
   }
 
-  Int_t SBSSimTDC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
+  UInt_t SBSSimTDC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
       const UInt_t *pstop) {
     Clear();
     unsigned int nwords = 0;
@@ -134,7 +134,7 @@ namespace Decoder {
    return 0;
   }
 
-  Int_t SBSSimTDC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
+  UInt_t SBSSimTDC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
       Int_t pos, Int_t len) {
     return LoadSlot(sldat,evbuffer+pos,evbuffer+pos+len);
     //return SBSSimTDC::LoadSlot(sldat,evbuffer,len);
