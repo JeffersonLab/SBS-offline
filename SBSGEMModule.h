@@ -82,7 +82,7 @@ struct sbsgemcluster_t {  //1D clusters;
   Double_t coordmean;  //ADC-weighted mean coordinate along the direction measured by the strip
   Double_t coordsigma; //ADC-weighted RMS coordinate deviation from the mean along the direction measured by the strip
   Double_t clusterADCsum; //Sum of ADCs over all samples on all strips
-  std::vector<double> stripADCsum; //Sum of individual strip ADCs over all samples on all strips
+  std::vector<double> stripADCsum; //Sum of individual strip ADCs over all samples on all strips; accounting for split fraction
   Double_t tmean; //reconstructed hit time
   //Double_t tsigma; unclear what we might use this for
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
@@ -123,6 +123,11 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
+  void find_clusters_1D(bool axis); //Assuming decode has already been called:
+  void find_2Dhits();
+  
+  bool fIsDecoded;
+  
  private:
 
   //Decode map information: 
@@ -148,7 +153,10 @@ class SBSGEMModule : public THaSubDetector {
   UShort_t fMPDMAP_ROW_SIZE; //MPDMAP_ROW_SIZE: default = 9, let's not hardcode
 
   UShort_t fNumberofChannelInFrame; //default 129
-	
+
+  //utility methods to avoid code duplication:
+  
+  
   //BASIC DECODED STRIP HIT INFO:
   //By the time the information is populated here, the ADC values are already assumed to be pedestal/common-mode subtracted and/or zero-suppressed as appropriate:
   UInt_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
@@ -156,8 +164,15 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UShort_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
   std::vector<Bool_t>  fAxis;    //The use of Bool_t here reflects the (probably safe) assumption that there will never be more than 2 strip orientations present in one GEM module. 
   std::vector<std::vector<Int_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
+  std::vector<Double_t> fADCsums;
+  std::vector<bool> fKeepStrip; //keep this strip?
+  std::vector<UShort_t> fMaxSamp; //APV25 time sample with maximum ADC;
+  std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
+  std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
+  std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
+  std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
 
-  //Basic decoded strip info (analogous to "moduledata_t" structure from standalone code) for input to clustering algorithm:
+  //Basic decoded strip info (analogous to "moduledata_t" structure from standalone code) for input to clustering algorithm: these might be unnecessary
   std::set<Int_t> fUstripList;  //List of unique "U" strips fired;
   std::set<Int_t> fVstripList;  //List of unique "V" strips fired;
   std::map<Int_t, Float_t> fADCsum_Ustrips; //Key = U strip index, value = sum of all ADC samples

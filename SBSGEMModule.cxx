@@ -167,6 +167,8 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
 
 void    SBSGEMModule::Clear( Option_t* opt){
   fNch = 0;
+  fIsDecoded = false;
+  
   return;
 }
 
@@ -233,7 +235,183 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
   //    std::cout << fName << " channels found  " << fNch << std::endl;
 
+  fIsDecoded = true;
+  
   return 0;
+}
+
+void SBSGEMModule::find_2Dhits(){
+  find_clusters(false); //u strips
+  find_clusters(true); //v strips
+}
+
+void SBSGEMModule::find_clusters_1D(bool axis){
+  
+  if( !fIsDecoded ){
+    cout << "find_clusters invoked before decoding for GEM Module " << GetName() << ", doing nothing" << endl;
+    return;
+  }
+
+  UShort_t maxsep = axis ? fMaxNeighborsV_totalcharge : fMaxNeighborsU_totalcharge;
+  UShort_t maxsepcoord = axis ? fMaxNeighborsV_hitpos : fMaxNeighborsU_hitpos; 
+
+  UInt_t Nstrips = axis ? fNstripsV : fNstripsU;
+  
+  Double_t pitch = axis ? fVStripPitch : fUStripPitch;
+  
+  std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
+  std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently:
+  
+  for( int ihit=0; ihit<fNstrips_hit; ihit++ ){
+    if( fAxis[ihit] == axis && fKeepStrip[ihit] ){
+      bool newstrip = (striplist.insert( fStrip[ihit] ) ).second;
+
+      if( newstrip ){ //should always be true:
+	hitindex[fStrip[ihit]] = ihit;
+      }
+    }
+  }
+
+  std::set<UShort_t> localmaxima;
+  std::map<UShort_t,bool> islocalmax;
+
+  for( std::set<UShort_t>::iterator i=striplist.begin(); i != striplist.end(); ++i ){
+    int strip = *i;
+    //int hitidx = hitindex[strip];
+    islocalmax[strip] = false;
+
+    double sumstrip = fADCsums[hitindex[strip]];
+    double sumleft = 0.0;
+    double sumright = 0.0;
+
+    if( striplist.find( strip - 1 ) != striplist.end() ){
+      sumleft = fADCsums[hitindex[strip-1]]; //if strip - 1 is found in strip list, hitindex is guaranteed to have been initialized above
+    }
+    if( striplist.find( strip + 1 ) != striplist.end() ){
+      sumright = fADCsums[hitindex[strip+1]];
+    }
+
+    if( sumstrip >= sumleft && sumstrip >= sumright ){ //new local max:
+      islocalmax[strip] = true;
+      localmaxima.insert( strip );
+    } 
+  } // end loop over list of strips along this axis:
+
+  vector<int> peakstoerase; 
+
+  //now calculate "prominence" for all peaks and erase "insignificant" peaks:
+
+  for( std::set<int>::iterator i=localmaxima.begin(); i != localmaxima.end(); ++i ){
+    int stripmax = *i;
+
+    double ADCmax = fADCsums[hitindex[stripmax]];
+    double prominence = ADCmax;
+
+    int striplo = stripmax, striphi = stripmax;
+    double ADCminright=ADCmax, ADCminleft=ADCmax;
+
+    bool higherpeakright=false,higherpeakleft=false;
+    int peakright = -1, peakleft = -1;
+
+    while( striplist.find( striphi+1 ) != striplist.end() ){
+      striphi++;
+
+      Double_t ADCtest = fADCsums[hitindex[striphi]];
+      
+      if( ADCtest < ADCminright && !higherpeakright ){ //as long as we haven't yet found a higher peak to the right, this is the lowest point between the current maximum and the next higher peak to the right:
+	ADCminright = ADCtest;
+      }
+
+      if( islocalmax[striphi] && ADCtest > ADCmax ){ //then this peak is in a contiguous group with another higher peak to the right:
+	higherpeakright = true;
+	peakright = striphi;
+      }
+    }
+
+    while( striplist.find(striplo-1) != striplist.end() ){
+      striplo--;
+      Double_t ADCtest = fADCsums[hitindex[striplo]];
+      if( ADCtest < ADCminleft && !higherpeakleft ){ //as long as we haven't yet found a higher peak to the left, this is the lowest point between the current maximum and the next higher peak to the left:
+	ADCminleft = ADCtest;
+      }
+
+      if( islocalmax[striplo] && ADCtest > ADCmax ){ //then this peak is in a contiguous group with another higher peak to the left:
+	higherpeakleft = true;
+	peakleft = striplo;
+      }
+    }
+
+    double sigma_sum = sqrt( double(fN_MPD_TIME_SAMP) )*fZeroSuppressRMS; //~25-50 ADC
+
+    bool peak_close = false;
+    if( !higherpeakleft ) ADCminleft = 0.0;
+    if( !higherpeakright ) ADCminright = 0.0;
+
+    if( higherpeakright || higherpeakleft ){ //this peak is contiguous with higher peaks on either the left or right or both:
+      prominence = ADCmax - std::max( ADCminleft, ADCminright );
+
+      if( higherpeakleft && std::abs( peakleft - stripmax ) <= 2*maxsep ) peak_close = true;
+      if( higherpeakright && std::abs( peakright - stripmax ) <= 2*maxsep ) peak_close = true;
+
+      if( peak_close && (prominence < fThreshold_2ndMax_nsigma * sigma_sum ||
+			 prominance/ADCmax < fThresh_2ndMax_fraction ) ){
+	peakstoerase.push_back( stripmax );
+      }
+    }
+  }
+
+  //Erase "insignificant" peaks (those in contiguous grouping with higher peak with prominence below thresholds):
+  for( int ipeak=0; ipeak<peakstoerase.size(); ipeak++ ){
+    localmaxima.erase( peakstoerase[ipeak] );
+    islocalmax[peakstoerase[ipeak]] = false;
+  }
+
+  //Cluster formation and cluster splitting from remaining local maxima:
+  for( std::set<int>::iterator i = localmax.begin(); i != localmax.end(); ++i ){
+    int stripmax = *i;
+    int striplo = stripmax;
+    int striphi = stripmax;
+    double ADCmax = fADCsums[hitindex[stripmax]];
+
+    while( striplist.find( striplo-1 ) != striplist.end() &&
+	   stripmax - striplo < maxsep ){
+      striplo--;
+    }
+
+    while( striplist.find( striphi+1 ) != striplist.end() &&
+	   striphi - stripmax < maxsep ){
+      striphi++;
+    }
+
+    int nstrips = striphi-striplo+1;
+
+    double sumx = 0.0, sumx2 = 0.0, sumADC = 0.0, sumt = 0.0, sumt2 = 0.0;
+    double sumwx = 0.0;
+
+    map<int,double> splitfraction;
+    vector<double> stripADCsum(nstrips);
+
+    for( int istrip=striplo; istrip<=striphi; istrip++ ){
+      int nmax_strip = 1;
+      double sumweight = ADCmax/(1.0 + pow( (stripmax-istrip)*pitch/fSigma_hitshape, 2 ) );
+      double maxweight = sumweight;
+      for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
+	if( localmaxima.find( jstrip ) != localmaxima.end() && jstrip != stripmax ){
+	  sumweight += fADCsums[hitindex[jstrip]]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) );
+	}
+      }
+   
+      splitfraction[istrip] = maxweight/sumweight;
+
+      double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch; //local hit position along direction measured by these strips
+      double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
+      double tstrip = fTmean[hitindex[istrip]];
+
+      
+      
+    
+  }
+  
 }
 
 void    SBSGEMModule::Print( Option_t* opt) const{
