@@ -240,12 +240,65 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   return 0;
 }
 
-void SBSGEMModule::find_2Dhits(){
-  find_clusters(false); //u strips
-  find_clusters(true); //v strips
+void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster finding with default (wide-open) track search constraints
+  //these functions will fill the 1D cluster arrays:
+  find_clusters_1D(false); //u strips
+  find_clusters_1D(true); //v strips
+
+  //Now make 2D clusters:
+
+  fill_2D_hit_arrays();
+  
 }
 
-void SBSGEMModule::find_clusters_1D(bool axis){
+void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_width ){
+  //constraint center and constraint width are assumed given in meters in "local" x,y coordinates.
+
+  double ucenter = constraint_center.X() * fPxU + constraint_center.Y() * fPyU;
+  double vcenter = constraint_center.X() * fPxV + constraint_center.Y() * fPyV;
+
+  //To determine the constraint width along u/v, we need to transform the X/Y constraint widths, which define a rectangular region,
+  //into U and V
+
+  double umin,umax,vmin,vmax;
+
+  double xmin = constraint_center.X() - constraint_width.X();
+  double xmax = constraint_center.X() + constraint_width.X();
+  double ymin = constraint_center.Y() - constraint_width.Y();
+  double ymax = constraint_center.Y() + constraint_width.Y();
+
+  //check the four corners of the rectangle:
+
+  double u00 = xmin * fPxU + ymin * fPyU;
+  double u01 = xmin * fPxU + ymax * fPyU;
+  double u10 = xmax * fPxU + ymin * fPyU;
+  double u11 = xmax * fPxU + ymax * fPyU;
+
+  //this is some elegant-looking (compact) code, but perhaps algorithmically clunky:
+  umin = std::min( u00, std::min(u01, std::min(u10, u11) ) );
+  umax = std::max( u00, std::max(u01, std::max(u10, u11) ) );
+
+  double v00 = xmin * fPxV + ymin * fPyV;
+  double v01 = xmin * fPxV + ymax * fPyV;
+  double v10 = xmax * fPxV + ymin * fPyV;
+  double v11 = xmax * fPxV + ymax * fPyV;
+  
+  vmin = std::min( v00, std::min(v01, std::min(v10, v11) ) );
+  vmax = std::max( v00, std::max(v01, std::max(v10, v11) ) );
+
+  //The following routines will loop on all the strips and populate the 1D "cluster list" (vector<sbsgemcluster_t> )
+  find_clusters_1D(false, ucenter, (umax-umin)/2.0 ); //U clusters
+  find_clusters_1D(true, vcenter, (vmax-vmin)/2.0 );  //V clusters
+
+  //Now make 2D clusters
+  
+  fill_2D_hit_arrays();
+}
+
+void SBSGEMModule::find_clusters_1D( bool axis, Double_t constraint_center, Double_t constraint_width ){
+
+  //Constraint center and constraint width are assumed to be given in "standard" Hall A units (meters) in module-local coordinates
+  //This method will generally only be called by the reconstruction methods of SBSGEMTrackerBase
   
   if( !fIsDecoded ){
     cout << "find_clusters invoked before decoding for GEM Module " << GetName() << ", doing nothing" << endl;
@@ -261,9 +314,10 @@ void SBSGEMModule::find_clusters_1D(bool axis){
   
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
   std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently:
-  
+
   for( int ihit=0; ihit<fNstrips_hit; ihit++ ){
     if( fAxis[ihit] == axis && fKeepStrip[ihit] ){
+      
       bool newstrip = (striplist.insert( fStrip[ihit] ) ).second;
 
       if( newstrip ){ //should always be true:
@@ -274,7 +328,9 @@ void SBSGEMModule::find_clusters_1D(bool axis){
 
   std::set<UShort_t> localmaxima;
   std::map<UShort_t,bool> islocalmax;
-
+  //std::map<UShort_t,bool> passed_constraint;
+  
+  
   for( std::set<UShort_t>::iterator i=striplist.begin(); i != striplist.end(); ++i ){
     int strip = *i;
     //int hitidx = hitindex[strip];
@@ -284,6 +340,7 @@ void SBSGEMModule::find_clusters_1D(bool axis){
     double sumleft = 0.0;
     double sumright = 0.0;
 
+    
     if( striplist.find( strip - 1 ) != striplist.end() ){
       sumleft = fADCsums[hitindex[strip-1]]; //if strip - 1 is found in strip list, hitindex is guaranteed to have been initialized above
     }
@@ -366,6 +423,7 @@ void SBSGEMModule::find_clusters_1D(bool axis){
     islocalmax[peakstoerase[ipeak]] = false;
   }
 
+ 
   //Cluster formation and cluster splitting from remaining local maxima:
   for( std::set<int>::iterator i = localmax.begin(); i != localmax.end(); ++i ){
     int stripmax = *i;
@@ -391,25 +449,149 @@ void SBSGEMModule::find_clusters_1D(bool axis){
     map<int,double> splitfraction;
     vector<double> stripADCsum(nstrips);
 
-    for( int istrip=striplo; istrip<=striphi; istrip++ ){
-      int nmax_strip = 1;
-      double sumweight = ADCmax/(1.0 + pow( (stripmax-istrip)*pitch/fSigma_hitshape, 2 ) );
-      double maxweight = sumweight;
-      for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
-	if( localmaxima.find( jstrip ) != localmaxima.end() && jstrip != stripmax ){
-	  sumweight += fADCsums[hitindex[jstrip]]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) );
-	}
-      }
-   
-      splitfraction[istrip] = maxweight/sumweight;
+    double maxpos = (stripmax + 0.5 - 0.5*Nstrips) * pitch;
 
-      double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch; //local hit position along direction measured by these strips
-      double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
-      double tstrip = fTmean[hitindex[istrip]];
-
-      
-      
+    //If peak position falls inside the "track search region" constraint, add a new cluster: 
+    if( fabs( maxpos - constraint_center ) <= constraint_width ){
     
+      //create a cluster, but don't add it to the 1D cluster array unless it passes the track search region constraint:
+      sbsgemcluster_t clusttemp;
+      clusttemp.nstrips = nstrips;
+      clusttemp.istriplo = striplo;
+      clusttemp.istriphi = striphi;
+      clusttemp.istripmax = stripmax;
+      clusttemp.ADCsamples.resize(fN_MPD_TIME_SAMP);
+      clusttemp.stripADCsum.clear();
+      clusttemp.hitindex.clear();
+      
+      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){ //initialize cluster-summed ADC samples to zero:
+	clusttemp.ADCsamples[isamp] = 0.0;
+      }
+      
+      for( int istrip=striplo; istrip<=striphi; istrip++ ){
+	int nmax_strip = 1;
+	double sumweight = ADCmax/(1.0 + pow( (stripmax-istrip)*pitch/fSigma_hitshape, 2 ) );
+	double maxweight = sumweight;
+	for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
+	  if( localmaxima.find( jstrip ) != localmaxima.end() && jstrip != stripmax ){
+	    sumweight += fADCsums[hitindex[jstrip]]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) );
+	  }
+	}
+   
+	splitfraction[istrip] = maxweight/sumweight;
+
+	double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch; //local hit position along direction measured by these strips
+	double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
+	double tstrip = fTmean[hitindex[istrip]];
+
+	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	  clusttemp.ADCsamples[isamp] += fADCsamples[hitindex[istrip]]*splitfraction[istrip];
+	}
+
+	clusttemp.stripADCsum.push_back( ADCstrip );
+
+	clusttemp.hitindex.push_back( hitindex[istrip] );
+	
+	sumADC += ADCstrip;
+	
+	
+	if( std::abs( istrip - stripmax ) <= std::max(1,std::min(fMaxNeighborsU_hitpos,fMaxNeighborsU_totalcharge)) ){ 
+	  sumx += hitpos * ADCstrip;
+	  sumx2 += pow(hitpos,2) * ADCstrip;
+	  sumwx += ADCstrip;
+	  //use same strip cuts for cluster timing determination as for position reconstruction: may revisit later:
+	  sumt += tstrip * ADCstrip;
+	  sumt2 += pow(tstrip,2) * ADCstrip;
+	} 
+      }
+
+      clusttemp.hitpos_mean = sumx / sumwx;
+      clusttemp.hitpos_sigma = sqrt( sumx2/sumwx - pow(clusttemp.hitpos_mean,2) );
+      clusttemp.clusterADCsum = sumADC;
+      clusttemp.t_mean = sumt / sumwx;
+      clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
+
+      if( axis ){
+	fVclusters.push_back( clusttemp );
+      } else {
+	fUclusters.push_back( clusttemp );
+      }
+    }
+  }
+}
+
+void SBSGEMModule::fill_2D_hit_arrays(){
+  //Clear out the 2D hit array to get rid of any leftover junk from prior events:
+  fHits.clear();
+  
+  //This routine is simple: just form all possible 2D hits from combining one "U" cluster with one "V" cluster. Here we assume that find_clusters_1D has already
+  //been called, if that is NOT the case, then this routine will just do nothing:
+  for( int iu=0; iu<fUclusters.size(); iu++ ){
+    for( int iv=0; iv<fVclusters.size(); iv++ ){
+      //Initialize sums for computing cluster and strip correlation coefficients:
+      sbsgemhit_t hittemp; // declare a temporary "hit" object:
+
+      //copying overhead, might be inefficient:
+      //sbsgemcluster_t uclusttemp = fUclusters[iu];
+      //sbsgemcluster_t vclusttemp = fVclusters[iv];
+      
+      //Initialize "keep" to true:
+      hittemp.keep = true;
+      hittemp.ontrack = false;
+      hittemp.trackidx = -1;
+      hittemp.iuclust = iu;
+      hittemp.ivclust = iv;
+      
+      hittemp.uhit = fUclusters[iu].hitpos_mean;
+      hittemp.vhit = fVclusters[iv].hitpos_mean;
+
+      double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch;
+      double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch;
+
+      hittemp.umom = (hittemp.uhit - pos_maxstripu)/fUStripPitch;
+      hittemp.vmom = (hittemp.vhit - pos_maxstripv)/fVStripPitch;
+      
+      TVector2 UVtemp(hittemp.uhit,hittemp.vhit);
+      TVector2 XYtemp = UVtoXY( UVtemp );
+
+      hittemp.xhit = XYtemp.X();
+      hittemp.yhit = XYtemp.Y();
+      
+      hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
+      hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
+
+      hittemp.thitcorr = hittemp.thit; //don't apply any corrections on thit yet
+      
+      //Next up is to calculate "global" hit coordinates (actually coordinates in "tracker-local" system)
+      //DetToTrackCoord is a utility function defined in THaDetectorBase
+      TVector3 hitpos_global = DetToTrackCoord( hittemp.xhit, hittemp.yhit );
+
+      // Unclear whether it is actually necessary to store these variables, but we also probably want to avoid 
+      // repeated calls to THaDetectorBase::DetToTrackCoord, so let's keep these for now:
+      hittemp.xghit = hitpos_global.X();
+      hittemp.yghit = hitpos_global.Y();
+      hittemp.zghit = hitpos_global.Z();
+
+      hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
+      hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean;
+
+      //Calculate correlation coefficients:
+      hittemp.corrcoeff_clust = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples );
+
+      //compute index of strip with max ADC sum within cluster strip array:
+      int ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
+      int vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; // 
+
+      //compute index of strip with max ADC sum within decoded hit array:
+      int uhitidx = fUclusters[iu].hitindex[ustripidx]; 
+      int vhitidx = fVclusters[iv].hitindex[vstripidx];
+      
+      hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
+
+      //Okay, that should be everything. Now add it to the 2D hit array:
+      fHits.push_back( hittemp );
+      
+    }
   }
   
 }
@@ -426,3 +608,52 @@ Int_t   SBSGEMModule::End( THaRunBase* r){
   return 0;
 }
 
+//utility method to calculate correlation coefficient of U and V samples: 
+Double_t CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples ){
+  double sumu=0.0, sumv=0.0, sumu2=0.0, sumv2=0.0, sumuv=0.0;
+
+  if ( Usamples.size() < nsamples || Vsamples.size() < nsamples ){
+    return -10.0; //nonsense value, correlation coefficient by definition is -1 < c < 1
+  }
+  
+  for( int isamp=0; isamp<nsamples; isamp++ ){
+    sumu += Usamples[isamp];
+    sumv += Vsamples[isamp];
+    sumu2 += pow(Usamples[isamp],2);
+    sumv2 += pow(Vsamples[isamp],2);
+    sumuv += Usamples[isamp]*Vsamples[isamp];
+  }
+
+  double nSAMP = double(nsamples);
+  double mu = sumu/nSAMP;
+  double mv = sumv/nSAMP;
+  double varu = sumu2/nSAMP - pow(mu,2);
+  double varv = sumv2/nSAMP - pow(mv,2);
+  double sigu = sqrt(varu);
+  double sigv = sqrt(varv);
+
+  return (sumuv - nSAMP*mu*mv)/(nSAMP*sigu*sigv);
+  
+}
+
+TVector2 SBSGEMModule::UVtoXY( TVector2 UV ){
+  double det = fPxU*fPyV - fPyU*fPxV;
+
+  double Utemp = UV.X();
+  double Vtemp = UV.Y();
+  
+  double Xtemp = (fPyV*Utemp - fPyU*Vtemp)/det;
+  double Ytemp = (fPxU*Vtemp - fPxV*Utemp)/det;
+
+  return TVector2(Xtemp,Ytemp);
+}
+
+TVector2 SBSGEMModule::XYtoUV( TVector2 XY ){
+  double Xtemp = XY.X();
+  double Ytemp = XY.Y();
+
+  double Utemp = Xtemp*fPxU + Ytemp*fPyU;
+  double Vtemp = Xtemp*fPxV + Ytemp*fPyV;
+
+  return TVector2(Utemp,Vtemp);
+}

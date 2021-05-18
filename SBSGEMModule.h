@@ -38,17 +38,17 @@ struct sbsgemhit_t { //2D reconstructed hits
   
   //Strip info: should we store a list of strips? We shouldn't need to if the clustering algorithm requires all strips in a cluster to be contiguous:
   //Some of this information is probably redundant with 1D clustering results stored in sbsgemcluster_t, but it may or may not be more efficient to store a copy here:
-  UShort_t nstripu; //Number of strips in cluster along "U" axis
-  UShort_t nstripv; //Number of strips in cluster along "V" axis
-  UShort_t ustriplo; //lowest u strip index in cluster
-  UShort_t ustriphi; //highest u strip index in cluster
-  UShort_t ustripmaxADC; //index of U strip with largest ADC in cluster
-  UShort_t vstriplo; //lowest v strip index in cluster
-  UShort_t vstriphi; //highest v strip index in cluster;
-  UShort_t vstripmaxADC; //index of V strip with largest ADC in cluster
+  /* UShort_t nstripu; //Number of strips in cluster along "U" axis */
+  /* UShort_t nstripv; //Number of strips in cluster along "V" axis */
+  /* UShort_t ustriplo; //lowest u strip index in cluster */
+  /* UShort_t ustriphi; //highest u strip index in cluster */
+  /* UShort_t ustripmaxADC; //index of U strip with largest ADC in cluster */
+  /* UShort_t vstriplo; //lowest v strip index in cluster */
+  /* UShort_t vstriphi; //highest v strip index in cluster; */
+  /* UShort_t vstripmaxADC; //index of V strip with largest ADC in cluster */
   //Coordinate info:
-  Double_t umom;  //umean - u of center of strip with max ADC (could be used to refine hit coordinate reconstruction, probably unnecessary)
-  Double_t vmom;  //vmean - v of center of strip with max ADC (could be used to refine hit coordinate reconstruction, probably unnecessary)
+  Double_t umom;  //umean - u of center of strip with max ADC (could be used to refine hit coordinate reconstruction, probably unnecessary), in units of strip pitch
+  Double_t vmom;  //vmean - v of center of strip with max ADC (could be used to refine hit coordinate reconstruction, probably unnecessary), in units of strip pitch
   Double_t uhit;  //Reconstructed U position of cluster in local module/strip coordinates
   Double_t vhit;  //Reconstructed V position of cluster in local module/strip coordinates
   Double_t xhit;  //Reconstructed "X" position of cluster in local module/strip coordinates
@@ -58,14 +58,14 @@ struct sbsgemhit_t { //2D reconstructed hits
   Double_t zghit; //"Global" Z coordinate of hit (in coordinates of parent SBSGEMTracker)
   //
   Double_t Ehit;  //Sum of all ADC values on all strips in the cluster: actually 1/2*( ADCX + ADCY ); i.e., average of cluster sums in X and Y
-  Double_t Euhit; //Sum of all ADC values on U strips in the cluster;
-  Double_t Evhit; //Sum of all ADC values on V strips in the cluster;
+  /* Double_t Euhit; //Sum of all ADC values on U strips in the cluster; */
+  /* Double_t Evhit; //Sum of all ADC values on V strips in the cluster; */
   Double_t thit;  //Average of ADC-weighted mean U strip time and V strip time
-  Double_t tuhit; //Average time of U strips in cluster;
-  Double_t tvhit; //Average time of V strips in cluster;
+  /* Double_t tuhit; //Average time of U strips in cluster; */
+  /* Double_t tvhit; //Average time of V strips in cluster; */
   Double_t thitcorr; //"Corrected" hit time (with any trigger or other corrections we might want to apply)
-  Double_t tuhitcorr; //"Corrected" U hit time (with any trigger time or other corrections)
-  Double_t tvhitcorr; //"Corrected" V hit time
+  /* Double_t tuhitcorr; //"Corrected" U hit time (with any trigger time or other corrections) */
+  /* Double_t tvhitcorr; //"Corrected" V hit time */
   Double_t ADCasym; //(ADCU-ADCV)/(ADCU+ADCV)
   Double_t tdiff;   //tu - tv
   Double_t corrcoeff_clust; //"Cluster" level XY correlation coefficient
@@ -79,13 +79,14 @@ struct sbsgemcluster_t {  //1D clusters;
   UInt_t istriphi;
   UInt_t istripmax;
   std::vector<double> ADCsamples; //cluster-summed ADC samples
-  Double_t coordmean;  //ADC-weighted mean coordinate along the direction measured by the strip
-  Double_t coordsigma; //ADC-weighted RMS coordinate deviation from the mean along the direction measured by the strip
+  Double_t hitpos_mean;  //ADC-weighted mean coordinate along the direction measured by the strip
+  Double_t hitpos_sigma; //ADC-weighted RMS coordinate deviation from the mean along the direction measured by the strip
   Double_t clusterADCsum; //Sum of ADCs over all samples on all strips
   std::vector<double> stripADCsum; //Sum of individual strip ADCs over all samples on all strips; accounting for split fraction
-  Double_t tmean; //reconstructed hit time
-  //Double_t tsigma; unclear what we might use this for
+  Double_t t_mean; //reconstructed hit time
+  Double_t t_sigma; //unclear what we might use this for
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
+  std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
 };
 
 //Should these be hardcoded? Probably not!
@@ -123,8 +124,22 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
-  void find_clusters_1D(bool axis); //Assuming decode has already been called:
-  void find_2Dhits();
+  void find_clusters_1D(bool axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
+  void find_2Dhits(); // Version with no arguments assumes no constraint points
+  void find_2Dhits(TVector2 constraint_center, TVector2 constraint_width); // Version with TVector2 arguments 
+
+  // fill the 2D hit arrays from the 1D cluster arrays:
+  void fill_2D_hit_arrays(); 
+  
+  //Filter 2D hits by criteria possibly to include ADC X/Y asymmetry, cluster size, time correlation, (lack of) overlap, possibly others:
+  void filter_2Dhits(); 
+
+  //Utility function to calculate correlation coefficient between U and V time samples:
+  Double_t CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples );
+
+  //Utility functions to compute "module local" X and Y coordinates from U and V (strip coordinates) to "transport" coordinates (x,y) and vice-versa:
+  TVector2 UVtoXY( TVector2 UV );
+  TVector2 XYtoUV( TVector2 XY );
   
   bool fIsDecoded;
   
@@ -172,43 +187,6 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
 
-  //Basic decoded strip info (analogous to "moduledata_t" structure from standalone code) for input to clustering algorithm: these might be unnecessary
-  std::set<Int_t> fUstripList;  //List of unique "U" strips fired;
-  std::set<Int_t> fVstripList;  //List of unique "V" strips fired;
-  std::map<Int_t, Float_t> fADCsum_Ustrips; //Key = U strip index, value = sum of all ADC samples
-  std::map<Int_t, Float_t> fADCsum_Vstrips; //Key = V strip index, value = sum of all ADC samples
-  //Since we allow re-use of strips in multiple clusters, these arrays are no longer relevant
-  /* std::map<Int_t, Bool_t> fUStripInCluster; //Key = U strip index, value = strip in cluster? */
-  /* std::map<Int_t, Bool_t> fVStripInCluster; //Key = V strip index, value = strip in cluster? */
-  /* std::map<Int_t, UInt_t> fUStripClusterIdx; //Key = U strip index, value = index in cluster/hit array */
-  /* std::map<Int_t, UInt_t> fVStripClusterIdx; //Key = V strip index, value = inded in cluster/hit array */
-  std::map<Int_t, std::vector<Float_t> > fADCsamp_Ustrips; //Key = U strip index, value = vector of ADC samples (converted to float)
-  std::map<Int_t, std::vector<Float_t> > fADCsamp_Vstrips; //Key = V strip index, value = vector of ADC samples (converted to float)
-  /* std::map<Int_t, Int_t> fBestMatch_Ustrips; //Key = U strip index, value = Best matching V strip index (by correlation coefficient) */
-  /* std::map<Int_t, Int_t> fBestMatch_Vstrips; //Key = V strip index, value = Best matching U strip index (by correlation coefficient) */
-  /* std::map<Int_t, Float_t> fBestCor_Ustrips; //Key = U strip index, value = Best correlation coefficient with best matching V strip */
-  /* std::map<Int_t, Float_t> fBestCor_Vstrips; //Key = V strip index, value = Best correlation coefficient with best matching U strip */
-
-  /* std::set<Int_t> fUstripList_filtered; //"Filtered" U strip list, based on whatever criteria we want */
-  /* set::set<Int_t> fVstripList_filtered; //"Filtered" V strip list, based on whatever criteria we want */
-
-  std::map<Int_t,Float_t> fADCmax_Ustrips; //Key = U strip index, value = maximum ADC sample on this strip
-  std::map<Int_t,Float_t> fADCmax_Vstrips; //Key = V strip index, value = maximum ADC sample on this strip
-  std::map<Int_t,Int_t>   fIsampmax_Ustrips; //Key = U strip index, value = time sample where maximum ADC occurs on this strip;
-  std::map<Int_t,Int_t>   fIsampmax_Vstrips; //Key = V strip index, value = time sample where max. ADC occurs on this strip;
-
-  std::map<Int_t,Float_t> fTmean_Ustrips;    //Key = U strip idx, value = ADC-weighted mean strip time (may add trigger jitter correction later on)
-  std::map<Int_t,Float_t> fTmean_Vstrips;    //Key = V strip idx, value = ADC-weighted mean strip time (may add trigger jitter correction later on)
-
-  std::map<Int_t,Float_t> fTsigma_Ustrips;    //Key = U strip idx, value = RMS of ADC-weighted mean strip time (may add trigger jitter correction later on)
-  std::map<Int_t,Float_t> fTsigma_Vstrips;    //Key = V strip idx, value = RMS of ADC-weighted mean strip time (may add trigger jitter correction later on)
-
-  //Strip timing with any relevant "corrections" applied (such as trigger time):
-  std::map<Int_t,Float_t> fTmeanCorr_Ustrips;    //Key = U strip idx, value = ADC-weighted mean strip time (may add trigger jitter correction later on)
-  std::map<Int_t,Float_t> fTmeanCorr_Vstrips;    //Key = V strip idx, value = ADC-weighted mean strip time (may add trigger jitter correction later on)
-
-  std::map<Int_t,Float_t> fTsigmaCorr_Ustrips;    //Key = U strip idx, value = RMS of ADC-weighted mean strip time (may add trigger jitter correction later on)
-  std::map<Int_t,Float_t> fTsigmaCorr_Vstrips;    //Key = V strip idx, value = RMS of ADC-weighted mean strip time (may add trigger jitter correction later on)
   ////// (1D and 2D) Clustering results (see above for definition of struct sbsgemcluster_t and struct sbsgemhit_t):
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
@@ -251,7 +229,7 @@ class SBSGEMModule : public THaSubDetector {
   //Only strips within these limits around the peak can be used for hit position reconstruction
   UShort_t fMaxNeighborsU_hitpos; 
   UShort_t fMaxNeighborsV_hitpos; 
-    
+  
   //GEOMETRICAL PARAMETERS:
   Double_t fUStripPitch;    //strip pitch along U, will virtually always be 0.4 mm
   Double_t fVStripPitch;    //strip pitch along V, will virtually always be 0.4 mm
@@ -261,7 +239,7 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fPyU;            //U Strip Y projection = sin( UAngle );
   Double_t fPxV;            //V Strip X projection = cos( VAngle );
   Double_t fPyV;            //V Strip Y projection = sin( VAngle );
-
+  
   //Note: These size variables are redundant with THaDetectorBase
   //Double_t fLx;             //Full width of module active area along "X" (usually + dispersive direction)
   //Double_t fLy;             //Full width of module active area along "Y" (usually + dispersive direction);
