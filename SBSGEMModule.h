@@ -124,6 +124,7 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
+  //Don't call this method directly, it is called by find_2Dhits. Call that instead:
   void find_clusters_1D(bool axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
   void find_2Dhits(); // Version with no arguments assumes no constraint points
   void find_2Dhits(TVector2 constraint_center, TVector2 constraint_width); // Version with TVector2 arguments 
@@ -133,7 +134,7 @@ class SBSGEMModule : public THaSubDetector {
   
   //Filter 2D hits by criteria possibly to include ADC X/Y asymmetry, cluster size, time correlation, (lack of) overlap, possibly others:
   void filter_2Dhits(); 
-
+  
   //Utility function to calculate correlation coefficient between U and V time samples:
   Double_t CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples );
 
@@ -142,9 +143,17 @@ class SBSGEMModule : public THaSubDetector {
   TVector2 XYtoUV( TVector2 XY );
   
   bool fIsDecoded;
-  
- private:
 
+  //UShort_t GetLayer() const { return fLayer; }
+
+  //std::vector<sbsgemhit_t> GetHitList() { return fHits; }
+  
+  //If we are going to declare all these data members private, we will need to write public getters and setters for at least the information required by the tracker classes:
+  //private:
+
+  //Let's just make all this stuff public because we're lazy. A lot of this is used by the track-finding routines
+  //anyway
+  
   //Decode map information: 
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
@@ -169,7 +178,9 @@ class SBSGEMModule : public THaSubDetector {
 
   UShort_t fNumberofChannelInFrame; //default 129
 
-  //utility methods to avoid code duplication:
+  //variables defining rectangular track search region constraint (NOTE: these will change event-to-event, they are NOT constant!)
+  Double_t fxcmin, fxcmax;
+  Double_t fycmin, fycmax;
   
   
   //BASIC DECODED STRIP HIT INFO:

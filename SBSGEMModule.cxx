@@ -247,6 +247,11 @@ void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster f
 
   //Now make 2D clusters:
 
+  fxcmin = -1.e12;
+  fxcmax = 1.e12;
+  fycmin = -1.e12;
+  fycmax = 1.e12;
+  
   fill_2D_hit_arrays();
   
 }
@@ -258,7 +263,7 @@ void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_w
   double vcenter = constraint_center.X() * fPxV + constraint_center.Y() * fPyV;
 
   //To determine the constraint width along u/v, we need to transform the X/Y constraint widths, which define a rectangular region,
-  //into U and V
+  //into U and V limits for 1D clustering:
 
   double umin,umax,vmin,vmax;
 
@@ -267,6 +272,11 @@ void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_w
   double ymin = constraint_center.Y() - constraint_width.Y();
   double ymax = constraint_center.Y() + constraint_width.Y();
 
+  fxcmin = xmin;
+  fxcmax = xmax;
+  fycmin = ymin;
+  fycmax = ymax;
+  
   //check the four corners of the rectangle:
 
   double u00 = xmin * fPxU + ymin * fPyU;
@@ -516,8 +526,8 @@ void SBSGEMModule::find_clusters_1D( bool axis, Double_t constraint_center, Doub
       } else {
 	fUclusters.push_back( clusttemp );
       }
-    }
-  }
+    } //Check if peak is inside track search region constraint
+  } //end loop on local maxima
 }
 
 void SBSGEMModule::fill_2D_hit_arrays(){
@@ -556,43 +566,48 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 
       hittemp.xhit = XYtemp.X();
       hittemp.yhit = XYtemp.Y();
-      
-      hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
-      hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
 
-      hittemp.thitcorr = hittemp.thit; //don't apply any corrections on thit yet
-      
-      //Next up is to calculate "global" hit coordinates (actually coordinates in "tracker-local" system)
-      //DetToTrackCoord is a utility function defined in THaDetectorBase
-      TVector3 hitpos_global = DetToTrackCoord( hittemp.xhit, hittemp.yhit );
-
-      // Unclear whether it is actually necessary to store these variables, but we also probably want to avoid 
-      // repeated calls to THaDetectorBase::DetToTrackCoord, so let's keep these for now:
-      hittemp.xghit = hitpos_global.X();
-      hittemp.yghit = hitpos_global.Y();
-      hittemp.zghit = hitpos_global.Z();
-
-      hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
-      hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean;
-
-      //Calculate correlation coefficients:
-      hittemp.corrcoeff_clust = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples );
-
-      //compute index of strip with max ADC sum within cluster strip array:
-      int ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
-      int vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; // 
-
-      //compute index of strip with max ADC sum within decoded hit array:
-      int uhitidx = fUclusters[iu].hitindex[ustripidx]; 
-      int vhitidx = fVclusters[iv].hitindex[vstripidx];
-      
-      hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
-
-      //Okay, that should be everything. Now add it to the 2D hit array:
-      fHits.push_back( hittemp );
-      
-    }
-  }
+      //Check if candidate 2D hit is inside the constraint region before doing anything else:
+      if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
+	  fycmin <= hittemp.yhit && hittemp.yhit <= fycmax ){
+    
+	hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
+	hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
+	
+	hittemp.thitcorr = hittemp.thit; //don't apply any corrections on thit yet
+	
+	//Next up is to calculate "global" hit coordinates (actually coordinates in "tracker-local" system)
+	//DetToTrackCoord is a utility function defined in THaDetectorBase
+	TVector3 hitpos_global = DetToTrackCoord( hittemp.xhit, hittemp.yhit );
+	
+	// Unclear whether it is actually necessary to store these variables, but we also probably want to avoid 
+	// repeated calls to THaDetectorBase::DetToTrackCoord, so let's keep these for now:
+	hittemp.xghit = hitpos_global.X();
+	hittemp.yghit = hitpos_global.Y();
+	hittemp.zghit = hitpos_global.Z();
+	
+	hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
+	hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean;
+	
+	//Calculate correlation coefficients:
+	hittemp.corrcoeff_clust = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples );
+	
+	//compute index of strip with max ADC sum within cluster strip array:
+	int ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
+	int vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; // 
+	
+	//compute index of strip with max ADC sum within decoded hit array:
+	int uhitidx = fUclusters[iu].hitindex[ustripidx]; 
+	int vhitidx = fVclusters[iv].hitindex[vstripidx];
+	
+	hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
+	
+	//Okay, that should be everything. Now add it to the 2D hit array:
+	fHits.push_back( hittemp );
+	
+      } //end check that 2D point is inside track search region
+    } //end loop over "V" clusters
+  } //end loop over "U" clusters
   
 }
 

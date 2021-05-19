@@ -27,7 +27,20 @@ public:
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
   virtual ~SBSGEMTrackerBase(); 
- 
+
+  bool fclustering_done;
+  bool ftracking_done;
+  
+  //1D and 2D clustering: 
+  void hit_reconstruction();
+  //track-finding: 
+  void find_tracks();
+  
+  //Utility methods: initialization:
+  void InitLayerCombos();
+  void InitGridBins(); //initialize 
+  
+  //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
 
   bool fOnlinePedestalSubtraction; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
@@ -40,6 +53,7 @@ protected:
   int fTrackingAlgorithmFlag; //Choose track algorithm
 
   int fMinHitsOnTrack; //default = 3; cannot be less than 3, cannot be more than total number of layers
+  
   
   
   // The use of maps here instead of vectors may be slightly algorithmically inefficient, but it DOES guarantee that the maps are
@@ -55,11 +69,14 @@ protected:
   //"Grid bins" for fast track-finding algorithm(s): define limits of layer active area:
   std::map<int, double> fXmin_layer, fXmax_layer, fYmin_layer, fYmax_layer;
   //Grid bin size: smaller values should give faster track finding, but bins should be large compared to GEM spatial resolution.
-  double fGridBinWidthX, fGridBinWidthY; //Default bin size = 10 mm for both.
-  int fGridNbinsX, fGridNbinsY;          //In the standalone code, these are typically derived from the grid bin size and the layer active area dimensions.
-
+  double fGridBinWidthX, fGridBinWidthY; //Default bin size = 10 mm for both. we are using same grid bin width at all layers:
+  std::map<int, int> fGridNbinsX_layer, fGridNbinsY_layer;          //In the standalone code, these are typically derived from the grid bin size and the layer active area dimensions.
+  //These variables are arguably redundant with the ones above, but as defined, these include a bit of extra "slop" to account for resolution, misalignments, etc.
+  std::map<int, double> fGridXmin_layer, fGridYmin_layer, fGridXmax_layer, fGrid_Ymax_layer;
+  
   double fTrackChi2Cut; //chi2/NDF cut for track validity
 
+  bool fUseConstraint;
   // "Constraint points" to restrict the search region for track-finding:
   TVector3 fConstraintPoint_Front;
   TVector3 fConstraintPoint_Back;
