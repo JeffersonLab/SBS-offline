@@ -43,14 +43,31 @@ protected:
   void InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
   void InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
+  //Retrieve the global position of a hit by module and hit index:
   TVector3 GetHitPosGlobal( int modidx, int clustidx );
 
+  //Calculate the intersection of a track with the plane of a module's active area:
+  TVector3 TrackIntersect( int module, TVector3 track_origin, TVector3 track_direction );
+
+  //Calculates the position of the track's intersection with a module in "module" coordinates U/V (the ones measured by the strips)
+  TVector2 GetUVTrack( int module, TVector3 track_origin, TVector3 track_direction );
+  
   //Utility method to iterate over combinations of hits in layers, used by find_tracks()
-  bool GetNextCombo( std::set<int> layers, std::map<int,std::vector<int> > hitlist, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo=false );
+  bool GetNextCombo( const std::set<int> &layers, const std::map<int,std::vector<int> > &hitlist, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo=false );
 
   // Utility method to take a list of hits mapped by layer as input, and give track parameters and chi2 as output.
   // This relies on the "hit list" and "free hit list" information also being sensibly populated
-  void FitTrack( std::map<int,int> hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack, double &chi2ndf );
+  //FitTrack calculates chi2 and residuals as well as best fit parameters
+  void FitTrack( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack, double &chi2ndf, vector<double> &uresid, vector<double> &vresid );
+  //CalcLineOfBestFit only calculates the track parameters, does not calculate chi2 or residuals:
+  void CalcLineOfBestFit( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
+
+  // routine to fit the best track to a set of hits, without the overhead of chi2 calculation, useful for "exclusive residuals" calculation:
+  //void FitTrackNoChisquaredCalc( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
+  
+  // Method to add a new Track to the track arrays: this takes the best hit combination and the parameters of the line of best fit to those hits
+  // and the (already calculated) chi2 and fills the tracking results arrays: best fit parameters, inclusive and exclusive tracking residuals, and hit lists by track:
+  void AddTrack( const std::map<int,int> &hitcombo, double *BestTrack, double chi2ndf, vector<double> &uresid, vector<double> &vresid );
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
@@ -143,8 +160,8 @@ protected:
   std::vector<double> fXtrack;
   std::vector<double> fYtrack;
   std::vector<double> fXptrack;
-  std::vector<double> fXptrack;
-  std::vector<double> fChi2Track;
+  std::vector<double> fYptrack;
+  std::vector<double> fChi2Track; //chi2/ndf
   
   
 };

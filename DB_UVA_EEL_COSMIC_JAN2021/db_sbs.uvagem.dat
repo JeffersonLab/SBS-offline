@@ -219,6 +219,7 @@ sbs.uvagem.m17.nstripsv = 1280
 sbs.uvagem.m18.nstripsv = 1280
 sbs.uvagem.m19.nstripsv = 1280
 
+# common value for all or most DBRequest::search
 # strip pitch along u (mm):
 sbs.uvagem.m0.upitch = 0.4
 sbs.uvagem.m1.upitch = 0.4
