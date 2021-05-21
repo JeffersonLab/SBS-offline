@@ -480,17 +480,20 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       myev->push_back(simev->Harm_HCal_Dig.adc_17->at(j));
       myev->push_back(simev->Harm_HCal_Dig.adc_18->at(j));
       myev->push_back(simev->Harm_HCal_Dig.adc_19->at(j));
-
-      ChanToROC(detname, lchan+288, crate, slot, chan);//+288 ??? that might be the trick
-
-      //cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
-      if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
-      }
-      myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, 1));
-      myev->push_back(simev->Harm_HCal_Dig.tdc->at(j));
+      if(fabs(simev->Harm_HCal_Dig.tdc->at(j))<1000000){
+	ChanToROC(detname, lchan+288, crate, slot, chan);//+288 ??? that might be the trick
+
+	//cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)];
+	}
+	myev = &(map[sldat]);
+	
+	myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, 1));
+	myev->push_back(simev->Harm_HCal_Dig.tdc->at(j));
+	cout << lchan << " " << crate << " " << slot << " " << chan << " " << simev->Harm_HCal_Dig.tdc->at(j) << endl;
+      }
     }
 
   }
@@ -680,8 +683,11 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     { 0 }
   };
   Int_t err;
-  int nparam_mod = 4;
-  int crate,slot,ch_lo,ch_hi, ch_count = 0, ch_map = 0;
+  int nparam_mod = 5;
+  if(isgem){//gem detectors
+    nparam_mod = 4;
+  }
+  int crate,slot,ch_lo,ch_hi, ch_ref, ch_count = 0, ch_map = 0;
   
   if(isgem){//it's easier if gems are their own thing
     std::string chambers;
@@ -740,7 +746,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 		
 		if(err==0)fInvGEMDetMap[detname][mod].resize(nchan);
 		
-		int nparam_mod = 4;
+		//int nparam_mod = 5;
 		for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
 		  crate  = detmap[k];
 		  slot   = detmap[k+1];
@@ -753,7 +759,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 		      if(fDebug>=3)cout << crate << " " << slot << " " << i << " " << apv_num << endl;
 		    }
 		    if(ch_count>nlogchan){
-		      std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+		      std::cout << " <0> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 		      return THaAnalysisObject::kInitError;
 		    }
 		    (fInvGEMDetMap[detname])[mod][ch_count]=gemstripinfo(crate, slot, i, apv_num);
@@ -788,12 +794,14 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
    //fNChanDet[detname] = nchan;
    //fChanMapStartDet[detname] = chanmapstart;
    (fInvDetMap[detname]).resize(nlogchan);
-   if(detmap[4]==-1)nparam_mod = 5;
+   //if(detmap[4]==-1)nparam_mod = 5;
    for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
      crate  = detmap[k];
      slot   = detmap[k+1];
      ch_lo  = detmap[k+2];
      ch_hi  = detmap[k+3];
+     ch_ref = detmap[k+4];
+     if(ch_ref==-1)continue;
      /*
        if(detname.find("hodo")!=std::string::npos)
        cout << " crate " << crate << " slot " << slot 
@@ -808,7 +816,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	 }
 	 */
 	 if(ch_count>nlogchan){
-	   std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	   std::cout << " <1> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
 	 (fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
@@ -821,10 +829,9 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	 */
        }
      }else{
-      
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	 if(ch_count>nlogchan){
-	   std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	   std::cout << " <2> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
 	 if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-1 << " (+" << nchan << ") " << std::endl;

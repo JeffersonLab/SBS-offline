@@ -93,8 +93,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     { "acc_charge", &fAccCharge, kFloat, 0, true }, ///< accumulated charge
     { 0 } ///< Request must end in a NULL
   };
-  err = LoadDB( file, date, config_request, fPrefix );
-
+  
   // Reinitialization only possible for same basic configuration
   if( !err ) {
     // Compute the max possible cluster size (which at most should be

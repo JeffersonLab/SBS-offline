@@ -47,12 +47,15 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     { "clus_rad",     &fClusRadius, kFloat,   0, 1 },
     { "mc_data",      &fMCdata,     kInt,     0, 1 },// flag for MC data
     { "dxdydz",         &dxyz,         kDoubleV, 3 },  // dx and dy block spacings
+    { 0 }
+    //already called!!!
   };
-
+  
   err = LoadDB( file, date, config_request, fPrefix );
   if(err) {
     return err;
   }
+  
   fClusBlockRadX = Int_t(fClusRadius/dxyz[0]);
   fClusBlockRadY = Int_t(fClusRadius/dxyz[1]);
 
