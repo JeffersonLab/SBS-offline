@@ -19,8 +19,14 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fGridBinWidthX = 0.01; //1 cm = 10 mm;
   fGridBinWidthY = 0.01; //1 cm = 10 mm;
 
+  fGridEdgeToleranceX = 0.003; //3 mm default
+  fGridEdgeToleranceY = 0.003; //3 mm default
+  
   fTrackChi2Cut = 100.0; //Max. chi2/ndf for a combination of hits to form a track
 
+  fSigma_hitpos = 0.0001; //100 um
+  fSigma_hitshape = 0.0004; //0.4 mm
+  
   // set defaults for constraint points and constraint widths:
   fConstraintPoint_Front.SetXYZ(0,0,0);
   fConstraintPoint_Back.SetXYZ(0,0,10.0);
@@ -225,7 +231,7 @@ void SBSGEMTrackerBase::hit_reconstruction(){
 					fConstraintWidth_Front.Y() * (1.-interp_frac) + fConstraintWidth_Back.Y() * interp_frac );
 
       //compute constraint in "local" module coordinates:
-      TVector3 constraint_intersect_local = TrackToDetCoord( constraint_intersect );
+      TVector3 constraint_intersect_local = mod->TrackToDetCoord( constraint_intersect );
       
       TVector2 constraint_center_module( constraint_intersect_local.X(), constraint_intersect_local.Y() );
 
@@ -238,26 +244,15 @@ void SBSGEMTrackerBase::hit_reconstruction(){
   }
 }
 
-// Standard, "default" fast track-finding algorithm (based on SBSGEM_standalone code by Andrew Puckett):
-void SBSGEMTrackerBase::find_tracks(){ 
+void SBSGEMTrackerBase::InitHitList(){
 
-  fNtracks_found = 0;
+  //clear out any old information:
+  layers_with_2Dhits.clear();
+  N2Dhits_layer.clear();
+  modindexhit2D.clear();
+  clustindexhit2D.clear();
+  hitused2D.clear();
   
-  if( !fclustering_done ){ //This shouldn't be called before hit reconstruction, but if it is, then this routine can call the hit reconstruction:
-    hit_reconstruction();
-  }
-  
-  ftracking_done = true;
-  //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
-  
-  //Define and initialize the "hit lists" and other local arrays that we will need to do the tracking:
-  //These "local hit list" arrays will NOT be modified throughout the track-finding procedure:
-  std::set<int> layers_with_2Dhits; //list of tracking layers with at least one 2D hit reconstructed (within the track search region)
-  std::map<int,int> N2Dhits_layer; // key = layer, mapped value = total number of reconstructed 2D hits
-  std::map<int,std::vector<int> > modindexhit2D; //key = layer, mapped value = module index of hits in that layer:
-  std::map<int,std::vector<int> > clustindexhit2D; //key = layer, mapped value = index of hits within 2D cluster array of module in question
-  std::map<int,std::vector<bool> > hitused2D; //flag to tell each track-finding iteration whether hit was already used in a previous track
-
   for( int imodule=0; imodule<fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
     int layer = fModules[imodule]->GetLayer();
 
@@ -276,8 +271,91 @@ void SBSGEMTrackerBase::find_tracks(){
       }
     }
   }
+}
 
-  //At this stage the local "hit lists" that we need for the tracking are initialized. Let's get started:
+void SBSGEMTrackerBase::InitFreeHitList(){
+  //We should clear these things out at the beginning of each iteration just in case:
+  layerswithfreehits.clear();
+  freehitlist_layer.clear();
+  freehitcounter.clear();
+
+  Nfreehits_binxy_layer.clear();
+  freehitlist_binxy_layer.clear();
+  
+  //This is called at the beginning of each track-finding iteration:
+  for( auto ilay = layers_with_2Dhits.begin(); ilay != layers_with_2Dhits.end(); ++ilay ){
+    int layer = *ilay;
+    Nfreehits_layer[layer] = 0;
+    
+    int nbins_gridxy = fGridNbinsX_layer[layer]*fGridNbinsY_layer[layer];
+
+    //resize the free hit counter and free hit list for the 2D grid bins to the number of grid bins:
+    Nfreehits_binxy_layer[layer].resize( nbins_gridxy );
+    freehitlist_binxy_layer[layer].resize( nbins_gridxy );
+
+    //loop over the 2D grid bins and initialize free hit counter and freehit list:
+    for( int bin=0; bin<nbins_gridxy; bin++ ){
+      Nfreehits_binxy_layer[layer][bin] = 0;
+      freehitlist_binxy_layer[layer][bin].clear();
+    }
+
+    //Now loop over all the hits and fill up the free hit list arrays:
+    for( int ihit=0; ihit<N2Dhits_layer[layer]; ihit++ ){
+      //Make sure this hit is not already used in a track:
+      if( !hitused2D[layer][ihit] ){ //
+	Nfreehits_layer[layer]++;
+	freehitlist_layer[layer].push_back( ihit ); //recall that "ihit" is the index in the unchanging "hit list" array
+
+	int module = modindexhit2D[layer][ihit]; 
+	int clustidx = clustindexhit2D[layer][ihit]; //index in module hit array
+	
+	//Next, let's grab the global X and Y coordinates of the hit and assign it to a grid bin:
+	double xgtemp = fModules[module]->fHits[clustidx].xghit;
+	double ygtemp = fModules[module]->fHits[clustidx].yghit;
+
+	//Now figure out which X and Y bin of the 2D grid this hit belongs in:
+
+	int binxtemp = int( (xgtemp - fGridXmin_layer[layer])/fGridBinWidthX );
+	int binytemp = int( (ygtemp - fGridYmin_layer[layer])/fGridBinWidthY );
+
+	//check that hit coordinates are within the limits of the grid (in principle this check is unnecessary since the grid is defined
+	// to contain the entire active area of the layer, but just to avoid any potential seg. faults we check anyway):
+	if( binxtemp >= 0 && binxtemp < fGridNbinsX_layer[layer] &&
+	    binytemp >= 0 && binytemp < fGridNbinsY_layer[layer] ){
+	  int binxytemp = binxtemp + fGridNbinsX_layer[layer]*binytemp;
+
+	  Nfreehits_binxy_layer[layer][binxytemp]++;
+	  freehitlist_binxy_layer[layer][binxytemp].push_back( ihit ); //Here again, ihit locates this hit within the unchanging "hit list" array
+	  
+	}
+	
+      } //check hit not already used in track
+    } //loop over all hits in layer
+
+    if( Nfreehits_layer[layer] > 0 ){
+      layerswithfreehits.insert(layer);
+      freehitcounter[layer] = 0;
+    }
+    
+  } //loop over all layers
+}
+
+// Standard "fast" track-finding algorithm (based on SBSGEM_standalone code by Andrew Puckett):
+void SBSGEMTrackerBase::find_tracks(){ 
+
+  fNtracks_found = 0;
+  
+  if( !fclustering_done ){ //This shouldn't be called before hit reconstruction, but if it is, then this routine can call the hit reconstruction:
+    hit_reconstruction();
+  }
+  
+  ftracking_done = true;
+  //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
+
+  //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
+  InitHitList();
+
+  //At this stage the static "hit lists" that we need for the tracking are initialized. Let's get started:
 
   if( layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
     bool foundtrack = true;
@@ -286,15 +364,230 @@ void SBSGEMTrackerBase::find_tracks(){
 
       int nhitsrequired = layers_with_2Dhits.size(); //initially we favor tracks with the largest possible number of hits; if we fail to find a track at this hit requirement, we decrement the number of required hits as long as it exceeds the minimum
 
-      while( nhitsrequired >= fMinHinHitsOnTrack ){ //as long as the current hit requirement exceeds the minimum, 
+      while( nhitsrequired >= fMinHinHitsOnTrack ){ //as long as the current hit requirement exceeds the minimum, we can find more tracks:
 	foundtrack = false;
 
+	//The goal will be to loop over all possible combinations of layers at the current hit requirement, and find the combination of one hit per layer with minimum chi2:
+	//At the beginning of each iteration of this loop, we need to populate several more arrays, the "free hit list" mapped by layer, and
+	//also the "free hit list" mapped by layer and 2D grid bin:
+
+	//We moved the initialization of the "free hit" list for each track-finding iteration to its own function,
+	// and we moved the relevant arrays to data members of the class
+
+	InitFreeHitList();
+
+	if( layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
+	  //The basic algorithm should do the following:
+
+	  // 1. Loop over all possible layer combinations for which the number of layers is equal to the current minimum hit requirement:
+	  // 2. Within each layer combination at the current minimum hit requirement, check that every layer has at least one free hit. If so, proceed:
+	  // 3. For all possible combinations of one hit from each of the two outermost layers, calculate the straight line between the two points, and project the
+	  //    straight line to each layer
+	  // 4. At each intermediate layer, populate the list of hits in the grid bins pointed to by the candidate track. If the projected track is close to the edge of
+	  //    the bin in either X or Y, also consider hits in the adjacent X and/or Y bins
+	  // 5. IFF every intermediate layer contains at least one hit in the grid bin(s) sufficiently close to the projected track, proceed to loop over the
+	  //    hits in the intermediate layers, using either the "fast" method (find the hit in each layer closest to the projected track) or the "brute force" method
+	  //    (loop on all possible hit combinations in the intermediate layers using "odometer" algorithm), which is probably more accurate, but slower
+	  // 6. For each candidate hit combination, calculate the chi2 of a straight line fit.
+
+
+	  bool firstgoodcombo = true;
+	  map<int,int> besthitcombo;
+	  double minchi2 = 1.e20; //arbitrary large number initially
+	  
+	  for( int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
+	    int minlayer = fNlayers + 1;
+	    int maxlayer = -1;
+
+	    set<int> layerstotest;
+	    
+	    for( int ihit=0; ihit<nhitsrequired; ihit++ ){
+	      int layeri = fLayerCombinations[nhitsrequired][icombo][ihit];
+	      if( layerswithfreehits.find( layeri ) != layerswithfreehits.end() ){ //check that this layer has unused hits:
+		layerstotest.insert( layeri );
+
+		minlayer = (layeri < minlayer) ? layeri : minlayer;
+		maxlayer = (layeri > maxlayer) ? layeri : maxlayer;
+	      }
+	    }
+
+	    //Calculate the total number of possible combinations of one hit from each of the two outermost layers:
+	    long ncombos_minmax = Nfreehits_layer[minlayer]*Nfreehits_layer[maxlayer];
+	    
+	    if( layerstotest.size() < nhitsrequired ){
+	      //skip this layer combination if any layers lack free hits or if the number of free hit combinations from the two outermost layers is prohibitively large:
+	      continue;
+	    }
+
+	    // If the number of hit combinations in the two outermost layers exceeds the maximum, try to find an alternate pair of layers
+	    // with hit combinations below the maximum:
+	    if( ncombos_minmax > fMaxHitCombinations ){
+	      // if the two outermost layers in this combo have too many hit combinations, find the combination of layers
+	      // with the largest lever arm in z such that the number of combinations is less than the
+	      // maximum:
+	      int maxdiff = 0;
+	      
+	      for( auto ilay = layerstotest.begin(); ilay != layerstotest.end(); ++ilay ){
+		int layeri = *ilay;
+		for( auto jlay = ilay; jlay != layerstotest.end(); ++jlay ){
+		  int layerj = *jlay;
+		  if( layerj > layeri ){
+		    long ncombostest = Nfreehits_layer[layeri]*Nfreehits_layer[layerj];
+
+		    if( ncombostest >= 1 && ncombostest <= fMaxHitCombinations &&
+			layerj - layeri > maxdiff ){
+		      minlayer = layeri;
+		      maxlayer = layerj;
+		      maxdiff = layerj - layeri;
+		      ncombos_minmax = ncombostest;
+		    }	  
+		  }
+		}	
+	      }
+	    } //end check of ncombos_minmax < maxhitcombinations
+
+	    //If the number of hit combinations STILL exceeds the maximum, skip this layer combination:
+	    if( ncombos_minmax > fMaxHitCombinations ){
+	      continue;
+	    }
+	    
+	    //Next: loop over all hits in the two outermost layers and form track from each combinations:
+	    for( int ihit = 0; ihit<Nfreehits_layer[minlayer]; ihit++ ){
+	      for( int jhit = 0; jhit<Nfreehits_layer[maxlayer]; jhit++ ){
+		//The track search region constraint should have already been enforced at the 2D hit reconstruction stage, so additional checks here are probably unnecessary:
+		
+		int hitmin = freehitlist_layer[minlayer][ihit];
+		int hitmax = freehitlist_layer[maxlayer][jhit];
+
+		int modmin = modindexhit2D[minlayer][hitmin];
+		int modmax = modindexhit2D[maxlayer][hitmax];
+
+		int clustmin = clustindexhit2D[minlayer][hitmin];
+		int clustmax = clustindexhit2D[maxlayer][hitmax];
+
+		//Get 3D global coordinates of the two hits:
+		TVector3 hitpos_min = GetHitPosGlobal( modmin, clustmin );
+		TVector3 hitpos_max = GetHitPosGlobal( modmax, clustmax );
+
+		// populate the list of 
+		std::set<int> otherlayers;
+
+		for( auto ilay = layerstotest.begin(); ilay != layerstotest.end(); ++ilay ){
+		  int thislayer = *ilay;
+		  if( thislayer != minlayer && thislayer != maxlayer ){
+		    otherlayers.insert( *ilay );
+		  }
+		}
+
+		//This array will hold the list of free hits in layers other than minlayer and maxlayer falling in 2D grid bins
+		//close to the track projection:
+		std::map<int,std::vector<int> > freehitlist_otherlayers_goodxy; 
+		
+		//The next step is to calculate the straight line passing through the two points from minlayer and maxlayer:
+		// double xptrtemp = (hitpos_max.X() - hitpos_min.X())/(hitpos_max.Z()-hitpos_min.Z());
+		// double yptrtemp = (hitpos_max.Y() - hitpos_min.Y())/(hitpos_max.Z()-hitpos_min.Z());
+		
+		
+		//Project track to z = 0 plane:
+		double xptrtemp = (hitpos_max.X() - hitpos_min.X())/(hitpos_max.Z() - hitpos_min.Z() );
+		double yptrtemp = (hitpos_max.Y() - hitpos_min.Y())/(hitpos_max.Z() - hitpos_min.Z() );
+
+		//Track coordinates at Z = 0:
+		double xtrtemp = 0.5*( hitpos_max.X() - xptrtemp * hitpos_max.Z() + hitpos_min.X() - xptrtemp * hitpos_min.Z() );
+		double ytrtemp = 0.5*( hitpos_max.Y() - yptrtemp * hitpos_max.Z() + hitpos_min.Y() - yptrtemp * hitpos_min.Z() );
+
+		//Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
+
+		bool nextcomboexists = true;
+
+		//clear out the "free hit" counter for looping over combinations:
+		freehitcounter.clear();
+		
+		for( auto ilay = otherlayers.begin(); ilay != otherlayers.end(); ++ilay ){
+		  int layer = *ilay;
+
+		  double xproj = xtrtemp + xptrtemp * fZavgLayer[layer];
+		  double yproj = ytrtemp + yptrtemp * fZavgLayer[layer];
+
+		  int binxtemp = int( (xproj - fGridXmin_layer[layer])/fGridBinWidthX );
+		  int binytemp = int( (yproj - fGridYmin_layer[layer])/fGridBinWidthY );
+
+		  //check if this bin is in-range:
+
+		  if( binxtemp >= 0 && binxtemp < fGridNbinsX_layer[layer] &&
+		      binytemp >= 0 && binytemp < fGridNbinsY_layer[layer] ){
+
+		    int binxhi = binxtemp;
+		    int binxlo = binxtemp;
+		    int binyhi = binytemp;
+		    int binylo = binytemp;
+
+		    double binxdiff = xproj - (fGridXmin_layer[layer]+binxtemp*fGridBinWidthX);
+		    double binydiff = yproj - (fGridYmin_layer[layer]+binytemp*fGridBinWidthY);
+		    
+		    //If x or y projection is close to low edge of bin, include the neighboring bin on the low side in the analysis:
+		    if( binxdiff < fGridEdgeToleranceX && binxtemp > 0 ) binxlo = binxtemp-1;
+		    if( binydiff < fGridEdgeToleranceY && binytemp > 0 ) binyho = binytemp-1;
+		    //I x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis:
+		    if( fGridBinWidthX - binxdiff < fGridEdgeToleranceX && binxtemp + 1 < fGridNbinsX_layer[layer] ) binxhi = binxtemp+1;
+		    if( fGridBinWidthY - binydiff < fGridEdgeToleranceY && binytemp + 1 < fGridNbinsY_layer[layer] ) binyhi = binytemp+1;
+
+		    //now loop over the relevant grid bins in this layer and fill the "reduced" free hit list:
+		    for( int binx = binxlo; binx <= binxhi; binx++ ){
+		      for( int biny = binylo; biny <= binyhi; biny++ ){
+			int binxy = binx + fGridNbinsX_layer[layer]*biny;
+
+			for( int khit=0; khit<freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
+			  freehitlist_otherlayers_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
+			}
+			
+		      }
+		    }
+		  } //end check on grid bin of projected track in range
+
+		  //This check enforces that all layers other than minlayer and maxlayer have at least one hit in the relevant 2D grid bins:
+		  if( freehitlist_otherlayers_goodxy.find(layer) == freehitlist_otherlayers_goodxy.end() ) nextcomboexists = false;
+
+		  freehitcounter[layer] = 0;
+		  
+		} //end loop on layers other than minlayer and maxlayer
+
+		//Next, we will loop on all possible combinations of one hit from each of the layers other than minlayer and maxlayer:
+		if( nextcomboexists ){
+		  bool firstcombo = true;
+		  
+		  while( nextcomboexists ){
+
+		    std::map<int,int> hitcombo;
+		    nextcomboexists = GetNextCombo( otherlayers, freehitlist_otherlayers_goodxy, freehitcounter, hitcombo, firstcombo );
+
+		    if( nextcomboexists ){
+		      //Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one:
+
+		      //First, add the hits from minlayer and maxlayer to the combo:
+		      hitcombo[minlayer] = hitmin;
+		      hitcombo[maxlayer] = hitmax;
+
+		      
+		      
+		      
+		    } //end if( nextcomboexists )
+		  } //end while( nextcomboexists )
+		} //end if( nextcomboexists )		       
+		
+	      } //end loop over hits in maxlayer
+	    } //end loop over hits in minlayer
+	    
+	    
+	  } //end loop over layer combinations at current minimum hit requirement
+	} //end check on layers with free hits >= nhitsrequired
+	
 	
 	
 	if( !foundtrack ){
 	  nhitsrequired--;
 	}
-      }
+      } //end while(nhitsrequired > minhits )
       
     } //end while( foundtrack )
 
@@ -304,4 +597,139 @@ void SBSGEMTrackerBase::find_tracks(){
   
   
 
+}
+
+void SBSGEMTrackerBase::FitTrack( std::map<int,int> hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack, double &chi2ndf ){
+  //Recall that the mapped value of "hit" in hitcombo is the index of the hit in the unchanging "hit list" array:
+
+  double sumx = 0.0, sumy = 0.0, sumz = 0.0, sumxz = 0.0, sumyz = 0.0, sumz2 = 0.0;
+
+  int nhits = 0;
+  
+  for( auto ilayer=hitcombo.begin(); ilayer != hitcombo.end(); ++ilayer ){
+    int layer = ilayer->first;   //layer 
+    int hitidx = ilayer->second; //index in the "hit list" array
+
+    //grab hit coordinates:
+    int module = modindexhit2D[hitidx];
+    int clustidx = clustindexhit2D[hitidx];
+
+    TVector3 hitpos_global = GetHitPosGlobal( module, clustidx );
+
+    //we don't use the u and v coordinates until the chi2 calculation, which comes later:
+    //double uhit = fModules[module]->fHits[clustidx].uhit;
+    //double vhit = fModules[module]->fHits[clustidx].vhit; 
+    
+    sumx += hitpos_global.X();
+    sumy += hitpos_global.Y();
+    sumz += hitpos_global.Z();
+    sumxz += hitpos_global.X()*hitpos_global.Z();
+    sumyz += hitpos_global.Y()*hitpos_global.Z();
+    sumz2 += pow(hitpos_global.Z(),2);
+
+    nhits++;
+  }
+
+  //now compute line of best fit:
+  double denom = (sumz2 * nhits - pow(sumz,2) );
+
+  xptrack = (nhits*sumxz - sumx*sumz)/denom;
+  yptrack = (nhits*sumyz - sumy*sumz)/denom;
+  xtrack = (sumx * sumz2 - sumxz * sumz)/denom;
+  ytrack = (sumy * sumz2 - sumyz * sumz)/denom;
+
+  double chi2 = 0.0; 
+
+  //I see no particularly good way to avoid looping over the hits again for the chi2 calculation:
+
+  for( auto ilayer=hitcombo.begin(); ilayer != hitcombo.end(); ++ilayer ){
+    int layer = ilayer->first;
+    int hitidx = ilayer->second;
+
+    int module = modindexhit2D[hitidx];
+    int clustidx = clustindexhit2D[hitidx];
+
+    double uhit = fModules[module]->fHits[clustidx].uhit;
+    double vhit = fModules[module]->fHits[clustidx].vhit;
+
+    //calculate intersection of track with plane of module:
+    TVector3 modpos = fModules[module]->GetOrigin();
+    TVector3 modzaxis = mod->GetZax();
+
+    TVector3 TrackOrigin( xtrack, ytrack, 0.0 );
+    TVector3 TrackDirection( xptrack, yptrack, 1.0 );
+    TrackDirection = TrackDirection.Unit();
+
+    //represents distance along track to intersection point with plane of module active area:
+    double sintersect = modzaxis.Dot( modpos - TrackOrigin )/(modzaxis.Dot( TrackDirection ) );
+
+    TVector3 TrackIntersect = TrackOrigin + sintersect * TrackDirection;
+    
+    TVector3 TrackIntersect_local = fModules[module]->TrackToDetCoord( TrackIntersect );
+
+    TVector2 XYtrack( TrackIntersect_local.X(), TrackIntersect_local.Y() );
+
+    TVector2 UVtrack = fModules[module]->XYtoUV( XYtrack );
+
+    double utrack = UVtrack.X();
+    double vtrack = UVtrack.Y();
+
+    chi2 += pow( (uhit-utrack)/fSigma_hitpos, 2 ) + pow( (vhit-vtrack)/fSigma_hitpos, 2 );
+  }
+
+  double ndf = double(2*nhits - 4);
+
+  chi2ndf = chi2/ndf;
+  
+}
+
+// "Odometer" algorithm for looping over possible combinations of one hit per layer:
+bool SBSGEMTrackerBase::GetNextCombo( std::set<int> layers, std::map<int,std::vector<int> > hitlist, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo ){
+  std::set<int>::iterator nextlayercounter = layers.begin();
+
+  bool comboexists = true;
+  
+  for( auto layercounter = layers.begin(); layercounter != layers.end(); ++layercounter ){
+    int layer = *layercounter;
+    int nextlayer = *nextlayercounter;
+    if( layer == nextlayer && !firstcombo ){
+      if( hitcounter[layer]+1 < hitlist[layer].size() ){
+	hitcounter[layer]++;
+      } else {
+	//reached last hit in current layer; roll back to first hit in this layer and increment hit counter in next layer:
+	// Note that this means on the next iteration of layercounter,
+	// layer == nextlayer will evaluate to true, and we will attempt to increment freehitcounter
+	// for that layer as long as another free hit is available. Meanwhile, since the
+	// free hit counter in the current layer has rolled back to 0, the next time we try to
+	// populate a unique hit combination, starting from the first layer, we will loop over the hits
+	// in the first layer again, having incremented the free hit counter for the next layer.
+	// This process will repeat itself until we reach the last hit
+	// in the last layer, at which point nextlayercounter will evaluate to layers.end,
+	// and the iteration will stop.
+	hitcounter[layer] = 0;
+	++nextlayercounter;
+      }
+    }
+
+    hitcombo[layer] = hitlist[layer][hitcounter[layer]];
+    
+    if( nextlayercounter == layers.end() ) comboexists = false; //we reached the last hit in the last layer. stop iteration
+    
+  }
+
+  if( firstcombo ) firstcombo = false;
+  
+  return comboexists;
+}
+
+TVector3 SBSGEMTrackerBase::GetHitPosGlobal( int module, int clustindex ){
+  
+  //check that module and cluster are in range: these conditions should never evaluate to true, but we want to prevent
+  // seg. faults anyway
+  if( module < 0 || module >= fModules.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
+  if( clustindex < 0 || clustindex >= fModules[module]->fHits.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
+  
+  return TVector3( fModules[module]->fHits[clustindex].xghit,
+		   fModules[module]->fHits[clustindex].yghit,
+		   fModules[module]->fHits[clustindex].zghit );
 }

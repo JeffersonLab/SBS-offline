@@ -162,8 +162,9 @@ class SBSGEMModule : public THaSubDetector {
   Bool_t fZeroSuppress;
   Bool_t fOnlinePedestalSubtraction; //this MIGHT be redundant with fZeroSuppress
 
-  Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
-  Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
+  //move these to trackerbase:
+  //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
+  //Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
     
   //Note on ROOT data types:
   // Char_t/UChar_t is one byte signed unsigned = 8 bits = 0..255 for unsigned
