@@ -6,12 +6,15 @@
 #include <set>
 #include <map>
 
-using namespace std;
+//using namespace std;
 
 class THaDetectorBase;
 class THaEvData;
 class THaRunBase;
 
+namespace SBSGEMModule {
+  enum GEMaxis_t { kUaxis, kVaxis };
+}
 
 struct mpdmap_t {
   UInt_t crate;
@@ -89,6 +92,7 @@ struct sbsgemcluster_t {  //1D clusters;
   std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
 };
 
+
 //Should these be hardcoded? Probably not!
 /* #define N_APV25_CHAN    128 */
 /* #define N_MPD_TIME_SAMP 6 */
@@ -125,7 +129,7 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   End( THaRunBase* r=0 );
 
   //Don't call this method directly, it is called by find_2Dhits. Call that instead:
-  void find_clusters_1D(bool axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
+  void find_clusters_1D(SBSGEMModule::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
   void find_2Dhits(); // Version with no arguments assumes no constraint points
   void find_2Dhits(TVector2 constraint_center, TVector2 constraint_width); // Version with TVector2 arguments 
 
@@ -189,7 +193,7 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
     
   std::vector<UShort_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
-  std::vector<Bool_t>  fAxis;    //The use of Bool_t here reflects the (probably safe) assumption that there will never be more than 2 strip orientations present in one GEM module. 
+  std::vector<SBSGEMModule::GEMaxis_t>  fAxis;  //We just made our enumerated type that has two possible values, makes the code more readable (maybe)
   std::vector<std::vector<Int_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
   std::vector<Double_t> fADCsums;
   std::vector<bool> fKeepStrip; //keep this strip?

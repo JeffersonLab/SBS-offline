@@ -4,6 +4,8 @@
 #include "TDatime.h"
 #include "THaEvData.h"
 
+//using namespace SBSGEMModule;
+
 //This should not be hard-coded, I think, but read in from the database (or perhaps not, if it never changes?)
 const int APVMAP[128] = {1, 33, 65, 97, 9, 41, 73, 105, 17, 49, 81, 113, 25, 57, 89, 121, 3, 35, 67, 99, 11, 43, 75, 107, 19, 51, 83, 115, 27, 59, 91, 123, 5, 37, 69, 101, 13, 45, 77, 109, 21, 53, 85, 117, 29, 61, 93, 125, 7, 39, 71, 103, 15, 47, 79, 111, 23, 55, 87, 119, 31, 63, 95, 127, 0, 32, 64, 96, 8, 40, 72, 104, 16, 48, 80, 112, 24, 56, 88, 120, 2, 34, 66, 98, 10, 42, 74, 106, 18, 50, 82, 114, 26, 58, 90, 122, 4, 36, 68, 100, 12, 44, 76, 108, 20, 52, 84, 116, 28, 60, 92, 124, 6, 38, 70, 102, 14, 46, 78, 110, 22, 54, 86, 118, 30, 62, 94, 126};
 
@@ -242,8 +244,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster finding with default (wide-open) track search constraints
   //these functions will fill the 1D cluster arrays:
-  find_clusters_1D(false); //u strips
-  find_clusters_1D(true); //v strips
+  find_clusters_1D(SBSGEMModule::kUaxis); //u strips
+  find_clusters_1D(SBSGEMModule::kVaxis); //v strips
 
   //Now make 2D clusters:
 
@@ -257,7 +259,7 @@ void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster f
 }
 
 void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_width ){
-  //constraint center and constraint width are assumed given in meters in "local" x,y coordinates.
+  //constraint center and constraint width are assumed given in meters in "local" detector x,y coordinates.
 
   double ucenter = constraint_center.X() * fPxU + constraint_center.Y() * fPyU;
   double vcenter = constraint_center.X() * fPxV + constraint_center.Y() * fPyV;
@@ -272,12 +274,15 @@ void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_w
   double ymin = constraint_center.Y() - constraint_width.Y();
   double ymax = constraint_center.Y() + constraint_width.Y();
 
+  //store these for later use:
   fxcmin = xmin;
   fxcmax = xmax;
   fycmin = ymin;
   fycmax = ymax;
   
-  //check the four corners of the rectangle:
+  //check the four corners of the rectangle and compute the maximum values of u and v occuring at the four corners of the rectangular region:
+  // NOTE: we will ALSO enforce the 2D search region in X and Y when we combine 1D U/V clusters into 2D X/Y hits, which, depending on the U/V strip orientation
+  // can exclude some 2D hits that would have passed the U/V constraints defined by the corners of the X/Y rectangle, but been outside the X/Y constraint rectangle
 
   double u00 = xmin * fPxU + ymin * fPyU;
   double u01 = xmin * fPxU + ymax * fPyU;
@@ -297,17 +302,20 @@ void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_w
   vmax = std::max( v00, std::max(v01, std::max(v10, v11) ) );
 
   //The following routines will loop on all the strips and populate the 1D "cluster list" (vector<sbsgemcluster_t> )
-  find_clusters_1D(false, ucenter, (umax-umin)/2.0 ); //U clusters
-  find_clusters_1D(true, vcenter, (vmax-vmin)/2.0 );  //V clusters
+  //Taking half the difference between max and min as the "width" is consistent with how it is used in
+  // find_clusters_1D; i.e., the peak is required to be within |peak position - constraint center| <= constraint width
+  find_clusters_1D(SBSGEMModule::kUaxis, ucenter, (umax-umin)/2.0 ); //U clusters
+  find_clusters_1D(SBSGEMModule::kVaxis, vcenter, (vmax-vmin)/2.0 );  //V clusters
 
   //Now make 2D clusters
   
   fill_2D_hit_arrays();
 }
 
-void SBSGEMModule::find_clusters_1D( bool axis, Double_t constraint_center, Double_t constraint_width ){
+void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t constraint_center, Double_t constraint_width ){
 
   //Constraint center and constraint width are assumed to be given in "standard" Hall A units (meters) in module-local coordinates
+  // (SPECIFICALLY: constraint center and constraint width are assumed to refer to the direction measured by the strips being considered here)
   //This method will generally only be called by the reconstruction methods of SBSGEMTrackerBase
   
   if( !fIsDecoded ){
@@ -315,12 +323,22 @@ void SBSGEMModule::find_clusters_1D( bool axis, Double_t constraint_center, Doub
     return;
   }
 
-  UShort_t maxsep = axis ? fMaxNeighborsV_totalcharge : fMaxNeighborsU_totalcharge;
-  UShort_t maxsepcoord = axis ? fMaxNeighborsV_hitpos : fMaxNeighborsU_hitpos; 
+  UShort_t maxsep;
+  UShort_t maxsepcoord; 
+  UInt_t Nstrips;
+  Double_t pitch;
 
-  UInt_t Nstrips = axis ? fNstripsV : fNstripsU;
-  
-  Double_t pitch = axis ? fVStripPitch : fUStripPitch;
+  if( axis == SBSGEMModule::kUaxis ){
+    maxsep = fMaxNeighborsU_totalcharge;
+    maxsepcoord = fMaxNeighborsU_hitpos; 
+    Nstrips = fNstripsU;
+    pitch = fUStripPitch;
+  } else { //V axis, no need to compare axis to kVaxis:
+    maxsep = fMaxNeighborsV_totalcharge;
+    maxsepcoord = fMaxNeighborsV_hitpos; 
+    Nstrips = fNstripsV;
+    pitch = fVStripPitch;
+  }
   
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
   std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently:
@@ -504,7 +522,6 @@ void SBSGEMModule::find_clusters_1D( bool axis, Double_t constraint_center, Doub
 	
 	sumADC += ADCstrip;
 	
-	
 	if( std::abs( istrip - stripmax ) <= std::max(1,std::min(fMaxNeighborsU_hitpos,fMaxNeighborsU_totalcharge)) ){ 
 	  sumx += hitpos * ADCstrip;
 	  sumx2 += pow(hitpos,2) * ADCstrip;
@@ -521,7 +538,7 @@ void SBSGEMModule::find_clusters_1D( bool axis, Double_t constraint_center, Doub
       clusttemp.t_mean = sumt / sumwx;
       clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
 
-      if( axis ){
+      if( axis == SBSGEMModule::kVaxis ){
 	fVclusters.push_back( clusttemp );
       } else {
 	fUclusters.push_back( clusttemp );
@@ -558,6 +575,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
       double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch;
       double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch;
 
+      //"Cluster moments" defined as difference between reconstructed hit position and center of strip with max. signal in the cluster:
       hittemp.umom = (hittemp.uhit - pos_maxstripu)/fUStripPitch;
       hittemp.vmom = (hittemp.vhit - pos_maxstripv)/fVStripPitch;
       

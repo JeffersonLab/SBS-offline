@@ -28,10 +28,10 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fSigma_hitshape = 0.0004; //0.4 mm
   
   // set defaults for constraint points and constraint widths:
-  fConstraintPoint_Front.SetXYZ(0,0,0);
+  fConstraintPoint_Front.SetXYZ(0,0,-10.0);
   fConstraintPoint_Back.SetXYZ(0,0,10.0);
 
-  //wide-open constraints for now:
+  //wide-open constraints for now (the units are meters here (mm would be more appropriate but whatever))
   fConstraintWidth_Front.Set( 1.5, 0.5 );
   fConstraintWidth_Back.Set( 1.5, 0.5 ); 
 }
@@ -62,6 +62,7 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   
 }
 
+//This only needs to be done ONCE (after loading the geometry from the database!)
 void SBSGEMTrackerBase::InitLayerCombos() { //It is assumed that this will be called by the ReadDatabase/Init method of the derived classes after loading the necessary information from the database:
 
   //Just in case:
@@ -190,60 +191,7 @@ void SBSGEMTrackerBase::InitGridBins() {
   
 }
 
-void SBSGEMTrackerBase::hit_reconstruction(){
-
-  fclustering_done = true;
-  
-  //Loop over all the GEM modules and invoke their cluster-finding methods with search region constraints:
-  for( int imodule=0; imodule<fNmodules; imodule++ ){
-    SBSGEMModule *mod = fModules[imodule];
-
-    if( !fUseConstraint ){ //call find_2D hits for the module without any constraint:
-      mod->find_2Dhits();
-    } else { //Determine constraint center and constraint width at this module:
-      TVector3 modpos = mod->GetOrigin();
-      TVector3 modzaxis = mod->GetZax();
-
-      TVector3 constraint_direction = (fConstraintPoint_Back - fConstraintPoint_Front).Unit();
-
-      //Calculate intersection point with plane of module:
-      // recall modzaxis dot ( r - modpos ) = 0
-      // r = r0 + s * nhat
-      // modzaxis dot ( r0 + s* nhat - modpos ) = 0
-      // s (modzaxis dot nhat) = modzaxis dot (modpos - r0) --> s = modzaxis dot (modpos - r0)/modzaxis dot nhat:
-
-      //This is the distance along the line defined by the front and rear constraint points to its intersection point with the plane of the module:
-      double sintersect = modzaxis.Dot( modpos - fConstraintPoint_Front )/( modzaxis.Dot( constraint_direction ) );
-
-      //The following is the intersection point of the line defined by the front and rear constraint points with the plane of the module:
-      TVector3 constraint_intersect = fConstraintPoint_Front + sintersect * constraint_direction;
-
-      //Define the constraint width at each module via linear interpolation between the front and rear constraint widths:
-      //Note: It is assumed that the front and rear constraint points and widths will be defined to be just outside the entire physical z extent
-      //      of all the layers,
-      //      such that every module lies between the front and rear constraint points (along z) by definition, and therefore that
-      //      "interp_frac" below lies between zero and one in virtually all cases
-      //      
-      
-      double interp_frac = sintersect / (fConstraintPoint_Back-fConstraintPoint_Front).Mag();
-      
-      TVector2 constraint_width_module( fConstraintWidth_Front.X() * (1.-interp_frac) + fConstraintWidth_Back.X() * interp_frac,
-					fConstraintWidth_Front.Y() * (1.-interp_frac) + fConstraintWidth_Back.Y() * interp_frac );
-
-      //compute constraint in "local" module coordinates:
-      TVector3 constraint_intersect_local = mod->TrackToDetCoord( constraint_intersect );
-      
-      TVector2 constraint_center_module( constraint_intersect_local.X(), constraint_intersect_local.Y() );
-
-      //Do 2D hit reconstruction in the search region defined by the constraints at this module.
-      //First check if any part of the search region overlaps the module active area:
-      
-      mod->find_2Dhits( constraint_center_module, constraint_width_module );
-    }
-      
-  }
-}
-
+//Initialize the "hit list" arrays that are used by the track-finding algorithm: these arrays are UNCHANGING throughout the iterations of track-finding:
 void SBSGEMTrackerBase::InitHitList(){
 
   //clear out any old information:
@@ -278,7 +226,8 @@ void SBSGEMTrackerBase::InitFreeHitList(){
   layerswithfreehits.clear();
   freehitlist_layer.clear();
   freehitcounter.clear();
-
+  Nfreehits_layer.clear();
+  
   Nfreehits_binxy_layer.clear();
   freehitlist_binxy_layer.clear();
   
@@ -340,12 +289,66 @@ void SBSGEMTrackerBase::InitFreeHitList(){
   } //loop over all layers
 }
 
+void SBSGEMTrackerBase::hit_reconstruction(){
+
+  fclustering_done = true;
+  
+  //Loop over all the GEM modules and invoke their cluster-finding methods with search region constraints:
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    SBSGEMModule *mod = fModules[imodule];
+
+    if( !fUseConstraint ){ //call find_2D hits for the module without any constraint:
+      mod->find_2Dhits();
+    } else {
+      
+      TVector3 constraint_direction = (fConstraintPoint_Back - fConstraintPoint_Front).Unit();
+
+      //Calculate intersection point with plane of module:
+      // recall modzaxis dot ( r - modpos ) = 0
+      // r = r0 + s * nhat
+      // modzaxis dot ( r0 + s* nhat - modpos ) = 0
+      // s (modzaxis dot nhat) = modzaxis dot (modpos - r0) --> s = modzaxis dot (modpos - r0)/modzaxis dot nhat
+
+      //The following is the intersection point of the line defined by the front and rear constraint points with the plane of the module:
+      double sintersect; //dummy variable to hold distance along track to intersection from front constraint point:
+      TVector3 constraint_intersect = TrackIntersect( imodule, fConstraintPoint_Front, constraint_direction, sintersect );
+      
+      //Define the constraint width at each module via linear interpolation between the front and rear constraint widths:
+      //Note: It is assumed that the front and rear constraint points and widths will be defined to be just outside the entire physical z extent
+      //      of all the layers,
+      //      such that every module lies between the front and rear constraint points (along z) by definition, and therefore that
+      //      "interp_frac" below lies between zero and one in virtually all cases
+      //      
+      
+      double interp_frac = sintersect / (fConstraintPoint_Back-fConstraintPoint_Front).Mag();
+      
+      TVector2 constraint_width_module( fConstraintWidth_Front.X() * (1.-interp_frac) + fConstraintWidth_Back.X() * interp_frac,
+					fConstraintWidth_Front.Y() * (1.-interp_frac) + fConstraintWidth_Back.Y() * interp_frac );
+
+      //compute constraint in "local" module coordinates:
+      TVector3 constraint_intersect_local = mod->TrackToDetCoord( constraint_intersect );
+      
+      TVector2 constraint_center_module( constraint_intersect_local.X(), constraint_intersect_local.Y() );
+
+      //Do 2D hit reconstruction in the search region defined by the constraints at this module.
+      //First check if any part of the search region overlaps the module active area:
+      
+      mod->find_2Dhits( constraint_center_module, constraint_width_module );
+    }
+      
+  }
+}
+
 // Standard "fast" track-finding algorithm (based on SBSGEM_standalone code by Andrew Puckett):
 void SBSGEMTrackerBase::find_tracks(){ 
 
+  //should this method invoke clear()? Yes: Clear() just clears out all the track arrays. It is assumed that this method will only be called once per event.
+  //Although that is probably not correct; it might be called as many as two times. Anyway, for now, let's use it, might need to revisit later:
+  //Clear();
+  
   fNtracks_found = 0;
   
-  if( !fclustering_done ){ //This shouldn't be called before hit reconstruction, but if it is, then this routine can call the hit reconstruction:
+  if( !fclustering_done ){ //This shouldn't be called before hit reconstruction, but if it is, then this routine will call the hit reconstruction:
     hit_reconstruction();
   }
   
@@ -358,285 +361,280 @@ void SBSGEMTrackerBase::find_tracks(){
   //At this stage the static "hit lists" that we need for the tracking are initialized. Let's get started:
 
   if( layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
-    bool foundtrack = true;
-    while( foundtrack ){ //As long as we find a track on each iteration, keep looking for more tracks:
-      foundtrack = false;
+    //bool foundtrack = true; rendered unnecessary by the removal of the outermost, redundant while loop:
+      
+    int nhitsrequired = layers_with_2Dhits.size(); //initially we favor tracks with the largest possible number of hits; if we fail to find a track at this hit requirement, we decrement the number of required hits as long as it exceeds the minimum
 
-      int nhitsrequired = layers_with_2Dhits.size(); //initially we favor tracks with the largest possible number of hits; if we fail to find a track at this hit requirement, we decrement the number of required hits as long as it exceeds the minimum
+    while( nhitsrequired >= fMinHinHitsOnTrack ){ //as long as the current minimum hit requirement exceeds the minimum hits to define a track, we look for more tracks with
+      // nhitsrequired hits:
+      bool foundtrack = false;
 
-      while( nhitsrequired >= fMinHinHitsOnTrack ){ //as long as the current hit requirement exceeds the minimum, we can find more tracks:
-	foundtrack = false;
+      //The goal will be to loop over all possible combinations of layers at the current hit requirement, and find the combination of one hit per layer with minimum chi2:
+      //At the beginning of each iteration of this loop, we need to populate several more arrays, the "free hit list" mapped by layer, and
+      //also the "free hit list" mapped by layer and 2D grid bin:
 
-	//The goal will be to loop over all possible combinations of layers at the current hit requirement, and find the combination of one hit per layer with minimum chi2:
-	//At the beginning of each iteration of this loop, we need to populate several more arrays, the "free hit list" mapped by layer, and
-	//also the "free hit list" mapped by layer and 2D grid bin:
+      // We moved the initialization of the "free hit" list for each track-finding iteration to its own function,
+      // and we moved the relevant arrays to data members of the class
 
-	//We moved the initialization of the "free hit" list for each track-finding iteration to its own function,
-	// and we moved the relevant arrays to data members of the class
+      //This happens once per track-finding iteration: if any tracks were found on the previous iteration, then their hits (and any others sharing the same 1D U or V clusters)
+      //will have been marked as used, reducing the number of "available" hits for finding additional tracks:
+      InitFreeHitList(); 
 
-	//This happens once per tracking iteration: 
-	InitFreeHitList(); 
+      if( layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
+	//The basic algorithm should do the following:
 
-	if( layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
-	  //The basic algorithm should do the following:
+	// 1. Loop over all possible layer combinations for which the number of layers is equal to the current minimum hit requirement:
+	// 2. Within each layer combination at the current minimum hit requirement, check that every layer has at least one free hit. If so, proceed:
+	// 3. For all possible combinations of one hit from each of the two outermost layers, calculate the straight line between the two points, and project the
+	//    straight line to each layer
+	// 4. At each intermediate layer, populate the list of hits in the grid bins pointed to by the candidate track. If the projected track is close to the edge of
+	//    the bin in either X or Y, also consider hits in the adjacent X and/or Y bins
+	// 5. IFF every intermediate layer contains at least one hit in the grid bin(s) sufficiently close to the projected track, proceed to loop over the
+	//    hits in the intermediate layers, using either the "fast" method (find the hit in each layer closest to the projected track) or the "brute force" method
+	//    (loop on all possible hit combinations in the intermediate layers using "odometer" algorithm), which is probably more accurate, but slower
+	// 6. For each candidate hit combination, calculate the chi2 of a straight line fit.
 
-	  // 1. Loop over all possible layer combinations for which the number of layers is equal to the current minimum hit requirement:
-	  // 2. Within each layer combination at the current minimum hit requirement, check that every layer has at least one free hit. If so, proceed:
-	  // 3. For all possible combinations of one hit from each of the two outermost layers, calculate the straight line between the two points, and project the
-	  //    straight line to each layer
-	  // 4. At each intermediate layer, populate the list of hits in the grid bins pointed to by the candidate track. If the projected track is close to the edge of
-	  //    the bin in either X or Y, also consider hits in the adjacent X and/or Y bins
-	  // 5. IFF every intermediate layer contains at least one hit in the grid bin(s) sufficiently close to the projected track, proceed to loop over the
-	  //    hits in the intermediate layers, using either the "fast" method (find the hit in each layer closest to the projected track) or the "brute force" method
-	  //    (loop on all possible hit combinations in the intermediate layers using "odometer" algorithm), which is probably more accurate, but slower
-	  // 6. For each candidate hit combination, calculate the chi2 of a straight line fit.
+	// The actual loop over hit combinations starts here, define local variables needed to store best hit combination, best track and residuals, and minimum chi2:
+	bool firstgoodcombo = true;
+	map<int,int> besthitcombo;
+	double minchi2 = 1.e20; //arbitrary large number initially
 
+	double besttrack[4]; //x, y, x', y'
 
-	  bool firstgoodcombo = true;
-	  map<int,int> besthitcombo;
-	  double minchi2 = 1.e20; //arbitrary large number initially
-
-	  double besttrack[4]; //x, y, x', y'
-
-	  //Let's carry around the track fitting residuals so that we don't have to repeat the calculation when adding the fitted track with best chi2:
-	  vector<double> uresidbest, vresidbest;
+	//Let's carry around the track fitting residuals so that we don't have to repeat the calculation when adding the fitted track with best chi2 to the track arrays:
+	vector<double> uresidbest, vresidbest;
 	  
-	  for( int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
-	    int minlayer = fNlayers + 1;
-	    int maxlayer = -1;
+	for( int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
+	  int minlayer = fNlayers + 1;
+	  int maxlayer = -1;
 
-	    //list of layers to test on this hit combination (all layers have to fire in order to proceed):
-	    set<int> layerstotest;
+	  //list of layers to test on this hit combination (all layers have to fire in order to proceed):
+	  set<int> layerstotest;
 
-	    //Also record outermost layers for fast track-finding:
+	  //Also record outermost layers for fast track-finding using "grid search":
 	    
-	    for( int ihit=0; ihit<nhitsrequired; ihit++ ){
-	      int layeri = fLayerCombinations[nhitsrequired][icombo][ihit];
-	      if( layerswithfreehits.find( layeri ) != layerswithfreehits.end() ){ //check that this layer has unused hits:
-		layerstotest.insert( layeri );
+	  for( int ihit=0; ihit<nhitsrequired; ihit++ ){
+	    int layeri = fLayerCombinations[nhitsrequired][icombo][ihit];
+	    if( layerswithfreehits.find( layeri ) != layerswithfreehits.end() ){ //check that this layer has unused hits:
+	      layerstotest.insert( layeri );
 
-		minlayer = (layeri < minlayer) ? layeri : minlayer;
-		maxlayer = (layeri > maxlayer) ? layeri : maxlayer;
-	      }
+	      minlayer = (layeri < minlayer) ? layeri : minlayer;
+	      maxlayer = (layeri > maxlayer) ? layeri : maxlayer;
 	    }
+	  }
 
-	    //Calculate the total number of possible combinations of one hit from each of the two outermost layers:
-	    long ncombos_minmax = Nfreehits_layer[minlayer]*Nfreehits_layer[maxlayer];
+	  //Calculate the total number of possible combinations of one hit from each of the two outermost layers:
+	  long ncombos_minmax = Nfreehits_layer[minlayer]*Nfreehits_layer[maxlayer];
 	    
-	    if( layerstotest.size() < nhitsrequired ){
-	      //skip this layer combination if any layers lack free hits at the current minimum hit requirement:
-	      continue;
-	    }
+	  if( layerstotest.size() < nhitsrequired ){
+	    //skip this layer combination if any layers lack free hits at the current minimum hit requirement:
+	    continue;
+	  }
 
-	    // If the number of hit combinations in the two outermost layers exceeds the maximum, try to find an alternate pair of layers
-	    // with hit combinations below the maximum:
-	    if( ncombos_minmax > fMaxHitCombinations ){
-	      // if the two outermost layers in this combo have too many hit combinations, find the combination of layers
-	      // with the largest lever arm in z such that the number of combinations is less than the
-	      // maximum:
-	      int maxdiff = 0;
+	  // If the number of hit combinations in the two outermost layers exceeds the maximum, try to find an alternate pair of layers
+	  // with hit combinations below the maximum:
+	  if( ncombos_minmax > fMaxHitCombinations ){
+	    // if the two outermost layers in this combo have too many hit combinations, find the combination of layers
+	    // with the largest lever arm in z such that the number of combinations is less than the
+	    // maximum:
+	    int maxdiff = 0;
 	      
-	      for( auto ilay = layerstotest.begin(); ilay != layerstotest.end(); ++ilay ){
-		int layeri = *ilay;
-		for( auto jlay = ilay; jlay != layerstotest.end(); ++jlay ){
-		  int layerj = *jlay;
-		  if( layerj > layeri ){
-		    long ncombostest = Nfreehits_layer[layeri]*Nfreehits_layer[layerj];
+	    for( auto ilay = layerstotest.begin(); ilay != layerstotest.end(); ++ilay ){
+	      int layeri = *ilay;
+	      for( auto jlay = ilay; jlay != layerstotest.end(); ++jlay ){
+		int layerj = *jlay;
+		if( layerj > layeri ){
+		  long ncombostest = Nfreehits_layer[layeri]*Nfreehits_layer[layerj];
 
-		    if( ncombostest >= 1 && ncombostest <= fMaxHitCombinations &&
-			layerj - layeri > maxdiff ){
-		      minlayer = layeri;
-		      maxlayer = layerj;
-		      maxdiff = layerj - layeri;
-		      ncombos_minmax = ncombostest;
-		    }	  
-		  }
-		}	
-	      }
-	    } //end check of ncombos_minmax < maxhitcombinations
+		  if( ncombostest >= 1 && ncombostest <= fMaxHitCombinations &&
+		      layerj - layeri > maxdiff ){
+		    minlayer = layeri;
+		    maxlayer = layerj;
+		    maxdiff = layerj - layeri;
+		    ncombos_minmax = ncombostest;
+		  }	  
+		}
+	      }	
+	    }
+	  } //end check of ncombos_minmax < maxhitcombinations
 
 	    //If the number of hit combinations STILL exceeds the maximum, skip this layer combination:
-	    if( ncombos_minmax > fMaxHitCombinations ){
-	      continue;
-	    }
+	  if( ncombos_minmax > fMaxHitCombinations ){
+	    continue;
+	  }
 	    
-	    //Next: loop over all hits in the two outermost layers and form track from each combination:
-	    for( int ihit = 0; ihit<Nfreehits_layer[minlayer]; ihit++ ){
-	      for( int jhit = 0; jhit<Nfreehits_layer[maxlayer]; jhit++ ){
-		//The track search region constraint should have already been enforced at the 2D hit reconstruction stage, so additional checks here are probably unnecessary:
+	  //Next: loop over all hits in the two outermost layers and form track from each combination:
+	  for( int ihit = 0; ihit<Nfreehits_layer[minlayer]; ihit++ ){
+	    for( int jhit = 0; jhit<Nfreehits_layer[maxlayer]; jhit++ ){
+	      //The track search region constraint should have already been enforced at the 2D hit reconstruction stage, so additional checks here are probably unnecessary.
 		
-		int hitmin = freehitlist_layer[minlayer][ihit];
-		int hitmax = freehitlist_layer[maxlayer][jhit];
+	      int hitmin = freehitlist_layer[minlayer][ihit];
+	      int hitmax = freehitlist_layer[maxlayer][jhit];
 
-		int modmin = modindexhit2D[minlayer][hitmin];
-		int modmax = modindexhit2D[maxlayer][hitmax];
+	      int modmin = modindexhit2D[minlayer][hitmin];
+	      int modmax = modindexhit2D[maxlayer][hitmax];
 
-		int clustmin = clustindexhit2D[minlayer][hitmin];
-		int clustmax = clustindexhit2D[maxlayer][hitmax];
+	      int clustmin = clustindexhit2D[minlayer][hitmin];
+	      int clustmax = clustindexhit2D[maxlayer][hitmax];
 
-		//Get 3D global coordinates of the two hits:
-		TVector3 hitpos_min = GetHitPosGlobal( modmin, clustmin );
-		TVector3 hitpos_max = GetHitPosGlobal( modmax, clustmax );
+	      //Get 3D global coordinates of the two hits:
+	      TVector3 hitpos_min = GetHitPosGlobal( modmin, clustmin );
+	      TVector3 hitpos_max = GetHitPosGlobal( modmax, clustmax );
 
-		// populate the list of layers other than minlayer and maxlayer to build the track:
-		std::set<int> otherlayers;
+	      // populate the list of layers other than minlayer and maxlayer to build the track:
+	      std::set<int> otherlayers;
 
-		for( auto ilay = layerstotest.begin(); ilay != layerstotest.end(); ++ilay ){
-		  int thislayer = *ilay;
-		  if( thislayer != minlayer && thislayer != maxlayer ){
-		    otherlayers.insert( *ilay );
-		  }
+	      for( auto ilay = layerstotest.begin(); ilay != layerstotest.end(); ++ilay ){
+		int thislayer = *ilay;
+		if( thislayer != minlayer && thislayer != maxlayer ){
+		  otherlayers.insert( *ilay );
 		}
+	      }
 
-		//This array will hold the list of free hits in layers other than minlayer and maxlayer falling in 2D grid bins
-		//close to the track projection:
-		std::map<int,std::vector<int> > freehitlist_otherlayers_goodxy; 
+	      //This array will hold the list of free hits in layers other than minlayer and maxlayer falling in 2D grid bins
+	      //close to the track projection:
+	      std::map<int,std::vector<int> > freehitlist_otherlayers_goodxy; 
 		
-		//The next step is to calculate the straight line passing through the two points from minlayer and maxlayer:
-		// double xptrtemp = (hitpos_max.X() - hitpos_min.X())/(hitpos_max.Z()-hitpos_min.Z());
-		// double yptrtemp = (hitpos_max.Y() - hitpos_min.Y())/(hitpos_max.Z()-hitpos_min.Z());
+	      //The next step is to calculate the straight line passing through the two points from minlayer and maxlayer:
+	      // double xptrtemp = (hitpos_max.X() - hitpos_min.X())/(hitpos_max.Z()-hitpos_min.Z());
+	      // double yptrtemp = (hitpos_max.Y() - hitpos_min.Y())/(hitpos_max.Z()-hitpos_min.Z());
 		
 		
-		//Project track to z = 0 plane:
-		double xptrtemp = (hitpos_max.X() - hitpos_min.X())/(hitpos_max.Z() - hitpos_min.Z() );
-		double yptrtemp = (hitpos_max.Y() - hitpos_min.Y())/(hitpos_max.Z() - hitpos_min.Z() );
+	      //Project track to z = 0 plane:
+	      double xptrtemp = (hitpos_max.X() - hitpos_min.X())/(hitpos_max.Z() - hitpos_min.Z() );
+	      double yptrtemp = (hitpos_max.Y() - hitpos_min.Y())/(hitpos_max.Z() - hitpos_min.Z() );
 
-		//Track coordinates at Z = 0:
-		double xtrtemp = 0.5*( hitpos_max.X() - xptrtemp * hitpos_max.Z() + hitpos_min.X() - xptrtemp * hitpos_min.Z() );
-		double ytrtemp = 0.5*( hitpos_max.Y() - yptrtemp * hitpos_max.Z() + hitpos_min.Y() - yptrtemp * hitpos_min.Z() );
+	      //Track coordinates at Z = 0:
+	      double xtrtemp = 0.5*( hitpos_max.X() - xptrtemp * hitpos_max.Z() + hitpos_min.X() - xptrtemp * hitpos_min.Z() );
+	      double ytrtemp = 0.5*( hitpos_max.Y() - yptrtemp * hitpos_max.Z() + hitpos_min.Y() - yptrtemp * hitpos_min.Z() );
 
-		//Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
+	      //Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
 
-		bool nextcomboexists = true;
+	      bool nextcomboexists = true;
 
-		//clear out the "free hit" counter for looping over combinations:
-		freehitcounter.clear();
+	      //clear out the "free hit" counter for looping over combinations:
+	      freehitcounter.clear();
 		
-		for( auto ilay = otherlayers.begin(); ilay != otherlayers.end(); ++ilay ){
-		  int layer = *ilay;
+	      for( auto ilay = otherlayers.begin(); ilay != otherlayers.end(); ++ilay ){
+		int layer = *ilay;
 
-		  double xproj = xtrtemp + xptrtemp * fZavgLayer[layer];
-		  double yproj = ytrtemp + yptrtemp * fZavgLayer[layer];
+		double xproj = xtrtemp + xptrtemp * fZavgLayer[layer];
+		double yproj = ytrtemp + yptrtemp * fZavgLayer[layer];
 
-		  int binxtemp = int( (xproj - fGridXmin_layer[layer])/fGridBinWidthX );
-		  int binytemp = int( (yproj - fGridYmin_layer[layer])/fGridBinWidthY );
+		int binxtemp = int( (xproj - fGridXmin_layer[layer])/fGridBinWidthX );
+		int binytemp = int( (yproj - fGridYmin_layer[layer])/fGridBinWidthY );
 
-		  //check if this bin is in-range:
+		//check if this bin is in-range:
 
-		  if( binxtemp >= 0 && binxtemp < fGridNbinsX_layer[layer] &&
-		      binytemp >= 0 && binytemp < fGridNbinsY_layer[layer] ){
+		if( binxtemp >= 0 && binxtemp < fGridNbinsX_layer[layer] &&
+		    binytemp >= 0 && binytemp < fGridNbinsY_layer[layer] ){
 
-		    int binxhi = binxtemp;
-		    int binxlo = binxtemp;
-		    int binyhi = binytemp;
-		    int binylo = binytemp;
+		  int binxhi = binxtemp;
+		  int binxlo = binxtemp;
+		  int binyhi = binytemp;
+		  int binylo = binytemp;
 
-		    double binxdiff = xproj - (fGridXmin_layer[layer]+binxtemp*fGridBinWidthX);
-		    double binydiff = yproj - (fGridYmin_layer[layer]+binytemp*fGridBinWidthY);
+		  //the following two variables are the differences between the track projection to this layer and the low edge of the bin in both X and Y:
+		  double binxdiff = xproj - (fGridXmin_layer[layer]+binxtemp*fGridBinWidthX);
+		  double binydiff = yproj - (fGridYmin_layer[layer]+binytemp*fGridBinWidthY);
 		    
-		    //If x or y projection is close to low edge of bin, include the neighboring bin on the low side in the analysis:
-		    if( binxdiff < fGridEdgeToleranceX && binxtemp > 0 ) binxlo = binxtemp-1;
-		    if( binydiff < fGridEdgeToleranceY && binytemp > 0 ) binylo = binytemp-1;
-		    //I x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis:
-		    if( fGridBinWidthX - binxdiff < fGridEdgeToleranceX && binxtemp + 1 < fGridNbinsX_layer[layer] ) binxhi = binxtemp+1;
-		    if( fGridBinWidthY - binydiff < fGridEdgeToleranceY && binytemp + 1 < fGridNbinsY_layer[layer] ) binyhi = binytemp+1;
+		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
+		  if( binxdiff < fGridEdgeToleranceX && binxtemp > 0 ) binxlo = binxtemp-1;
+		  if( binydiff < fGridEdgeToleranceY && binytemp > 0 ) binylo = binytemp-1;
+		  //I x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
+		  if( fGridBinWidthX - binxdiff < fGridEdgeToleranceX && binxtemp + 1 < fGridNbinsX_layer[layer] ) binxhi = binxtemp+1;
+		  if( fGridBinWidthY - binydiff < fGridEdgeToleranceY && binytemp + 1 < fGridNbinsY_layer[layer] ) binyhi = binytemp+1;
 
-		    //now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
-		    for( int binx = binxlo; binx <= binxhi; binx++ ){
-		      for( int biny = binylo; biny <= binyhi; biny++ ){
-			int binxy = binx + fGridNbinsX_layer[layer]*biny;
+		  //now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
+		  for( int binx = binxlo; binx <= binxhi; binx++ ){
+		    for( int biny = binylo; biny <= binyhi; biny++ ){
+		      int binxy = binx + fGridNbinsX_layer[layer]*biny;
 
-			for( int khit=0; khit<freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
-			  freehitlist_otherlayers_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
-			}
-			
+		      for( int khit=0; khit<freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
+			freehitlist_otherlayers_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
 		      }
+			
 		    }
-		  } //end check on grid bin of projected track in range
+		  }
+		} //end check on grid bin of projected track in range
 
 		  //This check enforces that all layers other than minlayer and maxlayer have at least one hit in the relevant 2D grid bins:
-		  if( freehitlist_otherlayers_goodxy.find(layer) == freehitlist_otherlayers_goodxy.end() ) nextcomboexists = false;
+		if( freehitlist_otherlayers_goodxy.find(layer) == freehitlist_otherlayers_goodxy.end() ) nextcomboexists = false;
 
-		  freehitcounter[layer] = 0;
+		freehitcounter[layer] = 0;
 		  
-		} //end loop on layers other than minlayer and maxlayer
+	      } //end loop on layers other than minlayer and maxlayer
 
 		//Next, we will loop on all possible combinations of one hit from each of the layers other than minlayer and maxlayer:
-		if( nextcomboexists ){
-		  bool firstcombo = true;
+	      if( nextcomboexists ){
+		bool firstcombo = true;
 
-		  std::map<int,int> hitcombo;
+		std::map<int,int> hitcombo;
 		  
-		  while( nextcomboexists = GetNextCombo( otherlayers, freehitlist_otherlayers_goodxy, freehitcounter, hitcombo, firstcombo ) ){
-		    // I think that the assignment of the result of GetNextCombo() to nextcomboexists in the while loop condition renders an extra check of the value of
-		    // nextcomboexists unnecessary
-		    //Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one:
+		while( nextcomboexists = GetNextCombo( otherlayers, freehitlist_otherlayers_goodxy, freehitcounter, hitcombo, firstcombo ) ){
+		  // I think that the assignment of the result of GetNextCombo() to nextcomboexists in the while loop condition renders an extra check of the value of
+		  // nextcomboexists unnecessary
+		  //Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one:
 
-		    //First, add the hits from minlayer and maxlayer to the combo:
-		    hitcombo[minlayer] = hitmin;
-		    hitcombo[maxlayer] = hitmax;
+		  //First, add the hits from minlayer and maxlayer to the combo:
+		  hitcombo[minlayer] = hitmin;
+		  hitcombo[maxlayer] = hitmax;
 
-		    double xptrtemp, yptrtemp, xtrtemp, ytrtemp, chi2ndftemp;
+		  double xptrtemp, yptrtemp, xtrtemp, ytrtemp, chi2ndftemp;
 
-		    vector<double> uresidtemp, vresidtemp;
+		  //This declaration might shadow another one up above
+		  //(actually it DOESN'T: the ones above are for the "best" hit combo, these are temporary dummy variables. Proceed)
+		  vector<double> uresidtemp, vresidtemp;
 		    
-		    //Fit a track to the current hit combination: 
-		    FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
+		  //Fit a track to the current hit combination:
+		  //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
+		  FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
 
-		    if( firstgoodcombo || chi2ndftemp < minchi2 ){
-		      firstgoodcombo = false;
-		      minchi2 = chi2ndftemp;
+		  if( firstgoodcombo || chi2ndftemp < minchi2 ){
+		    firstgoodcombo = false;
+		    minchi2 = chi2ndftemp;
 
-		      besthitcombo = hitcombo;
+		    besthitcombo = hitcombo;
 
-		      //record track properties so we don't need to re-fit later (although we will probably have to calculate residuals again unless we carry those around)
-		      besttrack[0] = xtrtemp;
-		      besttrack[1] = ytrtemp;
-		      besttrack[2] = xptrtemp;
-		      besttrack[3] = yptrtemp;
+		    //record track properties so we don't need to re-fit later
+		    besttrack[0] = xtrtemp;
+		    besttrack[1] = ytrtemp;
+		    besttrack[2] = xptrtemp;
+		    besttrack[3] = yptrtemp;
 
-		      //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
-		      uresidbest = uresidtemp;
-		      vresidbest = vresidtemp; 
-		    }
+		    //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
+		    uresidbest = uresidtemp;
+		    vresidbest = vresidtemp; 
+		  }
 
-		    //clear hitcombo just so we start fresh each iteration of the loop: this is PROBABLY unnecessary, but safer:
-		    hitcombo.clear();
+		  //clear hitcombo just so we start fresh each iteration of the loop: this is PROBABLY unnecessary, but safer than not doing so:
+		  hitcombo.clear();
 		    
-		  } //end while( nextcomboexists )
-		} //end if( nextcomboexists )		       
+		} //end while( nextcomboexists )
+	      } //end if( nextcomboexists )		       
 		
-	      } //end loop over hits in maxlayer
-	    } //end loop over hits in minlayer
-	  } //end loop over layer combinations at current minimum hit requirement
+	    } //end loop over hits in maxlayer
+	  } //end loop over hits in minlayer
+	} //end loop over layer combinations at current minimum hit requirement
 
 	  //We treat all layer combinations at the same minimum hit requirement on an equal footing as far as track-finding is concerned:
-	  if( !firstgoodcombo && minchi2 < fTrackChi2Cut ){ //then we found at least one candidate track:
-	    foundtrack = true;
+	if( !firstgoodcombo && minchi2 < fTrackChi2Cut ){ //then we found at least one candidate track:
+	  foundtrack = true;
 
-	    fNtracks_found++;
-
-	    AddTrack( besthitcombo, besttrack, minchi2 );
+	  // "AddTrack" takes care of incrementing fNtracks_found
 	    
-	  }
-	  
-	} //end check on layers with free hits >= nhitsrequired
-	
-	
-	
-	if( !foundtrack ){
-	  nhitsrequired--;
+	  AddTrack( besthitcombo, besttrack, minchi2 );
+	    
 	}
-      } //end while(nhitsrequired > minhits )
-      
-    } //end while( foundtrack )
-
-
+	  
+      } //end check on layers with free hits >= nhitsrequired
+		
+      if( !foundtrack ){ //If we didn't find any tracks at the current minimum hit requirement, then reduce the minimum, and see if we can find a good track
+	// (or tracks) with one fewer hit. Otherwise, we search again at the current minimum hit requirement:
+	nhitsrequired--;
+      }
+    } //end while(nhitsrequired >= minhits ) 
   } //end check of sufficient layers with hits to do tracking
-
-  
-  
-
 }
 
 //The next function determines the line of best fit through a combination of hits, without calculating residuals or chi2.
@@ -777,7 +775,7 @@ TVector3 SBSGEMTrackerBase::GetHitPosGlobal( int module, int clustindex ){
 void SBSGEMTrackerBase::AddTrack( const std::map<int,int> &hitcombo, double *BestTrack, double chi2ndf, std::vector<double> &uresidbest, std::vector<double> &vresidbest ){
   //AddTrack stores the best track found on each track-finding iteration in the appropriate data members of the class. It also takes care of
   //marking the hits on the track as used, and also marking all the 2D hits as used that contain any of the same 1D clusters as the found track:
-  fNtracks_found++;
+  
   fNhitsOnTrack.push_back( hitcombo.size() );
 
   fXtrack.push_back( BestTrack[0] );
@@ -804,12 +802,13 @@ void SBSGEMTrackerBase::AddTrack( const std::map<int,int> &hitcombo, double *Bes
 
     //Also: this is the time to mark the hits as used:
     hitused2D[layer][hitidx] = true;
+    fModules[module]->fHits[iclust].ontrack = true;
+    fModules[module]->fHits[iclust].trackidx = fNtracks_found;
     
     modlisttemp.push_back( module );
     hitlisttemp.push_back( iclust );
 
-    //For exclusive residual calculation, we use FitTrack with the hit combo excluding the current layer, and setting chi2calc to false, with dummy variables for the
-    //other arguments. Maybe Ole can think of a better/more efficient way to do this:
+    //For exclusive residual calculation, we use CalcLineOfBestFit instead of FitTrack with the hit combo excluding the current layer:
     std::map<int,int> hitcombotemp = hitcombo;
     hitcombotemp.erase( layer ); //remove the current layer from the list of hits:
 
@@ -831,27 +830,64 @@ void SBSGEMTrackerBase::AddTrack( const std::map<int,int> &hitcombo, double *Bes
     eresidv.push_back( UVhit.Y() - UVtrack.Y() );
 		      
   }
-
+  
   fModListTrack.push_back( modlisttemp );
   fHitListTrack.push_back( hitlisttemp );
 
   feresidu_hits.push_back( eresidu );
   feresidv_hits.push_back( eresidv );
+
+  //Purge hits containing either the same X cluster or the same Y cluster as any of the hits added to the track:
+  //Note: This must be called AFTER adding the list of modules and the list of hits on the track to the track arrays:
+  PurgeHits(fNtracks_found);
   
+  fNtracks_found++;
 }
 
+//The purpose of this routine is to mark all the 2D hits as used that contain any of the same 1D U/V clusters as the 2D hits on this track.
+//This routine accesses both the module hit arrays and the "hit list" arrays used by the track-finding. The loop over the entire 2D hit list in each layer
+//on the track at the end of each track-finding iteration is maybe a bit expensive, but still probably cheap compared to the alternative (and will lead to fewer false tracks)
+// The routine is designed to prevent re-use of the same 1D cluster in multiple tracks:
+void SBSGEMTrackerBase::PurgeHits( int itrack ){
+  for( int ihit=0; ihit<fNhitsOnTrack[itrack]; ihit++ ){
+    int module = fModListTrack[itrack][ihit];
+    int cluster = fHitListTrack[itrack][ihit];
+    int layer = fModules[module]->fLayer;
+    
+    int uidx = fModules[module]->fHits[cluster].iuclust;
+    int vidx = fModules[module]->fHits[cluster].ivclust;
 
-TVector3 SBSGEMTrackerBase::TrackIntersect( int module, TVector3 track_origin, TVector3 track_direction ){
+    // Next we need to loop on the 2D hit list of this layer (the one used for track-finding) and mark any unused hits containing the same 1D (U/V) clusters
+    // as the hits on this track as used:
+    for( int jhit = 0; jhit<N2Dhits_layer[layer]; jhit++ ){
+      int modj = modindexhit2D[layer][jhit];
+      int clustj = clustindexhit2D[layer][jhit];
+
+      if( modj == module ){
+	int uj = fModules[modj]->fHits[clustj].iuclust;
+	int vj = fModules[modj]->fHits[clustj].ivclust;
+
+	if( uj == uidx || vj == vidx ){
+	  hitused2D[layer][jhit] = true;
+	}
+      }
+    }
+  }
+}
+
+TVector3 SBSGEMTrackerBase::TrackIntersect( int module, TVector3 track_origin, TVector3 track_direction, double &sintersect ){
   TVector3 modpos = fModules[module]->GetOrigin();
   TVector3 modzaxis = fModules[module]->GetZax();
 
-  double sintersect = modzaxis.Dot( modpos - track_origin )/modzaxis.Dot( track_direction );
+  sintersect = modzaxis.Dot( modpos - track_origin )/modzaxis.Dot( track_direction );
 
   return track_origin + sintersect * track_direction;
 }
 
 TVector2 SBSGEMTrackerBase::GetUVTrack( int module, TVector3 track_origin, TVector3 track_direction ){
-  TVector3 TrackIntersect_Global = TrackIntersect( module, track_origin, track_direction );
+
+  double sdummy; //we have to pass a double argument to hold the distance from origin to intersection:
+  TVector3 TrackIntersect_Global = TrackIntersect( module, track_origin, track_direction, sdummy );
   TVector3 TrackIntersect_Local = fModules[module]->TrackToDetCoord( TrackIntersect_Global );
 
   TVector2 XYtrack( TrackIntersect_Local.X(), TrackIntersect_Local.Y() );

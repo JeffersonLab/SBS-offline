@@ -47,7 +47,7 @@ protected:
   TVector3 GetHitPosGlobal( int modidx, int clustidx );
 
   //Calculate the intersection of a track with the plane of a module's active area:
-  TVector3 TrackIntersect( int module, TVector3 track_origin, TVector3 track_direction );
+  TVector3 TrackIntersect( int module, TVector3 track_origin, TVector3 track_direction, double &sintersect );
 
   //Calculates the position of the track's intersection with a module in "module" coordinates U/V (the ones measured by the strips)
   TVector2 GetUVTrack( int module, TVector3 track_origin, TVector3 track_direction );
@@ -68,6 +68,8 @@ protected:
   // Method to add a new Track to the track arrays: this takes the best hit combination and the parameters of the line of best fit to those hits
   // and the (already calculated) chi2 and fills the tracking results arrays: best fit parameters, inclusive and exclusive tracking residuals, and hit lists by track:
   void AddTrack( const std::map<int,int> &hitcombo, double *BestTrack, double chi2ndf, vector<double> &uresid, vector<double> &vresid );
+
+  void PurgeHits(int itrack);
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
@@ -91,9 +93,12 @@ protected:
   std::map<int,int> fNumModulesByLayer; //key = unique layer ID (logical tracking layer), mapped value = number of modules per layer
   std::map<int, std::set<int> > fModuleListByLayer;  //key = unique layer ID, mapped value = list of unique modules associated with this layer
 
-  std::map<int, std::vector<std::vector<int> > > fLayerCombinations; //key = minimum hit requirement to form a track. Mapped value = 2D array of layer combinations at a given minimum hit requirement.
+  std::map<int, std::vector<std::vector<int> > > fLayerCombinations; //key = minimum hit requirement to form a track. Mapped value = 2D array of layer combinations at a given minimum hit requirement, with outer index a dummy index for looping over combinations, and the inner index the list of layers in each combo
 
-  std::map<int, double> fZavgLayer; //Average z position by layer. This is MAINLY used by the efficiency determination and plotting machinery, not so much by the reconstruction algorithms.
+  std::map<int, double> fZavgLayer; //Average z position of the modules in a logical tracking layer. This IS used when projecting candidate tracks to each layer
+  // to decide which grid bins to search for hits.
+  // But NOTE: the z positions of individual modules are not, in general, identical to the average z position of the layer. If too fine a grid is used and the
+  // variations of module z positions within a layer are too big, the "grid search" track-finding algorithm may not work too well!
 
   //"Grid bins" for fast track-finding algorithm(s): define limits of layer active area:
   std::map<int, double> fXmin_layer, fXmax_layer, fYmin_layer, fYmax_layer;
@@ -101,7 +106,8 @@ protected:
   double fGridBinWidthX, fGridBinWidthY; //Default bin size = 10 mm for both. we are using same grid bin width at all layers:
   double fGridEdgeToleranceX, fGridEdgeToleranceY; 
   std::map<int, int> fGridNbinsX_layer, fGridNbinsY_layer;          //In the standalone code, these are typically derived from the grid bin size and the layer active area dimensions.
-  //These variables are arguably redundant with the ones above, but as defined, these include a bit of extra "slop" to account for resolution, misalignments, etc.
+  //These variables are arguably redundant with the ones above, but as defined, these include a bit of extra "slop" to account for resolution, misalignments, z staggering of
+  // modules within a layer, etc.
   std::map<int, double> fGridXmin_layer, fGridYmin_layer, fGridXmax_layer, fGrid_Ymax_layer;
   
   double fTrackChi2Cut; //chi2/NDF cut for track validity
