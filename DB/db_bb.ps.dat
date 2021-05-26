@@ -1,14 +1,17 @@
 ## Detector map, format:
 ## crate slot start_channel end_channel
+bb.ps.nchan = 52
+
 bb.ps.detmap = ##
-  4     4     0     53 # One Lecroy 1881M ADC
+  4     5     62    63   -1 # One Lecroy 1881M ADC
+  4     5     0     62   0 # One Lecroy 1881M ADC
 #  4     7     0     53 # (Optional) One Lecroy 1877 TDC
 
-## Optional channel map
-##bb.ps.chanmap =  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-##               21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40
-##               41 42 43 44 45 46 47 48 49 50 51 52 53 54
-##bb.ps.chanmap_start = 1 # Since the map above starts with channel 1 being first
+bb.ps.chanmap =  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
+                17 18 19 20 21 22 23 24 25 26 -1 -1 -1 -1 -1 -1
+                27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 
+                43 44 45 46 47 48 49 50 51 52 -1 -1 -1 -1 -1 
+
 
 
 ## Positions in [m] where +z is roated by bb.theta
@@ -19,10 +22,42 @@ bb.ps.size   =  0.740  2.295  0.085 # in meters
 
 ## Number of rows and columns
 bb.ps.ncols =  2
-bb.ps.nrows = 27
+bb.ps.nrows = 26
 
 ## Position of first module
 bb.ps.xyz    = -1.105  0.185  0.000
 ## Space between modules
-bb.ps.dxdydz =  0.000  0.000  0.000
+bb.ps.dxdydz =  0.085 -0.370  0.000
 
+## Mininum energy  for a cluster center (not really used right now)
+bb.ps.emin  = 0.0
+
+bb.ps.pedestal = 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+ 600.0  600.0  600.0  600.0 
+
+bb.ps.gain = 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 
+ 1.0  1.0  1.0  1.0 

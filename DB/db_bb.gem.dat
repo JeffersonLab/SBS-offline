@@ -1,6 +1,7 @@
 950101
 
 ## A chamber is a "Tracker-Plane" composed of vertically stacked modules
+bb.gem.is_mc = 1
 bb.gem.chambers = ft0 ft1 ft2 ft3 bt0
 
 ## A module is a pair of 2 GEMs (x and y)
@@ -20,6 +21,9 @@ bb.gem.ft1.m2.planeconfig = x y
 bb.gem.ft2.m0.planeconfig = x y
 bb.gem.ft2.m1.planeconfig = x y
 bb.gem.ft2.m2.planeconfig = x y
+bb.gem.ft3.m0.planeconfig = x y
+bb.gem.ft3.m1.planeconfig = x y
+bb.gem.ft3.m2.planeconfig = x y
 bb.gem.bt0.m0.planeconfig = x y
 bb.gem.bt0.m1.planeconfig = x y
 bb.gem.bt0.m2.planeconfig = x y
@@ -37,6 +41,9 @@ bb.gem.planeconfig =
   ft2.m0.x ft2.m0.y
   ft2.m1.x ft2.m1.y
   ft2.m2.x ft2.m2.y
+  ft3.m0.x ft3.m0.y
+  ft3.m1.x ft3.m1.y
+  ft3.m2.x ft3.m2.y
   bt0.m0.x bt0.m0.y
   bt0.m1.x bt0.m1.y
   bt0.m2.x bt0.m2.y
@@ -258,6 +265,251 @@ bb.gem.bt0.m3.x.stripangle = 0.0
 bb.gem.bt0.m3.x.pitch = 0.000400
 bb.gem.bt0.m3.y.stripangle = 90.0
 bb.gem.bt0.m3.y.pitch = 0.000400
+
+bb.gem.cratemap = 19   0   18   6425   2048
+
+bb.gem.ft0.m0.x.nchan = 1280
+bb.gem.ft0.m0.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    0     0  1279
+bb.gem.ft0.m0.x.ped = 1500.
+bb.gem.ft0.m0.x.rms = 20.
+
+bb.gem.ft0.m0.y.nchan = 1024
+bb.gem.ft0.m0.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    0  1280  2047
+      19    1     0   255
+bb.gem.ft0.m0.y.ped = 1500.
+bb.gem.ft0.m0.y.rms = 20.
+
+bb.gem.ft0.m1.x.nchan = 1280
+bb.gem.ft0.m1.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    1   256  1535
+bb.gem.ft0.m1.x.ped = 1500.
+bb.gem.ft0.m1.x.rms = 20.
+
+bb.gem.ft0.m1.y.nchan = 1024
+bb.gem.ft0.m1.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    1  1536  2047
+      19    2     0   511
+bb.gem.ft0.m1.y.ped = 1500.
+bb.gem.ft0.m1.y.rms = 20.
+
+bb.gem.ft0.m2.x.nchan = 1280
+bb.gem.ft0.m2.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    2   512  1791
+bb.gem.ft0.m2.x.ped = 1500.
+bb.gem.ft0.m2.x.rms = 20.
+
+bb.gem.ft0.m2.y.nchan = 1024
+bb.gem.ft0.m2.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    2  1792  2047
+      19    3     0   767
+bb.gem.ft0.m2.y.ped = 1500.
+bb.gem.ft0.m2.y.rms = 20.
+
+
+bb.gem.ft1.m0.x.nchan = 1280
+bb.gem.ft1.m0.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    3   768  2047
+bb.gem.ft1.m0.x.ped = 1500.
+bb.gem.ft1.m0.x.rms = 20.
+
+bb.gem.ft1.m0.y.nchan = 1024
+bb.gem.ft1.m0.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    4     0  1023
+bb.gem.ft1.m0.y.ped = 1500.
+bb.gem.ft1.m0.y.rms = 20.
+
+bb.gem.ft1.m1.x.nchan = 1280
+bb.gem.ft1.m1.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    4  1024  2047
+      19    5     0   255
+bb.gem.ft1.m1.x.ped = 1500.
+bb.gem.ft1.m1.x.rms = 20.
+
+bb.gem.ft1.m1.y.nchan = 1024
+bb.gem.ft1.m1.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    5   256  1279
+bb.gem.ft1.m1.y.ped = 1500.
+bb.gem.ft1.m1.y.rms = 20.
+
+bb.gem.ft1.m2.x.nchan = 1280
+bb.gem.ft1.m2.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    5  1280  2047
+      19    6     0   511
+bb.gem.ft1.m2.x.ped = 1500.
+bb.gem.ft1.m2.x.rms = 20.
+
+bb.gem.ft1.m2.y.nchan = 1024
+bb.gem.ft1.m2.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    6   512  1535
+bb.gem.ft1.m2.y.ped = 1500.
+bb.gem.ft1.m2.y.rms = 20.
+
+
+bb.gem.ft2.m0.x.nchan = 1280
+bb.gem.ft2.m0.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    6  1536  2047
+      19    7     0   767
+bb.gem.ft2.m0.x.ped = 1500.
+bb.gem.ft2.m0.x.rms = 20.
+
+bb.gem.ft2.m0.y.nchan = 1024
+bb.gem.ft2.m0.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    7   768  1791
+bb.gem.ft2.m0.y.ped = 1500.
+bb.gem.ft2.m0.y.rms = 20.
+
+bb.gem.ft2.m1.x.nchan = 1280
+bb.gem.ft2.m1.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    7  1792  2047
+      19    8     0  1023
+bb.gem.ft2.m1.x.ped = 1500.
+bb.gem.ft2.m1.x.rms = 20.
+
+bb.gem.ft2.m1.y.nchan = 1024
+bb.gem.ft2.m1.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    8  1024  2047
+bb.gem.ft2.m1.y.ped = 1500.
+bb.gem.ft2.m1.y.rms = 20.
+
+bb.gem.ft2.m2.x.nchan = 1280
+bb.gem.ft2.m2.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    9     0  1279
+bb.gem.ft2.m2.x.ped = 1500.
+bb.gem.ft2.m2.x.rms = 20.
+
+bb.gem.ft2.m2.y.nchan = 1024
+bb.gem.ft2.m2.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19    9  1280  2047
+      19   10     0   255
+bb.gem.ft2.m2.y.ped = 1500.
+bb.gem.ft2.m2.y.rms = 20.
+
+
+bb.gem.ft3.m0.x.nchan = 1280
+bb.gem.ft3.m0.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   10   256  1535
+bb.gem.ft3.m0.x.ped = 1500.
+bb.gem.ft3.m0.x.rms = 20.
+
+bb.gem.ft3.m0.y.nchan = 1024
+bb.gem.ft3.m0.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   10  1536  2047
+      19   11     0   511
+bb.gem.ft3.m0.y.ped = 1500.
+bb.gem.ft3.m0.y.rms = 20.
+
+bb.gem.ft3.m1.x.nchan = 1280
+bb.gem.ft3.m1.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   11   512  1791
+bb.gem.ft3.m1.x.ped = 1500.
+bb.gem.ft3.m1.x.rms = 20.
+
+bb.gem.ft3.m1.y.nchan = 1024
+bb.gem.ft3.m1.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   11  1792  2047
+      19   12     0   767
+bb.gem.ft3.m1.y.ped = 1500.
+bb.gem.ft3.m1.y.rms = 20.
+
+bb.gem.ft3.m2.x.nchan = 1280
+bb.gem.ft3.m2.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   12   768  2047
+bb.gem.ft3.m2.x.ped = 1500.
+bb.gem.ft3.m2.x.rms = 20.
+
+bb.gem.ft3.m2.y.nchan = 1024
+bb.gem.ft3.m2.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   13     0  1023
+bb.gem.ft3.m2.y.ped = 1500.
+bb.gem.ft3.m2.y.rms = 20.
+
+
+bb.gem.bt0.m0.x.nchan = 1280
+bb.gem.bt0.m0.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   13  1024  2047
+      19   14     0   255
+bb.gem.bt0.m0.x.ped = 1500.
+bb.gem.bt0.m0.x.rms = 20.
+
+bb.gem.bt0.m0.y.nchan = 1536
+bb.gem.bt0.m0.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   14   256  1791
+bb.gem.bt0.m0.y.ped = 1500.
+bb.gem.bt0.m0.y.rms = 20.
+
+bb.gem.bt0.m1.x.nchan = 1280
+bb.gem.bt0.m1.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   14  1792  2047
+      19   15     0  1023
+bb.gem.bt0.m1.x.ped = 1500.
+bb.gem.bt0.m1.x.rms = 20.
+
+bb.gem.bt0.m1.y.nchan = 1536
+bb.gem.bt0.m1.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   15  1024  2047
+      19   16     0   511
+bb.gem.bt0.m1.y.ped = 1500.
+bb.gem.bt0.m1.y.rms = 20.
+
+bb.gem.bt0.m2.x.nchan = 1280
+bb.gem.bt0.m2.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   16   512  1791
+bb.gem.bt0.m2.x.ped = 1500.
+bb.gem.bt0.m2.x.rms = 20.
+
+bb.gem.bt0.m2.y.nchan = 1536
+bb.gem.bt0.m2.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   16  1792  2047
+      19   17     0  1279
+bb.gem.bt0.m2.y.ped = 1500.
+bb.gem.bt0.m2.y.rms = 20.
+
+bb.gem.bt0.m3.x.nchan = 1280
+bb.gem.bt0.m3.x.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   17  1280  2047
+      19   18     0   511
+bb.gem.bt0.m3.x.ped = 1500.
+bb.gem.bt0.m3.x.rms = 20.
+
+bb.gem.bt0.m3.y.nchan = 1536
+bb.gem.bt0.m3.y.detmap =
+## Crate Slot ch_lo ch_hi 
+      19   18   512  2047
+bb.gem.bt0.m3.y.ped = 1500.
+bb.gem.bt0.m3.y.rms = 20.
 
 ## Channel maps
 bb.gem.ft0.m0.x.chanmap =

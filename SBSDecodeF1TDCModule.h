@@ -25,7 +25,8 @@ public:
 
    enum EResolution { ILO = 0, IHI = 1 };
 
-   virtual void Init();
+   virtual void Init() = 0;
+   virtual void CommonInit();
    virtual void Clear(const Option_t *opt="");
    virtual Bool_t IsSlot(UInt_t rdata);
    virtual Int_t GetData(Int_t chan, Int_t hit) const;
@@ -62,12 +63,34 @@ private:
 
    // For multiple slots
    Int_t nF1;
-   Int_t *F1slots;
+   std::vector<Int_t> F1slots;
 
-   static TypeIter_t fgThisType;
    ClassDef(SBSDecodeF1TDCModule,0)  //  JLab F1 TDC Module, test version
 
 };
+
+class SBSDecodeF1TDCLowResModule : public SBSDecodeF1TDCModule {
+public:
+  SBSDecodeF1TDCLowResModule() : SBSDecodeF1TDCModule() {};
+  SBSDecodeF1TDCLowResModule(Int_t crate, Int_t slot);
+  virtual ~SBSDecodeF1TDCLowResModule();
+  virtual void Init();
+private:
+   ClassDef(SBSDecodeF1TDCLowResModule,0)  //  JLab F1 TDC Module, test version
+   static TypeIter_t fgThisType;
+};
+
+class SBSDecodeF1TDCHighResModule : public SBSDecodeF1TDCModule {
+public:
+  SBSDecodeF1TDCHighResModule() : SBSDecodeF1TDCModule() {};
+  SBSDecodeF1TDCHighResModule(Int_t crate, Int_t slot);
+  virtual ~SBSDecodeF1TDCHighResModule();
+  virtual void Init();
+private:
+   ClassDef(SBSDecodeF1TDCHighResModule,0)  //  JLab F1 TDC Module, test version
+   static TypeIter_t fgThisType;
+};
+
 
 }
 

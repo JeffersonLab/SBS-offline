@@ -1,23 +1,29 @@
+bb.hodo.nchan = 180
+
 ## Detector map, format:
 ## crate slot start_channel end_channel refindex
 bb.hodo.detmap = 
 ## Start with the reference channels for the TDC
   5     1     0      0    -1 ## First channel is reference channel (per the code)
-  5     2     0      0    -1 ## First channel is reference channel (per the code)
+#  5     2     0      0    -1 ## First channel is reference channel (per the code)
 ## Detmap for the TDCs
   5     1     1     90     0 ## 90 channels (Left  PMTs) with reference index
   5     2     1     90     0 ## 90 channels (Right PMTs) with reference index
 
 ## Now a detmap for the ADCs (with no reference channel)
 ## crate slot start_channel end_channel
-bb.hodo.detmap_adc = 
-  5     4     0     89 ## 90 channels (Left  PMTs)
-  5     5     0     89 ## 90 channels (Right PMTs)
+##bb.hodo.detmap_adc = 
+##  5     3     0     31  0 ## 90 channels (Left  PMTs)
+##  5     3     0     31  0 ## 90 channels (Left  PMTs)
+##  5     4     0     31  0 ## 90 channels (Right PMTs)
 
 ## Specify the number of bars
 bb.hodo.nbars = 90
+bb.hodo.nrows = 90
+bb.hodo.ncols = 2
 
 bb.hodo.position = 0 0 0 # Just a test, but should be the origin of this detector
+bb.hodo.xyz  =  0.000 -1.1125 0.000 ## Spacing between modules in local coordinates
 bb.hodo.dxdydz  =  0.000 0.025 0.000 ## Spacing between modules in local coordinates
 bb.hodo.size = 0.600 2.250  0.025 ## Taken from an old talk where I used 90x25 mm for y
 #bb.hodo.angle = 0.0 0.0 0.0 ## Seems optional, otherwise it assumes no additional angle
