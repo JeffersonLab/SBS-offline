@@ -196,8 +196,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 
   if( fDoBench ) fBench->Begin("clearEvent");
   Clear();
-  for( int i=0; i<fNSlotClear; i++ )
-    crateslot[fSlotClear[i]]->clearEvent();
+  for( auto i : fSlotClear)
+    crateslot[i]->clearEvent();
   if( fDoBench ) fBench->Stop("clearEvent");
 
   // FIXME: needed?
@@ -313,7 +313,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
@@ -336,7 +336,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
@@ -359,7 +359,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
@@ -392,7 +392,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
@@ -428,7 +428,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
       if(fDebug>3)cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
@@ -454,7 +454,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       //cout << lchan << " " << crate << " " << slot << " " << chan << endl;
 
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       //cout << SBSSimDataDecoder::EncodeHeader(5, chan, 20) << endl;
@@ -486,7 +486,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 
 	//cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
 	if( crate >= 0 || slot >=  0 ) {
-	  sldat = crateslot[idx(crate,slot)];
+	  sldat = crateslot[idx(crate,slot)].get();
 	}
 	myev = &(map[sldat]);
 	
