@@ -1,13 +1,13 @@
 # Date/Time = Tue Aug  23 11:00:00 2005
 
-==== Crate 4 type fastbus
+#==== Crate 4 type fastbus
 # ADCs (And optional TDCs) for BBPS, BBSH
 # slot  model   clear   header  mask    nchan   ndata
-   1    1881    1  # BB SH
-   2    1881    1  # BB SH
-   3    1881    1  # BB SH
-   4    1881    1  # BB SH
-   5    1881    1  # BB PS
+#   1    1881    1  # BB SH
+#   2    1881    1  # BB SH
+#   3    1881    1  # BB SH
+#   4    1881    1  # BB SH
+#   5    1881    1  # BB PS
 
 ==== Crate 5 type vme
 # slot model clear header mask       nchan ndata
@@ -17,14 +17,34 @@
   3     792  4
   4     792  4
 
+==== Crate 6 type vme Bank Decoding
+# slot  model   bank
+  3      250     3
+  4      250     3
+  5      250     3
+  6      250     3
+  7      250     3
+  8      250     3
+  9      250     3
+  10     250     3
+  13     250     3
+  14     250     3
+  15     250     3
+  16     250     3
+  17     250     3
+  18     250     3
+  19     250     3
+  20     250     3
 
-#==== Crate 7 type vme
-# TDCs for GRINCH (VETROC) - still stuck with something that is not VETROC
-# slot model clear header mask     nchan ndata
-#  1    1190  5
-#  2    1190  5
-#  3    1190  5
-#  4    1190  5
+
+
+==== Crate 7 type vme
+## TDCs for GRINCH (VETROC) - still stuck with something that is not VETROC
+## slot model clear header mask     nchan ndata
+ 1    3201  5
+ 2    3201  5
+ 3    3201  5
+ 4    3201  5
 
 
 

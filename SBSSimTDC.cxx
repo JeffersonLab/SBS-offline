@@ -32,6 +32,8 @@ namespace Decoder {
     //DoRegister( ModuleType( "Decoder::SBSSimTDC" , 53204 ));
     DoRegister( ModuleType( "Decoder::SBSSimTDC" , -3204 ));
   
+  Module::TypeIter_t SBSSimTDC::fgType0 =
+    DoRegister( ModuleType( "Decoder::SBSSimTDC" , -6401 ));
   Module::TypeIter_t SBSSimTDC::fgType1 =
     DoRegister( ModuleType( "Decoder::SBSSimTDC" , -1877 ));
   Module::TypeIter_t SBSSimTDC::fgType2 =
@@ -95,12 +97,12 @@ namespace Decoder {
     unsigned short chan = 0, type = 0;
     UInt_t raw_buff;
     SimEncoder::tdc_data tmp_tdc_data;
-    //std::cout << "load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
+    std::cout << "SBSSimTDC load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
     while(evbuffer < pstop) {
       // First, decode the header
       chan = type = nwords = 0;
       SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
-      //std::cout << " nwords " << nwords << " chan " << chan << " type " << type << std::endl; 
+      std::cout << " nwords " << nwords << " chan " << chan << " type " << type << std::endl; 
       SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find TDC decoder of type: " << type

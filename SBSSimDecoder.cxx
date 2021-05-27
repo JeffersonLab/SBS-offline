@@ -420,9 +420,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.hodo")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBHodoScint.nhits << " " << simev->Tgmn->Earm_BBHodo_dighit_nchan << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBHodoScint_hit_nhits << " " << simev->Tgmn->Earm_BBHodo_dighit_nchan << endl;
     for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
-      //cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << endl;
+      cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
       lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j)+1;
       ChanToROC(detname, lchan, crate, slot, chan);
       
@@ -453,9 +453,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.grinch")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH.nhits << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
+    cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
     for(int j = 0; j<simev->Tgmn->Earm_GRINCH_dighit_nchan; j++){
-      //cout << j << " " << simev->Tgmn->Earm_GRINCH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_adc->at(j) << endl;
+      cout << j << " " << simev->Tgmn->Earm_GRINCH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_adc->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j) << endl;
       lchan = simev->Tgmn->Earm_GRINCH_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
@@ -901,9 +901,9 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
    //}
    // Could close the common file already
    fclose(file);
-  
    if(nlogchan==0)nlogchan = nchan;
-  
+   
+   
    if(err)return THaAnalysisObject::kInitError;
   
    //fNChanDet[detname] = nchan;
@@ -970,6 +970,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   fFirstSlotDetMap[detname] = fs;
   fFirstCrateDetMap[detname] = fc;
   */
+  
   return(THaAnalysisObject::kOK);
 }
 

@@ -51,6 +51,7 @@ namespace Decoder {
   private:
     static const size_t NTDCCHAN = 128; // Max ADC channels
     static TypeIter_t fgThisType;
+    static TypeIter_t fgType0;
     static TypeIter_t fgType1;
     static TypeIter_t fgType2;
     static TypeIter_t fgType3;
