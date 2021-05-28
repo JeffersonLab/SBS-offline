@@ -10,9 +10,9 @@
 #include "SBSGEMModule.h"
 
 SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const char* desc, THaApparatus* app ):
-  THaTrackingDetector(name,desc,app) : SBS{
+  THaTrackingDetector(name,desc,app) : SBSGEMTrackerBase() {
 
-        fPlanes.clear();
+        fModules.clear();
 	fIsMC = false;//by default!
         fCrateMap = 0;	
 }
@@ -26,11 +26,13 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     assert( fCrateMap == 0 );
  
     // Why THaTrackingDetector::Init() here? THaTrackingDetector doesn't implement its own Init() method
+    //Does this trigger the invocation of THaTrackingDetector's dedicated "ReadDatabase" method, perhaps?
     THaAnalysisObject::EStatus status = THaTrackingDetector::Init(date);
+    //Note: 
 
     if( status == kOK ){
-        for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
-            status = (*it)->Init(date);
+        for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+	  status = (*it)->Init(date); //This calls ReadDatabase for each module!
             if( status != kOK ){
                 return status;
             }
@@ -42,6 +44,7 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     return kOK;
 }
 
+Int_t 
 
 Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     std::cout << "[Reading SBSGEMSpectrometerTracker database]" << std::endl;
@@ -51,20 +54,14 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     FILE* file = OpenFile( date );
     if( !file ) return kFileError;
 
-    //As far as I can tell, this doesn't do anything yet (AJRP):
-    Int_t err = ReadGeometry( file, date );
-    if( err ) {
-        fclose(file);
-        return err;
-    }
+    
 
-    std::string planeconfig;
+    std::string modconfig;
     std::vector<Int_t> *cmap = new std::vector<Int_t>;
     //it appears that cmap is not actually used yet in any way. TBD
 
     DBRequest request[] = {
-        { "planeconfig",       &planeconfig,       kString   },
-        { "cratemap",          cmap,               kIntV     },
+        { "modules",       &modconfig,       kString   },
         { "is_mc",             &fIsMC,             kInt, 0, 1},
         {0}
     };
@@ -74,15 +71,22 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     fclose(file);
 
     //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
-    std::vector<std::string> planes = vsplit(planeconfig);
-    if( planes.empty()) {
-            Error("", "[SBSGEMSpectrometerTracker::ReadDatabase] No planes defined");
+    std::vector<std::string> modules = vsplit(modconfig);
+    if( modules.empty()) {
+            Error("", "[SBSGEMSpectrometerTracker::ReadDatabase] No modules defined");
     }
 
     for (std::vector<std::string>::iterator it = planes.begin() ; it != planes.end(); ++it){
-      fPlanes.push_back(new SBSGEMPlane( (*it).c_str(), (*it).c_str(), this, fIsMC));
+      fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this, fIsMC));
     }
 
+    //Actually, the loading of the geometry was moved to SBSGEMModule::ReadDatabase(), since this information is specified by module:
+    // Int_t err = ReadGeometry( file, date );
+    // if( err ) {
+    //     fclose(file);
+    //     return err;
+    // }
+    
     status = kOK;
 
     if( status != kOK )
@@ -95,7 +99,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
 
 Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
+    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
         (*it)->Begin(run);
     }
 
@@ -103,7 +107,7 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
 }
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
+    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
         (*it)->Clear(opt);
     }
 
@@ -114,7 +118,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
   //std::cout << "[SBSGEMSpectrometerTracker::Decode]" << std::endl;
 
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
+    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
       (*it)->Decode(evdata);
     }
 
@@ -123,7 +127,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
 
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
+    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
         (*it)->End(run);
     }
 
@@ -132,15 +136,15 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 }
 
 void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
-    std::cout << "GEM Stand " << fName << " with " << fPlanes.size() << " planes defined:" << std::endl;
+    std::cout << "GEM Stand " << fName << " with " << fModules.size() << " planes defined:" << std::endl;
     /*
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
+    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
         std::cout << "\t"
         (*it)->Print(opt);
     }
     */
-    for( unsigned int i = 0; i < fPlanes.size(); i++ ){
-        fPlanes[i]->Print(opt);
+    for( unsigned int i = 0; i < fModules.size(); i++ ){
+        fModules[i]->Print(opt);
     }
 
     return;
@@ -149,7 +153,7 @@ void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
 
 void SBSGEMSpectrometerTracker::SetDebug( Int_t level ){
       THaTrackingDetector::SetDebug( level );
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
+    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
         (*it)->SetDebug(level);
     }
 

@@ -110,7 +110,7 @@ sbs.uvagem.m18.size = 614.4  512.0   1.0
 sbs.uvagem.m19.size = 614.4  512.0   1.0
 
 
-# U strip angles (in degrees):
+# U strip angles (in degrees, wrt X direction):
 # 
 sbs.uvagem.m0.uangle = 0.0
 sbs.uvagem.m1.uangle = 0.0
@@ -166,7 +166,8 @@ sbs.uvagem.m18.vangle = 90.0
 sbs.uvagem.m19.vangle = 90.0
 
 
-# number of U strips:
+# number of U strips: note that these repeated entries could be replaced by a single entry like
+# sbs.uvagem.nstripsu = 1536 that would be the default for all the subdetectors (modules) unless overridden by module-specific directives
 sbs.uvagem.m0.nstripsu = 1536
 sbs.uvagem.m1.nstripsu = 1536
 sbs.uvagem.m2.nstripsu = 1536
@@ -219,7 +220,31 @@ sbs.uvagem.m17.nstripsv = 1280
 sbs.uvagem.m18.nstripsv = 1280
 sbs.uvagem.m19.nstripsv = 1280
 
-# common value for all or most DBRequest::search
+# if we call LoadDB with "search = 1", then these will get applied to all modules by default:
+sbs.uvagem.ped = 0.0
+sbs.uvagem.rms = 10.0
+
+sbs.uvagem.threshold_sample = 50.0
+sbs.uvagem.threshold_stripsum = 200.0
+sbs.uvagem.threshold_clustersum = 500.0
+
+#
+sbs.uvagem.ADCasym_cut = 0.3
+# time difference cut in nanoseconds:
+sbs.uvagem.deltat_cut = 30.0
+
+# peak prominence cuts for splitting clusters when overlapping peaks are detected:
+sbs.uvagem.peakprominence_minsigma = 5.0
+sbs.uvagem.peakprominence_minfraction = 0.2
+
+# cluster size restrictions for total charge calculation and hit position reconstruction:
+# for cluster charge calculation: +/- 4 strips from peak = maximum cluster size 9 strips
+sbs.uvagem.maxnu_charge = 4
+sbs.uvagem.maxnv_charge = 4
+# for cluster position reconstruction: +/- 2 strips from peak = maximum cluster size 5 strips
+sbs.uvagem.maxnu_pos = 2
+sbs.uvagem.maxnv_pos = 2
+
 # strip pitch along u (mm):
 sbs.uvagem.m0.upitch = 0.4
 sbs.uvagem.m1.upitch = 0.4
@@ -272,7 +297,7 @@ sbs.uvagem.m17.vpitch = 0.4
 sbs.uvagem.m18.vpitch = 0.4
 sbs.uvagem.m19.vpitch = 0.4
 
-# u and v gain: vector with dimension equal to the number of APV cards: to equalize gain, DIVIDE ADCs by these relative gain coefficients to equalize gains.
+# u and v gain: vector with dimension equal to the number of APV cards: to equalize gain, DIVIDE ADCs by these relative gain coefficients.
 # Note one of the "U" APVs always has its gain fixed to 1 by definition and all the other APV gains are determined relative to that one:
 sbs.uvagem.m0.vgain = 0.816936  0.795968  0.823609  0.763147  0.832519  0.892504  0.86463  0.843393  0.831767  0.872576  
 sbs.uvagem.m0.ugain = 0.945801  0.965016  0.998945  0.966427  1.03651  1.01875  0.9907  1  0.941739  0.98209  0.937806  0.994046  
@@ -316,15 +341,478 @@ sbs.uvagem.m19.vgain = 0.626405  0.606266  0.627196  0.590842  0.603806  0.50166
 sbs.uvagem.m19.ugain = 1.00279  1.09937  1.08615  1  1.02314  1.06173  1.03447  1.0635  0.93411  0.978972  0.838197  0.78698  
 
 ################### DECODE INFO #################################################################
-## let's come back to decoding tomorrow after we have a better idea what we are up against     ##
-## Channel maps for decoding:
-# existing SBSGEMPlane uses the struct mpdmap_t
-# the rows for which have eight entries (not sure if this is sufficient):
+## Channel maps for decoding:                                                                  ## 
+# existing SBSGEMPlane uses the struct mpdmap_t                                                ##
+# the rows for which have eight entries (not sure if this is sufficient):                      ##
+# At minimum we need 9 entries in the decode map, because now we need to specify the strip     ##
+# axis in the decode map in migrating from SBSGEMPlane (which has one strip orientation)       ##
+# to SBSGEMModule (which has two)                                                              ##
+#################################################################################################
 
 # m0 specifies module
-# As far as I can tell, slot and mpd are redundant.
+# As far as I can tell, slot and mpd are redundant. So maybe we could drop the number of entries in struct mpdmap_t back to 8
 # "gem" is also in principle unnecessary, but we can use this to store the unique "prodID" to keep track of each GEM
-# adc, i2c, pos, invert, and axis are all necessary for decoding: 
-sbs.uvagem.m0.chanmap =
+# adc, i2c, pos, invert, and axis are all necessary for decoding:
+
+# The following decode map was automatically generated from file gem_map_uva_eel_3crates_layer12345.cfg: 
 ## Crate Slot mpd gem adc i2c pos inv axis#
-   4     2    2    33  0   15   1   1   0
+sbs.uvagem.m0.chanmap = 
+      4       2       2      33       0      15       0       1       0 
+      4       2       2      33       1      14       1       1       0 
+      4       2       2      33       2      13       2       1       0 
+      4       2       2      33       3      12       3       1       0 
+      4       2       2      33       4      11       4       1       0 
+      4       2       2      33       5      10       5       1       0 
+      4       2       2      33       6       9       6       1       0 
+      4       2       2      33       7       8       7       1       0 
+      4       2       2      33       8       7       8       1       0 
+      4       2       2      33       9       6       9       1       0 
+      4       2       2      33      10       5      10       1       0 
+      4       2       2      33      11       4      11       1       0 
+      4       6       6      33      10       4       9       1       1 
+      4       6       6      33      11       3       8       1       1 
+      4       6       6      33      12       2       7       1       1 
+      4       6       6      33      13       1       6       1       1 
+      4       6       6      33      14       0       5       1       1 
+      4       7       7      33       0       4       0       0       1 
+      4       7       7      33       1       3       1       0       1 
+      4       7       7      33       2       2       2       0       1 
+      4       7       7      33       3       1       3       0       1 
+      4       7       7      33       4       0       4       0       1 
+sbs.uvagem.m1.chanmap = 
+      4       3       3      47       0      15       0       1       0 
+      4       3       3      47       1      14       1       1       0 
+      4       3       3      47       2      13       2       1       0 
+      4       3       3      47       3      12       3       1       0 
+      4       3       3      47       4      11       4       1       0 
+      4       3       3      47       5      10       5       1       0 
+      4       3       3      47       6       9       6       1       0 
+      4       3       3      47       7       8       7       1       0 
+      4       3       3      47       8       7       8       1       0 
+      4       3       3      47       9       6       9       1       0 
+      4       3       3      47      10       5      10       1       0 
+      4       3       3      47      11       4      11       1       0 
+      4       6       6      47       5      12       9       1       1 
+      4       6       6      47       6      11       8       1       1 
+      4       6       6      47       7      10       7       1       1 
+      4       6       6      47       8       9       6       1       1 
+      4       6       6      47       9       8       5       1       1 
+      4       7       7      47       5      12       0       0       1 
+      4       7       7      47       6      11       1       0       1 
+      4       7       7      47       7      10       2       0       1 
+      4       7       7      47       8       9       3       0       1 
+      4       7       7      47       9       8       4       0       1 
+sbs.uvagem.m2.chanmap = 
+      4       4       4      16       0      15      11       0       0 
+      4       4       4      16       1      14      10       0       0 
+      4       4       4      16       2      13       9       0       0 
+      4       4       4      16       3      12       8       0       0 
+      4       4       4      16       4      11       7       0       0 
+      4       4       4      16       5      10       6       0       0 
+      4       4       4      16       6       9       5       0       0 
+      4       4       4      16       7       8       4       0       0 
+      4       4       4      16       8       7       3       0       0 
+      4       4       4      16       9       6       2       0       0 
+      4       4       4      16      10       5       1       0       0 
+      4       4       4      16      11       4       0       0       0 
+      4       6       6      16       0      20       9       1       1 
+      4       6       6      16       1      19       8       1       1 
+      4       6       6      16       2      18       7       1       1 
+      4       6       6      16       3      17       6       1       1 
+      4       6       6      16       4      16       5       1       1 
+      4       7       7      16      10      20       0       0       1 
+      4       7       7      16      11      19       1       0       1 
+      4       7       7      16      12      18       2       0       1 
+      4       7       7      16      13      17       3       0       1 
+      4       7       7      16      14      16       4       0       1 
+sbs.uvagem.m3.chanmap = 
+      4       5       5      19       0      15      11       0       0 
+      4       5       5      19       1      14      10       0       0 
+      4       5       5      19       2      13       9       0       0 
+      4       5       5      19       3      12       8       0       0 
+      4       5       5      19       4      11       7       0       0 
+      4       5       5      19       5      10       6       0       0 
+      4       5       5      19       6       9       5       0       0 
+      4       5       5      19       7       8       4       0       0 
+      4       5       5      19       8       7       3       0       0 
+      4       5       5      19       9       6       2       0       0 
+      4       5       5      19      10       5       1       0       0 
+      4       5       5      19      11       4       0       0       0 
+      4       8       8      19       0       4       9       1       1 
+      4       8       8      19       1       3       8       1       1 
+      4       8       8      19       2       2       7       1       1 
+      4       8       8      19       3       1       6       1       1 
+      4       8       8      19       4       0       5       1       1 
+      4       8       8      19       8      12       0       0       1 
+      4       8       8      19       9      11       1       0       1 
+      4       8       8      19      10      10       2       0       1 
+      4       8       8      19      11       9       3       0       1 
+      4       8       8      19      12       8       4       0       1 
+sbs.uvagem.m4.chanmap = 
+      3       2       2      13       0      15       0       1       0 
+      3       2       2      13       1      14       1       1       0 
+      3       2       2      13       2      13       2       1       0 
+      3       2       2      13       3      12       3       1       0 
+      3       2       2      13       4      11       4       1       0 
+      3       2       2      13       5      10       5       1       0 
+      3       2       2      13       6       9       6       1       0 
+      3       2       2      13       7       8       7       1       0 
+      3       2       2      13       8       7       8       1       0 
+      3       2       2      13       9       6       9       1       0 
+      3       2       2      13      10       5      10       1       0 
+      3       2       2      13      11       4      11       1       0 
+      3       6       6      13      10       4       9       1       1 
+      3       6       6      13      11       3       8       1       1 
+      3       6       6      13      12       2       7       1       1 
+      3       6       6      13      13       1       6       1       1 
+      3       6       6      13      14       0       5       1       1 
+      3       7       7      13       0       4       0       0       1 
+      3       7       7      13       1       3       1       0       1 
+      3       7       7      13       2       2       2       0       1 
+      3       7       7      13       3       1       3       0       1 
+      3       7       7      13       4       0       4       0       1 
+sbs.uvagem.m5.chanmap = 
+      3       3       3      20       0      15       0       1       0 
+      3       3       3      20       1      14       1       1       0 
+      3       3       3      20       2      13       2       1       0 
+      3       3       3      20       3      12       3       1       0 
+      3       3       3      20       4      11       4       1       0 
+      3       3       3      20       5      10       5       1       0 
+      3       3       3      20       6       9       6       1       0 
+      3       3       3      20       7       8       7       1       0 
+      3       3       3      20       8       7       8       1       0 
+      3       3       3      20       9       6       9       1       0 
+      3       3       3      20      10       5      10       1       0 
+      3       3       3      20      11       4      11       1       0 
+      3       6       6      20       5      12       9       1       1 
+      3       6       6      20       6      11       8       1       1 
+      3       6       6      20       7      10       7       1       1 
+      3       6       6      20       8       9       6       1       1 
+      3       6       6      20       9       8       5       1       1 
+      3       7       7      20       5      12       0       0       1 
+      3       7       7      20       6      11       1       0       1 
+      3       7       7      20       7      10       2       0       1 
+      3       7       7      20       8       9       3       0       1 
+      3       7       7      20       9       8       4       0       1 
+sbs.uvagem.m6.chanmap = 
+      3       4       4      17       0      15      11       0       0 
+      3       4       4      17       1      14      10       0       0 
+      3       4       4      17       2      13       9       0       0 
+      3       4       4      17       3      12       8       0       0 
+      3       4       4      17       4      11       7       0       0 
+      3       4       4      17       5      10       6       0       0 
+      3       4       4      17       6       9       5       0       0 
+      3       4       4      17       7       8       4       0       0 
+      3       4       4      17       8       7       3       0       0 
+      3       4       4      17       9       6       2       0       0 
+      3       4       4      17      10       5       1       0       0 
+      3       4       4      17      11       4       0       0       0 
+      3       6       6      17       0      20       9       1       1 
+      3       6       6      17       1      19       8       1       1 
+      3       6       6      17       2      18       7       1       1 
+      3       6       6      17       3      17       6       1       1 
+      3       6       6      17       4      16       5       1       1 
+      3       7       7      17      10      20       0       0       1 
+      3       7       7      17      11      19       1       0       1 
+      3       7       7      17      12      18       2       0       1 
+      3       7       7      17      13      17       3       0       1 
+      3       7       7      17      14      16       4       0       1 
+sbs.uvagem.m7.chanmap = 
+      3       5       5      25       0      15      11       0       0 
+      3       5       5      25       1      14      10       0       0 
+      3       5       5      25       2      13       9       0       0 
+      3       5       5      25       3      12       8       0       0 
+      3       5       5      25       4      11       7       0       0 
+      3       5       5      25       5      10       6       0       0 
+      3       5       5      25       6       9       5       0       0 
+      3       5       5      25       7       8       4       0       0 
+      3       5       5      25       8       7       3       0       0 
+      3       5       5      25       9       6       2       0       0 
+      3       5       5      25      10       5       1       0       0 
+      3       5       5      25      11       4       0       0       0 
+      3       8       8      25       0       4       9       1       1 
+      3       8       8      25       1       3       8       1       1 
+      3       8       8      25       2       2       7       1       1 
+      3       8       8      25       3       1       6       1       1 
+      3       8       8      25       4       0       5       1       1 
+      3       8       8      25       8      12       0       0       1 
+      3       8       8      25       9      11       1       0       1 
+      3       8       8      25      10      10       2       0       1 
+      3       8       8      25      11       9       3       0       1 
+      3       8       8      25      12       8       4       0       1 
+sbs.uvagem.m8.chanmap = 
+      3      10      10      45       0      15       0       1       0 
+      3      10      10      45       1      14       1       1       0 
+      3      10      10      45       2      13       2       1       0 
+      3      10      10      45       3      12       3       1       0 
+      3      10      10      45       4      11       4       1       0 
+      3      10      10      45       5      10       5       1       0 
+      3      10      10      45       6       9       6       1       0 
+      3      10      10      45       7       8       7       1       0 
+      3      10      10      45       8       7       8       1       0 
+      3      10      10      45       9       6       9       1       0 
+      3      10      10      45      10       5      10       1       0 
+      3      10      10      45      11       4      11       1       0 
+      3      14      14      45      10       4       9       1       1 
+      3      14      14      45      11       3       8       1       1 
+      3      14      14      45      12       2       7       1       1 
+      3      14      14      45      13       1       6       1       1 
+      3      14      14      45      14       0       5       1       1 
+      3      15      15      45       0       4       0       0       1 
+      3      15      15      45       1       3       1       0       1 
+      3      15      15      45       2       2       2       0       1 
+      3      15      15      45       3       1       3       0       1 
+      3      15      15      45       4       0       4       0       1 
+sbs.uvagem.m9.chanmap = 
+      3      11      11      22       0      15       0       1       0 
+      3      11      11      22       1      14       1       1       0 
+      3      11      11      22       2      13       2       1       0 
+      3      11      11      22       3      12       3       1       0 
+      3      11      11      22       4      11       4       1       0 
+      3      11      11      22       5      10       5       1       0 
+      3      11      11      22       6       9       6       1       0 
+      3      11      11      22       7       8       7       1       0 
+      3      11      11      22       8       7       8       1       0 
+      3      11      11      22       9       6       9       1       0 
+      3      11      11      22      10       5      10       1       0 
+      3      11      11      22      11       4      11       1       0 
+      3      14      14      22       5      12       9       1       1 
+      3      14      14      22       6      11       8       1       1 
+      3      14      14      22       7      10       7       1       1 
+      3      14      14      22       8       9       6       1       1 
+      3      14      14      22       9       8       5       1       1 
+      3      15      15      22       5      12       0       0       1 
+      3      15      15      22       6      11       1       0       1 
+      3      15      15      22       7      10       2       0       1 
+      3      15      15      22       8       9       3       0       1 
+      3      15      15      22       9       8       4       0       1 
+sbs.uvagem.m10.chanmap = 
+      3      12      12      29       0      15      11       0       0 
+      3      12      12      29       1      14      10       0       0 
+      3      12      12      29       2      13       9       0       0 
+      3      12      12      29       3      12       8       0       0 
+      3      12      12      29       4      11       7       0       0 
+      3      12      12      29       5      10       6       0       0 
+      3      12      12      29       6       9       5       0       0 
+      3      12      12      29       7       8       4       0       0 
+      3      12      12      29       8       7       3       0       0 
+      3      12      12      29       9       6       2       0       0 
+      3      12      12      29      10       5       1       0       0 
+      3      12      12      29      11       4       0       0       0 
+      3      14      14      29       0      20       9       1       1 
+      3      14      14      29       1      19       8       1       1 
+      3      14      14      29       2      18       7       1       1 
+      3      14      14      29       3      17       6       1       1 
+      3      14      14      29       4      16       5       1       1 
+      3      15      15      29      10      20       0       0       1 
+      3      15      15      29      11      19       1       0       1 
+      3      15      15      29      12      18       2       0       1 
+      3      15      15      29      13      17       3       0       1 
+      3      15      15      29      14      16       4       0       1 
+sbs.uvagem.m11.chanmap = 
+      3      13      13      42       0      15      11       0       0 
+      3      13      13      42       1      14      10       0       0 
+      3      13      13      42       2      13       9       0       0 
+      3      13      13      42       3      12       8       0       0 
+      3      13      13      42       4      11       7       0       0 
+      3      13      13      42       5      10       6       0       0 
+      3      13      13      42       6       9       5       0       0 
+      3      13      13      42       7       8       4       0       0 
+      3      13      13      42       8       7       3       0       0 
+      3      13      13      42       9       6       2       0       0 
+      3      13      13      42      10       5       1       0       0 
+      3      13      13      42      11       4       0       0       0 
+      3      16      16      42       0       4       9       1       1 
+      3      16      16      42       1       3       8       1       1 
+      3      16      16      42       2       2       7       1       1 
+      3      16      16      42       3       1       6       1       1 
+      3      16      16      42       4       0       5       1       1 
+      3      16      16      42       8      12       0       0       1 
+      3      16      16      42       9      11       1       0       1 
+      3      16      16      42      10      10       2       0       1 
+      3      16      16      42      11       9       3       0       1 
+      3      16      16      42      12       8       4       0       1 
+sbs.uvagem.m12.chanmap = 
+      4      10      10      41       0      15       0       1       0 
+      4      10      10      41       1      14       1       1       0 
+      4      10      10      41       2      13       2       1       0 
+      4      10      10      41       3      12       3       1       0 
+      4      10      10      41       4      11       4       1       0 
+      4      10      10      41       5      10       5       1       0 
+      4      10      10      41       6       9       6       1       0 
+      4      10      10      41       7       8       7       1       0 
+      4      10      10      41       8       7       8       1       0 
+      4      10      10      41       9       6       9       1       0 
+      4      10      10      41      10       5      10       1       0 
+      4      10      10      41      11       4      11       1       0 
+      4      14      14      41      10       4       9       1       1 
+      4      14      14      41      11       3       8       1       1 
+      4      14      14      41      12       2       7       1       1 
+      4      14      14      41      13       1       6       1       1 
+      4      14      14      41      14       0       5       1       1 
+      4      15      15      41       0       4       0       0       1 
+      4      15      15      41       1       3       1       0       1 
+      4      15      15      41       2       2       2       0       1 
+      4      15      15      41       3       1       3       0       1 
+      4      15      15      41       4       0       4       0       1 
+sbs.uvagem.m13.chanmap = 
+      4      11      11      30       0      15       0       1       0 
+      4      11      11      30       1      14       1       1       0 
+      4      11      11      30       2      13       2       1       0 
+      4      11      11      30       3      12       3       1       0 
+      4      11      11      30       4      11       4       1       0 
+      4      11      11      30       5      10       5       1       0 
+      4      11      11      30       6       9       6       1       0 
+      4      11      11      30       7       8       7       1       0 
+      4      11      11      30       8       7       8       1       0 
+      4      11      11      30       9       6       9       1       0 
+      4      11      11      30      10       5      10       1       0 
+      4      11      11      30      11       4      11       1       0 
+      4      14      14      30       5      12       9       1       1 
+      4      14      14      30       6      11       8       1       1 
+      4      14      14      30       7      10       7       1       1 
+      4      14      14      30       8       9       6       1       1 
+      4      14      14      30       9       8       5       1       1 
+      4      15      15      30       5      12       0       0       1 
+      4      15      15      30       6      11       1       0       1 
+      4      15      15      30       7      10       2       0       1 
+      4      15      15      30       8       9       3       0       1 
+      4      15      15      30       9       8       4       0       1 
+sbs.uvagem.m14.chanmap = 
+      4      12      12      36       0      15      11       0       0 
+      4      12      12      36       1      14      10       0       0 
+      4      12      12      36       2      13       9       0       0 
+      4      12      12      36       3      12       8       0       0 
+      4      12      12      36       4      11       7       0       0 
+      4      12      12      36       5      10       6       0       0 
+      4      12      12      36       6       9       5       0       0 
+      4      12      12      36       7       8       4       0       0 
+      4      12      12      36       8       7       3       0       0 
+      4      12      12      36       9       6       2       0       0 
+      4      12      12      36      10       5       1       0       0 
+      4      12      12      36      11       4       0       0       0 
+      4      14      14      36       0      20       9       1       1 
+      4      14      14      36       1      19       8       1       1 
+      4      14      14      36       2      18       7       1       1 
+      4      14      14      36       3      17       6       1       1 
+      4      14      14      36       4      16       5       1       1 
+      4      15      15      36      10      20       0       0       1 
+      4      15      15      36      11      19       1       0       1 
+      4      15      15      36      12      18       2       0       1 
+      4      15      15      36      13      17       3       0       1 
+      4      15      15      36      14      16       4       0       1 
+sbs.uvagem.m15.chanmap = 
+      4      13      13      43       0      15      11       0       0 
+      4      13      13      43       1      14      10       0       0 
+      4      13      13      43       2      13       9       0       0 
+      4      13      13      43       3      12       8       0       0 
+      4      13      13      43       4      11       7       0       0 
+      4      13      13      43       5      10       6       0       0 
+      4      13      13      43       6       9       5       0       0 
+      4      13      13      43       7       8       4       0       0 
+      4      13      13      43       8       7       3       0       0 
+      4      13      13      43       9       6       2       0       0 
+      4      13      13      43      10       5       1       0       0 
+      4      13      13      43      11       4       0       0       0 
+      4      16      16      43       0       4       9       1       1 
+      4      16      16      43       1       3       8       1       1 
+      4      16      16      43       2       2       7       1       1 
+      4      16      16      43       3       1       6       1       1 
+      4      16      16      43       4       0       5       1       1 
+      4      16      16      43       8      12       0       0       1 
+      4      16      16      43       9      11       1       0       1 
+      4      16      16      43      10      10       2       0       1 
+      4      16      16      43      11       9       3       0       1 
+      4      16      16      43      12       8       4       0       1 
+sbs.uvagem.m16.chanmap = 
+      7       2       2      40       0      15       0       1       0 
+      7       2       2      40       1      14       1       1       0 
+      7       2       2      40       2      13       2       1       0 
+      7       2       2      40       3      12       3       1       0 
+      7       2       2      40       4      11       4       1       0 
+      7       2       2      40       5      10       5       1       0 
+      7       2       2      40       6       9       6       1       0 
+      7       2       2      40       7       8       7       1       0 
+      7       2       2      40       8       7       8       1       0 
+      7       2       2      40       9       6       9       1       0 
+      7       2       2      40      10       5      10       1       0 
+      7       2       2      40      11       4      11       1       0 
+      7       6       6      40      10       4       9       1       1 
+      7       6       6      40      11       3       8       1       1 
+      7       6       6      40      12       2       7       1       1 
+      7       6       6      40      13       1       6       1       1 
+      7       6       6      40      14       0       5       1       1 
+      7       7       7      40       0       4       0       0       1 
+      7       7       7      40       1       3       1       0       1 
+      7       7       7      40       2       2       2       0       1 
+      7       7       7      40       3       1       3       0       1 
+      7       7       7      40       4       0       4       0       1 
+sbs.uvagem.m17.chanmap = 
+      7       3       3      38       0      15       0       1       0 
+      7       3       3      38       1      14       1       1       0 
+      7       3       3      38       2      13       2       1       0 
+      7       3       3      38       3      12       3       1       0 
+      7       3       3      38       4      11       4       1       0 
+      7       3       3      38       5      10       5       1       0 
+      7       3       3      38       6       9       6       1       0 
+      7       3       3      38       7       8       7       1       0 
+      7       3       3      38       8       7       8       1       0 
+      7       3       3      38       9       6       9       1       0 
+      7       3       3      38      10       5      10       1       0 
+      7       3       3      38      11       4      11       1       0 
+      7       6       6      38       5      12       9       1       1 
+      7       6       6      38       6      11       8       1       1 
+      7       6       6      38       7      10       7       1       1 
+      7       6       6      38       8       9       6       1       1 
+      7       6       6      38       9       8       5       1       1 
+      7       7       7      38       5      12       0       0       1 
+      7       7       7      38       6      11       1       0       1 
+      7       7       7      38       7      10       2       0       1 
+      7       7       7      38       8       9       3       0       1 
+      7       7       7      38       9       8       4       0       1 
+sbs.uvagem.m18.chanmap = 
+      7       4       4      37       0      15      11       0       0 
+      7       4       4      37       1      14      10       0       0 
+      7       4       4      37       2      13       9       0       0 
+      7       4       4      37       3      12       8       0       0 
+      7       4       4      37       4      11       7       0       0 
+      7       4       4      37       5      10       6       0       0 
+      7       4       4      37       6       9       5       0       0 
+      7       4       4      37       7       8       4       0       0 
+      7       4       4      37       8       7       3       0       0 
+      7       4       4      37       9       6       2       0       0 
+      7       4       4      37      10       5       1       0       0 
+      7       4       4      37      11       4       0       0       0 
+      7       6       6      37       0      20       9       1       1 
+      7       6       6      37       1      19       8       1       1 
+      7       6       6      37       2      18       7       1       1 
+      7       6       6      37       3      17       6       1       1 
+      7       6       6      37       4      16       5       1       1 
+      7       7       7      37      10      20       0       0       1 
+      7       7       7      37      11      19       1       0       1 
+      7       7       7      37      12      18       2       0       1 
+      7       7       7      37      13      17       3       0       1 
+      7       7       7      37      14      16       4       0       1 
+sbs.uvagem.m19.chanmap = 
+      7       5       5      39       0      15      11       0       0 
+      7       5       5      39       1      14      10       0       0 
+      7       5       5      39       2      13       9       0       0 
+      7       5       5      39       3      12       8       0       0 
+      7       5       5      39       4      11       7       0       0 
+      7       5       5      39       5      10       6       0       0 
+      7       5       5      39       6       9       5       0       0 
+      7       5       5      39       7       8       4       0       0 
+      7       5       5      39       8       7       3       0       0 
+      7       5       5      39       9       6       2       0       0 
+      7       5       5      39      10       5       1       0       0 
+      7       5       5      39      11       4       0       0       0 
+      7       8       8      39       0       4       9       1       1 
+      7       8       8      39       1       3       8       1       1 
+      7       8       8      39       2       2       7       1       1 
+      7       8       8      39       3       1       6       1       1 
+      7       8       8      39       4       0       5       1       1 
+      7       8       8      39       8      12       0       0       1 
+      7       8       8      39       9      11       1       0       1 
+      7       8       8      39      10      10       2       0       1 
+      7       8       8      39      11       9       3       0       1 
+      7       8       8      39      12       8       4       0       1 

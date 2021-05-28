@@ -13,7 +13,7 @@ class THaEvData;
 class THaRunBase;
 
 namespace SBSGEMModule {
-  enum GEMaxis_t { kUaxis, kVaxis };
+  enum GEMaxis_t { kUaxis=0, kVaxis };
 }
 
 struct mpdmap_t {
@@ -124,7 +124,10 @@ class SBSGEMModule : public THaSubDetector {
 
   virtual Int_t   ReadDatabase(const TDatime& );
   virtual Int_t   DefineVariables( EMode mode );
-
+  //We are overriding THaDetectorBase's ReadGeometry method for SBSGEMModule, because we use a different definition of the angles:
+  virtual Int_t   ReadGeometry( FILE* file, const TDatime& date, 
+			      Bool_t required = true );
+  
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
@@ -164,7 +167,7 @@ class SBSGEMModule : public THaSubDetector {
 
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
-  Bool_t fOnlinePedestalSubtraction; //this MIGHT be redundant with fZeroSuppress
+  Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
 
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
@@ -180,8 +183,9 @@ class SBSGEMModule : public THaSubDetector {
   UChar_t fN_APV25_CHAN;     //number of APV25 channels, default 128
   UChar_t fN_MPD_TIME_SAMP;  //number of MPD time samples, default = 6
   UShort_t fMPDMAP_ROW_SIZE; //MPDMAP_ROW_SIZE: default = 9, let's not hardcode
+  UShort_t fNumberOfChannelInFrame; //default 129, not clear if this is used:
 
-  UShort_t fNumberofChannelInFrame; //default 129
+  Double_t fSamplePeriod; //for timing calculations: default = 25 ns.
 
   //variables defining rectangular track search region constraint (NOTE: these will change event-to-event, they are NOT constant!)
   Double_t fxcmin, fxcmax;
@@ -194,7 +198,7 @@ class SBSGEMModule : public THaSubDetector {
     
   std::vector<UShort_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
   std::vector<SBSGEMModule::GEMaxis_t>  fAxis;  //We just made our enumerated type that has two possible values, makes the code more readable (maybe)
-  std::vector<std::vector<Int_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
+  std::vector<std::vector<Double_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
   std::vector<Double_t> fADCsums;
   std::vector<bool> fKeepStrip; //keep this strip?
   std::vector<UShort_t> fMaxSamp; //APV25 time sample with maximum ADC;
@@ -216,6 +220,11 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fNstripsU; // Total number of strips in this module along the generic "U" axis
   UInt_t fNstripsV; // Total number of strips in this module along the generic "V" axis
 
+  //Pedestal means and RMS values for all channels:
+  std::vector<Double_t> fPedestalU, fPedRMSU; 
+  std::vector<Double_t> fPedestalV, fPedRMSV;
+
+  //To be determined from channel map/strip count information:
   UShort_t fNAPVs_U; //Number of APV cards per module along "U" strip direction; this is typically 8, 10, or 12, but could be larger for U/V GEMs
   UShort_t fNAPVs_V; //Number of APV cards per module along "V" strip direction; 
   //UInt_t fNTimeSamplesADC; //Number of ADC time samples (this could be variable in principle, but should be the same for all strips within a module within a run) redundant with fN_MPD_TIME_SAMP
@@ -225,7 +234,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fVgain; // "gain match" coefficients for V strips by APV card;
     
   ///////////////////////////////////////////////////////////////////////////////////////////////////
-  //     CLUSTERING PARAMETERS (to be read from database and given sensible default values)        //
+  //     CLUSTERING PARAMETERS (to be read from database and/or given sensible default values)        //
   ///////////////////////////////////////////////////////////////////////////////////////////////////
 
   Double_t fThresholdSample; //Threshold on the (gain-matched and pedestal-subtracted) max. sample on a strip to keep that strip for clustering 
