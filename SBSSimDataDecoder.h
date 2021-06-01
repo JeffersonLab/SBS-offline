@@ -74,11 +74,16 @@ public:
   */
   // Decoders
   virtual bool DecodeADC(SimEncoder::adc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; }
+			 //const std::vector<UInt_t> evb, //
+			 const unsigned int *enc_data,
+			 unsigned short nwords) { return false; }
   virtual bool DecodeTDC(SimEncoder::tdc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; };
+			 const std::vector<unsigned int> evb, //const unsigned int *enc_data,
+			 unsigned short nwords) { return false; };
   virtual bool DecodeSADC(SimEncoder::sadc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; }
+			  //const std::vector<UInt_t> evb, //
+			  const unsigned int *enc_data,
+			  unsigned short nwords) { return false; }
   /*
   virtual bool DecodeFADC(SimEncoder::sadc_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; }
@@ -130,7 +135,7 @@ public:
   //virtual bool EncodeTDC(SimEncoder::tdc_data data, unsigned int *enc_data,
   //  unsigned short &nwords);
   virtual bool DecodeTDC(SimEncoder::tdc_data &data,
-      const unsigned int *enc_data,unsigned short nwords);
+      const std::vector<unsigned int> evb,unsigned short nwords);
   virtual bool IsTDC() { return true; }
 
 protected:

@@ -45,9 +45,9 @@ public:
    Int_t GetNumSlots() const { return nF1; };
 
    // Loads slot data for bank structures
-   virtual Int_t LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer, Int_t pos, Int_t len);
+   virtual UInt_t LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer, Int_t pos, Int_t len);
 // Loads sldat and increments ptr to evbuffer
-   Int_t LoadSlot(THaSlotData *sldat,  const UInt_t* evbuffer, const UInt_t *pstop );
+   UInt_t LoadSlot(THaSlotData *sldat,  const UInt_t* evbuffer, const UInt_t *pstop );
 
 private:
 
