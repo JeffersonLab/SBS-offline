@@ -88,6 +88,7 @@ namespace Decoder {
   }
 
   void SBSSimTDC::CheckDecoderStatus() const {
+    std::cout << "SBSSimTDC has been called" << std::endl;
   }
 
   UInt_t SBSSimTDC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
