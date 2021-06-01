@@ -334,7 +334,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
     //loop over all decode map entries associated with this module (each decode map entry is one APV card)
     Int_t effChan = it->mpd_id << 8 | it->adc_id; //left-shift mpd id by 8 bits and take the bitwise OR with ADC_id to uniquely identify the APV card.
-    //mpd_id is not necessarily equal to slot, but that seems to tbe convention in many cases
+    //mpd_id is not necessarily equal to slot, but that seems to be the convention in many cases
     // Find channel for this crate/slot
 
     Int_t nchan = evdata.GetNumChan( it->crate, it->slot );
@@ -356,7 +356,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       Int_t isamp = 0;
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
 	assert(isamp<nsamp); //Not clear that this line is necessary, but it appears to be essentially checking that the number of strips fired on this APV card is nonzero.
-	Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, isamp); //first raw data word is the strip number
+	Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, isamp); //first raw data word is the strip number I suppose... I'm not necessarily convinced this is correct, but we'll look into it
 	assert(strip>=0&&strip<128);
 	// Madness....   copy pasted from stand alone decoder
 	// I bet there's a more elegant way to express this
@@ -386,7 +386,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	double T2sum = 0.0;
 	
 	for(Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++) {
-
+	  //need to figure out what's the difference between "data" and "rawdata" for
+	  //MPD:
 	  double ADCvalue = evdata.GetData(it->crate, it->slot, chan, isamp++) - pedtemp;
 	  
 	  //subtract "pedestal" from raw ADC value:

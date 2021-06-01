@@ -26,13 +26,13 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     assert( fCrateMap == 0 );
  
     // Why THaTrackingDetector::Init() here? THaTrackingDetector doesn't implement its own Init() method
-    //Does this trigger the invocation of THaTrackingDetector's dedicated "ReadDatabase" method, perhaps?
+    //Does this trigger the invocation of THaTrackingDetector's dedicated "ReadDatabase" method, perhaps? Even that doesn't really make any sense
     THaAnalysisObject::EStatus status = THaTrackingDetector::Init(date);
     //Note: 
 
     if( status == kOK ){
         for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-	  status = (*it)->Init(date); //This calls ReadDatabase for each module!
+	  status = (*it)->Init(date); //This triggers calling of ReadDatabase for each module!
             if( status != kOK ){
                 return status;
             }
@@ -61,11 +61,13 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     //it appears that cmap is not actually used yet in any way. TBD
 
     DBRequest request[] = {
-        { "modules",       &modconfig,       kString   },
-        { "is_mc",             &fIsMC,             kInt, 0, 1},
-        {0}
+      { "modules",       &modconfig,       kString   }, //read the list of modules:
+      { "is_mc",             &fIsMC,             kInt, 0, 1}, //NOTE: is_mc can also be defined via the constructor in the replay script
+      {0}
     };
 
+   
+    
     Int_t status = kInitError;
     err = LoadDB( file, date, request, fPrefix );
     fclose(file);
@@ -80,7 +82,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
       fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this, fIsMC));
     }
 
-    //Actually, the loading of the geometry was moved to SBSGEMModule::ReadDatabase(), since this information is specified by module:
+    //Actually, the loading of the geometry was moved to SBSGEMModule::ReadDatabase(), since this information is specified on a module-by-module basis:
     // Int_t err = ReadGeometry( file, date );
     // if( err ) {
     //     fclose(file);
@@ -118,65 +120,67 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
   //std::cout << "[SBSGEMSpectrometerTracker::Decode]" << std::endl;
 
-    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-      (*it)->Decode(evdata);
-    }
-
-    return 0;
+  //Triggers decoding of each module:
+  
+  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+    (*it)->Decode(evdata);
+  }
+  
+  return 0;
 }
 
 
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
-    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-        (*it)->End(run);
-    }
+  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+    (*it)->End(run);
+  }
 
 
-    return 0;
+  return 0;
 }
 
 void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
-    std::cout << "GEM Stand " << fName << " with " << fModules.size() << " planes defined:" << std::endl;
-    /*
+  std::cout << "GEM Stand " << fName << " with " << fModules.size() << " planes defined:" << std::endl;
+  /*
     for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-        std::cout << "\t"
-        (*it)->Print(opt);
+    std::cout << "\t"
+    (*it)->Print(opt);
     }
-    */
-    for( unsigned int i = 0; i < fModules.size(); i++ ){
-        fModules[i]->Print(opt);
-    }
+  */
+  for( unsigned int i = 0; i < fModules.size(); i++ ){
+    fModules[i]->Print(opt);
+  }
 
-    return;
+  return;
  }
 
 
 void SBSGEMSpectrometerTracker::SetDebug( Int_t level ){
-      THaTrackingDetector::SetDebug( level );
-    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-        (*it)->SetDebug(level);
-    }
+  THaTrackingDetector::SetDebug( level );
+  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+    (*it)->SetDebug(level);
+  }
 
-    return;
+  return;
 }
 
 Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
-    if( mode == kDefine and fIsSetup ) return kOK;
-    fIsSetup = ( mode == kDefine );
-    RVarDef vars[] = {
-//        { "trkstat", "Track reconstruction status",  "fTrkStat" },
-        { 0 },
-    };
-    DefineVarsFromList( vars, mode );
+  if( mode == kDefine and fIsSetup ) return kOK;
+  fIsSetup = ( mode == kDefine );
+  RVarDef vars[] = {
+    //        { "trkstat", "Track reconstruction status",  "fTrkStat" },
+    { 0 },
+  };
+  DefineVarsFromList( vars, mode );
 
-    return 0;
+  return 0;
 }
 
 
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
-    return 0;
+  return 0;
 }
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
-    return 0;
+  return 0;
 }
 

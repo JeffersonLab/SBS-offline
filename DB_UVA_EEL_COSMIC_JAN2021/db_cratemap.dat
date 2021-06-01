@@ -1,6 +1,6 @@
 # Date/Time = Fri Jan 1 11:00:00 2021
 ## Crate map for decoding 5-layer UVA EEL cosmic-ray data from January 12, 2021 (from gem_map_uva_eel_3crates_layer12345.cfg)
-# I don't know if any of the information other than the crate, slot, and module type is correct or valid here:
+# For this run, the MPD data is in CODA bank 10:
 ==== Crate 3 type vme
  2 3561 10
  3 3561 10
