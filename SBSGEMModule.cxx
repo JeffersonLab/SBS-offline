@@ -330,11 +330,8 @@ void    SBSGEMModule::Clear( Option_t* opt){
 Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   //    std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
 
-  int i;
-
-  //fNch = 0;
   fNstrips_hit = 0;
-  //This could be written much more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it:
+  //This could be written more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it too much:
   for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
     //loop over all decode map entries associated with this module (each decode map entry is one APV card)
     Int_t effChan = it->mpd_id << 8 | it->adc_id; //left-shift mpd id by 8 bits and take the bitwise OR with ADC_id to uniquely identify the APV card.
@@ -846,11 +843,11 @@ void    SBSGEMModule::Print( Option_t* opt) const{
   return;
 }
 
-Int_t   SBSGEMModule::Begin( THaRunBase* r){
+Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   return 0;
 }
 
-Int_t   SBSGEMModule::End( THaRunBase* r){
+Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
   return 0;
 }
 

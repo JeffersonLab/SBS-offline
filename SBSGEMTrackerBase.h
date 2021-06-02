@@ -23,6 +23,12 @@ class SBSGEMModule;
 class SBSGEMTrackerBase {
 public:
   void Clear(); //clear out all the event-specific data structures
+
+  //These can change event-by-event:
+  void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; }
+  void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
+  void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
+  void SetBackConstraintPoint( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -37,6 +43,7 @@ protected:
   void find_tracks();
   
   //Utility methods: initialization:
+  void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void InitLayerCombos();
   void InitGridBins(); //initialize 
 
@@ -67,14 +74,14 @@ protected:
   
   // Method to add a new Track to the track arrays: this takes the best hit combination and the parameters of the line of best fit to those hits
   // and the (already calculated) chi2 and fills the tracking results arrays: best fit parameters, inclusive and exclusive tracking residuals, and hit lists by track:
-  void AddTrack( const std::map<int,int> &hitcombo, double *BestTrack, double chi2ndf, vector<double> &uresid, vector<double> &vresid );
+  void AddTrack( const std::map<int,int> &hitcombo, const vector<double> &BestTrack, double chi2ndf, const vector<double> &uresid, const vector<double> &vresid );
 
   void PurgeHits(int itrack);
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
 
-  bool fOnlinePedestalSubtraction; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
+  bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
   
   bool fIsMC;
 
@@ -90,6 +97,9 @@ protected:
   // The use of maps here instead of vectors may be slightly algorithmically inefficient, but it DOES guarantee that the maps are
   //  (a) sorted by increasing layer index, which, generally speaking, for a sensibly constructed database, will also be in ascending order of Z.
   //  (b) each unique logical tracking layer index can only occur exactly once
+
+  std::set<int> fLayers;
+  std::vector<int> fLayerByIndex; //idiot-proofing just in case the user defines something stupid:
   std::map<int,int> fNumModulesByLayer; //key = unique layer ID (logical tracking layer), mapped value = number of modules per layer
   std::map<int, std::set<int> > fModuleListByLayer;  //key = unique layer ID, mapped value = list of unique modules associated with this layer
 

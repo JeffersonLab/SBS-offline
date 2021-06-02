@@ -12,9 +12,9 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fMinHitsOnTrack = 3;
 
-  fOnlinePedestalSubtraction = true;
+  fOnlineZeroSuppression = false;
   fZeroSuppress = true;
-  fZeroSuppressRMS = 10.0; //10 ADC channels. We are free to define how this is actually used;
+  fZeroSuppressRMS = 5.0; //5 sigma
 
   fGridBinWidthX = 0.01; //1 cm = 10 mm;
   fGridBinWidthY = 0.01; //1 cm = 10 mm;
@@ -31,7 +31,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fConstraintPoint_Front.SetXYZ(0,0,-10.0);
   fConstraintPoint_Back.SetXYZ(0,0,10.0);
 
-  //wide-open constraints for now (the units are meters here (mm would be more appropriate but whatever))
+  //wide-open constraints for now (the units are meters here (mm or cm would be more natural but whatever))
   fConstraintWidth_Front.Set( 1.5, 0.5 );
   fConstraintWidth_Back.Set( 1.5, 0.5 ); 
 }
@@ -60,6 +60,34 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fclustering_done = false;
   ftracking_done = false;
   
+}
+
+void SBSGEMTrackerBase::CompleteInitialization(){
+  fLayers.clear();
+  fLayerByIndex.clear();
+  fNumModulesByLayer.clear();
+  fModuleListByLayer.clear();
+  //loop on the array of (initialized) modules and fill out missing info:
+  
+  for( int imod=0; imod<fModules.size(); imod++ ){
+    int layer = fModules[imod]->fLayer;
+
+    auto newlayer = fLayers.insert( layer );
+
+    fModuleListByLayer[layer].insert( imod );
+  }
+
+  fNmodules = fModules.size();
+  fNlayers = fLayers.size();
+
+  for( auto ilay = fLayers.begin(); ilay != fLayers.end(); ++ilay ){
+    int layer = *ilay;
+    fLayerByIndex.push_back( layer ); //this is a sorted vector version of the layer list
+    fNumModulesByLayer[layer] = fModuleListByLayer[layer].size();
+  }
+
+  InitLayerCombos();
+  InitGridBins();
 }
 
 //This only needs to be done ONCE (after loading the geometry from the database!)
@@ -106,7 +134,9 @@ void SBSGEMTrackerBase::InitGridBins() {
   fGridYmin_layer.clear();
   fGridYmax_layer.clear();
   
-  for( int layer = 0; layer<fNlayers; layer++ ){
+  for( int ilayer = 0; ilayer<fNlayers; ilayer++ ){
+    int layer = fLayerByIndex[ilayer];
+    
     std::set<int> modlist_layer = fModuleListByLayer[layer];
 
     //Initialize grid active area for this layer:
@@ -399,7 +429,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	map<int,int> besthitcombo;
 	double minchi2 = 1.e20; //arbitrary large number initially
 
-	double besttrack[4]; //x, y, x', y'
+	vector<double> besttrack(4); //x, y, x', y'
 
 	//Let's carry around the track fitting residuals so that we don't have to repeat the calculation when adding the fitted track with best chi2 to the track arrays:
 	vector<double> uresidbest, vresidbest;
@@ -415,11 +445,12 @@ void SBSGEMTrackerBase::find_tracks(){
 	    
 	  for( int ihit=0; ihit<nhitsrequired; ihit++ ){
 	    int layeri = fLayerCombinations[nhitsrequired][icombo][ihit];
-	    if( layerswithfreehits.find( layeri ) != layerswithfreehits.end() ){ //check that this layer has unused hits:
-	      layerstotest.insert( layeri );
+	    int layer = fLayerByIndex[layeri];
+	    if( layerswithfreehits.find( layer ) != layerswithfreehits.end() ){ //check that this layer has unused hits:
+	      layerstotest.insert( layer );
 
-	      minlayer = (layeri < minlayer) ? layeri : minlayer;
-	      maxlayer = (layeri > maxlayer) ? layeri : maxlayer;
+	      minlayer = (layer < minlayer) ? layer : minlayer;
+	      maxlayer = (layer > maxlayer) ? layer : maxlayer;
 	    }
 	  }
 
@@ -623,7 +654,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	  // "AddTrack" takes care of incrementing fNtracks_found
 	    
-	  AddTrack( besthitcombo, besttrack, minchi2 );
+	  AddTrack( besthitcombo, besttrack, minchi2, uresidbest, vresidbest );
 	    
 	}
 	  
@@ -772,7 +803,7 @@ TVector3 SBSGEMTrackerBase::GetHitPosGlobal( int module, int clustindex ){
 		   fModules[module]->fHits[clustindex].zghit );
 }
 
-void SBSGEMTrackerBase::AddTrack( const std::map<int,int> &hitcombo, double *BestTrack, double chi2ndf, std::vector<double> &uresidbest, std::vector<double> &vresidbest ){
+void SBSGEMTrackerBase::AddTrack( const std::map<int,int> &hitcombo, const vector<double> &BestTrack, double chi2ndf, const std::vector<double> &uresidbest, const std::vector<double> &vresidbest ){
   //AddTrack stores the best track found on each track-finding iteration in the appropriate data members of the class. It also takes care of
   //marking the hits on the track as used, and also marking all the 2D hits as used that contain any of the same 1D clusters as the found track:
   
@@ -809,8 +840,9 @@ void SBSGEMTrackerBase::AddTrack( const std::map<int,int> &hitcombo, double *Bes
     hitlisttemp.push_back( iclust );
 
     //For exclusive residual calculation, we use CalcLineOfBestFit instead of FitTrack with the hit combo excluding the current layer:
+    //copy the hit combo to a temporary local container:
     std::map<int,int> hitcombotemp = hitcombo;
-    hitcombotemp.erase( layer ); //remove the current layer from the list of hits:
+    hitcombotemp.erase( layer ); //remove the current layer from the temporary copy of the list of hits
 
     //dummy variables to hold temporary track parameters:
     double xtemp,ytemp, xptemp,yptemp;

@@ -40,8 +40,8 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector : public SBSGEMTrac
 	
   //bool fIsMC; moved to SBSGEMTrackerBase
 	
-  THaCrateMap *fCrateMap; //Does this do anything? Not as far as I can tell. I wish someone would have documented why they added this. AJRP
-  ClassDef(SBSGEMSpectrometerTracker ,0);
+  //THaCrateMap *fCrateMap; //Does this do anything? Not as far as I can tell. I wish someone would have commented about why they added this. AJRP
+  ClassDef(SBSGEMSpectrometerTracker, 0);
 
 };
 
