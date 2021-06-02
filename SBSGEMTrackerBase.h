@@ -166,7 +166,7 @@ protected:
   int fNtracks_found;
   std::vector<int> fNhitsOnTrack; //number of hits on track:
   std::vector<std::vector<int> > fModListTrack; //list of modules containing hits on fitted tracks
-  std::vector<std::vector<int> > fHitListTrack; //list of hits on fitted tracks: NOTE--the "hit list" of the track refers to the index in the 2D cluster array. To locate the hit and its properties you need the module index and the hit index, i.e., fModules[fModListTrack[ihit]]->
+  std::vector<std::vector<int> > fHitListTrack; //list of hits on fitted tracks: NOTE--the "hit list" of the track refers to the index in the 2D cluster array. To locate the hit and its properties you need the module index and the hit index, i.e., fModules[fModListTrack[ihit]]->fHits[fHitListTrack[ihit]]
   std::vector<std::vector<double> > fresidu_hits; //inclusive residuals: track - hit along direction measured by u strips
   std::vector<std::vector<double> > fresidv_hits; //inclusive residuals: track - hit along direction measured by v strips
   std::vector<std::vector<double> > feresidu_hits; //exclusive residuals: track - hit along direction measured by u strips

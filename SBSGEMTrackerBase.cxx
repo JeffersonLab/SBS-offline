@@ -62,6 +62,7 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   
 }
 
+//This is called by the Init() methods of derived classes:
 void SBSGEMTrackerBase::CompleteInitialization(){
   fLayers.clear();
   fLayerByIndex.clear();
@@ -82,10 +83,13 @@ void SBSGEMTrackerBase::CompleteInitialization(){
 
   for( auto ilay = fLayers.begin(); ilay != fLayers.end(); ++ilay ){
     int layer = *ilay;
-    fLayerByIndex.push_back( layer ); //this is a sorted vector version of the layer list
+    fLayerByIndex.push_back( layer ); //this is a vector version of the layer list, unless the user has defined something weird, layer[layerindex] = layerindex for layerindex = 0, ..., Nlayers-1
     fNumModulesByLayer[layer] = fModuleListByLayer[layer].size();
   }
 
+  //make sure the user has defined something sensible:
+  fMinHitsOnTrack = std::max(3,std::min(fNlayers,fMinHitsOnTrack) );
+  
   InitLayerCombos();
   InitGridBins();
 }

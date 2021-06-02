@@ -36,7 +36,7 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     int modcounter=0;
     
     for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-      status = (*it)->Init(date); //This triggers calling of ReadDatabase for each module!
+      status = (*it)->Init(date); //This triggers calling of ReadDatabase for each module (I hope)!
       if( status != kOK ){
 	return status;
       }
@@ -217,9 +217,53 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 
 
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
+
+  if( !fUseConstraint ){
+    //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
+    find_tracks();
+
+    for( int itrack=0; itrack<fNtracks_found; itrack++ ){
+      THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );
+
+      int ndf = 2*fNhitsOnTrack[itrack]-4;
+      double chi2 = fChi2Track[itrack]*ndf;
+      
+      Track->SetChi2( chi2, ndf );
+
+      int index = tracks.GetLast();
+      Track->SetIndex( index );
+    }
+    
+    
+  }
+  
   return 0;
 }
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
+
+  if( fUseConstraint ){ //
+
+    //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
+    find_tracks();
+
+    //We don't necessarily know 
+    
+    for( int itrack=0; itrack<fNtracks_found; itrack++ ){
+      //AddTrack returns a pointer to the created THaTrack:
+      THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
+
+      int ndf = 2*fNhitsOnTrack[itrack]-4;
+      double chi2 = fChi2Track[itrack]*ndf;
+      
+      Track->SetChi2( chi2, ndf );
+
+      int index = tracks.GetLast();
+      Track->SetIndex( index );
+      
+    }
+    
+  }
+  
   return 0;
 }
 
