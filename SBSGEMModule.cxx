@@ -16,9 +16,13 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 {
   // FIXME:  To database
   //Set Default values for fZeroSuppress and fZeroSuppressRMS:
-  fZeroSuppress    = kFALSE;
+  fZeroSuppress    = kTRUE;
   fZeroSuppressRMS = 5.0;
 
+  //Default online zero suppression to FALSE: actually I wonder if it would be better to use this in 
+  // Moved this to MPDModule, since this should be done during the decoding of the raw APV data:
+  //fOnlineZeroSuppression = kFALSE;
+  
   //Set default values for decode map parameters:
   fN_APV25_CHAN = 128;
   fN_MPD_TIME_SAMP = 6;
@@ -330,7 +334,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
   //fNch = 0;
   fNstrips_hit = 0;
-  //This could be written much more efficiently, in principle. However, it's probably not a speed bottleneck, so for now let's not worry about it:
+  //This could be written much more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it:
   for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
     //loop over all decode map entries associated with this module (each decode map entry is one APV card)
     Int_t effChan = it->mpd_id << 8 | it->adc_id; //left-shift mpd id by 8 bits and take the bitwise OR with ADC_id to uniquely identify the APV card.
@@ -350,13 +354,26 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
       Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
       assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
-      Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card:
+      Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
 
       // Loop over all the strips and samples in the data
-      Int_t isamp = 0;
+      //Int_t ihit = 0;
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
-	assert(isamp<nsamp); //Not clear that this line is necessary, but it appears to be essentially checking that the number of strips fired on this APV card is nonzero.
-	Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, isamp); //first raw data word is the strip number I suppose... I'm not necessarily convinced this is correct, but we'll look into it
+	//Temporary vector to hold ped-subtracted ADC samples for this strip:
+	std::vector<double> ADCtemp;
+
+	//sums over time samples
+	double ADCsum_temp = 0.0;
+	double maxADC = 0.0;
+	UShort_t iSampMax = -1;
+	
+	//crude timing calculations:
+	double Tsum = 0.0;
+	double T2sum = 0.0;
+
+	//At this point, "strip" equals APV channel number:
+	Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip );
+
 	assert(strip>=0&&strip<128);
 	// Madness....   copy pasted from stand alone decoder
 	// I bet there's a more elegant way to express this
@@ -367,28 +384,23 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	Int_t RstripNb = APVMAP[strip];
 	RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
 	Int_t RstripPos = RstripNb + 128*it->pos;
-	strip = RstripPos; //At this point, "strip" should correspond to increasing order of position along the U or V axis:
+	strip = RstripPos; //At this point, "strip" should correspond to increasing order of position along the U or V axis; i.e., what we think it should!
 
-	//Temporary vector to hold ped-subtracted ADC samples for this strip:
-	std::vector<double> ADCtemp;
+	//NOTE that we are replacing the value of "strip" with the line above!
 
-	//Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
-	// sample-to-sample:
-	double pedtemp = ( axis == SBSGEMModule::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
-	double rmstemp = ( axis == SBSGEMModule::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
+	//Now loop over the time samples:
+	for( Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++ ){
 
-	double ADCsum_temp = 0.0;
-	double maxADC = 0.0;
-	UShort_t iSampMax = -1;
-
-	//timing calculations:
-	double Tsum = 0.0;
-	double T2sum = 0.0;
-	
-	for(Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++) {
-	  //need to figure out what's the difference between "data" and "rawdata" for
-	  //MPD:
-	  double ADCvalue = evdata.GetData(it->crate, it->slot, chan, isamp++) - pedtemp;
+	  Int_t ihit = adc_samp + fN_MPD_TIME_SAMP * istrip; //index in the "hit" array for this APV card:
+	  assert(ihit<nsamp);
+	  
+	  // Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
+	  // sample-to-sample: When operating without online zero suppression, these should all probably be set to zero, since we will
+	  // generally do offline common-mode calculation and subtraction in that case:
+	  double pedtemp = ( axis == SBSGEMModule::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
+	  double rmstemp = ( axis == SBSGEMModule::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
+	  
+	  double ADCvalue = double( evdata.GetData(it->crate, it->slot, chan, ihit) ) - pedtemp;
 	  
 	  //subtract "pedestal" from raw ADC value:
 	  ADCtemp.push_back( ADCvalue );
@@ -398,18 +410,18 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  ADCsum_temp += ADCvalue;
 	  
 	  if( iSampMax < 0 || ADCvalue > maxADC ){
-	    maxADC = ADCvalue
+	    maxADC = ADCvalue;
 	    iSampMax = adc_samp;
 	  }
 
-	  //just take simple time bins at the center of each sample:
+	  //for crude strip timing, just take simple time bins at the center of each sample (we'll worry about trigger time words later):
 	  double Tsamp = fSamplePeriod * ( adc_samp + 0.5 );
 	  
 	  Tsum += Tsamp * ADCvalue;
 	  T2sum += pow(Tsamp,2) * ADCvalue;
 	  
 	  //assert( ((UInt_t) fNch) < fMPDmap.size()*fN_APV25_CHAN );
-	  assert( fNstrips_hit < fMPDmap.size()*fN_APV25_CHAN );
+	  //assert( fNstrips_hit < fMPDmap.size()*fN_APV25_CHAN );
 	}
 	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
 
@@ -424,7 +436,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fAxis.push_back( axis );
 	  fADCsamples.push_back( ADCtemp ); //pedestal-subtracted
 	  fADCsums.push_back( ADCsum_temp ); //sum of all (pedestal-subtracted) samples
-	  fKeepStrip.push_back( true );
+	  fKeepStrip.push_back( true ); //keep all strips by default
 	  fMaxSamp.push_back( iSampMax );
 	  fADCmax.push_back( maxADC );
 	  fTmean.push_back( Tsum/ADCsum_temp );

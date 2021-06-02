@@ -167,7 +167,8 @@ class SBSGEMModule : public THaSubDetector {
 
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
-  Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
+  //Moved to the MPD module class:
+  //Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
 
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
