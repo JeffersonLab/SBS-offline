@@ -38,9 +38,9 @@ namespace Decoder {
 
     // We don't need these functions for simulated data, but must be defined
     // so that this won't be an abstract class
-    virtual UInt_t LoadNextEvBuffer(THaSlotData*) {return 0;};// needs return something for compilation
-    virtual UInt_t LoadThisBlock(THaSlotData*, std::vector<UInt_t >) {return 0;};// needs return something for compilation
-    virtual Int_t Decode(const UInt_t *) { return 0; }; // use DecodeOneWord instead
+    UInt_t LoadNextEvBuffer(THaSlotData*) {return 0;};// needs return something for compilation
+    UInt_t LoadThisBlock(THaSlotData*, const std::vector<UInt_t > &) {return 0;};// needs return something for compilation
+    Int_t Decode(const UInt_t *) { return 0; }; // use DecodeOneWord instead
 
     /*
     struct fadc_data_struct {
@@ -56,9 +56,11 @@ namespace Decoder {
   private:
     static const size_t NADCCHAN = 2048; // Max ADC channels
     static TypeIter_t fgThisType;
+    /*
     static TypeIter_t fgType1;
     static TypeIter_t fgType2;
     static TypeIter_t fgType3;
+    */
     //static std::vector<TypeIter_t> fgTypeVec;//Let's try something...
     std::vector<SimEncoder::sadc_data> sadc_data;
 

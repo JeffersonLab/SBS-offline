@@ -29,8 +29,8 @@ namespace Decoder {
 
   Module::TypeIter_t SBSSimADC::fgThisType =
     //DoRegister( ModuleType( "Decoder::SBSSimADC" , 50250 ));
-    DoRegister( ModuleType( "Decoder::SBSSimADC" ,  -250 ));
-  
+    DoRegister( ModuleType( "Decoder::SBSSimADC" ,  252 ));
+  /*
   Module::TypeIter_t SBSSimADC::fgType1 =
     DoRegister( ModuleType( "Decoder::SBSSimADC" , -1881 ));
   Module::TypeIter_t SBSSimADC::fgType2 =
@@ -38,7 +38,7 @@ namespace Decoder {
   Module::TypeIter_t SBSSimADC::fgType3 =
     DoRegister( ModuleType( "Decoder::SBSSimADC" , -3561 ));
   //Int_t modid[4] = {-250, -1881, -792, -3561};
-  
+  */
   
   SBSSimADC::SBSSimADC()
   {

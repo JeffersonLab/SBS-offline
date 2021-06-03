@@ -142,7 +142,7 @@ namespace Decoder {
     return LoadSlot(sldat,evbuffer+pos,evbuffer+pos+len);
     //return SBSSimTDC::LoadSlot(sldat,evbuffer,len);
   }
-
+  
 }
 
 ClassImp(Decoder::SBSSimTDC)
