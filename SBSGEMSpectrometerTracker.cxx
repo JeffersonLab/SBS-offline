@@ -8,9 +8,11 @@
 
 #include "SBSGEMSpectrometerTracker.h"
 #include "SBSGEMModule.h"
+#include "THaTrack.h"
+#include "TClonesArray.h"
 
 SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const char* desc, THaApparatus* app ):
-  THaTrackingDetector(name,desc,app) : SBSGEMTrackerBase() {
+  THaTrackingDetector(name,desc,app), SBSGEMTrackerBase() {
 
   fModules.clear();
   fIsMC = false;//by default!
@@ -33,7 +35,7 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
 
   if( status == kOK ){
 
-    int modcounter=0;
+    //    int modcounter=0;
     
     for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
       status = (*it)->Init(date); //This triggers calling of ReadDatabase for each module (I hope)!
@@ -51,8 +53,6 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
  
   return kOK;
 }
-
-Int_t 
 
 Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   std::cout << "[Reading SBSGEMSpectrometerTracker database]" << std::endl;
@@ -92,7 +92,6 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
-    { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1},
     {0}
   };
 
@@ -101,7 +100,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
     
   Int_t status = kInitError;
-  err = LoadDB( file, date, request, fPrefix );
+  LoadDB( file, date, request, fPrefix );
   fclose(file);
 
   //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
@@ -140,7 +139,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
 
 Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
-  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     (*it)->Begin(run);
   }
 
@@ -148,7 +147,7 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
 }
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
-  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     (*it)->Clear(opt);
   }
 
@@ -161,7 +160,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
   //Triggers decoding of each module:
   
-  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     (*it)->Decode(evdata);
   }
   
@@ -170,7 +169,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
 
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
-  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     (*it)->End(run);
   }
 
@@ -181,7 +180,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
   std::cout << "GEM Stand " << fName << " with " << fModules.size() << " planes defined:" << std::endl;
   /*
-    for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+    for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     std::cout << "\t"
     (*it)->Print(opt);
     }
@@ -196,7 +195,7 @@ void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
 
 void SBSGEMSpectrometerTracker::SetDebug( Int_t level ){
   THaTrackingDetector::SetDebug( level );
-  for (std::vector<SBSGEMPlane *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     (*it)->SetDebug(level);
   }
 
@@ -207,8 +206,50 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
   RVarDef vars[] = {
-    //        { "trkstat", "Track reconstruction status",  "fTrkStat" },
-    { 0 },
+    { "track.ntrack", "number of tracks found", "fNtracks_found" },
+    { "track.nhits", "number of hits on track", "fNhitsOnTrack" },
+    { "track.x", "Track X (TRANSPORT)", "fXtrack" }, //might be redundant with spectrometer variables, but probably needed for "non-tracking" version
+    { "track.y", "Track Y (TRANSPORT)", "fYtrack" },
+    { "track.xp", "Track dx/dz (TRANSPORT)", "fXptrack" },
+    { "track.yp", "Track dy/dz (TRANSPORT)", "fYptrack" },
+    { "track.chi2ndf", "Track Chi2/ndf", "fChi2Track" },
+    { "track.besttrack", "Index of 'best' track", "fBestTrackIndex" },
+    { "hit.ngoodhits", "Total number of hits on all found tracks", "fNgoodhits" },
+    { "hit.trackindex", "Index of track containing this hit", "fHitTrackIndex" },
+    { "hit.module", "Module index of this hit", "fHitModule" },
+    { "hit.layer", "Layer index of this hit", "fHitLayer" },
+    { "hit.nstripu", "number of U strips on this hit", "fHitNstripsU" },
+    { "hit.nstripv", "number of V strips on this hit", "fHitNstripsV" },
+    { "hit.ustripmax", "index of u strip with max ADC in this hit", "fHitUstripMax" },
+    { "hit.vstripmax", "index of v strip with max ADC in this hit", "fHitVstripMax" },
+    { "hit.ustriplo", "index of minimum u strip in this hit", "fHitUstripLo" },
+    { "hit.vstriplo", "index of minimum v strip in this hit", "fHitVstripLo" },
+    { "hit.ustriphi", "index of maximum u strip in this hit", "fHitUstripHi" },
+    { "hit.vstriphi", "index of maximum v strip in this hit", "fHitVstripHi" },
+    { "hit.u", "reconstructed hit position along u", "fHitUlocal" },
+    { "hit.v", "reconstructed hit position along v", "fHitVlocal" },
+    { "hit.xlocal", "reconstructed local x position of hit (internal module coordinates)", "fHitXlocal" },
+    { "hit.ylocal", "reconstructed local y position of hit (internal module coordinates)", "fHitYlocal" },
+    { "hit.xglobal", "reconstructed global x position of hit", "fHitXglobal" },
+    { "hit.yglobal", "reconstructed global y position of hit", "fHitYglobal" },
+    { "hit.zglobal", "reconstructed global z position of hit", "fHitZglobal" },
+    { "hit.umoment", "U cluster moment (consult source code or A. Puckett for definition)", "fHitUmoment" },
+    { "hit.vmoment", "V cluster moment (consult source code or A. Puckett for definition)", "fHitVmoment" },
+    { "hit.usigma", "U cluster rms", "fHitUsigma" },
+    { "hit.vsigma", "V cluster rms", "fHitVsigma" },
+    { "hit.residu", "u hit residual with fitted track (inclusive method)", "fHitResidU" },
+    { "hit.residv", "v hit residual with fitted track (inclusive method)", "fHitResidV" },
+    { "hit.eresidu", "u hit residual with fitted track (exclusive method)", "fHitEResidU" },
+    { "hit.eresidv", "v hit residual with fitted track (exclusive method)", "fHitEResidV" },
+    { "hit.ADCU", "cluster ADC sum, U strips", "fHitUADC" },
+    { "hit.ADCV", "cluster ADC sum, V strips", "fHitVADC" },
+    { "hit.ADCasym", "Hit ADC asymmetry: (ADCU - ADCV)/(ADCU + ADCV)", "fHitADCasym" },
+    { "hit.Utime", "cluster timing based on U strips", "fHitUTime" },
+    { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
+    { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
+    { "hit.ccor_clust", "correlation coefficient between cluster-summed U and V samples", "fHitCorrCoeffClust" },
+    { "hit.ccor_strip", "correlation coefficient between U and V samples on strips with max ADC", "fHitCorrCoeffMaxStrip" },
+    { nullptr }
   };
   DefineVarsFromList( vars, mode );
 
@@ -267,3 +308,4 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
   return 0;
 }
 
+ClassImp(SBSGEMSpectrometerTracker)

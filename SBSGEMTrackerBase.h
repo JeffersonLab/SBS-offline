@@ -41,6 +41,9 @@ protected:
   void hit_reconstruction();
   //track-finding: 
   void find_tracks();
+
+  // Fill arrays of "good" hits (hits that end up on fitted tracks)
+  void fill_good_hit_arrays();
   
   //Utility methods: initialization:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
@@ -60,12 +63,12 @@ protected:
   TVector2 GetUVTrack( int module, TVector3 track_origin, TVector3 track_direction );
   
   //Utility method to iterate over combinations of hits in layers, used by find_tracks()
-  bool GetNextCombo( const std::set<int> &layers, const std::map<int,std::vector<int> > &hitlist, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo=false );
+  bool GetNextCombo( const std::set<int> &layers, const std::map<int,std::vector<int> > &hitlist, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo );
 
   // Utility method to take a list of hits mapped by layer as input, and give track parameters and chi2 as output.
   // This relies on the "hit list" and "free hit list" information also being sensibly populated
   //FitTrack calculates chi2 and residuals as well as best fit parameters
-  void FitTrack( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack, double &chi2ndf, vector<double> &uresid, vector<double> &vresid );
+  void FitTrack( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack, double &chi2ndf, std::vector<double> &uresid, std::vector<double> &vresid );
   //CalcLineOfBestFit only calculates the track parameters, does not calculate chi2 or residuals:
   void CalcLineOfBestFit( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
 
@@ -74,7 +77,7 @@ protected:
   
   // Method to add a new Track to the track arrays: this takes the best hit combination and the parameters of the line of best fit to those hits
   // and the (already calculated) chi2 and fills the tracking results arrays: best fit parameters, inclusive and exclusive tracking residuals, and hit lists by track:
-  void AddTrack( const std::map<int,int> &hitcombo, const vector<double> &BestTrack, double chi2ndf, const vector<double> &uresid, const vector<double> &vresid );
+  void AddNewTrack( const std::map<int,int> &hitcombo, const std::vector<double> &BestTrack, double chi2ndf, const std::vector<double> &uresid, const std::vector<double> &vresid );
 
   void PurgeHits(int itrack);
   
@@ -82,6 +85,8 @@ protected:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
 
   bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
+  bool fZeroSuppress;
+  double fZeroSuppressRMS;
   
   bool fIsMC;
 
@@ -118,7 +123,7 @@ protected:
   std::map<int, int> fGridNbinsX_layer, fGridNbinsY_layer;          //In the standalone code, these are typically derived from the grid bin size and the layer active area dimensions.
   //These variables are arguably redundant with the ones above, but as defined, these include a bit of extra "slop" to account for resolution, misalignments, z staggering of
   // modules within a layer, etc.
-  std::map<int, double> fGridXmin_layer, fGridYmin_layer, fGridXmax_layer, fGrid_Ymax_layer;
+  std::map<int, double> fGridXmin_layer, fGridYmin_layer, fGridXmax_layer, fGridYmax_layer;
   
   double fTrackChi2Cut; //chi2/NDF cut for track validity
 
@@ -131,7 +136,7 @@ protected:
   TVector2 fConstraintWidth_Back;
 
   Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
-  Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
+  
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //            DATA members to hold the track information (at least temporarily, will eventually                 //
   //            be passed to the THaSpectrometer tracks TClonesArray for SBSGEMSpectrometerTracker                //
@@ -171,14 +176,74 @@ protected:
   std::vector<std::vector<double> > fresidv_hits; //inclusive residuals: track - hit along direction measured by v strips
   std::vector<std::vector<double> > feresidu_hits; //exclusive residuals: track - hit along direction measured by u strips
   std::vector<std::vector<double> > feresidv_hits; //exclusive residuals: track - hit along direction measured by v strips
-
+  
   //Fitted track parameters: coordinates at Z = 0 and slopes
   std::vector<double> fXtrack;
   std::vector<double> fYtrack;
   std::vector<double> fXptrack;
   std::vector<double> fYptrack;
   std::vector<double> fChi2Track; //chi2/ndf
+
+  int fBestTrackIndex; //Index of "golden track" within the TClonesArray defined by THaSpectrometer or other "best track" selection method (if not a spectrometer tracker)
   
+  // We will need to define some global variables that are either in the form of basic data or vectors of basic data,
+  // that are more convenient for ROOT Tree and/or Histogram output:
+  //Generally speaking, we will mainly be interested in histogramming the results for clusters/2D hits that end up on good tracks:
+  // Note that for the time being, we ONLY consider 2D hits for tracking; this means that we require both U and V strips to fire!
+  // Moreover, each 2D hit (and therefore, each 1D cluster) can ONLY be used in exactly one good track
+  // The following arrays, used to store properties of hits on good tracks
+
+  // What do we want to (potentially) store?
+  // Global and local coordinates (both U/V and X/Y)
+  // Module index
+  // layer index
+  // Track index of the hits
+  // ADC cluster sums U and V, and ADC asymmetry
+  // Timing information U, V, and U - V
+  // U and V cluster moments
+  // Inclusive and exclusive tracking residuals
+  // U/V Correlation coefficients (cluster and strip level)
+  // Cluster sizes in strips along U and V
+  // Strip indices along U and V in which maximum occurs
+  // lower and upper strip indices in the cluster.
+  
+  //We will define all of these in a way that is ROOT-tree friendly (basic data types or 1D STL vectors):
+  int fNgoodhits; //Total number of good 2D hits ending up on good tracks:
+  std::vector<int> fHitTrackIndex; //Index of track containing this hit
+  std::vector<int> fHitModule; // Module index of hit
+  std::vector<int> fHitLayer; // Layer index of hit
+  std::vector<int> fHitNstripsU; // number of U strips on hit
+  std::vector<int> fHitUstripMax; // U strip index of maximum
+  std::vector<int> fHitUstripLo; //lo U strip index of hit
+  std::vector<int> fHitUstripHi; //hi U strip index
+  std::vector<int> fHitNstripsV; //number of V strips on hit
+  std::vector<int> fHitVstripMax; // V strip index of maximum
+  std::vector<int> fHitVstripLo; //lo V strip index of hit
+  std::vector<int> fHitVstripHi; //hi V strip index
+  std::vector<double> fHitUlocal; //reconstructed "U" coordinate
+  std::vector<double> fHitVlocal; //reconstructed "V" coordinate
+  std::vector<double> fHitXlocal; //reconstructed "X" coordinate (rotation of U/V)
+  std::vector<double> fHitYlocal; //reconstructed "Y" coordinate (rotation of U/V)
+  std::vector<double> fHitXglobal; //global x coordinate of hit
+  std::vector<double> fHitYglobal; //global y coordinate of hit
+  std::vector<double> fHitZglobal; //global z coordinate of hit
+  std::vector<double> fHitUmoment; // cluster "U" moment
+  std::vector<double> fHitVmoment; // cluster "V" moment
+  std::vector<double> fHitUsigma; //"sigma" of reconstructed U position (measure of cluster width)
+  std::vector<double> fHitVsigma; //"sigma of reconstructed V position (measure of cluster width)
+  std::vector<double> fHitResidU; //U tracking residual ("inclusive")
+  std::vector<double> fHitResidV; //V tracking residual ("inclusive")
+  std::vector<double> fHitEResidU; //U tracking residual ("exclusive");
+  std::vector<double> fHitEResidV; //V tracking residual ("exclusive");
+  std::vector<double> fHitUADC; // cluster ADC sum, U strips
+  std::vector<double> fHitVADC; // cluster ADC sum, V strips
+  std::vector<double> fHitADCasym; // (ADCU-ADCV)/(ADCU + ADCV)
+  std::vector<double> fHitUTime; // cluster-mean time, U strips
+  std::vector<double> fHitVTime; // cluster-mean time, V strips
+  std::vector<double> fHitDeltaT; // TU - TV;
+  std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
+  std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC. 
+  //And I THINK that's all we need to get started!
   
 };
 

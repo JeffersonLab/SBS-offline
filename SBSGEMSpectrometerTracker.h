@@ -1,5 +1,5 @@
 #ifndef SBSGEMSPECTROMETERTRACKER_H
-#defined SBSGEMSPECTROMETERTRACKER_H 1
+#define SBSGEMSPECTROMETERTRACKER_H 1
 #include <vector>
 #include <THaTrackingDetector.h>
 #include "SBSGEMTrackerBase.h"
@@ -9,13 +9,15 @@ class THaApparatus;
 class THaEvData;
 class SBSGEMPlane;
 class THaCrateMap;
+class THaTrack;
+class TClonesArray;
 
-class SBSGEMSpectrometerTracker : public THaTrackingDetector : public SBSGEMTrackerBase {
+class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrackerBase {
  public:
   SBSGEMSpectrometerTracker( const char *name, const char *description = "",
 	       THaApparatus *app = 0 );
 
-  virtual ~SBSGEMStand();
+  virtual ~SBSGEMSpectrometerTracker();
 
   virtual void    Clear( Option_t* opt="" );
   virtual Int_t   Decode( const THaEvData& );

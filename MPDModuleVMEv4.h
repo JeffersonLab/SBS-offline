@@ -1,5 +1,5 @@
-#ifndef MPDModule_
-#define MPDModule_
+#ifndef MPDModuleVMEv4_
+#define MPDModuleVMEv4_
 
 /////////////////////////////////////////////////////////////////////
 //
@@ -82,7 +82,7 @@ namespace Decoder {
     
   private:
 
-    bool fOnlineZeroSuppression; //if true, assumes that raw-data are already zero-suppressed and baseline-subtracted
+    //bool fOnlineZeroSuppression; //if true, assumes that raw-data are already zero-suppressed and baseline-subtracted
     
     // configuration parameters
     Int_t fAcqMode; // normal, zero suppression, histogram, synch ...

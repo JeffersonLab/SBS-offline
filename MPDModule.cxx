@@ -35,6 +35,9 @@
 #include "MPDModule.h"
 #include "THaSlotData.h"
 #include <limits>
+#include <vector>
+#include <map>
+#include <set>
 
 using namespace std;
 
@@ -136,7 +139,7 @@ namespace Decoder {
       
 
     if( found_this_slot ){ //then the current slot has data, extract it and decode it. 
-      for( auto iadc = RawDataByADC_Channel_temp.begin(); iadc != RawDataByADC_Channel_temp.end(); ++iadc ){
+      for( auto iadc = RawDataByADC_Channel.begin(); iadc != RawDataByADC_Channel.end(); ++iadc ){
 	//iadc is a pointer to pair<UInt_t, std::vector<UInt_t> > (I think)
 	adc_chan = iadc->first; //one APV card
 	std::vector<UInt_t> ADCsamples = iadc->second; //vector of all the ADC samples:
@@ -167,12 +170,10 @@ namespace Decoder {
       }
 	    
 	
-      }
-
-      iword++;
     }
-
+  
     return fWordsSeen;
+  
   }
   
   //
@@ -616,8 +617,7 @@ namespace Decoder {
     
     return 0;
   }
-
-
 }
+
 
 ClassImp(Decoder::MPDModule)

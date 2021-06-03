@@ -11,9 +11,10 @@
 
 #pragma link C++ class Decoder::SBSDecodeF1TDCModule+;
 #pragma link C++ class Decoder::MPDModule+;
+#pragma link C++ class Decoder::MPDModuleVMEv4+;
 #pragma link C++ class SBSBigBite+;
-#pragma link C++ class SBSGEMStand+;
-#pragma link C++ class SBSGEMPlane+;
+#pragma link C++ class SBSGEMSpectrometerTracker+;
+#pragma link C++ class SBSGEMModule+;
 #pragma link C++ class SBSGRINCH+;
 #pragma link C++ class SBSGRINCH_Cluster+;
 #pragma link C++ class SBSGRINCH_Hit+;

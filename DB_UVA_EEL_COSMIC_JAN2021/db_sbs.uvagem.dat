@@ -229,7 +229,7 @@ sbs.uvagem.threshold_stripsum = 200.0
 sbs.uvagem.threshold_clustersum = 500.0
 
 #
-sbs.uvagem.ADCasym_cut = 0.3
+sbs.uvagem.ADCasym_cut = 1.1
 # time difference cut in nanoseconds:
 sbs.uvagem.deltat_cut = 30.0
 
@@ -244,6 +244,8 @@ sbs.uvagem.maxnv_charge = 4
 # for cluster position reconstruction: +/- 2 strips from peak = maximum cluster size 5 strips
 sbs.uvagem.maxnu_pos = 2
 sbs.uvagem.maxnv_pos = 2
+
+sbs.uvagem.sigmahitshape = 0.0004 
 
 # strip pitch along u (mm):
 sbs.uvagem.m0.upitch = 0.4

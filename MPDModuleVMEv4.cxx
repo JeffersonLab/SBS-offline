@@ -35,6 +35,9 @@
 #include "MPDModuleVMEv4.h"
 #include "THaSlotData.h"
 #include <limits>
+#include <vector>
+#include <map>
+#include <set>
 
 using namespace std;
 
@@ -46,7 +49,7 @@ namespace Decoder {
   MPDModuleVMEv4::MPDModuleVMEv4(Int_t crate, Int_t slot) : VmeModule(crate, slot) {
     fDebugFile=0;
     Init(); //Should this be called here? not clear...
-    fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
+    //fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
     fBlockHeader = 0x0;
     fAPVHeader   = 0x4;
 
@@ -84,7 +87,7 @@ namespace Decoder {
     //Get the slot number for this call to LoadSlot:
     UInt_t this_slot = sldat->getSlot();
     
-    bool foundslot = false;
+    ///bool foundslot = false;
 
     UInt_t thisheader;
 
@@ -137,7 +140,7 @@ namespace Decoder {
       
 
     if( found_this_slot ){ //then the current slot has data, extract it and decode it. 
-      for( auto iadc = RawDataByADC_Channel_temp.begin(); iadc != RawDataByADC_Channel_temp.end(); ++iadc ){
+      for( auto iadc = RawDataByADC_Channel.begin(); iadc != RawDataByADC_Channel.end(); ++iadc ){
 	//iadc is a pointer to pair<UInt_t, std::vector<UInt_t> > (I think)
 	adc_chan = iadc->first; //one APV card
 	std::vector<UInt_t> ADCsamples = iadc->second; //vector of all the ADC samples:
@@ -168,11 +171,7 @@ namespace Decoder {
       }
 	    
 	
-      }
-
-      iword++;
     }
-
     return fWordsSeen;
   }
   

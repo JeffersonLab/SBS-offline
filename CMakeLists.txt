@@ -52,8 +52,9 @@ endif()
 
 ##----------------------------------------------------------------------------
 ## Set the sources which have a corresponding .h file here
-set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
-  SBSBBShowerCluster.cxx SBSBBShower.cxx SBSBBTotalShower.cxx
+set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
+  SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx
+  SBSBBShowerCluster.cxx SBSBBShower.cxx SBSBBTotalShower.cxx 
   SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
   SBSScintPartialHit.cxx SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx
