@@ -327,7 +327,7 @@ Int_t SBSTimingHodoscope::ReadDatabase(const TDatime& date)
   // Step through the modules already filled and find out how many reference
   // channels we have (and also, make these modules TDCs)
   nref_chans = 0;
-  for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
+  for( UInt_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
     THaDetMap::Module *d = fDetMap->GetModule( imod );
     d->MakeTDC();
     if(d->refindex == -1) {
@@ -346,7 +346,7 @@ Int_t SBSTimingHodoscope::ReadDatabase(const TDatime& date)
       new((*fRefCh)[i]) SBSScintPMT(1.0,0,ref_ch_res[i]);
     }
   } else {
-    Error( Here(here), "Malformed ref_ch_res in database. %d entries provided"
+    Error( Here(here), "Malformed ref_ch_res in database. %lu entries provided"
         " but expected either 1 or %d",ref_ch_res.size(),nref_chans);
     return kInitError;
 
@@ -2015,13 +2015,13 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 	// and we need one line (=one module) per reference channel
 	// otherwise only the first will be used
 	Int_t i=0;
-	Int_t data;
-	while ((i < fDetMap->GetSize())&&(  i < GetNRefCh() )) {
+	UInt_t data;
+  while( (i < (Int_t)fDetMap->GetSize()) && (i < GetNRefCh()) ) {
 		THaDetMap::Module * d = fDetMap->GetModule(i);
 
 		// Get number of channels with hits
-		Int_t chan=d->lo;
-		Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+		UInt_t chan=d->lo;
+		UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
 #if DEBUG_THIS
 		cout << "Found " << nHits << "  hits in the reference channel for " << GetName()
@@ -2064,7 +2064,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 				Warning(Here(here),"%s",s.str().c_str());
 			}
 #endif//#if DEBUG_LEVEL>=2
-			data = 2^31 ;//new error value to 
+			data = (1LL << 31);//new error value to
 			return (0);//Jin Huang
 		} else {
 			if (nHits>1) {
@@ -2108,7 +2108,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 	// two ways to process the data -- one is good for densely packed data in only
 	// one module, the second better for more scattered out data
 
-	while (i < fDetMap->GetSize()){
+	while (i < (Int_t)fDetMap->GetSize()){
 		THaDetMap::Module * d = fDetMap->GetModule(i);
 		Bool_t isAdc=fDetMap->IsADC(d);
 
@@ -2133,7 +2133,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 			if (chan < d->lo || chan > d->hi) 
 				continue; //Not part of this detector
 #else         /* Better for sparse cabling */
-		for (Int_t chan=d->lo; chan<=d->hi; chan++) {
+		for (UInt_t chan=d->lo; chan<=d->hi; chan++) {
 #endif
 
 			DEBUG_MASSINFO(Here(here),
@@ -2142,7 +2142,7 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 			DEBUG_LINE_MASSINFO(evdata.PrintSlotData(d->crate, d->slot));
 
 			// Get number of hits for this channel and loop through hits
-			Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+      UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
 			if (nHits<=0) continue;
 #if DEBUG_THIS
@@ -2217,10 +2217,10 @@ Int_t SBSTimingHodoscope::Decode( const THaEvData& evdata )
 #endif
 
 			// loop through the hits
-			for (Int_t hit = 0; hit < nHits; hit++) {
+			for (UInt_t hit = 0; hit < nHits; hit++) {
 				// Loop through all hits for this channel, and store the
 				// TDC/ADC  data for this hit
-				Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
+        Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
 				if (isAdc) {  // it is an ADC module
 					if (isLeft) {              
 						new( (*fLaHits)[nextLaHit++] )  SBSAdcHit( pmt, data );

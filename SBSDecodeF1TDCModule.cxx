@@ -97,7 +97,7 @@ void SBSDecodeF1TDCModule::Clear(const Option_t* opt) {
   for(Int_t i=0; i<fNumHits.size(); i++) fNumHits[i]=0;
 }
 
-UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer, Int_t pos, Int_t len) {
+UInt_t SBSDecodeF1TDCModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len) {
 // the 4-arg version of LoadSlot.  Let it call the 3-arg version.
 // I'm not sure we need both (historical)
 

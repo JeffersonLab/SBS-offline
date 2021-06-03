@@ -29,8 +29,8 @@ class SBSGRINCH_Hit : public TObject {
  SBSGRINCH_Hit( Int_t pmtnum, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
 		Float_t x, Float_t y ) :
   fPMTNum(pmtnum), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), 
-    fRow(i), fCol(j), fX(x), fY(y), fFlag(0), 
-    tdcr_set(false), tdcf_set(false), fVeto(0) {}
+    fRow(i), fCol(j), fX(x), fY(y), fFlag(0),
+    fVeto(0), tdcr_set(false), tdcf_set(false) {}
   virtual ~SBSGRINCH_Hit() {}
   
   void       Show(FILE * fout1);

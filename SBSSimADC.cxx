@@ -143,8 +143,8 @@ namespace Decoder {
    return 0;
   }
 
-  UInt_t SBSSimADC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
-      Int_t pos, Int_t len) {
+  UInt_t SBSSimADC::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer,
+                              UInt_t pos, UInt_t len) {
     return LoadSlot(sldat,evbuffer+pos,evbuffer+pos+len);
     //return SBSSimADC::LoadSlot(sldat,evbuffer,len);
   }

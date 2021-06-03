@@ -90,54 +90,27 @@ namespace Decoder {
 
   UInt_t SBSSimTDC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
       const UInt_t *pstop) {
- 
-    std::vector<UInt_t> evb(evbuffer, pstop);
-
-    // Note, methods SplitBuffer, GetNextBlock  are defined in PipeliningModule
-
-    SplitBuffer(evb);
-    return LoadThisBlock(sldat, GetNextBlock());
-   
-  }
-
-  UInt_t SBSSimTDC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
-      Int_t pos, Int_t len) {
-    return LoadSlot(sldat,evbuffer+pos,evbuffer+pos+len);
-    //return SBSSimTDC::LoadSlot(sldat,evbuffer,len);
-  }
-
-  UInt_t SBSSimTDC::LoadNextEvBuffer( THaSlotData *sldat) {
-    // Note, GetNextBlock belongs to PipeliningModule
-    return LoadThisBlock(sldat, GetNextBlock());
-  }
-
-  UInt_t SBSSimTDC::LoadThisBlock( THaSlotData *sldat, const vector<UInt_t> evb) {
-
-    // Fill data structures of this class using the event buffer of one "event".
-    // An "event" is defined in the traditional way -- a scattering from a target, etc.
-
     Clear();
     unsigned int nwords = 0;
     unsigned short chan = 0, type = 0;
     UInt_t raw_buff;
     SimEncoder::tdc_data tmp_tdc_data;
-    //std::cout << "SBSSimTDC load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
-    UInt_t index = 0;
-    for( size_t i = 0; i < evb.size(); i++ ){
+    //std::cout << "load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
+    while(evbuffer < pstop) {
       // First, decode the header
       chan = type = nwords = 0;
-      SBSSimDataDecoder::DecodeHeader(evb[index++],type,chan,nwords);
+      SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
       //std::cout << " nwords " << nwords << " chan " << chan << " type " << type << std::endl; 
       SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
-	std::cerr << "Could not find TDC decoder of type: " << type
-		  << std::endl;
+        std::cerr << "Could not find TDC decoder of type: " << type
+          << std::endl;
       } else {
         if(!enc->IsTDC()) {
           std::cerr << "Encoder " << enc->GetName() << " of type " << type
-		    << " is not a TDC!" << std::endl;
+            << " is not a TDC!" << std::endl;
         } else if ( nwords > 0 ) {
-	  enc->DecodeTDC(tmp_tdc_data,evb,nwords);
+	  enc->DecodeTDC(tmp_tdc_data,evbuffer,nwords);
           //std::cerr << "Got TDC encoder for type: " << type
 	  //<< ", name: " << enc->GetName() << std::endl;
 	  //cout << "time array size ? " << tmp_tdc_data.time.size() << endl;
@@ -156,27 +129,17 @@ namespace Decoder {
           tmp_tdc_data.time.clear(); // Clear it to prepare for next read
         }
       }
-      index+= nwords;//evb += nwords; // Skip ahead in the buffer
+      evbuffer += nwords; // Skip ahead in the buffer
     }
-    return index;
-    
-    /*
-    Clear();
-
-    UInt_t index = 0;
-    for( vsiz_t i = 0; i < evb.size(); i++ )
-      DecodeOneWord(evb[index++]);
-
-    LoadTHaSlotDataObj(sldat);
-
-    return index;
-    */
+   return 0;
   }
-  
-  //UInt_t SBSSimTDC::DecodeOneWord( UInt_t pdat)
-  
-  
-  
+
+  UInt_t SBSSimTDC::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer,
+                              UInt_t pos, UInt_t len) {
+    return LoadSlot(sldat,evbuffer+pos,evbuffer+pos+len);
+    //return SBSSimTDC::LoadSlot(sldat,evbuffer,len);
+  }
+
 }
 
 ClassImp(Decoder::SBSSimTDC)

@@ -157,17 +157,17 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     }
     if( !err ) {
       // Set up the new channel map
-      Int_t nmodules = fDetMap->GetSize();
+      UInt_t nmodules = fDetMap->GetSize();
       if(fDebug>=2)cout << "Set up the new channel map " << nmodules << endl;
       assert( nmodules > 0 );
       fChanMap.resize(nmodules);
-      for( Int_t i=0, k=0; i < nmodules && !err; i++ ) {
+      for( UInt_t i=0, k=0; i < nmodules && !err; i++ ) {
 	THaDetMap::Module* module = fDetMap->GetModule(i);
-	Int_t nchan = module->hi - module->lo + 1;
+	UInt_t nchan = module->hi - module->lo + 1;
         if(fDebug>=2)cout << " nchan = " << nchan << endl;
 	if( nchan > 0 ) {
 	  fChanMap.at(i).resize(nchan);
-	  for( Int_t j=0; j<nchan; ++j ) {
+	  for( UInt_t j=0; j<nchan; ++j ) {
 	    if(fDebug>=2)cout << " k = " << k << " " << nchan*nmodules << endl;
 	    assert( k < nmodules*nchan );
 	    fChanMap.at(i).at(j) = chanmap.empty() ? k : chanmap[k]-1;
@@ -528,15 +528,15 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
   const char* const here = "Decode";
   // Loop over all modules defined for shower detector
   bool has_warning = false;
-  Int_t nmodules = fDetMap->GetSize();
-  for( Int_t i = 0; i < nmodules; i++ ) {
+  UInt_t nmodules = fDetMap->GetSize();
+  for( UInt_t i = 0; i < nmodules; i++ ) {
     THaDetMap::Module* d = fDetMap->GetModule( i );
 
     // Loop over all channels that have a hit.
-    for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
-      Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+    for( UInt_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+      UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
        if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
-      Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
+      UInt_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
       if( nhit > 1 || nhit == 0 ) {
 	OSSTREAM msg;
 	msg << nhit << " hits on " << "ADC channel "
@@ -557,9 +557,9 @@ Int_t SBSBBShower::Decode( const THaEvData& evdata )
 #endif
       }
       // Get the data. If multiple hits on a channel, take the first (ADC)
-      Int_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
+      UInt_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
       
-      Int_t jchan = (d->reverse) ? d->hi - chan : chan-d->lo;
+      UInt_t jchan = (d->reverse) ? d->hi - chan : chan-d->lo;
       //cout << " jchan = " <<  jchan << " " << chan << " " << d->hi << " chanmap = " << fChanMap[i][jchan]<< endl;
        if( jchan<0 || jchan>d->hi ) {
 	Error( Here(here), "Illegal detector channel: %d", jchan );
