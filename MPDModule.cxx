@@ -595,22 +595,22 @@ namespace Decoder {
 
 
   // //Unclear if these are used by anything: comment for now (AJRP)
-  // UInt_t MPDModule::GetData( UInt_t adc, UInt_t sample, UInt_t chan) const {
-  //   printf("MPD GET DATA\n");
-  //   UInt_t idx = asc2i(adc, sample, chan);
-  //   if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
-  //   return fData[idx];
-  // }
+  UInt_t MPDModule::GetData( UInt_t adc, UInt_t sample, UInt_t chan) const {
+    // printf("MPD GET DATA\n");
+    // UInt_t idx = asc2i(adc, sample, chan);
+    // if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
+    // return fData[idx];
+  }
   
-  // void MPDModule::Clear(const Option_t *opt) {
-  //   fNumHits = 0;
-  //   for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
-  //   for (Int_t i=0; i<fNumADC*fNumSample; i++) { 
-  //     fFrameHeader[i]=0;
-  //     fFrameTrailer[i]=0;
-  //   }
+  void MPDModule::Clear(const Option_t *opt) {
+    // fNumHits = 0;
+    // for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
+    // for (Int_t i=0; i<fNumADC*fNumSample; i++) { 
+    //   fFrameHeader[i]=0;
+    //   fFrameTrailer[i]=0;
+    // }
     
-  // }
+  }
   
   Int_t MPDModule::Decode(const UInt_t *pdat) {
     //Doesn't do anything. I suppose that's fine for now?

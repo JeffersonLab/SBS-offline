@@ -38,6 +38,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <iostream>
 
 using namespace std;
 
@@ -50,10 +51,7 @@ namespace Decoder {
     fDebugFile=0;
     Init(); //Should this be called here? not clear...
     //fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
-    fBlockHeader = 0x0;
-    fAPVHeader   = 0x4;
-
-    fNumSample = 6;
+    
   }
   
   MPDModuleVMEv4::~MPDModuleVMEv4() {
@@ -63,6 +61,11 @@ namespace Decoder {
   void MPDModuleVMEv4::Init() { 
     Module::Init();
     //    Config(0,25,6,16,128); // should be called by the user (but how?)
+    fBlockHeader = 0x0;
+    fAPVHeader   = 0x4;
+
+    fNumSample = 6;
+    
     fDebugFile=0;
     Clear("");
     //    fName = "MPD Module (INFN MPD for GEM and more), use Config to dynamic config";
@@ -73,6 +76,9 @@ namespace Decoder {
   //We may also need to code up something to handle the alternative case
   
   UInt_t MPDModuleVMEv4::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
+
+    //std::cout << "Calling MPDModuleVMEv4::LoadSlot" << std::endl;
+    
     //AJRP: LoadSlot method for the VME MPD4 data format used by the UVA GEM cosmic test stand ca. Jan. 2021
     const UInt_t *datawords = &(evbuffer[pos]);
 
@@ -106,9 +112,15 @@ namespace Decoder {
     while( iword < len ){
       thisword = datawords[iword++];
 
+      
+      
       //Extract word header from bits 22-24 of data word:
       thisheader = (thisword & 0x00E00000)>>21;
 
+      // std::cout << "iword, thisword, thisheader, fBlockHeader, fAPVHeader, fNumSample = " << iword << ", " << thisword << ", "
+      // 		<< thisheader << ", " << fBlockHeader << ", " << fAPVHeader << ", "
+      // 		<< fNumSample << std::endl;
+      
       //Check if new slot:
       if(thisheader == fBlockHeader){ //extract "MPDID" (slot) info from bits 17-21 of data word:
 
@@ -116,23 +128,30 @@ namespace Decoder {
 	
 	slot = (thisword & 0x001F0000)>>16;
 
+	std::cout << "Found block header, slot = " << slot << std::endl;
+	
 	if( slot == this_slot ) found_this_slot = true; //first time we find the desired slot, set found_this_slot to true
 	//new_slot = true; //Every time we encounter a block header word, we set new_slot to true.
+	found_adc = false; //initialize found_adc to false when we encounter a new block header word
       }
 
       if( prev_slot == this_slot ) break; //we finished loading the data from the slot we actually want!
     
       if( slot == this_slot && thisheader == fAPVHeader ){ //APV data:
-	found_adc = false;
 
 	UInt_t thistype = (thisword & 0x00180000)>>19; //Data type is found in bits 20-21 of data word
+	
 	if( thistype == 0 ){ //apv header: this word contains the ADC channel info: 
 	  adc_chan = (thisword &0xf); //first four bits of data word
 	  found_adc = true;
+
+	  std::cout << "Found APV header, ADC channel = " << adc_chan << std::endl;
+	  
 	}
 
 	if( thistype == 1 && found_adc ){ //ADC sample data:
 	  RawDataByADC_Channel[adc_chan].push_back( thisword & 0x00000fff ); //Raw ADC samples are contained in bits 1-12 of data word
+	  //std::cout << "Found raw data, (channel, raw ADC value) = (" << adc_chan << ", " << RawDataByADC_Channel[adc_chan].back() << ")" << std::endl;
 	}
 	//We ignore APV trailer and "trailer" (types "2" and "3"). We hope they aren't important
       }
@@ -594,22 +613,22 @@ namespace Decoder {
 
 
   // //Unclear if these are used by anything: comment for now (AJRP)
-  // UInt_t MPDModuleVMEv4::GetData( UInt_t adc, UInt_t sample, UInt_t chan) const {
-  //   printf("MPD GET DATA\n");
-  //   UInt_t idx = asc2i(adc, sample, chan);
-  //   if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
-  //   return fData[idx];
-  // }
+  UInt_t MPDModuleVMEv4::GetData( UInt_t adc, UInt_t sample, UInt_t chan) const {
+    // printf("MPD GET DATA\n");
+    // UInt_t idx = asc2i(adc, sample, chan);
+    // if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
+    // return fData[idx];
+  }
   
-  // void MPDModuleVMEv4::Clear(const Option_t *opt) {
-  //   fNumHits = 0;
-  //   for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
-  //   for (Int_t i=0; i<fNumADC*fNumSample; i++) { 
-  //     fFrameHeader[i]=0;
-  //     fFrameTrailer[i]=0;
-  //   }
+  void MPDModuleVMEv4::Clear(const Option_t *opt) {
+    // fNumHits = 0;
+    // for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
+    // for (Int_t i=0; i<fNumADC*fNumSample; i++) { 
+    //   fFrameHeader[i]=0;
+    //   fFrameTrailer[i]=0;
+    // }
     
-  // }
+  }
   
   Int_t MPDModuleVMEv4::Decode(const UInt_t *pdat) {
     //Doesn't do anything. I suppose that's fine for now?

@@ -63,7 +63,7 @@ protected:
   TVector2 GetUVTrack( int module, TVector3 track_origin, TVector3 track_direction );
   
   //Utility method to iterate over combinations of hits in layers, used by find_tracks()
-  bool GetNextCombo( const std::set<int> &layers, const std::map<int,std::vector<int> > &hitlist, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo );
+  bool GetNextCombo( const std::set<int> &layers, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo );
 
   // Utility method to take a list of hits mapped by layer as input, and give track parameters and chi2 as output.
   // This relies on the "hit list" and "free hit list" information also being sensibly populated
@@ -165,6 +165,8 @@ protected:
   std::map<int, std::vector<int> > Nfreehits_binxy_layer; //number of free hits by grid bin in each layer
   std::map<int, std::vector<std::vector<int> > > freehitlist_binxy_layer; //list of free hits by layer and 2D grid bin; again, the "hit list" contains the index in the unchanging array clustindex2D
   
+  //Array to hold the "reduced free hit list":
+  std::map<int,std::vector<int> > freehitlist_goodxy;
   
   //////////////////// Tracking results: //////////////////////////////
   

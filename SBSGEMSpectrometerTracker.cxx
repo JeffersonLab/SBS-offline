@@ -259,8 +259,10 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 
+  std::cout << "SBSGEMSpectrometerTracker::CoarseTrack" << std::endl;
   if( !fUseConstraint ){
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
+    std::cout << "calling find_tracks..." << std::endl;
     find_tracks();
 
     for( int itrack=0; itrack<fNtracks_found; itrack++ ){
@@ -282,9 +284,11 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 }
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 
+  std::cout << "SBSGEMSpectrometerTracker::FineTrack" << std::endl;
   if( fUseConstraint ){ //
 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
+    std::cout << "calling find_tracks" << std::endl;
     find_tracks();
 
     //We don't necessarily know 

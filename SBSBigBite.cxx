@@ -35,7 +35,7 @@ SBSBigBite::~SBSBigBite()
 Int_t SBSBigBite::CoarseTrack()
 {
   // Coarse track Reconstruction
-
+  THaSpectrometer::CoarseTrack();
   // TODO
 
   return 0;
@@ -45,7 +45,7 @@ Int_t SBSBigBite::CoarseTrack()
 Int_t SBSBigBite::CoarseReconstruct()
 {
   // Coarse Reconstruction of particles in spectrometer
-
+  THaSpectrometer::CoarseReconstruct(); 
   // TODO
 
   return 0;
@@ -55,7 +55,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 Int_t SBSBigBite::Track()
 {
   // Fine track Reconstruction
-
+  THaSpectrometer::Track();
   // TODO
 
   return 0;
@@ -66,7 +66,7 @@ Int_t SBSBigBite::Track()
 Int_t SBSBigBite::Reconstruct()
 {
   // Fine Reconstruction of particles in spectrometer
-
+  THaSpectrometer::Reconstruct();
   // TODO
 
   return 0;

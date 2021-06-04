@@ -337,7 +337,7 @@ void    SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many mo
 }
 
 Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
-  //    std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
+  std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
 
   fNstrips_hit = 0;
 
@@ -354,7 +354,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
     SBSGEM::GEMaxis_t axis = it->axis == 0 ? SBSGEM::kUaxis : SBSGEM::kVaxis; 
     
-    //        printf("nchan = %d\n", nchan );
+    printf("nchan = %d\n", nchan );
 
     for( Int_t ichan = 0; ichan < nchan; ++ichan ) { //this is looping over all the "channels" (APV cards) in the crate and slot containing this decode map entry/APV card:
       Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan ); //"chan" here refers to one APV card 
@@ -365,6 +365,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
 
+      std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
+		<< it->adc_id << ", " << nstrips << std::endl;
+      
       //declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
       double commonMode[fN_MPD_TIME_SAMP];
 
@@ -512,7 +515,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     } //end loop over APV cards with hits
   } //end loop on decode map entries for this module
 
-  //    std::cout << fName << " channels found  " << fNch << std::endl;
+  std::cout << fName << " channels found  " << fNstrips_hit << std::endl;
 
   fIsDecoded = true;
   

@@ -571,8 +571,9 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	      //This array will hold the list of free hits in layers other than minlayer and maxlayer falling in 2D grid bins
 	      //close to the track projection:
-	      std::map<int,std::vector<int> > freehitlist_otherlayers_goodxy; 
-		
+	      //std::map<int,std::vector<int> > freehitlist_otherlayers_goodxy; 
+	      freehitlist_goodxy.clear();
+	      
 	      //The next step is to calculate the straight line passing through the two points from minlayer and maxlayer:
 	      // double xptrtemp = (hitpos_max.X() - hitpos_min.X())/(hitpos_max.Z()-hitpos_min.Z());
 	      // double yptrtemp = (hitpos_max.Y() - hitpos_min.Y())/(hitpos_max.Z()-hitpos_min.Z());
@@ -629,7 +630,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		      int binxy = binx + fGridNbinsX_layer[layer]*biny;
 
 		      for( int khit=0; khit<freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
-			freehitlist_otherlayers_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
+			freehitlist_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
 		      }
 			
 		    }
@@ -637,7 +638,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		} //end check on grid bin of projected track in range
 
 		  //This check enforces that all layers other than minlayer and maxlayer have at least one hit in the relevant 2D grid bins:
-		if( freehitlist_otherlayers_goodxy.find(layer) == freehitlist_otherlayers_goodxy.end() ) nextcomboexists = false;
+		if( freehitlist_goodxy.find(layer) == freehitlist_goodxy.end() ) nextcomboexists = false;
 
 		freehitcounter[layer] = 0;
 		  
@@ -649,7 +650,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
 		std::map<int,int> hitcombo;
 		  
-		while( (nextcomboexists = GetNextCombo( otherlayers, freehitlist_otherlayers_goodxy, freehitcounter, hitcombo, firstcombo ) ) ){
+		while( (nextcomboexists = GetNextCombo( otherlayers, freehitcounter, hitcombo, firstcombo ) ) ){
 		  // I think that the assignment of the result of GetNextCombo() to nextcomboexists in the while loop condition renders an extra check of the value of
 		  // nextcomboexists unnecessary
 		  //Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one:
@@ -865,7 +866,7 @@ void SBSGEMTrackerBase::FitTrack( const std::map<int,int> &hitcombo, double &xtr
 }
 
 // "Odometer" algorithm for looping over possible combinations of one hit per layer:
-bool SBSGEMTrackerBase::GetNextCombo( const std::set<int> &layers, const std::map<int,std::vector<int> > &hitlist, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo ){
+bool SBSGEMTrackerBase::GetNextCombo( const std::set<int> &layers, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo ){
   std::set<int>::iterator nextlayercounter = layers.begin();
 
   bool comboexists = true;
@@ -873,15 +874,9 @@ bool SBSGEMTrackerBase::GetNextCombo( const std::set<int> &layers, const std::ma
   for( auto layercounter = layers.begin(); layercounter != layers.end(); ++layercounter ){
     int layer = *layercounter;
     int nextlayer = *nextlayercounter;
-
-    //Grab an iterator to this layer's hit list (we can't just use the operator[]) because hitlist is a constant reference:
-    auto hitlist_layer = hitlist.find( layer );
-    if( hitlist_layer == hitlist.end() ) { //this shouldn't be possible:
-      return false; 
-    }
     
     if( layer == nextlayer && !firstcombo ){
-      if( hitcounter[layer]+1 < (hitlist_layer->second).size() ){
+      if( hitcounter[layer]+1 < freehitlist_goodxy[layer].size() ){
 	hitcounter[layer]++;
       } else {
 	//reached last hit in current layer; roll back to first hit in this layer and increment hit counter in next layer:
@@ -899,7 +894,7 @@ bool SBSGEMTrackerBase::GetNextCombo( const std::set<int> &layers, const std::ma
       }
     }
 
-    hitcombo[layer] = (hitlist_layer->second)[hitcounter[layer]];
+    hitcombo[layer] = freehitlist_goodxy[layer][hitcounter[layer]];
     
     if( nextlayercounter == layers.end() ) comboexists = false; //we reached the last hit in the last layer. stop iteration
     

@@ -26,7 +26,7 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrack
   virtual Int_t   ReadDatabase( const TDatime& date );
   // We're going to need to override ReadGeometry for the GEM tracker classes since our definition of the module orientation angles differs from the standard definition
   // in THaDetectorBase:
-  virtual Int_t   ReadGeometry( FILE *file, const TDatime &date, Bool_t required = false );
+  //virtual Int_t   ReadGeometry( FILE *file, const TDatime &date, Bool_t required = false );
 
   virtual Int_t   CoarseTrack( TClonesArray& tracks );
   virtual Int_t   FineTrack( TClonesArray& tracks );
