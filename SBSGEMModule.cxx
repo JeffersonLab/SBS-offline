@@ -158,7 +158,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   for ( UInt_t istrip=0; istrip<fNstripsU; istrip++ ){
     fPedestalU[istrip] = 0.0;
-    fPedRMSU[istrip] = fZeroSuppressRMS; //placeholder to be replaced by value from database
+    fPedRMSU[istrip] = 10.0; //placeholder to be replaced by value from database
   }
 
   //Initialize all pedestals to zero, RMS values to default:
@@ -170,7 +170,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   for( UInt_t istrip=0; istrip<fNstripsV; istrip++ ){
     fPedestalV[istrip] = 0.0;
-    fPedRMSV[istrip] = fZeroSuppressRMS;
+    fPedRMSV[istrip] = 10.0;
   }
 
   // for( UInt_t i = 0; i < rawped.size(); i++ ){
@@ -354,7 +354,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
     SBSGEM::GEMaxis_t axis = it->axis == 0 ? SBSGEM::kUaxis : SBSGEM::kVaxis; 
     
-    printf("nchan = %d\n", nchan );
+    //printf("nchan = %d\n", nchan );
 
     for( Int_t ichan = 0; ichan < nchan; ++ichan ) { //this is looping over all the "channels" (APV cards) in the crate and slot containing this decode map entry/APV card:
       Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan ); //"chan" here refers to one APV card 
@@ -365,8 +365,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
 
-      std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
-		<< it->adc_id << ", " << nstrips << std::endl;
+      //std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
+      //		<< it->adc_id << ", " << nstrips << std::endl;
       
       //declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
       double commonMode[fN_MPD_TIME_SAMP];
@@ -396,8 +396,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  commonMode[isamp] /= 72.0;
 	  for( int istrip=0; istrip<nstrips; istrip++ ){
 	    commonModeSubtractedADC[isamp][istrip] = double(rawADCs[isamp][istrip]) - commonMode[isamp];
+
+	    // cout << "istrip, isample, common mode[isample], raw ADC, common-mode subtracted ADC = " << istrip << ", " << isamp << ", "
+	    // 	 << commonMode[isamp] << ", " << rawADCs[isamp][istrip] << ", " << commonModeSubtractedADC[isamp][istrip] << endl;
 	  }
 	}
+
+	
 	
       }
       
@@ -442,6 +447,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// generally do offline common-mode calculation and subtraction in that case:
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
+
+	std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
+		  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << std::endl;
 	
 	//Now loop over the time samples:
 	for( Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++ ){
@@ -484,8 +492,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
 	if(!fZeroSuppress ||
-	   ( rmstemp > 0.0 && fabs(maxADC)/
-	     rmstemp > fZeroSuppressRMS ) ){ //Default threshold is 5-sigma!
+	   ( rmstemp > 0.0 && std::max(0.0,maxADC) > fZeroSuppressRMS*rmstemp ) ){ //Default threshold is 5-sigma!
 	  //Increment hit count and populate decoded data structures:
 	  
 	  fStrip.push_back( strip );
@@ -515,7 +522,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     } //end loop over APV cards with hits
   } //end loop on decode map entries for this module
 
-  std::cout << fName << " channels found  " << fNstrips_hit << std::endl;
+  std::cout << fName << " decoded, number of strips fired = " << fNstrips_hit << std::endl;
 
   fIsDecoded = true;
   

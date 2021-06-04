@@ -128,7 +128,7 @@ namespace Decoder {
 	
 	slot = (thisword & 0x001F0000)>>16;
 
-	std::cout << "Found block header, slot = " << slot << std::endl;
+	//	std::cout << "Found block header, slot = " << slot << std::endl;
 	
 	if( slot == this_slot ) found_this_slot = true; //first time we find the desired slot, set found_this_slot to true
 	//new_slot = true; //Every time we encounter a block header word, we set new_slot to true.
@@ -145,7 +145,7 @@ namespace Decoder {
 	  adc_chan = (thisword &0xf); //first four bits of data word
 	  found_adc = true;
 
-	  std::cout << "Found APV header, ADC channel = " << adc_chan << std::endl;
+	  //  std::cout << "Found APV header, ADC channel = " << adc_chan << std::endl;
 	  
 	}
 
