@@ -98,6 +98,7 @@ namespace SBSData {
 
   void Waveform::Process(std::vector<Float_t> &vals)
   {
+    //printf("vals size %d, samples raw size %d\n", vals.size(), fSamples.samples_raw.size());
     if( vals.size() != fSamples.samples_raw.size()) {
       // Resize our data vector
       fSamples.samples_raw.resize(vals.size());
@@ -113,6 +114,7 @@ namespace SBSData {
     Float_t max  = -404;
     Float_t sum = 0;
     Float_t sped = 0;
+    
     for(size_t i = 0; i < vals.size(); i++ ) {
       fSamples.samples_raw[i] = vals[i];
       fSamples.samples[i] = (vals[i]-fSamples.ped)*fSamples.cal;
@@ -126,6 +128,7 @@ namespace SBSData {
       //fSamples.data_ped_sum += fSamples.data_ped[i];
       //fSamples.data_cal_sum += fSamples.data_cal[i];
     }
+    //printf("ouh!\n");
     fSamples.pulse.integral.raw = sum;
     fSamples.pulse.integral.val = (sum-sped)*fSamples.cal;
     fSamples.pulse.time.raw = time;

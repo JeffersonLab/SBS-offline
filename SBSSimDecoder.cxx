@@ -420,9 +420,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.hodo")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBHodoScint_hit_nhits << " " << simev->Tgmn->Earm_BBHodo_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBHodoScint_hit_nhits << " " << simev->Tgmn->Earm_BBHodo_dighit_nchan << endl;
     for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
-      cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
+      //cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
       lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j)+1;
       ChanToROC(detname, lchan, crate, slot, chan);
       
@@ -453,9 +453,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.grinch")==0){
-    cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
     for(int j = 0; j<simev->Tgmn->Earm_GRINCH_dighit_nchan; j++){
-      cout << j << " " << simev->Tgmn->Earm_GRINCH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_adc->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j) << endl;
+      //cout << j << " " << simev->Tgmn->Earm_GRINCH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_adc->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j) << endl;
       lchan = simev->Tgmn->Earm_GRINCH_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
@@ -944,19 +944,22 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	 */
        }
      }else{
+       int chan_offset = 1;
+       if(detname.find("sh")!=std::string::npos)chan_offset = 0;
+       if(detname.find("ps")!=std::string::npos)chan_offset = 0;
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	 if(ch_count>nlogchan){
 	   std::cout << " <2> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
-	 if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-1 << " (+" << nchan << ") " << std::endl;
+	 if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-chan_offset << " (+" << nchan << ") " << std::endl;
 	 if(chanmap[ch_map]>=0){
 	   if(ch_count<nchan){
-	     (fInvDetMap[detname])[chanmap[ch_map]-1]=detchaninfo(crate, slot, i);
-	     if(fDebug>=3)std::cout << chanmap[ch_map]-1 << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-1) << std::endl;
+	     (fInvDetMap[detname])[chanmap[ch_map]-chan_offset]=detchaninfo(crate, slot, i);
+	     if(fDebug>=3)std::cout << chanmap[ch_map]-chan_offset << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-chan_offset) << std::endl;
 	   }else{
-	     (fInvDetMap[detname])[chanmap[ch_map]+nchan-1]=detchaninfo(crate, slot, i);
-	     if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-1) << std::endl;
+	     (fInvDetMap[detname])[chanmap[ch_map]+nchan-chan_offset]=detchaninfo(crate, slot, i);
+	     if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-chan_offset) << std::endl;
 	   }
 	   ch_count++;
 	 }

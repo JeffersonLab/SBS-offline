@@ -605,7 +605,6 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
   // For now, we'll just use the user-specified fModeADC
   //Int_t mode = evdata.GetModule(d->crate, d->slot)->GetMode();
   
-
   if(fModeADC != SBSModeADC::kWaveform) {
     // Process all hits in this channel
     if(fModeADC == SBSModeADC::kADCSimple) { // Single ADC value (FADC250 mode 1)
@@ -629,10 +628,16 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     // will correspond to the number of samples taken.
     std::vector<Float_t> samples;
     samples.resize(nhit);
+    //std::cout << " nhit = " << nhit << ": ";  
     for(Int_t i = 0; i < nhit; i++) {
       samples[i] = evdata.GetData(d->crate, d->slot, chan, i);
+      //std::cout << "  " << samples[i];
     }
+    //std::cout << std::endl;
+    //std::cout << blk << std::endl;
+    //std::cout << blk->Waveform() << std::endl;
     blk->Waveform()->Process(samples);
+    //std::cout << "ouh" << std::endl;
     samples.clear();
   }
 

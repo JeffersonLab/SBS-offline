@@ -21,7 +21,8 @@ SBSBBShower::SBSBBShower( const char* name, const char* description,
   fSearchRegion(0), fSearchRowmin(0), fSearchRowmax(0), fSearchColmin(0),
   fSearchColmax(0)
 {
-  SetModeADC(SBSModeADC::kADC); //< Multi-function ADC
+  //SetModeADC(SBSModeADC::kADC); //< Multi-function ADC
+  SetModeADC(SBSModeADC::kWaveform); //< Multi-function ADC
   SetModeTDC(SBSModeTDC::kNone); //< No TDC information
 }
 

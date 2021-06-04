@@ -96,11 +96,11 @@ UInt_t SBSSimADC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
     UInt_t raw_buff;
     bool printed = false;
     bool is_first = true;
-    std::cout << "SBSSimADC load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
+    //std::cout << "SBSSimADC load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
     while(evbuffer < pstop) {
       // First, decode the header
       SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
-      cout << type << " " << chan << " " << nwords << endl;
+      //cout << type << " " << chan << " " << nwords << endl;
       SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find ADC decoder of type: " << type
