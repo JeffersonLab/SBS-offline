@@ -159,6 +159,22 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   for ( UInt_t istrip=0; istrip<fNstripsU; istrip++ ){
     fPedestalU[istrip] = 0.0;
     fPedRMSU[istrip] = 10.0; //placeholder to be replaced by value from database
+
+    if( rawped.size() == fNstripsU ){
+      fPedestalU[istrip] = rawped[istrip];
+    } else if ( rawped.size() == fNstripsU/128 ) {
+      fPedestalU[istrip] = rawped[istrip/128];
+    } else if ( rawped.size() == 1 ){
+      fPedestalU[istrip] = rawped[0];
+    }
+
+    if( rawrms.size() == fNstripsU ){
+      fPedRMSU[istrip] = rawrms[istrip];
+    } else if ( rawrms.size() == fNstripsU/128 ) {
+      fPedRMSU[istrip] = rawrms[istrip/128];
+    } else if ( rawrms.size() == 1 ){
+      fPedRMSU[istrip] = rawrms[0];
+    }
   }
 
   //Initialize all pedestals to zero, RMS values to default:
@@ -171,6 +187,23 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   for( UInt_t istrip=0; istrip<fNstripsV; istrip++ ){
     fPedestalV[istrip] = 0.0;
     fPedRMSV[istrip] = 10.0;
+
+    if( rawped.size() == fNstripsV ){
+      fPedestalV[istrip] = rawped[istrip];
+    } else if ( rawped.size() == fNstripsV/128 ) {
+      fPedestalV[istrip] = rawped[istrip/128];
+    } else if ( rawped.size() == 1 ){
+      fPedestalV[istrip] = rawped[0];
+    }
+
+    if( rawrms.size() == fNstripsV ){
+      fPedRMSV[istrip] = rawrms[istrip];
+    } else if ( rawrms.size() == fNstripsV/128 ) {
+      fPedRMSV[istrip] = rawrms[istrip/128];
+    } else if ( rawrms.size() == 1 ){
+      fPedRMSV[istrip] = rawrms[0];
+    }
+    
   }
 
   // for( UInt_t i = 0; i < rawped.size(); i++ ){
@@ -329,9 +362,35 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     
 }
 
-void    SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more things too
+void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more things too
   fNstrips_hit = 0;
   fIsDecoded = false;
+
+  fNclustU = 0;
+  fNclustV = 0;
+  fUclusters.clear();
+  fVclusters.clear();
+  fN2Dhits = 0;
+  fHits.clear();
+
+  fStripAxis.clear();
+  fADCsamples1D.clear();
+  fStripTrackIndex.clear();
+  fRawADCsamples1D.clear();
+
+  fUstripIndex.clear();
+  fVstripIndex.clear();
+  fStrip.clear();
+  fAxis.clear();
+  fADCsamples.clear();
+  fRawADCsamples.clear();
+  fADCsums.clear();
+  fKeepStrip.clear();
+  fMaxSamp.clear();
+  fADCmax.clear();
+  fTmean.clear();
+  fTsigma.clear();
+  fTcorr.clear();
   
   return;
 }
@@ -448,8 +507,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
 
-	std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
-		  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << std::endl;
+	// std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
+	//  	  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << std::endl;
 	
 	//Now loop over the time samples:
 	for( Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++ ){
@@ -492,7 +551,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
 	if(!fZeroSuppress ||
-	   ( rmstemp > 0.0 && std::max(0.0,maxADC) > fZeroSuppressRMS*rmstemp ) ){ //Default threshold is 5-sigma!
+	   ( rmstemp > 0.0 && std::max(0.0,maxADC) > fZeroSuppressRMS*rmstemp &&
+	     maxADC > fThresholdSample && ADCsum_temp > fThresholdStripSum ) ){ //Default threshold is 5-sigma!
 	  //Increment hit count and populate decoded data structures:
 	  
 	  fStrip.push_back( strip );
@@ -531,9 +591,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster finding with default (wide-open) track search constraints
   //these functions will fill the 1D cluster arrays:
+  
   find_clusters_1D(SBSGEM::kUaxis); //u strips
   find_clusters_1D(SBSGEM::kVaxis); //v strips
 
+  
+  std::cout << "Module " << fName << ", found (nu, nv)" << fNclustU << ", " << fNclustV << ") clusters" << std::endl; 
   //Now make 2D clusters:
 
   fxcmin = -1.e12;
@@ -604,6 +667,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   //Constraint center and constraint width are assumed to be given in "standard" Hall A units (meters) in module-local coordinates
   // (SPECIFICALLY: constraint center and constraint width are assumed to refer to the direction measured by the strips being considered here)
   //This method will generally only be called by the reconstruction methods of SBSGEMTrackerBase
+
+  // cout << "constraint center, constraint width = " << constraint_center << ", " << constraint_width << endl;
   
   if( !fIsDecoded ){
     cout << "find_clusters invoked before decoding for GEM Module " << GetName() << ", doing nothing" << endl;
@@ -620,11 +685,15 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     maxsepcoord = fMaxNeighborsU_hitpos; 
     Nstrips = fNstripsU;
     pitch = fUStripPitch;
+    fNclustU = 0;
+    fUclusters.clear();
   } else { //V axis, no need to compare axis to kVaxis:
     maxsep = fMaxNeighborsV_totalcharge;
     maxsepcoord = fMaxNeighborsV_hitpos; 
     Nstrips = fNstripsV;
     pitch = fVStripPitch;
+    fNclustV = 0;
+    fVclusters.clear();
   }
   
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
@@ -669,6 +738,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     } 
   } // end loop over list of strips along this axis:
 
+  cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
+  
   vector<int> peakstoerase; 
 
   //now calculate "prominence" for all peaks and erase "insignificant" peaks:
@@ -738,7 +809,9 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     islocalmax[peakstoerase[ipeak]] = false;
   }
 
- 
+  cout << "After peak erasing, n local maxima = " << localmaxima.size() << endl;
+  
+  
   //Cluster formation and cluster splitting from remaining local maxima:
   for( std::set<UShort_t>::iterator i = localmaxima.begin(); i != localmaxima.end(); ++i ){
     int stripmax = *i;
@@ -825,10 +898,14 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       clusttemp.t_mean = sumt / sumwx;
       clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
 
-      if( axis == SBSGEM::kVaxis ){
-	fVclusters.push_back( clusttemp );
-      } else {
-	fUclusters.push_back( clusttemp );
+      if( sumADC >= fThresholdClusterSum ){
+	if( axis == SBSGEM::kVaxis ){
+	  fVclusters.push_back( clusttemp );
+	  fNclustV++;
+	} else {
+	  fUclusters.push_back( clusttemp );
+	  fNclustU++;
+	}
       }
     } //Check if peak is inside track search region constraint
   } //end loop on local maxima

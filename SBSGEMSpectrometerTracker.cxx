@@ -84,7 +84,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "is_mc",        &fIsMC,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "onlinezerosuppression", &onlinezerosuppressflag, kInt, 0, 1},
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
-    { "maxhitcombos", &fMaxHitCombinations, kLong, 0, 1},
+    { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
     { "gridbinwidthx", &fGridBinWidthX, kDouble, 0, 1},
     { "gridbinwidthy", &fGridBinWidthY, kDouble, 0, 1},
     { "gridedgetolerancex", &fGridEdgeToleranceX, kDouble, 0, 1},
@@ -119,6 +119,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //Define the number of modules from the "modules" string:
   fNmodules = fModules.size();
   //number of layers should 
+
+  std::cout << "fNmodules = " << fNmodules << std::endl;
   
   //Actually, the loading of the geometry was moved to SBSGEMModule::ReadDatabase(), since this information is specified on a module-by-module basis:
   // Int_t err = ReadGeometry( file, date );

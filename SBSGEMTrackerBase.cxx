@@ -374,6 +374,10 @@ void SBSGEMTrackerBase::hit_reconstruction(){
   for( int imodule=0; imodule<fNmodules; imodule++ ){
     SBSGEMModule *mod = fModules[imodule];
 
+    std::cout << "Calling hit reconstruction for module " << mod->GetName() << std::endl;
+
+    std::cout << "N strips fired = " << mod->fNstrips_hit << std::endl;
+    
     if( !fUseConstraint ){ //call find_2D hits for the module without any constraint:
       mod->find_2Dhits();
     } else {
@@ -421,7 +425,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
   //should this method invoke clear()? Yes: Clear() just clears out all the track arrays. It is assumed that this method will only be called once per event.
   //Although that is probably not correct; it might be called as many as two times. Anyway, for now, let's use it, might need to revisit later:
-  //Clear();
+  Clear();
   
   fNtracks_found = 0;
   
