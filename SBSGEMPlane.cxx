@@ -262,14 +262,14 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 	for( UInt_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
 	
     UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
-	  //std::cout << j << " chan " << chan << " first " << d->first << " lo " << d->lo << " hi " << d->hi << std::endl;
+    //std::cout << j << " chan " << chan << " first " << d->first << " lo " << d->lo << " hi " << d->hi << std::endl;
 	  if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
 	  int strip = strip0 + chan-d->lo;
 	  assert(strip<fNch);
 	
 	  UInt_t nsamps = evdata.GetNumHits(d->crate, d->slot, chan);
 	  if(nsamps!=N_MPD_TIME_SAMP)continue;
-	  //std::cout << nsamps << std::endl;
+	  //std::cout << nsamps << " strip: " << strip << std::endl;
 	  
 	  fStrip_.push_back(strip);
 	  fadc_0.push_back( evdata.GetData(d->crate, d->slot, chan, 0) - fPedestal[strip] );
@@ -286,6 +286,10 @@ Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){
 	  fadc3[strip] = evdata.GetData(d->crate, d->slot, chan, 3) - fPedestal[strip];
 	  fadc4[strip] = evdata.GetData(d->crate, d->slot, chan, 4) - fPedestal[strip];
 	  fadc5[strip] = evdata.GetData(d->crate, d->slot, chan, 5) - fPedestal[strip];
+
+	  // std::cout << fadc0[strip] << " " << fadc1[strip] << " " 
+	  // 	    << fadc2[strip] << " " << fadc3[strip] << " " 
+	  // 	    << fadc4[strip] << " " << fadc5[strip] << std::endl; 
 	}// end loop on j
 	strip0+= d->hi-d->lo;
       }//end loop on modules

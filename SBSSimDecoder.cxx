@@ -324,16 +324,16 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
 	std::vector<UInt_t> *myev = &(map[sldat]);
 	
-	cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
-	     << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
 	if(samps.size()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
 	    myev->push_back(samps[k]);
-	    cout << " " << samps[k];
+	    //cout << " " << samps[k];
 	  }
 	}
-	cout << endl;
+	//cout << endl;
 	
 	samps.clear();
 	cur_chan = lchan;
@@ -385,16 +385,16 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
 	std::vector<UInt_t> *myev = &(map[sldat]);
 	
-	cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
-	     << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
 	if(samps.size()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
-	    cout << " " << samps[k];
+	    //cout << " " << samps[k];
 	    myev->push_back(samps[k]);
 	  }
 	}
-	cout << endl;
+	//cout << endl;
 	
 	samps.clear();
 	cur_chan = lchan;
@@ -431,9 +431,25 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   if(strcmp(detname.c_str(), "bb.hodo")==0){
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBHodoScint_hit_nhits << " " << simev->Tgmn->Earm_BBHodo_dighit_nchan << endl;
+    // cout << simev->Tgmn->Earm_BBHodo_dighit_chan->size() << " " 
+    // 	 << simev->Tgmn->Earm_BBHodo_dighit_adc->size() << " " 
+    // 	 << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->size() << " " 
+    // 	 << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->size() << endl; 
+    /*
+    ChanToROC(detname, 180, crate, slot, chan);
+    cout << crate << " " << slot << " " << chan << endl;
+    if( crate >= 0 || slot >=  0 ) {
+      sldat = crateslot[idx(crate,slot)].get();
+    }
+    std::vector<UInt_t> *myev = &(map[sldat]);
+    myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
+    myev->push_back(0);
+    */
+    
+    
     for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
       //cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
-      lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j)+1;
+      lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
@@ -506,8 +522,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       if(cur_chan!=lchan){
 	//ChanToROC(detname, lchan, crate, slot, chan);
 	apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
-	//if(fDebug>3)
-cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
+	if(fDebug>3)cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
 	if( crate >= 0 || slot >=  0 ) {
 	  sldat = crateslot[idx(crate,slot)].get();
 	}
@@ -529,17 +544,15 @@ cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " <
 	if(samps.size()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
-	    cout << " " << samps[k];
+	    //cout << " " << samps[k];
 	    myev->push_back(samps[k]);
 	  }
 	}
-	cout << endl;
+	//cout << endl;
 	
 	samps.clear();
 	cur_chan = lchan;
 	
-	cout << simev->Tgmn->Earm_BBGEM_dighit_samp->size() << " " 
-	     << simev->Tgmn->Earm_BBGEM_dighit_adc->size() << endl;
 	if(simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)>=0){
 	  samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
 	}
@@ -945,7 +958,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   
    //fNChanDet[detname] = nchan;
    //fChanMapStartDet[detname] = chanmapstart;
-   (fInvDetMap[detname]).resize(nlogchan);
+   (fInvDetMap[detname]).resize(nlogchan+1);//for ref
    //if(detmap[4]==-1)nparam_mod = 5;
    for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
      crate  = detmap[k];
@@ -953,7 +966,10 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
      ch_lo  = detmap[k+2];
      ch_hi  = detmap[k+3];
      ch_ref = detmap[k+4];
-     if(ch_ref==-1)continue;
+     if(ch_ref==-1){
+       (fInvDetMap[detname])[nlogchan]=detchaninfo(crate, slot, ch_lo);
+       continue;
+     }
      /*
        if(detname.find("hodo")!=std::string::npos)
        cout << " crate " << crate << " slot " << slot 
@@ -971,7 +987,9 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	   std::cout << " <1> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
+	 
 	 (fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
+	 //cout << "ch_count " << ch_count << " crate " << crate << " slot " << slot << " i " << i << " &(fInvDetMap[detname]).at(ch_count) " << &(fInvDetMap[detname]).at(ch_count) << endl ;
 	 /*
 	   if(detname.find("hodo")!=std::string::npos){
 	   cout << " crate " << crate << " slot " << slot 
@@ -1042,9 +1060,9 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
-
+  
   if(fDebug>3){
-    std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << " " << std::endl;
+    std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
     std::cout << &(fInvDetMap.at(detname)).at(h_chan) << std::endl;
   }
   crate = ((fInvDetMap.at(detname)).at(h_chan)).crate;
