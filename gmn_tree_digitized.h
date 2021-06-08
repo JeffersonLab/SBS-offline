@@ -1,8 +1,8 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Thu May 13 08:26:25 2021 by ROOT version 6.14/04
+// Mon Jun  7 11:45:28 2021 by ROOT version 6.14/04
 // from TTree T/Geant4 SBS Simulation
-// found on file: simdigtest_2.root
+// found on file: /volatile/halla/sbs/efuchey/digitized_files/simdigtest_2.root
 //////////////////////////////////////////////////////////
 
 #ifndef gmn_tree_digitized_h
@@ -411,12 +411,8 @@ public :
    Int_t           Earm_BBGEM_dighit_nstrips;
    std::vector<int>     *Earm_BBGEM_dighit_module;
    std::vector<int>     *Earm_BBGEM_dighit_strip;
-   std::vector<int>     *Earm_BBGEM_dighit_adc_0;
-   std::vector<int>     *Earm_BBGEM_dighit_adc_1;
-   std::vector<int>     *Earm_BBGEM_dighit_adc_2;
-   std::vector<int>     *Earm_BBGEM_dighit_adc_3;
-   std::vector<int>     *Earm_BBGEM_dighit_adc_4;
-   std::vector<int>     *Earm_BBGEM_dighit_adc_5;
+   std::vector<int>     *Earm_BBGEM_dighit_adc;
+   std::vector<int>     *Earm_BBGEM_dighit_samp;
 
    // List of branches
    TBranch        *b_ev;   //!
@@ -759,12 +755,8 @@ public :
    TBranch        *b_Earm_BBGEM_dighit_nstrips;   //!
    TBranch        *b_Earm_BBGEM_dighit_module;   //!
    TBranch        *b_Earm_BBGEM_dighit_strip;   //!
-   TBranch        *b_Earm_BBGEM_dighit_adc_0;   //!
-   TBranch        *b_Earm_BBGEM_dighit_adc_1;   //!
-   TBranch        *b_Earm_BBGEM_dighit_adc_2;   //!
-   TBranch        *b_Earm_BBGEM_dighit_adc_3;   //!
-   TBranch        *b_Earm_BBGEM_dighit_adc_4;   //!
-   TBranch        *b_Earm_BBGEM_dighit_adc_5;   //!
+   TBranch        *b_Earm_BBGEM_dighit_adc;   //!
+   TBranch        *b_Earm_BBGEM_dighit_samp;   //!
 
    gmn_tree_digitized(TTree *tree=0);
    virtual ~gmn_tree_digitized();
@@ -785,9 +777,9 @@ gmn_tree_digitized::gmn_tree_digitized(TTree *tree) : fChain(0)
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
    if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("simdigtest_2.root");
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("/volatile/halla/sbs/efuchey/digitized_files/simdigtest_2.root");
       if (!f || !f->IsOpen()) {
-         f = new TFile("simdigtest_2.root");
+         f = new TFile("/volatile/halla/sbs/efuchey/digitized_files/simdigtest_2.root");
       }
       f->GetObject("T",tree);
 
@@ -1147,12 +1139,8 @@ void gmn_tree_digitized::Init(TTree *tree)
    Earm_BBHodo_dighit_tdc_t = 0;
    Earm_BBGEM_dighit_module = 0;
    Earm_BBGEM_dighit_strip = 0;
-   Earm_BBGEM_dighit_adc_0 = 0;
-   Earm_BBGEM_dighit_adc_1 = 0;
-   Earm_BBGEM_dighit_adc_2 = 0;
-   Earm_BBGEM_dighit_adc_3 = 0;
-   Earm_BBGEM_dighit_adc_4 = 0;
-   Earm_BBGEM_dighit_adc_5 = 0;
+   Earm_BBGEM_dighit_adc = 0;
+   Earm_BBGEM_dighit_samp = 0;
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -1499,12 +1487,8 @@ void gmn_tree_digitized::Init(TTree *tree)
    fChain->SetBranchAddress("Earm.BBGEM.dighit.nstrips", &Earm_BBGEM_dighit_nstrips, &b_Earm_BBGEM_dighit_nstrips);
    fChain->SetBranchAddress("Earm.BBGEM.dighit.module", &Earm_BBGEM_dighit_module, &b_Earm_BBGEM_dighit_module);
    fChain->SetBranchAddress("Earm.BBGEM.dighit.strip", &Earm_BBGEM_dighit_strip, &b_Earm_BBGEM_dighit_strip);
-   fChain->SetBranchAddress("Earm.BBGEM.dighit.adc_0", &Earm_BBGEM_dighit_adc_0, &b_Earm_BBGEM_dighit_adc_0);
-   fChain->SetBranchAddress("Earm.BBGEM.dighit.adc_1", &Earm_BBGEM_dighit_adc_1, &b_Earm_BBGEM_dighit_adc_1);
-   fChain->SetBranchAddress("Earm.BBGEM.dighit.adc_2", &Earm_BBGEM_dighit_adc_2, &b_Earm_BBGEM_dighit_adc_2);
-   fChain->SetBranchAddress("Earm.BBGEM.dighit.adc_3", &Earm_BBGEM_dighit_adc_3, &b_Earm_BBGEM_dighit_adc_3);
-   fChain->SetBranchAddress("Earm.BBGEM.dighit.adc_4", &Earm_BBGEM_dighit_adc_4, &b_Earm_BBGEM_dighit_adc_4);
-   fChain->SetBranchAddress("Earm.BBGEM.dighit.adc_5", &Earm_BBGEM_dighit_adc_5, &b_Earm_BBGEM_dighit_adc_5);
+   fChain->SetBranchAddress("Earm.BBGEM.dighit.adc", &Earm_BBGEM_dighit_adc, &b_Earm_BBGEM_dighit_adc);
+   fChain->SetBranchAddress("Earm.BBGEM.dighit.samp", &Earm_BBGEM_dighit_samp, &b_Earm_BBGEM_dighit_samp);
    Notify();
 }
 

@@ -323,12 +323,17 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  sldat = crateslot[idx(crate,slot)].get();
 	}
 	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	     << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
 	if(samps.size()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
 	    myev->push_back(samps[k]);
+	    cout << " " << samps[k];
 	  }
 	}
+	cout << endl;
 	
 	samps.clear();
 	cur_chan = lchan;
@@ -379,12 +384,17 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  sldat = crateslot[idx(crate,slot)].get();
 	}
 	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	     << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
 	if(samps.size()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
+	    cout << " " << samps[k];
 	    myev->push_back(samps[k]);
 	  }
 	}
+	cout << endl;
 	
 	samps.clear();
 	cur_chan = lchan;
@@ -487,30 +497,57 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   
   if(strcmp(detname.c_str(), "bb.gem")==0){
+    int cur_chan = -1;
+    samps.clear();
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBGEM_dighit_nstrips << endl;
     for(int j = 0; j<simev->Tgmn->Earm_BBGEM_dighit_nstrips; j++){
       mod = simev->Tgmn->Earm_BBGEM_dighit_module->at(j);
       lchan = simev->Tgmn->Earm_BBGEM_dighit_strip->at(j);
-      //???
-      //ChanToROC(detname, lchan, crate, slot, chan);
-      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
-      if(fDebug>3)cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
-      if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)].get();
-      }
-      std::vector<UInt_t> *myev = &(map[sldat]);
+      if(cur_chan!=lchan){
+	//ChanToROC(detname, lchan, crate, slot, chan);
+	apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+	//if(fDebug>3)
+cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
       
-      //tmp_mpd = lchan/128+simev->Tgmn->Earm_BBGEM_dighit_module->at(j)*12;
-      //fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
-      //myev->push_back(SBSSimDataDecoder::EncodeHeader(9, chan, 6));
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, 6));
-      //if(fDebug>3)cout << SBSSimDataDecoder::EncodeHeader(9, chan, 6) << endl;
-      myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_0->at(j));
-      myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_1->at(j));
-      myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_2->at(j));
-      myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_3->at(j));
-      myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_4->at(j));
-      myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_5->at(j));
+	//tmp_mpd = lchan/128+simev->Tgmn->Earm_BBGEM_dighit_module->at(j)*12;
+	//fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
+	//myev->push_back(SBSSimDataDecoder::EncodeHeader(9, chan, 6));
+	//myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, 6));
+	//if(fDebug>3)cout << SBSSimDataDecoder::EncodeHeader(9, chan, 6) << endl;
+	/*
+	  myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_0->at(j));
+	  myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_1->at(j));
+	  myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_2->at(j));
+	  myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_3->at(j));
+	  myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_4->at(j));
+	  myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_5->at(j));
+	*/
+	if(samps.size()){
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	  for(int k = 0; k<samps.size(); k++){
+	    cout << " " << samps[k];
+	    myev->push_back(samps[k]);
+	  }
+	}
+	cout << endl;
+	
+	samps.clear();
+	cur_chan = lchan;
+	
+	cout << simev->Tgmn->Earm_BBGEM_dighit_samp->size() << " " 
+	     << simev->Tgmn->Earm_BBGEM_dighit_adc->size() << endl;
+	if(simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)>=0){
+	  samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
+	}
+      }else{
+	if(simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)>=0){
+	  samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
+	}
+      }
     }
   }
   

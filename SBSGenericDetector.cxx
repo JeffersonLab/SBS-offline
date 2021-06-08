@@ -597,7 +597,7 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     SBSElement *blk, THaDetMap::Module *d, Int_t chan)
 {
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
-  //std::cout << d->crate << " " << d->slot << " " << chan << std::endl;
+  std::cout << d->crate << " " << d->slot << " " << chan << std::endl;
   if(nhit <= 0  || !WithADC() || !blk)
     return 0;
 
@@ -628,12 +628,12 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     // will correspond to the number of samples taken.
     std::vector<Float_t> samples;
     samples.resize(nhit);
-    //std::cout << " nhit = " << nhit << ": ";  
+    std::cout << " nhit = " << nhit << ": ";  
     for(Int_t i = 0; i < nhit; i++) {
       samples[i] = evdata.GetData(d->crate, d->slot, chan, i);
-      //std::cout << "  " << samples[i];
+      std::cout << "  " << samples[i];
     }
-    //std::cout << std::endl;
+    std::cout << std::endl;
     //std::cout << blk << std::endl;
     //std::cout << blk->Waveform() << std::endl;
     blk->Waveform()->Process(samples);
