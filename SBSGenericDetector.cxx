@@ -109,7 +109,9 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // Specify number of columns per row.  If less than nrows entries provided
   // the pattern will repeat to fill up nrows entries
   std::vector<Int_t> ncols;
-
+  
+  bool is_mc;
+  
   // Read mapping/geometry/configuration parameters
   fChanMapStart = 0;
   DBRequest config_request[] = {
@@ -124,10 +126,16 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "xyz",           &xyz,      kFloatV, 3 },  ///< If only 3 values specified, then assume as stating point for fist block and distribute according to dxyz
     { "dxdydz",         &dxyz,     kFloatV, 3, true },  ///< element spacing (dx,dy,dz)
     { "row_offset_pattern",        &row_offset_pattern,   kFloatV, 0, true }, ///< [Optional] conflicts with ncols
+    { "is_mc",      &is_mc, kInt,    0, true }, ///< Optional channel map
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
 
+  if(is_mc){// if this is simulated data, we do not care about the reference channel
+    fDisableRefADC = true;
+    fDisableRefTDC = true;
+  }
+  
   // Sanity checks (make sure there were no inconsistent values entered.
   if( !err && (nrows <= 0 || ncols.size() <= 0 || int(ncols.size()) > nrows 
         || nlayers <= 0) ) {

@@ -1,4 +1,5 @@
 bb.hodo.nchan = 180
+bb.hodo.is_mc = 1
 
 ## Detector map, format:
 ## crate slot start_channel end_channel refindex
