@@ -445,22 +445,26 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
     myev->push_back(0);
     */
-    
+    int ntdc = 0;
     
     for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
-      //cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
+      ntdc = 0;
       lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
-      
+      cout << detname << " " << lchan << " " << crate << " " << slot << " " << chan << endl;
+      cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)].get();
       }
-      std::vector<UInt_t> *myev = &(map[sldat]);
+      if(simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j)>-1000000)ntdc++;
+      if(simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j)>-1000000)ntdc++;
       
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
-      
-      myev->push_back(simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j));
-      myev->push_back(simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j));
+      if(ntdc){
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, ntdc));
+	
+	if(simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j)>-1000000)myev->push_back(simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j));
+	if(simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j)>-1000000)myev->push_back(simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j));
       /*
       ChanToROC(detname, lchan, crate, slot, chan);//+91 ??? that might be the trick
       if( crate >= 0 || slot >=  0 ) {
@@ -471,10 +475,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       myev->push_back(SBSSimDataDecoder::EncodeHeader(8, chan, 1));
       myev->push_back(simev->Tgmn->Earm_BBHodo_dighit_adc->at(j));
       */
-      if(fDebug>2){
-	std::cout << " j = " << j << " my ev = {";
-	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
-	std::cout << " } " << std::endl;
+	if(fDebug>2){
+	  std::cout << " j = " << j << " my ev = {";
+	  for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	  std::cout << " } " << std::endl;
+	}
       }
     }
   }

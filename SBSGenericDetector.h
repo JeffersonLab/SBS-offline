@@ -137,7 +137,8 @@ protected:
   Bool_t fDisableRefADC; //< Reference ADC may be optionally disabled
   Bool_t fDisableRefTDC; //< Reference TDC may be optionally disabled
   Bool_t fStoreEmptyElements; //< Do not store data for empty elements in rootfile
-
+  Bool_t fIsMC; // flag to indicate if data are simulated;
+  
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)
   std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to calorimeter element number
