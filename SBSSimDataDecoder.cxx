@@ -184,9 +184,11 @@ bool SBSSimTDCEncoder::DecodeTDC(SimEncoder::tdc_data &data,
 {
   for(unsigned short n = 0; n < nwords; n++) {
     //std::cout << "n = " << n << ": encoded data " << enc_data[n] << " edge bit " << fEdgeBit << std::endl;
-    data.time.push_back(((enc_data[n]>>fEdgeBit)<<31) |
-        (enc_data[n]&fBitMask));
-    //std::cout << "decoded data " << (((enc_data[n]>>fEdgeBit)<<31) | (enc_data[n]&fBitMask)) << " edge bit " << fEdgeBit << std::endl;
+    //data.time.push_back(((enc_data[n]>>fEdgeBit)<<31) |
+    //  (enc_data[n]&fBitMask));
+    data.time.push_back(enc_data[n]);
+    //std::cout << " decoded data " << (((enc_data[n]>>fEdgeBit)<<31) | (enc_data[n]&fBitMask)) << " edge bit " << fEdgeBit << std::endl;
+    //std::cout << data.time[n] << " " << data.getTime(n) << " " << data.getEdge(n) << std::endl;
   }
   return !data.time.empty();
 }

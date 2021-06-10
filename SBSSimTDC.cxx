@@ -127,7 +127,7 @@ namespace Decoder {
             }
             // TODO: Figure out what to do with the edge information
             // I'd imagine we need to distinguish it somehow!
-            sldat->loadData("tdc",chan,raw_buff,raw_buff);
+	    sldat->loadData("tdc",chan,raw_buff,tmp_tdc_data.getEdge(i));
           }
           tmp_tdc_data.time.clear(); // Clear it to prepare for next read
         }

@@ -75,7 +75,7 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
 {
   EvtID = entry;
 
-  std::cout << "SBSSimEvent::GetEntry(" << entry << "): " << std::endl;
+  //std::cout << "SBSSimEvent::GetEntry(" << entry << "): " << std::endl;
   // Read contents of entry.
   //if (!fChain) return 0;
 

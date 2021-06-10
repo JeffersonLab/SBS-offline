@@ -661,7 +661,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   Float_t refval  = 0;
-  std::cout << " crate " << d->crate << " slot " << d->slot << " chan " << chan << " nhit " << nhit << std::endl;
+  //std::cout << " crate " << d->crate << " slot " << d->slot << " chan " << chan << " nhit " << nhit << std::endl;
   if(!fDisableRefTDC && d->refindex>=0) {
     if(!fRefElements[d->refindex]->TDC()->HasData()) {
       std::cout << "Error reference TDC channel has no hits!" << std::endl;
@@ -679,7 +679,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
     edge = 0; // Default is to not have any trailing info
     if(fModeTDC != SBSModeTDC::kTDCSimple) { // trailing edge info stored on raw data variable
       edge = evdata.GetRawData(d->crate, d->slot, chan, ihit);
-      std::cout << evdata.GetData(d->crate, d->slot, chan, ihit) - refval << " " << edge << std::endl;
+      //std::cout << ihit << " " << evdata.GetData(d->crate, d->slot, chan, ihit) - refval << " " << edge << std::endl;
     }
     blk->TDC()->Process(
         evdata.GetData(d->crate, d->slot, chan, ihit) - refval, edge);
