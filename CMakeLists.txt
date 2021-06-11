@@ -54,8 +54,8 @@ endif()
 ## Set the sources which have a corresponding .h file here
 set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx
-  SBSBBShowerCluster.cxx SBSBBShower.cxx SBSBBTotalShower.cxx 
-  SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx
+  SBSBBShower.cxx SBSBBTotalShower.cxx 
+  SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx 
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
   SBSScintPartialHit.cxx SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx
   SBSScintPlane.cxx SBSEArm.cxx
@@ -69,7 +69,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   )
 #gmn_tree_digitized.C
 #g4sbs_data.cxx g4sbs_tree.cxx
-#gmn_dig_tree.cxx  SBSSimMPD.cxx 
+#gmn_dig_tree.cxx  SBSSimMPD.cxx SBSBBShowerCluster.cxx SBSShowerBlock.cxx
 
 ## Make corresponding header files
 string(REGEX REPLACE .cxx .h headers "${sources}")

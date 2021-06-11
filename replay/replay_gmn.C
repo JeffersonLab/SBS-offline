@@ -39,7 +39,7 @@ void replay_gmn_test(const char* filebase, uint nev = -1, TString experiment="gm
   //bigbite->AddDetector( new SBSBBTotalShower("ts", "sh", "ps", "BigBite shower") );
   bigbite->AddDetector( new SBSGRINCH("grinch", "GRINCH PID") );
   bigbite->AddDetector( new SBSTimingHodoscope("hodo", "timing hodo") );
-  bigbite->AddDetector( new SBSGEMStand("gem", "GEM tracker") );
+  bigbite->AddDetector( new SBSGEMSpectrometerTracker("gem", "GEM tracker") );
   gHaApps->Add(bigbite);
   
   SBSEArm *harm = new SBSEArm("sbs","Hadron Arm with HCal");
