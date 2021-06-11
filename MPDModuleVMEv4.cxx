@@ -32,37 +32,40 @@
 // #define SSP_TAG(b)     ((b&0x78000000)>>27)
 // #define SSP_SAMPLE(b,c) ((b>>c)&0xFFF)|(((b>>c)&0x1000)?0xFFFFF000:0x0)
 
-#include "MPDModule.h"
+#include "MPDModuleVMEv4.h"
 #include "THaSlotData.h"
 #include <limits>
 #include <vector>
 #include <map>
 #include <set>
+#include <iostream>
 
 using namespace std;
 
 namespace Decoder {
 
-  Module::TypeIter_t MPDModule::fgThisType =
-    DoRegister( ModuleType( "Decoder::MPDModule" , 3561 ));
+  Module::TypeIter_t MPDModuleVMEv4::fgThisType =
+    DoRegister( ModuleType( "Decoder::MPDModuleVMEv4" , 3560 ));
 
-  MPDModule::MPDModule(Int_t crate, Int_t slot) : VmeModule(crate, slot) {
+  MPDModuleVMEv4::MPDModuleVMEv4(Int_t crate, Int_t slot) : VmeModule(crate, slot) {
     fDebugFile=0;
     Init(); //Should this be called here? not clear...
-    fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
+    //fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
+    
+  }
+  
+  MPDModuleVMEv4::~MPDModuleVMEv4() {
+    
+  }
+  
+  void MPDModuleVMEv4::Init() { 
+    Module::Init();
+    //    Config(0,25,6,16,128); // should be called by the user (but how?)
     fBlockHeader = 0x0;
     fAPVHeader   = 0x4;
 
     fNumSample = 6;
-  }
-  
-  MPDModule::~MPDModule() {
     
-  }
-  
-  void MPDModule::Init() { 
-    Module::Init();
-    //    Config(0,25,6,16,128); // should be called by the user (but how?)
     fDebugFile=0;
     Clear("");
     //    fName = "MPD Module (INFN MPD for GEM and more), use Config to dynamic config";
@@ -70,8 +73,12 @@ namespace Decoder {
   }
 
   //This version ASSUMES that there is no online zero suppression, so all 128 APV channels are present in every event!
+  //We may also need to code up something to handle the alternative case
   
-  UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
+  UInt_t MPDModuleVMEv4::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
+
+    //std::cout << "Calling MPDModuleVMEv4::LoadSlot" << std::endl;
+    
     //AJRP: LoadSlot method for the VME MPD4 data format used by the UVA GEM cosmic test stand ca. Jan. 2021
     const UInt_t *datawords = &(evbuffer[pos]);
 
@@ -86,7 +93,7 @@ namespace Decoder {
     //Get the slot number for this call to LoadSlot:
     UInt_t this_slot = sldat->getSlot();
     
-    bool foundslot = false;
+    ///bool foundslot = false;
 
     UInt_t thisheader;
 
@@ -105,9 +112,15 @@ namespace Decoder {
     while( iword < len ){
       thisword = datawords[iword++];
 
+      
+      
       //Extract word header from bits 22-24 of data word:
       thisheader = (thisword & 0x00E00000)>>21;
 
+      // std::cout << "iword, thisword, thisheader, fBlockHeader, fAPVHeader, fNumSample = " << iword << ", " << thisword << ", "
+      // 		<< thisheader << ", " << fBlockHeader << ", " << fAPVHeader << ", "
+      // 		<< fNumSample << std::endl;
+      
       //Check if new slot:
       if(thisheader == fBlockHeader){ //extract "MPDID" (slot) info from bits 17-21 of data word:
 
@@ -115,23 +128,30 @@ namespace Decoder {
 	
 	slot = (thisword & 0x001F0000)>>16;
 
+	//	std::cout << "Found block header, slot = " << slot << std::endl;
+	
 	if( slot == this_slot ) found_this_slot = true; //first time we find the desired slot, set found_this_slot to true
 	//new_slot = true; //Every time we encounter a block header word, we set new_slot to true.
+	found_adc = false; //initialize found_adc to false when we encounter a new block header word
       }
 
       if( prev_slot == this_slot ) break; //we finished loading the data from the slot we actually want!
     
       if( slot == this_slot && thisheader == fAPVHeader ){ //APV data:
-	found_adc = false;
 
 	UInt_t thistype = (thisword & 0x00180000)>>19; //Data type is found in bits 20-21 of data word
+	
 	if( thistype == 0 ){ //apv header: this word contains the ADC channel info: 
 	  adc_chan = (thisword &0xf); //first four bits of data word
 	  found_adc = true;
+
+	  //  std::cout << "Found APV header, ADC channel = " << adc_chan << std::endl;
+	  
 	}
 
 	if( thistype == 1 && found_adc ){ //ADC sample data:
 	  RawDataByADC_Channel[adc_chan].push_back( thisword & 0x00000fff ); //Raw ADC samples are contained in bits 1-12 of data word
+	  //std::cout << "Found raw data, (channel, raw ADC value) = (" << adc_chan << ", " << RawDataByADC_Channel[adc_chan].back() << ")" << std::endl;
 	}
 	//We ignore APV trailer and "trailer" (types "2" and "3"). We hope they aren't important
       }
@@ -171,13 +191,11 @@ namespace Decoder {
 	    
 	
     }
-  
     return fWordsSeen;
-  
   }
   
   //
-  // UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t* evbuffer, UInt_t pos, UInt_t len) {
+  // UInt_t MPDModuleVMEv4::LoadSlot( THaSlotData *sldat, const UInt_t* evbuffer, UInt_t pos, UInt_t len) {
   //   const UInt_t *p = &evbuffer[pos];
   //   //UInt_t data;
   //   fWordsSeen = 0;
@@ -212,7 +230,7 @@ namespace Decoder {
   //     //printf("\n");
 
   //     if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 0 )) {
-  // 	fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] "
+  // 	fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] "
   // 		"BLOCK HEADER NOT FOUND\n", __LINE__);
   // 	return -1;
   //     }
@@ -222,7 +240,7 @@ namespace Decoder {
   //     // (need at least 4 per event: 1 event header + 2 trigger words +
   //     // 1 event trailer
   //     if( nevent > 0 && jj + (nevent*4) >= len) {
-  // 	fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] "
+  // 	fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] "
   // 		"NOT ENOUGH WORDS TO DECODE THIS EVENT!\n", __LINE__);
   // 	return -1;
   //     }
@@ -235,7 +253,7 @@ namespace Decoder {
   // 	//printf("EVENT COUNT        %d\n", (thesewords & 0x3FFFFF) >> 0);
   // 	//printf("\n");
   // 	if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 2 )) {
-  // 	  fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] EVENT HEADER NOT FOUND\n", __LINE__);
+  // 	  fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] EVENT HEADER NOT FOUND\n", __LINE__);
   // 	  return -1;
   // 	}
 
@@ -246,7 +264,7 @@ namespace Decoder {
   // 	//printf("COURSE TIME        %d\n", (thesewords & 0xFFFFFF) >> 0);
   // 	//printf("\n");
   // 	if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 3 )) {
-  // 	  fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] TRIGGER TIME 1 WORD NOT FOUND\n", __LINE__);
+  // 	  fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] TRIGGER TIME 1 WORD NOT FOUND\n", __LINE__);
   // 	  return -1;
   // 	}
 
@@ -256,7 +274,7 @@ namespace Decoder {
   // 	//printf("COURSE TIME        %d\n", (thesewords & 0xFFFFFF) >> 0);
   // 	//printf("\n");
   // 	if( (SSP_DATADEF(thesewords) != 0) ) {
-  // 	  fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] TRIGGER TIME 2 WORD NOT FOUND\n", __LINE__);
+  // 	  fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] TRIGGER TIME 2 WORD NOT FOUND\n", __LINE__);
   // 	  return -1;
   // 	}
 
@@ -281,7 +299,7 @@ namespace Decoder {
   // 	    // For each one of these, we must have at least 3 more
   // 	    // words preceeding
   // 	    if(jj+2>=len) {
-  // 	      fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] NOT ENOUGH"
+  // 	      fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] NOT ENOUGH"
   // 		      " WORDS TO DECODE APV HITS for MPD %d\n", __LINE__,
   // 		      mpdID);
   // 	      return -1;
@@ -294,7 +312,7 @@ namespace Decoder {
   // 	      sample_dat[h*2]   = SSP_SAMPLE(hit[h],0);
   // 	      sample_dat[h*2+1] = SSP_SAMPLE(hit[h],13);
   // 	      if(SSP_DATADEF(hit[h]) != 0) {
-  // 		fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] MISSING"
+  // 		fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] MISSING"
   // 			" APV_HIT_WORD%d for APV_HIT%d of MPD=%d, word=0x%x\n", __LINE__,
   // 			h,kk,mpdID,hit[h]);
   // 		return -1;
@@ -352,14 +370,14 @@ namespace Decoder {
   //     //printf("NUMBER_OF_WORDS    %d\n", (thesewords & 0x003FFFFF) >> 0 );
   //     //printf("\n");
   //     if( (SSP_DATADEF(thesewords) != 1) || (SSP_TAG(thesewords) != 1 )) {
-  // 	fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] "
+  // 	fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] "
   // 		"BLOCK TRAILER NOT FOUND\n", __LINE__);
   // 	return -1;
   //     }
 
   //     //printf("Read number of words %d expected %d\n",jj-mm,thesewords&0x3FFFFF);
   //     if((thesewords&0x3FFFFF) != (jj-mm) ) {
-  // 	fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] NUMBER OF "
+  // 	fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] NUMBER OF "
   //               "WORDS READ %d DOES NOT MATCH NUMBER EXPECTED %d\n", __LINE__,
   //               jj-mm,thesewords&0x3FFFFF);
   // 	return -1;
@@ -388,7 +406,7 @@ namespace Decoder {
   //     //printf("BLOCK COUNT     %d\n", (thesewords & 0x0000FF) >> 0);
 
   //     if( (thesewords & 0xe00000) >> 21 != 0 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] BLOCK HEADER NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] BLOCK HEADER NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -403,7 +421,7 @@ namespace Decoder {
   //     //printf("Good? (4)       %x\n", (thesewords & 0xF00000) >> 20);
   //     //printf("EVENT COUNT     %d\n", (thesewords & 0x0FFFFF) >> 0);
   //     if( (thesewords & 0xF00000) >> 20 != 0x4 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] EVENT HEADER NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] EVENT HEADER NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -412,7 +430,7 @@ namespace Decoder {
   //     //printf("Good? (6)       %x\n", (thesewords & 0xF00000) >> 20);
   //     //printf("COURSE TIME     %d\n", (thesewords & 0x0FFFFF) >> 0);
   //     if( (thesewords & 0xF00000) >> 20 != 0x6 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] TRIGGER TIME 1 WORD NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] TRIGGER TIME 1 WORD NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -421,7 +439,7 @@ namespace Decoder {
   //     //printf("Good? (7)       %x\n", (thesewords & 0xF00000) >> 20);
   //     //printf("COURSE TIME     %d\n", (thesewords & 0x0FFFFF) >> 0);
   //     if( (thesewords & 0xF00000) >> 20 != 0x7 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] TRIGGER TIME 2 WORD NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] TRIGGER TIME 2 WORD NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -440,7 +458,7 @@ namespace Decoder {
   //     //printf("APV HEADER      %x\n", (thesewords & 0x01FFF0) >> 4);
   //     //printf("APV ID          %x\n", (thesewords & 0x00000F) >> 0);
   //     if( (thesewords & 0x1C0000) >> 18 != 0x0 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] DATA HEADER NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] DATA HEADER NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -476,7 +494,7 @@ namespace Decoder {
   //     //printf("Sample Count    %x\n", (thesewords & 0x000F00) >>  8);
   //     //printf("Frame Counter   %x\n", (thesewords & 0x0000FF) >>  0);
   //     if( (thesewords & 0x1E0000) >> 17 != 0x8 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] APV TRAILER NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] APV TRAILER NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -486,7 +504,7 @@ namespace Decoder {
   //     //printf("Baseline val    %x\n", (thesewords & 0x07FF00) >>  8);
   //     //printf("Word count      %x\n", (thesewords & 0x0000FF) >>  0);
   //     if( (thesewords & 0x180000) >> 19 != 0x3 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] DATA TRAILER NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] DATA TRAILER NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -499,7 +517,7 @@ namespace Decoder {
   //     //printf("N WORDS IN EVT  %d\n", (thesewords & 0x0FFF00) >> 8);
   //     //printf("FINE TRIGGER T  %d\n", (thesewords & 0x0000FF) >> 0);
   //     if( (thesewords & 0xF00000) >> 20 != 0xa ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] EVENT TRAILER NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] EVENT TRAILER NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
 
@@ -515,7 +533,7 @@ namespace Decoder {
   //     //printf("Good? (2)       %x\n", (thesewords & 0xF00000) >> 20);
   //     //printf("NWORDS IN BLOCK %d\n", (thesewords & 0x0FFFFF) >> 0);
   //     if( (thesewords & 0xF00000) >> 20 != 0x2 ){
-  //     fprintf(stderr, "[ERROR  MPDModule::LoadSlot, line %d] BLOCK TRAILER NOT FOUND\n", __LINE__);
+  //     fprintf(stderr, "[ERROR  MPDModuleVMEv4::LoadSlot, line %d] BLOCK TRAILER NOT FOUND\n", __LINE__);
   //     return -1;
   //     }
   //     }
@@ -545,7 +563,7 @@ namespace Decoder {
   // 	// It doesn't seem to match the data I have
   // 	//if( (header & 0xe00) != 0xe00 ){
   // 	// APV interal memory error in header decoding
-  // 	//   fprintf(stderr, "MPDModule::LoadSlot Warning: APV memory corruption 0x%03x\n", header );
+  // 	//   fprintf(stderr, "MPDModuleVMEv4::LoadSlot Warning: APV memory corruption 0x%03x\n", header );
   // 	//   return -1;
   // 	//}
   // 	break;
@@ -555,7 +573,7 @@ namespace Decoder {
   // 	trailer = p[i] & 0xfff;
   // 	if( (data_count % 16) != 0 ){
   // 	// Missing data
-  // 	fprintf(stderr, "MPDModule::LoadSlot Warning: Missing data?\n");
+  // 	fprintf(stderr, "MPDModuleVMEv4::LoadSlot Warning: Missing data?\n");
   // 	return -1;
   // 	}
   // 	data_count = 0;
@@ -582,7 +600,7 @@ namespace Decoder {
 
   // 	default:
   // 	// Bad tag
-  // 	fprintf(stderr, "MPDModule::LoadSlot Warning: Bad Tag 0x%08x\n", tag);
+  // 	fprintf(stderr, "MPDModuleVMEv4::LoadSlot Warning: Bad Tag 0x%08x\n", tag);
   // 	return -1;
 
   // 	}
@@ -595,14 +613,14 @@ namespace Decoder {
 
 
   // //Unclear if these are used by anything: comment for now (AJRP)
-  UInt_t MPDModule::GetData( UInt_t adc, UInt_t sample, UInt_t chan) const {
+  UInt_t MPDModuleVMEv4::GetData( UInt_t adc, UInt_t sample, UInt_t chan) const {
     // printf("MPD GET DATA\n");
     // UInt_t idx = asc2i(adc, sample, chan);
     // if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
     // return fData[idx];
   }
   
-  void MPDModule::Clear(const Option_t *opt) {
+  void MPDModuleVMEv4::Clear(const Option_t *opt) {
     // fNumHits = 0;
     // for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
     // for (Int_t i=0; i<fNumADC*fNumSample; i++) { 
@@ -612,12 +630,13 @@ namespace Decoder {
     
   }
   
-  Int_t MPDModule::Decode(const UInt_t *pdat) {
+  Int_t MPDModuleVMEv4::Decode(const UInt_t *pdat) {
     //Doesn't do anything. I suppose that's fine for now?
     
     return 0;
   }
+
+
 }
 
-
-ClassImp(Decoder::MPDModule)
+ClassImp(Decoder::MPDModuleVMEv4)

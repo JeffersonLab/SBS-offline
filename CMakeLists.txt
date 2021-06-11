@@ -52,9 +52,10 @@ endif()
 
 ##----------------------------------------------------------------------------
 ## Set the sources which have a corresponding .h file here
-set(sources MPDModule.cxx SBSBigBite.cxx SBSGEMStand.cxx SBSGEMPlane.cxx
-  SBSBBShower.cxx SBSBBTotalShower.cxx
-  SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx
+set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
+  SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx
+  SBSBBShowerCluster.cxx SBSBBShower.cxx SBSBBTotalShower.cxx 
+  SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx SBSShowerBlock.cxx
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
   SBSScintPartialHit.cxx SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx
   SBSScintPlane.cxx SBSEArm.cxx
@@ -186,6 +187,7 @@ configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.sh ${CMAKE_CURRENT_BINARY_DIR}/sbse
 INSTALL(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 #install the relevant directories: DB, replay, scripts in the top-level installation folder:
 INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB DESTINATION ${CMAKE_INSTALL_PREFIX})
+INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB_UVA_EEL_COSMIC_JAN2021 DESTINATION ${CMAKE_INSTALL_PREFIX})
 INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/replay DESTINATION ${CMAKE_INSTALL_PREFIX})
 INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/scripts DESTINATION ${CMAKE_INSTALL_PREFIX})
 INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.sh DESTINATION ${CMAKE_INSTALL_BINDIR})

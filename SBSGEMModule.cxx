@@ -3,10 +3,13 @@
 #include "SBSGEMModule.h"
 #include "TDatime.h"
 #include "THaEvData.h"
+#include "TRotation.h"
+#include <algorithm>
 
+using namespace std;
 //using namespace SBSGEMModule;
 
-//This should not be hard-coded, I think, but read in from the database (or perhaps not, if it never changes?)
+//This should not be hard-coded, I think, but read in from the database (or perhaps not, if it never changes? For now we keep it hard-coded)
 const int APVMAP[128] = {1, 33, 65, 97, 9, 41, 73, 105, 17, 49, 81, 113, 25, 57, 89, 121, 3, 35, 67, 99, 11, 43, 75, 107, 19, 51, 83, 115, 27, 59, 91, 123, 5, 37, 69, 101, 13, 45, 77, 109, 21, 53, 85, 117, 29, 61, 93, 125, 7, 39, 71, 103, 15, 47, 79, 111, 23, 55, 87, 119, 31, 63, 95, 127, 0, 32, 64, 96, 8, 40, 72, 104, 16, 48, 80, 112, 24, 56, 88, 120, 2, 34, 66, 98, 10, 42, 74, 106, 18, 50, 82, 114, 26, 58, 90, 122, 4, 36, 68, 100, 12, 44, 76, 108, 20, 52, 84, 116, 28, 60, 92, 124, 6, 38, 70, 102, 14, 46, 78, 110, 22, 54, 86, 118, 30, 62, 94, 126};
 
 
@@ -16,14 +19,23 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 {
   // FIXME:  To database
   //Set Default values for fZeroSuppress and fZeroSuppressRMS:
-  fZeroSuppress    = kFALSE;
+  fZeroSuppress    = kTRUE;
   fZeroSuppressRMS = 5.0;
 
+  //Default online zero suppression to FALSE: actually I wonder if it would be better to use this in 
+  // Moved this to MPDModule, since this should be done during the decoding of the raw APV data:
+  fOnlineZeroSuppression = kFALSE;
+  
   //Set default values for decode map parameters:
   fN_APV25_CHAN = 128;
   fN_MPD_TIME_SAMP = 6;
   fMPDMAP_ROW_SIZE = 9;
-    
+
+  fNumberOfChannelInFrame = 129;
+
+  fSamplePeriod = 25.0; //nanoseconds:
+
+  fSigma_hitshape = 0.0004; //0.4 mm
   // for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
   //     fadc[i] = NULL;
   // }
@@ -64,144 +76,418 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   std::vector<Double_t> rawped;
   std::vector<Double_t> rawrms;
 
+  //UShort_t layer;
+  
+  //I think we can set up the entire database parsing in one shot here (AJRP). Together with the call to ReadGeometry, this should define basically everything we need.
+  //After loading, we will run some checks on the loaded information:
+  //copying commented structure of DBRequest here for reference (see VarDef.h):
+  // struct DBRequest {
+  //   const char*      name;     // Key name
+  //   void*            var;      // Pointer to data (default to Double*)
+  //   VarType          type;     // (opt) data type (see VarType.h, default Double_t)
+  //   UInt_t           nelem;    // (opt) number of array elements (0/1 = 1 or auto)
+  //   Bool_t           optional; // (opt) If true, missing key is ok
+  //   Int_t            search;   // (opt) Search for key along name tree
+  //   const char*      descript; // (opt) Key description (if 0, same as name)
+  // };
+  
   const DBRequest request[] = {
-    { "chanmap",        &fChanMapData,        kIntV, 0, 0},
-    { "ped",            &rawped,        kDoubleV, 0, 1},
-    { "rms",            &rawrms,        kDoubleV, 0, 1},
-    {}
+    { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
+    { "ped",            &rawped,        kDoubleV, 0, 1, 1}, // optional raw pedestal info (not clear how we want to use or organize yet)
+    { "rms",            &rawrms,        kDoubleV, 0, 1, 1}, // optional pedestal rms info (not clear how we want to use or organize yet)
+    { "layer",          &fLayer,         kUShort, 0, 0, 0}, // mandatory: logical tracking layer must be specified for every module:
+    { "nstripsu",       &fNstripsU,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along U axis
+    { "nstripsv",       &fNstripsV,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along V axis
+    { "uangle",         &fUAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "U" strips wrt X axis
+    { "vangle",         &fVangle,       kDouble, 0, 0, 1}, //mandatory: Angle of "V" strips wrt X axis
+    { "upitch",         &fUStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of U strips
+    { "vpitch",         &fVStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of V strips
+    { "ugain",          &fUgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of U strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
+    { "vgain",          &fVgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of V strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
+    { "threshold_sample",  &fThresholdSample, kDouble, 0, 1, 1}, //(optional): threshold on max. ADC sample to keep strip (baseline-subtracted)
+    { "threshold_stripsum", &fThresholdStripSum, kDouble, 0, 1, 1}, //(optional): threshold on sum of ADC samples on a strip (baseline-subtracted)
+    { "threshold_clustersum", &fThresholdClusterSum, kDouble, 0, 1, 1}, //(optional): threshold on sum of all ADCs over all strips in a cluster (baseline-subtracted)
+    { "ADCasym_cut", &fADCasymCut, kDouble, 0, 1, 1}, //(optional): filter 2D hits by ADC asymmetry, |Asym| < cut
+    { "deltat_cut", &fTimeCutUVdiff, kDouble, 0, 1, 1}, //(optional): filter 2D hits by U/V time difference
+    { "peakprominence_minsigma", &fThresh_2ndMax_nsigma, kDouble, 0, 1, 1}, //(optional): reject overlapping clusters with peak prominence less than this number of sigmas
+    { "peakprominence_minfraction", &fThresh_2ndMax_fraction, kDouble, 0, 1, 1}, //(optional): reject overlapping clusters with peak prominence less than this fraction of height of nearby higher peak
+    { "maxnu_charge", &fMaxNeighborsU_totalcharge, kUShort, 0, 1, 1}, //(optional): cluster size restriction along U for total charge calculation
+    { "maxnv_charge", &fMaxNeighborsV_totalcharge, kUShort, 0, 1, 1}, //(optional): cluster size restriction along V for total charge calculation
+    { "maxnu_pos", &fMaxNeighborsU_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
+    { "maxnv_pos", &fMaxNeighborsV_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
+    { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1}, //(optional): width parameter for cluster-splitting algorithm
+    {0}
   };
-  status = LoadDB( file, date, request, fPrefix );
-  fclose(file);
+  status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
 
+  if( status != 0 ){
+    fclose(file);
+    return status;
+  }
+  
   Int_t nentry = fChanMapData.size()/fMPDMAP_ROW_SIZE;
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
     mpdmap_t thisdata;
-    thisdata.crate  = fChanMapData[0+mapline*MPDMAP_ROW_SIZE];
-    thisdata.slot   = fChanMapData[1+mapline*MPDMAP_ROW_SIZE];
-    thisdata.mpd_id = fChanMapData[2+mapline*MPDMAP_ROW_SIZE];
-    thisdata.gem_id = fChanMapData[3+mapline*MPDMAP_ROW_SIZE];
-    thisdata.adc_id = fChanMapData[4+mapline*MPDMAP_ROW_SIZE];
-    thisdata.i2c    = fChanMapData[5+mapline*MPDMAP_ROW_SIZE];
-    thisdata.pos    = fChanMapData[6+mapline*MPDMAP_ROW_SIZE];
-    thisdata.invert = fChanMapData[7+mapline*MPDMAP_ROW_SIZE];
-    thisdata.axis   = fChanMapData[8+mapline*MPDMAP_ROW_SIZE];
+    thisdata.crate  = fChanMapData[0+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.slot   = fChanMapData[1+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.mpd_id = fChanMapData[2+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.gem_id = fChanMapData[3+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.adc_id = fChanMapData[4+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.i2c    = fChanMapData[5+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.pos    = fChanMapData[6+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.invert = fChanMapData[7+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.axis   = fChanMapData[8+mapline*fMPDMAP_ROW_SIZE];
     fMPDmap.push_back(thisdata);
   }
 
   std::cout << fName << " mapped to " << nentry << " APV25 chips" << std::endl;
 
-  // FIXME:  make sure to delete if already initialized
-  fStrip    = new Int_t [N_APV25_CHAN*nentry];
+  //Geometry info is required to be present in the database for each module:
+  Int_t err = ReadGeometry( file, date, true );
+  if( err ) {
+    fclose(file);
+    return err;
+  }
 
+  //Initialize all pedestals to zero, RMS values to default:
+  fPedestalU.clear();
+  fPedestalU.resize( fNstripsU ); 
 
-  for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
-    fadc[i] = new Int_t [N_APV25_CHAN*nentry];
-    for( Int_t j = 0; j < N_MPD_TIME_SAMP; j++ ){
-      fadc[i][j] = 0.0;
+  fPedRMSU.clear();
+  fPedRMSU.resize( fNstripsU );
+  
+  for ( UInt_t istrip=0; istrip<fNstripsU; istrip++ ){
+    fPedestalU[istrip] = 0.0;
+    fPedRMSU[istrip] = 10.0; //placeholder to be replaced by value from database
+
+    if( rawped.size() == fNstripsU ){
+      fPedestalU[istrip] = rawped[istrip];
+    } else if ( rawped.size() == fNstripsU/128 ) {
+      fPedestalU[istrip] = rawped[istrip/128];
+    } else if ( rawped.size() == 1 ){
+      fPedestalU[istrip] = rawped[0];
+    }
+
+    if( rawrms.size() == fNstripsU ){
+      fPedRMSU[istrip] = rawrms[istrip];
+    } else if ( rawrms.size() == fNstripsU/128 ) {
+      fPedRMSU[istrip] = rawrms[istrip/128];
+    } else if ( rawrms.size() == 1 ){
+      fPedRMSU[istrip] = rawrms[0];
     }
   }
-  fadc0 = fadc[0];
-  fadc1 = fadc[1];
-  fadc2 = fadc[2];
-  fadc3 = fadc[3];
-  fadc4 = fadc[4];
-  fadc5 = fadc[5];
 
-  fPedestal = new Double_t [N_APV25_CHAN*nentry];
-  fRMS      = new Double_t [N_APV25_CHAN*nentry];
-  for( Int_t i = 0; i < N_APV25_CHAN*nentry; i++ ){
-    // FIXME needs to read in pedestal map
-    fPedestal[i] = 0.0;
-    fRMS[i] = 0.0;
+  //Initialize all pedestals to zero, RMS values to default:
+  fPedestalV.clear();
+  fPedestalV.resize( fNstripsV ); 
+
+  fPedRMSV.clear();
+  fPedRMSV.resize( fNstripsV );
+  
+  for( UInt_t istrip=0; istrip<fNstripsV; istrip++ ){
+    fPedestalV[istrip] = 0.0;
+    fPedRMSV[istrip] = 10.0;
+
+    if( rawped.size() == fNstripsV ){
+      fPedestalV[istrip] = rawped[istrip];
+    } else if ( rawped.size() == fNstripsV/128 ) {
+      fPedestalV[istrip] = rawped[istrip/128];
+    } else if ( rawped.size() == 1 ){
+      fPedestalV[istrip] = rawped[0];
+    }
+
+    if( rawrms.size() == fNstripsV ){
+      fPedRMSV[istrip] = rawrms[istrip];
+    } else if ( rawrms.size() == fNstripsV/128 ) {
+      fPedRMSV[istrip] = rawrms[istrip/128];
+    } else if ( rawrms.size() == 1 ){
+      fPedRMSV[istrip] = rawrms[0];
+    }
+    
   }
 
-  for( UInt_t i = 0; i < rawped.size(); i++ ){
-    if( (i % 2) == 1 ) continue;
-    int idx = (int) rawped[i];
+  // for( UInt_t i = 0; i < rawped.size(); i++ ){
+  //   if( (i % 2) == 1 ) continue;
+  //   int idx = (int) rawped[i];
 	
-    if( idx < N_APV25_CHAN*nentry ){
-      fPedestal[idx] = rawped[i+1];
-    } else {
+  //   if( idx < N_APV25_CHAN*nentry ){
+  //     fPedestal[idx] = rawped[i+1];
+  //   } else {
 		
-      std::cout << "[SBSGEMModule::ReadDatabase]  WARNING: " << " strip " << idx  << " listed but not enough strips in cratemap" << std::endl;
-    }
-  }
+  //     std::cout << "[SBSGEMModule::ReadDatabase]  WARNING: " << " strip " << idx  << " listed but not enough strips in cratemap" << std::endl;
+  //   }
+  // }
 
-  for( UInt_t i = 0; i < rawrms.size(); i++ ){
-    if( (i % 2) == 1 ) continue;
-    int idx = (int) rawrms[i];
-    if( idx < N_APV25_CHAN*nentry ){
-      fRMS[idx] = rawrms[i+1];
-    } else {
-      std::cout << "[SBSGEMModule::ReadDatabase]  WARNING: " << " strip " << idx  << " listed but not enough strips in cratemap" << std::endl;
-    }
-  }
+  // for( UInt_t i = 0; i < rawrms.size(); i++ ){
+  //   if( (i % 2) == 1 ) continue;
+  //   int idx = (int) rawrms[i];
+  //   if( idx < N_APV25_CHAN*nentry ){
+  //     fRMS[idx] = rawrms[i+1];
+  //   } else {
+  //     std::cout << "[SBSGEMModule::ReadDatabase]  WARNING: " << " strip " << idx  << " listed but not enough strips in cratemap" << std::endl;
+  //   }
+  // }
 
+  fclose(file);
+  
+  return 0;
+}
+
+Int_t SBSGEMModule::ReadGeometry( FILE *file, const TDatime &date, Bool_t required ){ //We start with a copy of THaDetectorBase::ReadGeometry and modify accordingly:
+  // Read this detector's basic geometry information from the database.
+  // Derived classes may override to read more advanced data.
+
+  const char* const here = "ReadGeometry";
+
+  vector<double> position, size, angles;
+  Bool_t optional = !required;
+  DBRequest request[] = {
+    { "position", &position, kDoubleV, 0, optional, 0,
+      "\"position\" (detector position [m])" },
+    { "size",     &size,     kDoubleV, 0, optional, 0,
+      "\"size\" (detector size [m])" },
+    { "angle",    &angles,   kDoubleV, 0, true, 0,
+      "\"angle\" (detector angles(s) [deg]" },
+    { nullptr }
+  };
+  Int_t err = LoadDB( file, date, request );
+  if( err )
+    return kInitError;
+
+  if( !position.empty() ) {
+    if( position.size() != 3 ) {
+      Error( Here(here), "Incorrect number of values = %u for "
+	     "detector position. Must be exactly 3. Fix database.",
+	     static_cast<unsigned int>(position.size()) );
+      return 1;
+    }
+    fOrigin.SetXYZ( position[0], position[1], position[2] );
+  }
+  else
+    fOrigin.SetXYZ(0,0,0);
+
+  if( !size.empty() ) {
+    if( size.size() != 3 ) {
+      Error( Here(here), "Incorrect number of values = %u for "
+	     "detector size. Must be exactly 3. Fix database.",
+	     static_cast<unsigned int>(size.size()) );
+      return 2;
+    }
+    if( size[0] == 0 || size[1] == 0 || size[2] == 0 ) {
+      Error( Here(here), "Illegal zero detector dimension. Fix database." );
+      return 3;
+    }
+    if( size[0] < 0 || size[1] < 0 || size[2] < 0 ) {
+      Warning( Here(here), "Illegal negative value for detector dimension. "
+	       "Taking absolute. Check database." );
+    }
+    fSize[0] = 0.5 * TMath::Abs(size[0]);
+    fSize[1] = 0.5 * TMath::Abs(size[1]);
+    fSize[2] = TMath::Abs(size[2]);
+  }
+  else
+    fSize[0] = fSize[1] = fSize[2] = kBig;
+
+  if( !angles.empty() ) {
+    if( angles.size() != 1 && angles.size() != 3 ) {
+      Error( Here(here), "Incorrect number of values = %u for "
+	     "detector angle(s). Must be either 1 or 3. Fix database.",
+	     static_cast<unsigned int>(angles.size()) );
+      return 4;
+    }
+    // If one angle is given, it indicates a rotation about y, as before.
+    // If three angles are given, they are interpreted as rotations about the X, Y, and Z axes, respectively:
+    // 
+    if( angles.size() == 1 ) {
+      DefineAxes( angles[0] * TMath::DegToRad() );
+    }
+    else {
+      TRotation RotTemp;
+
+      // So let's review how to define the detector axes correctly.
+
+      // THaDetectorBase::DetToTrackCoord(TVector3 p) returns returns p.X * fXax() + p.Y * fYax() + p.Z * fZax() + fOrigin
+      // In the standalone code, we do Rot * (p) + fOrigin (essentially):
+      // So in matrix form, when we do TRotation::RotateX(alpha), we get:
+
+      // RotTemp * Point =  |  1    0            0         |    |  p.X()  |
+      //                    |  0   cos(alpha) -sin(alpha)  | *  |  p.Y()  |
+      //                    |  0   sin(alpha)  cos(alpha)  |    |  p.Z()  |
+      // 
+      // This definition ***appears**** to be consistent with the "sense" of the rotation as applied by the standalone code.
+      // The detector axes are defined as the ROWS of the rotation matrix. We will have to test that it is working correctly, however:
+   
+      RotTemp.RotateX( angles[0] );
+      RotTemp.RotateY( angles[1] );
+      RotTemp.RotateZ( angles[2] );
+      
+      fXax.SetXYZ( RotTemp.XX(), RotTemp.XY(), RotTemp.XZ() );
+      fYax.SetXYZ( RotTemp.YX(), RotTemp.YY(), RotTemp.YZ() );
+      fZax.SetXYZ( RotTemp.ZX(), RotTemp.ZY(), RotTemp.ZZ() );
+    }
+  } else
+    DefineAxes(0);
 
   return 0;
 }
 
+    
 Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
-
-  RVarDef vars[] = {
-    { "nch",   "Number of channels",   "fNch" },
-    { "strip", "Strip number mapping", "fStrip" },
-    { "adc0", "Strip number mapping", "fadc0" },
-    { "adc1", "Strip number mapping", "fadc1" },
-    { "adc2", "Strip number mapping", "fadc2" },
-    { "adc3", "Strip number mapping", "fadc3" },
-    { "adc4", "Strip number mapping", "fadc4" },
-    { "adc5", "Strip number mapping", "fadc5" },
-    { 0 },
+  
+  //Raw strip info:
+  RVarDef varstrip[] = {
+    { "nstripsfired",   "Number of strips fired",   "fNstrips_hit" },
+    { "stripaxis", "axis of fired strips", "fStripAxis" },
+    { "stripADCsamples", "ADC samples (index = isamp+Nsamples*istrip)", "fADCsamples1D" },
+    { "striprawADCsamples", "raw ADC samples (no baseline subtraction)", "fRawADCsamples1D" },
+    { "stripADCsum", "Sum of ADC samples on a strip", "fADCsums" },
+    { "stripisampmax", "sample in which max ADC occurred on a strip", "fMaxSamp" },
+    { "stripADCmax", "Value of max ADC sample on a strip", "fADCmax" },
+    { "stripTmean", "ADC-weighted mean strip time", "fTmean" },
+    { "stripTsigma", "ADC-weighted rms strip time", "fTsigma" },
+    { "stripTcorr", "Corrected strip time", "fTcorr" },
+    { "stripItrack", "Index of track containing this strip (-1 if not on any track)", "fStripTrackIndex" },
+    { nullptr },
   };
 
 
-  Int_t ret = DefineVarsFromList( vars, mode );
+  Int_t ret = DefineVarsFromList( varstrip, mode );
 
   if( ret != kOK )
     return ret;
-    
+  
   return kOK;
     
 }
 
-void    SBSGEMModule::Clear( Option_t* opt){
-  fNch = 0;
+void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more things too
+  fNstrips_hit = 0;
   fIsDecoded = false;
+
+  fNclustU = 0;
+  fNclustV = 0;
+  fUclusters.clear();
+  fVclusters.clear();
+  fN2Dhits = 0;
+  fHits.clear();
+
+  fStripAxis.clear();
+  fADCsamples1D.clear();
+  fStripTrackIndex.clear();
+  fRawADCsamples1D.clear();
+
+  fUstripIndex.clear();
+  fVstripIndex.clear();
+  fStrip.clear();
+  fAxis.clear();
+  fADCsamples.clear();
+  fRawADCsamples.clear();
+  fADCsums.clear();
+  fKeepStrip.clear();
+  fMaxSamp.clear();
+  fADCmax.clear();
+  fTmean.clear();
+  fTsigma.clear();
+  fTcorr.clear();
   
   return;
 }
 
 Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
-  //    std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
+  std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
 
-  int i;
+  fNstrips_hit = 0;
 
-  fNch = 0;
+  fUstripIndex.clear();
+  fVstripIndex.clear();
+  //This could be written more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it too much:
   for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
-    Int_t effChan = it->mpd_id << 8 | it->adc_id;
+    //loop over all decode map entries associated with this module (each decode map entry is one APV card)
+    Int_t effChan = it->mpd_id << 8 | it->adc_id; //left-shift mpd id by 8 bits and take the bitwise OR with ADC_id to uniquely identify the APV card.
+    //mpd_id is not necessarily equal to slot, but that seems to be the convention in many cases
     // Find channel for this crate/slot
 
     Int_t nchan = evdata.GetNumChan( it->crate, it->slot );
 
-    //        printf("nchan = %d\n", nchan );
+    SBSGEM::GEMaxis_t axis = it->axis == 0 ? SBSGEM::kUaxis : SBSGEM::kVaxis; 
+    
+    //printf("nchan = %d\n", nchan );
 
-    for( Int_t ichan = 0; ichan < nchan; ++ichan ) {
-      Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan );
-      if( chan != effChan ) continue; // not part of this detector
+    for( Int_t ichan = 0; ichan < nchan; ++ichan ) { //this is looping over all the "channels" (APV cards) in the crate and slot containing this decode map entry/APV card:
+      Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan ); //"chan" here refers to one APV card 
+      if( chan != effChan ) continue; // 
 
 
       Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
-      assert(nsamp%N_MPD_TIME_SAMP==0);
-      Int_t nstrips = nsamp/N_MPD_TIME_SAMP;
+      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
+      Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
 
+      //std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
+      //		<< it->adc_id << ", " << nstrips << std::endl;
+      
+      //declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
+      double commonMode[fN_MPD_TIME_SAMP];
+
+      //Regardless of whether we are doing common-mode subtraction, fill these temporary local arrays, so we don't need duplicate calls to evdata.GetRawData
+      // and evdata.GetData
+      vector<vector<int> > rawStrip(fN_MPD_TIME_SAMP);
+      vector<vector<int> > rawADCs(fN_MPD_TIME_SAMP); //by time sample and by ADC channel:
+      vector<vector<double> > commonModeSubtractedADC(fN_MPD_TIME_SAMP);
+      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	commonMode[isamp] = 0.0;
+	for( int istrip=0; istrip<nstrips; istrip++ ){
+	  int strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip ); 
+	  int ADC = evdata.GetData( it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip );
+	  rawStrip[isamp].push_back( strip ); //APV25 channel number
+	  rawADCs[isamp].push_back( ADC );
+	  commonModeSubtractedADC[isamp].push_back( double(ADC) ); 
+	}
+
+	if( !fOnlineZeroSuppression && nstrips == fN_APV25_CHAN ){ //calculate common-mode: this implements the "sorting method" found in the ROOT_GUI_multiCrate program:
+	  vector<int> sortedADCs = rawADCs[isamp];
+	  std::sort(sortedADCs.begin(), sortedADCs.end());
+
+	  for( int k=28; k<100; k++ ){
+	    commonMode[isamp] += double(sortedADCs[k]);
+	  }
+	  commonMode[isamp] /= 72.0;
+	  for( int istrip=0; istrip<nstrips; istrip++ ){
+	    commonModeSubtractedADC[isamp][istrip] = double(rawADCs[isamp][istrip]) - commonMode[isamp];
+
+	    // cout << "istrip, isample, common mode[isample], raw ADC, common-mode subtracted ADC = " << istrip << ", " << isamp << ", "
+	    // 	 << commonMode[isamp] << ", " << rawADCs[isamp][istrip] << ", " << commonModeSubtractedADC[isamp][istrip] << endl;
+	  }
+	}
+
+	
+	
+      }
+      
+      
+      
       // Loop over all the strips and samples in the data
-      Int_t isamp = 0;
+      //Int_t ihit = 0;
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
-	assert(isamp<nsamp);
-	Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, isamp);
+	//Temporary vector to hold ped-subtracted ADC samples for this strip:
+	std::vector<double> ADCtemp;
+	std::vector<int> rawADCtemp;
+	
+	//sums over time samples
+	double ADCsum_temp = 0.0;
+	double maxADC = 0.0;
+	UShort_t iSampMax = -1;
+	
+	//crude timing calculations:
+	double Tsum = 0.0;
+	double T2sum = 0.0;
+
+	//At this point, "strip" equals APV channel number:
+	//Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip );
+
+	Int_t strip = rawStrip[0][istrip];
+	
 	assert(strip>=0&&strip<128);
 	// Madness....   copy pasted from stand alone decoder
 	// I bet there's a more elegant way to express this
@@ -212,30 +498,91 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	Int_t RstripNb = APVMAP[strip];
 	RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
 	Int_t RstripPos = RstripNb + 128*it->pos;
-	strip = RstripPos;
+	strip = RstripPos; //At this point, "strip" should correspond to increasing order of position along the U or V axis; i.e., what we think it should!
 
-	fStrip[fNch] = strip;
-	for(Int_t adc_samp = 0; adc_samp < N_MPD_TIME_SAMP; adc_samp++) {
+	//NOTE that we are replacing the value of "strip" with the line above!
+	// Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
+	// sample-to-sample: When operating without online zero suppression, these should all probably be set to zero, since we will
+	// generally do offline common-mode calculation and subtraction in that case:
+	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
+	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
 
-	  fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot,
-						 chan, isamp++) - fPedestal[strip];
+	// std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
+	//  	  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << std::endl;
+	
+	//Now loop over the time samples:
+	for( Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++ ){
 
-	  assert( ((UInt_t) fNch) < fMPDmap.size()*N_APV25_CHAN );
+	  // Int_t ihit = adc_samp + fN_MPD_TIME_SAMP * istrip; //index in the "hit" array for this APV card:
+	  // assert(ihit<nsamp);
+	  
+	  
+	  //Int_t rawADC = evdata.GetData(it->crate, it->slot, chan, ihit);
+	  Int_t rawADC = rawADCs[adc_samp][istrip];
+	  
+	  rawADCtemp.push_back( rawADC );
+	  
+	  //double ADCvalue =  - pedtemp; "pedestal" subtraction seems redundant here, whether we are doing online or offline suppression:
+	  double ADCvalue = commonModeSubtractedADC[adc_samp][istrip] - pedtemp;
+	  
+	  //pedestal-subtracted ADC values:
+	  ADCtemp.push_back( ADCvalue );
+	  // fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot,
+	  // 					 chan, isamp++) - fPedestal[strip];
+
+	  ADCsum_temp += ADCvalue;
+	  
+	  if( iSampMax < 0 || ADCvalue > maxADC ){
+	    maxADC = ADCvalue;
+	    iSampMax = adc_samp;
+	  }
+
+	  //for crude strip timing, just take simple time bins at the center of each sample (we'll worry about trigger time words later):
+	  double Tsamp = fSamplePeriod * ( adc_samp + 0.5 );
+	  
+	  Tsum += Tsamp * ADCvalue;
+	  T2sum += pow(Tsamp,2) * ADCvalue;
+	  
+	  //assert( ((UInt_t) fNch) < fMPDmap.size()*fN_APV25_CHAN );
+	  //assert( fNstrips_hit < fMPDmap.size()*fN_APV25_CHAN );
 	}
 	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
 
-	// Zero suppression
+	// Zero suppression based on third time sample only?
+	//Maybe better to do based on max ADC sample:
 	if(!fZeroSuppress ||
-	   ( fRMS[strip] > 0.0 && fabs(fadc[2][fNch])/
-	     fRMS[strip] > fZeroSuppressRMS ) ){
-	  fNch++;
+	   ( rmstemp > 0.0 && std::max(0.0,maxADC) > fZeroSuppressRMS*rmstemp &&
+	     maxADC > fThresholdSample && ADCsum_temp > fThresholdStripSum ) ){ //Default threshold is 5-sigma!
+	  //Increment hit count and populate decoded data structures:
+	  
+	  fStrip.push_back( strip );
+	  fAxis.push_back( axis );
+	  fStripAxis.push_back( UInt_t(axis) );
+	  fADCsamples.push_back( ADCtemp ); //pedestal-subtracted
+	  fRawADCsamples.push_back( rawADCtemp ); //Raw
+	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	    fADCsamples1D.push_back( ADCtemp[isamp] );
+	    fRawADCsamples1D.push_back( rawADCtemp[isamp] );
+	  }
+	  fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
+	  fADCsums.push_back( ADCsum_temp ); //sum of all (pedestal-subtracted) samples
+	  fKeepStrip.push_back( true ); //keep all strips by default
+	  fMaxSamp.push_back( iSampMax );
+	  fADCmax.push_back( maxADC );
+	  fTmean.push_back( Tsum/ADCsum_temp );
+	  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
+	  fTcorr.push_back( fTmean.back() ); //don't apply any corrections for now
+
+	  if( axis == SBSGEM::kUaxis ) fUstripIndex[strip] = fNstrips_hit; 
+	  if( axis == SBSGEM::kVaxis ) fVstripIndex[strip] = fNstrips_hit;
+	  
+	  fNstrips_hit++;
 	}
-      }
-    }
+      } //end loop over strips on this APV card
+    } //end loop over APV cards with hits
+  } //end loop on decode map entries for this module
 
-  }
-
-  //    std::cout << fName << " channels found  " << fNch << std::endl;
+  std::cout << fName << " decoded, number of strips fired = " << fNstrips_hit << std::endl;
 
   fIsDecoded = true;
   
@@ -244,9 +591,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster finding with default (wide-open) track search constraints
   //these functions will fill the 1D cluster arrays:
-  find_clusters_1D(SBSGEMModule::kUaxis); //u strips
-  find_clusters_1D(SBSGEMModule::kVaxis); //v strips
+  
+  find_clusters_1D(SBSGEM::kUaxis); //u strips
+  find_clusters_1D(SBSGEM::kVaxis); //v strips
 
+  
+  std::cout << "Module " << fName << ", found (nu, nv)" << fNclustU << ", " << fNclustV << ") clusters" << std::endl; 
   //Now make 2D clusters:
 
   fxcmin = -1.e12;
@@ -304,19 +654,21 @@ void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_w
   //The following routines will loop on all the strips and populate the 1D "cluster list" (vector<sbsgemcluster_t> )
   //Taking half the difference between max and min as the "width" is consistent with how it is used in
   // find_clusters_1D; i.e., the peak is required to be within |peak position - constraint center| <= constraint width
-  find_clusters_1D(SBSGEMModule::kUaxis, ucenter, (umax-umin)/2.0 ); //U clusters
-  find_clusters_1D(SBSGEMModule::kVaxis, vcenter, (vmax-vmin)/2.0 );  //V clusters
+  find_clusters_1D(SBSGEM::kUaxis, ucenter, (umax-umin)/2.0 ); //U clusters
+  find_clusters_1D(SBSGEM::kVaxis, vcenter, (vmax-vmin)/2.0 );  //V clusters
 
   //Now make 2D clusters
   
   fill_2D_hit_arrays();
 }
 
-void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t constraint_center, Double_t constraint_width ){
+void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint_center, Double_t constraint_width ){
 
   //Constraint center and constraint width are assumed to be given in "standard" Hall A units (meters) in module-local coordinates
   // (SPECIFICALLY: constraint center and constraint width are assumed to refer to the direction measured by the strips being considered here)
   //This method will generally only be called by the reconstruction methods of SBSGEMTrackerBase
+
+  // cout << "constraint center, constraint width = " << constraint_center << ", " << constraint_width << endl;
   
   if( !fIsDecoded ){
     cout << "find_clusters invoked before decoding for GEM Module " << GetName() << ", doing nothing" << endl;
@@ -328,16 +680,20 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
   UInt_t Nstrips;
   Double_t pitch;
 
-  if( axis == SBSGEMModule::kUaxis ){
+  if( axis == SBSGEM::kUaxis ){
     maxsep = fMaxNeighborsU_totalcharge;
     maxsepcoord = fMaxNeighborsU_hitpos; 
     Nstrips = fNstripsU;
     pitch = fUStripPitch;
+    fNclustU = 0;
+    fUclusters.clear();
   } else { //V axis, no need to compare axis to kVaxis:
     maxsep = fMaxNeighborsV_totalcharge;
     maxsepcoord = fMaxNeighborsV_hitpos; 
     Nstrips = fNstripsV;
     pitch = fVStripPitch;
+    fNclustV = 0;
+    fVclusters.clear();
   }
   
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
@@ -382,11 +738,13 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
     } 
   } // end loop over list of strips along this axis:
 
+  cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
+  
   vector<int> peakstoerase; 
 
   //now calculate "prominence" for all peaks and erase "insignificant" peaks:
 
-  for( std::set<int>::iterator i=localmaxima.begin(); i != localmaxima.end(); ++i ){
+  for( std::set<UShort_t>::iterator i=localmaxima.begin(); i != localmaxima.end(); ++i ){
     int stripmax = *i;
 
     double ADCmax = fADCsums[hitindex[stripmax]];
@@ -438,8 +796,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
       if( higherpeakleft && std::abs( peakleft - stripmax ) <= 2*maxsep ) peak_close = true;
       if( higherpeakright && std::abs( peakright - stripmax ) <= 2*maxsep ) peak_close = true;
 
-      if( peak_close && (prominence < fThreshold_2ndMax_nsigma * sigma_sum ||
-			 prominance/ADCmax < fThresh_2ndMax_fraction ) ){
+      if( peak_close && (prominence < fThresh_2ndMax_nsigma * sigma_sum ||
+			 prominence/ADCmax < fThresh_2ndMax_fraction ) ){
 	peakstoerase.push_back( stripmax );
       }
     }
@@ -451,9 +809,11 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
     islocalmax[peakstoerase[ipeak]] = false;
   }
 
- 
+  cout << "After peak erasing, n local maxima = " << localmaxima.size() << endl;
+  
+  
   //Cluster formation and cluster splitting from remaining local maxima:
-  for( std::set<int>::iterator i = localmax.begin(); i != localmax.end(); ++i ){
+  for( std::set<UShort_t>::iterator i = localmaxima.begin(); i != localmaxima.end(); ++i ){
     int stripmax = *i;
     int striplo = stripmax;
     int striphi = stripmax;
@@ -497,7 +857,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
       }
       
       for( int istrip=striplo; istrip<=striphi; istrip++ ){
-	int nmax_strip = 1;
+	//int nmax_strip = 1;
 	double sumweight = ADCmax/(1.0 + pow( (stripmax-istrip)*pitch/fSigma_hitshape, 2 ) );
 	double maxweight = sumweight;
 	for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
@@ -513,7 +873,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
 	double tstrip = fTmean[hitindex[istrip]];
 
 	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	  clusttemp.ADCsamples[isamp] += fADCsamples[hitindex[istrip]]*splitfraction[istrip];
+	  clusttemp.ADCsamples[isamp] += fADCsamples[hitindex[istrip]][isamp]*splitfraction[istrip];
 	}
 
 	clusttemp.stripADCsum.push_back( ADCstrip );
@@ -522,7 +882,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
 	
 	sumADC += ADCstrip;
 	
-	if( std::abs( istrip - stripmax ) <= std::max(1,std::min(fMaxNeighborsU_hitpos,fMaxNeighborsU_totalcharge)) ){ 
+	if( std::abs( istrip - stripmax ) <= std::max(UShort_t(1),std::min(fMaxNeighborsU_hitpos,fMaxNeighborsU_totalcharge)) ){ 
 	  sumx += hitpos * ADCstrip;
 	  sumx2 += pow(hitpos,2) * ADCstrip;
 	  sumwx += ADCstrip;
@@ -538,10 +898,14 @@ void SBSGEMModule::find_clusters_1D( SBSGEMModule::GEMaxis_t axis, Double_t cons
       clusttemp.t_mean = sumt / sumwx;
       clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
 
-      if( axis == SBSGEMModule::kVaxis ){
-	fVclusters.push_back( clusttemp );
-      } else {
-	fUclusters.push_back( clusttemp );
+      if( sumADC >= fThresholdClusterSum ){
+	if( axis == SBSGEM::kVaxis ){
+	  fVclusters.push_back( clusttemp );
+	  fNclustV++;
+	} else {
+	  fUclusters.push_back( clusttemp );
+	  fNclustU++;
+	}
       }
     } //Check if peak is inside track search region constraint
   } //end loop on local maxima
@@ -633,11 +997,11 @@ void    SBSGEMModule::Print( Option_t* opt) const{
   return;
 }
 
-Int_t   SBSGEMModule::Begin( THaRunBase* r){
+Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   return 0;
 }
 
-Int_t   SBSGEMModule::End( THaRunBase* r){
+Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
   return 0;
 }
 

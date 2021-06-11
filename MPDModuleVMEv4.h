@@ -1,5 +1,5 @@
-#ifndef MPDModule_
-#define MPDModule_
+#ifndef MPDModuleVMEv4_
+#define MPDModuleVMEv4_
 
 /////////////////////////////////////////////////////////////////////
 //
@@ -32,13 +32,13 @@
 
 namespace Decoder {
 
-  class MPDModule : public VmeModule {
+  class MPDModuleVMEv4 : public VmeModule {
 
   public:
 
-    MPDModule() {};
-    MPDModule(Int_t crate, Int_t slot);
-    virtual ~MPDModule();
+    MPDModuleVMEv4() {};
+    MPDModuleVMEv4(Int_t crate, Int_t slot);
+    virtual ~MPDModuleVMEv4();
 
     /*
     using Module::GetData;
@@ -82,7 +82,7 @@ namespace Decoder {
     
   private:
 
-    bool fOnlineZeroSuppression; //if true, assumes that raw-data are already zero-suppressed and baseline-subtracted
+    //bool fOnlineZeroSuppression; //if true, assumes that raw-data are already zero-suppressed and baseline-subtracted
     
     // configuration parameters
     Int_t fAcqMode; // normal, zero suppression, histogram, synch ...
@@ -122,7 +122,7 @@ namespace Decoder {
     //   return adc*fNumSample*fNumChan + sample*fNumChan + chan;
     // };
     
-    ClassDef(MPDModule,0)  //  INFN MPD Module 
+    ClassDef(MPDModuleVMEv4,0)  //  INFN MPD Module 
 
   };
 

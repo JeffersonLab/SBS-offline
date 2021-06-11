@@ -1,5 +1,5 @@
 #ifndef SBSGEMSPECTROMETERTRACKER_H
-#defined SBSGEMSPECTROMETERTRACKER_H 1
+#define SBSGEMSPECTROMETERTRACKER_H 1
 #include <vector>
 #include <THaTrackingDetector.h>
 #include "SBSGEMTrackerBase.h"
@@ -9,19 +9,24 @@ class THaApparatus;
 class THaEvData;
 class SBSGEMPlane;
 class THaCrateMap;
+class THaTrack;
+class TClonesArray;
 
-class SBSGEMSpectrometerTracker : public THaTrackingDetector : public SBSGEMTrackerBase {
+class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrackerBase {
  public:
   SBSGEMSpectrometerTracker( const char *name, const char *description = "",
 	       THaApparatus *app = 0 );
 
-  virtual ~SBSGEMStand();
+  virtual ~SBSGEMSpectrometerTracker();
 
   virtual void    Clear( Option_t* opt="" );
   virtual Int_t   Decode( const THaEvData& );
   virtual EStatus Init( const TDatime& date );
 
   virtual Int_t   ReadDatabase( const TDatime& date );
+  // We're going to need to override ReadGeometry for the GEM tracker classes since our definition of the module orientation angles differs from the standard definition
+  // in THaDetectorBase:
+  //virtual Int_t   ReadGeometry( FILE *file, const TDatime &date, Bool_t required = false );
 
   virtual Int_t   CoarseTrack( TClonesArray& tracks );
   virtual Int_t   FineTrack( TClonesArray& tracks );
@@ -33,12 +38,12 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector : public SBSGEMTrac
   virtual Int_t   End( THaRunBase* r=0 );
 
  private:
-  //std::vector <SBSGEM *> fPlanes; storing the modules moved to SBSGEMTrackerBase
+  // std::vector <SBSGEMModule *> fPlanes; storing the modules moved to SBSGEMTrackerBase
 	
   //bool fIsMC; moved to SBSGEMTrackerBase
 	
-  THaCrateMap *fCrateMap;
-  ClassDef(SBSGEMSpectrometerTracker ,0);
+  //THaCrateMap *fCrateMap; //Does this do anything? Not as far as I can tell. I wish someone would have commented about why they added this. AJRP
+  ClassDef(SBSGEMSpectrometerTracker, 0);
 
 };
 

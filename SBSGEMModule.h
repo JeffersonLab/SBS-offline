@@ -12,8 +12,8 @@ class THaDetectorBase;
 class THaEvData;
 class THaRunBase;
 
-namespace SBSGEMModule {
-  enum GEMaxis_t { kUaxis, kVaxis };
+namespace SBSGEM {
+  enum GEMaxis_t { kUaxis=0, kVaxis };
 }
 
 struct mpdmap_t {
@@ -81,7 +81,7 @@ struct sbsgemcluster_t {  //1D clusters;
   UInt_t istriplo;
   UInt_t istriphi;
   UInt_t istripmax;
-  std::vector<double> ADCsamples; //cluster-summed ADC samples
+  std::vector<double> ADCsamples; //cluster-summed ADC samples (accounting for split fraction)
   Double_t hitpos_mean;  //ADC-weighted mean coordinate along the direction measured by the strip
   Double_t hitpos_sigma; //ADC-weighted RMS coordinate deviation from the mean along the direction measured by the strip
   Double_t clusterADCsum; //Sum of ADCs over all samples on all strips
@@ -124,12 +124,15 @@ class SBSGEMModule : public THaSubDetector {
 
   virtual Int_t   ReadDatabase(const TDatime& );
   virtual Int_t   DefineVariables( EMode mode );
-
+  //We are overriding THaDetectorBase's ReadGeometry method for SBSGEMModule, because we use a different definition of the angles:
+  virtual Int_t   ReadGeometry( FILE* file, const TDatime& date, 
+			      Bool_t required = true );
+  
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
   //Don't call this method directly, it is called by find_2Dhits. Call that instead:
-  void find_clusters_1D(SBSGEMModule::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
+  void find_clusters_1D(SBSGEM::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
   void find_2Dhits(); // Version with no arguments assumes no constraint points
   void find_2Dhits(TVector2 constraint_center, TVector2 constraint_width); // Version with TVector2 arguments 
 
@@ -164,7 +167,8 @@ class SBSGEMModule : public THaSubDetector {
 
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
-  Bool_t fOnlinePedestalSubtraction; //this MIGHT be redundant with fZeroSuppress
+  //Moved to the MPD module class:
+  Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
 
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
@@ -180,8 +184,9 @@ class SBSGEMModule : public THaSubDetector {
   UChar_t fN_APV25_CHAN;     //number of APV25 channels, default 128
   UChar_t fN_MPD_TIME_SAMP;  //number of MPD time samples, default = 6
   UShort_t fMPDMAP_ROW_SIZE; //MPDMAP_ROW_SIZE: default = 9, let's not hardcode
+  UShort_t fNumberOfChannelInFrame; //default 128, not clear if this is used: This might not be constant, in fact
 
-  UShort_t fNumberofChannelInFrame; //default 129
+  Double_t fSamplePeriod; //for timing calculations: default = 25 ns.
 
   //variables defining rectangular track search region constraint (NOTE: these will change event-to-event, they are NOT constant!)
   Double_t fxcmin, fxcmax;
@@ -191,24 +196,42 @@ class SBSGEMModule : public THaSubDetector {
   //BASIC DECODED STRIP HIT INFO:
   //By the time the information is populated here, the ADC values are already assumed to be pedestal/common-mode subtracted and/or zero-suppressed as appropriate:
   UInt_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
-    
-  std::vector<UShort_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
-  std::vector<SBSGEMModule::GEMaxis_t>  fAxis;  //We just made our enumerated type that has two possible values, makes the code more readable (maybe)
-  std::vector<std::vector<Int_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
+
+  //Map strip indices in this array:
+  //key = U or V  strip number, mapped value is position of that strip's information in the "decoded strip" arrays below:
+  std::map<UInt_t,UInt_t> fUstripIndex; 
+  std::map<UInt_t, UInt_t> fVstripIndex; 
+  
+  std::vector<UInt_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
+  std::vector<SBSGEM::GEMaxis_t>  fAxis;  //We just made our enumerated type that has two possible values, makes the code more readable (maybe)
+  std::vector<std::vector<Double_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
+  std::vector<std::vector<Int_t> > fRawADCsamples; //2D array of raw (non-baseline-subtracted) ADC values.
   std::vector<Double_t> fADCsums;
   std::vector<bool> fKeepStrip; //keep this strip?
-  std::vector<UShort_t> fMaxSamp; //APV25 time sample with maximum ADC;
+  std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
-
+  
   ////// (1D and 2D) Clustering results (see above for definition of struct sbsgemcluster_t and struct sbsgemhit_t):
+
+  UInt_t fNclustU; // number of U clusters found
+  UInt_t fNclustV; // number of V clusters found
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
 
+  UInt_t fN2Dhits; // number of 2D hits found in region of interest:
   std::vector<sbsgemhit_t> fHits; //2D hit reconstruction results
-	
+
+  /////////////////////// Global variables that are more convenient for ROOT Tree/Histogram Output (to the extent needed): ///////////////////////
+  //Raw strip info:
+  std::vector<UInt_t> fStripAxis; //redundant with fAxis, but more convenient for Podd global variable definition
+  std::vector<Double_t> fADCsamples1D; //1D array to hold ADC samples; should end up with dimension fNstrips_hit*fN_MPD_TIME_SAMP
+  std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
+  std::vector<Int_t> fRawADCsamples1D; 
+  /////////////////////// End of global variables needed for ROOT Tree/Histogram output ///////////////////////
+  
   //Constant, module-specific parameters:
   UShort_t fModule; // Module index within a tracker. Should be unique! Since this is a GEM module class, this parameter should be unchanging
   UShort_t fLayer;  // Layer index of this module within a tracker. Since this is a GEM module class, this parameter should be unchanging
@@ -216,6 +239,11 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fNstripsU; // Total number of strips in this module along the generic "U" axis
   UInt_t fNstripsV; // Total number of strips in this module along the generic "V" axis
 
+  //Pedestal means and RMS values for all channels:
+  std::vector<Double_t> fPedestalU, fPedRMSU; 
+  std::vector<Double_t> fPedestalV, fPedRMSV;
+
+  //To be determined from channel map/strip count information:
   UShort_t fNAPVs_U; //Number of APV cards per module along "U" strip direction; this is typically 8, 10, or 12, but could be larger for U/V GEMs
   UShort_t fNAPVs_V; //Number of APV cards per module along "V" strip direction; 
   //UInt_t fNTimeSamplesADC; //Number of ADC time samples (this could be variable in principle, but should be the same for all strips within a module within a run) redundant with fN_MPD_TIME_SAMP
@@ -225,7 +253,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fVgain; // "gain match" coefficients for V strips by APV card;
     
   ///////////////////////////////////////////////////////////////////////////////////////////////////
-  //     CLUSTERING PARAMETERS (to be read from database and given sensible default values)        //
+  //     CLUSTERING PARAMETERS (to be read from database and/or given sensible default values)        //
   ///////////////////////////////////////////////////////////////////////////////////////////////////
 
   Double_t fThresholdSample; //Threshold on the (gain-matched and pedestal-subtracted) max. sample on a strip to keep that strip for clustering 
@@ -245,6 +273,8 @@ class SBSGEMModule : public THaSubDetector {
   //Only strips within these limits around the peak can be used for hit position reconstruction
   UShort_t fMaxNeighborsU_hitpos; 
   UShort_t fMaxNeighborsV_hitpos; 
+
+  Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
   
   //GEOMETRICAL PARAMETERS:
   Double_t fUStripPitch;    //strip pitch along U, will virtually always be 0.4 mm
