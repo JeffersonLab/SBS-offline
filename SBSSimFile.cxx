@@ -72,17 +72,22 @@ SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char*
     }
   }
   */
+  cout << "using experiment configuration: " << experiment << endl;
   
-  if(experiment=="gmn" || experiment=="gen"){
+  if(strcmp(experiment,"gmn")==0 || strcmp(experiment,"gen")==0){
+    //(experiment=="gmn" || experiment=="gen")//{
     fExperiment = kGMN;
   }
-  if(experiment=="genrp"){
+  if(strcmp(experiment,"genrp")==0){
+    //(experiment=="genrp")//{
     fExperiment = kGEnRP;
   }
-  if(experiment=="gep"){
+  if(strcmp(experiment,"gep")==0){
+    //(experiment=="gep")//{
     fExperiment = kGEp;
   }
-  if(experiment=="sidis"){
+  if(strcmp(experiment,"sidis")==0){
+    //(experiment=="sidis")//{
     fExperiment = kSIDIS;
   }
   
