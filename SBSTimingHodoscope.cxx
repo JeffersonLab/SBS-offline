@@ -34,6 +34,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   //if( !file ) return kFileError;
   //Int_t err;
 
+  std::cout << "******** Detector " << GetName() << " ReadDatabase ********" << std::endl;
 
   // Make sure to call parent class so that the generic variables can be read
   return SBSGenericDetector::ReadDatabase(date);
