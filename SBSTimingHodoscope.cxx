@@ -47,9 +47,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   if(err) {
     return err;
   }
-  
-  // Uncomment the following to add a ny new variables we want to define
-  // as the output
+
 
   //RVarDef vars[] = {
   //  { "example", "Example variable",  "fExampleVariable" },
@@ -80,7 +78,6 @@ void SBSTimingHodoscope::ClearEvent()
  */
 Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *)
 {
-
   // The variable passed defines is one TimingHodoscope paddle PMT
   // We can use it alone to find the good hits in that paddle or since
   // we know the row and column of that paddle, we can find it's corresponding

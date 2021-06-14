@@ -52,10 +52,14 @@ struct SBSGenericOutputData {
   // Module info
   std::vector<Int_t> row;         //< [] row
   std::vector<Int_t> col;         //< [] col
-  std::vector<Int_t> layer;       //< [] col
+  std::vector<Int_t> ped;         //< [] pedestal
+  std::vector<Int_t> layer;       //< [] layer
   // ADC variables
   std::vector<Float_t> a;         //< [] ADC integral
+  std::vector<Float_t> a_p;         //< [] ADC integral -pedestal
+  std::vector<Float_t> a_c;         //< [] (ADC integral -pedestal)*calib
   std::vector<Float_t> a_amp;     //< [] ADC pulse amplitude
+  std::vector<Float_t> a_amp_p;     //< [] ADC pulse amplitude -pedestal
   std::vector<Float_t> a_time;    //< [] ADC pulse time
   // TDC variables
   std::vector<Float_t> t;         //< [] TDC (leading edge) time
@@ -70,9 +74,13 @@ struct SBSGenericOutputData {
   void clear() {
     row.clear();
     col.clear();
+    ped.clear();
     layer.clear();
     a.clear();
+    a_p.clear();
+    a_c.clear();
     a_amp.clear();
+    a_amp_p.clear();
     a_time.clear();
     t.clear();
     t_te.clear();
@@ -91,6 +99,7 @@ public:
       THaApparatus* a = NULL);
   virtual ~SBSGenericDetector();
 
+  virtual void Clear( Option_t* opt="" );
   virtual void ClearEvent();
   virtual void ClearOutputVariables();
 
@@ -164,6 +173,7 @@ protected:
 
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
+  Int_t      fNGoodhits;     ///< Number of good hits in event
 
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?

@@ -37,7 +37,7 @@ Int_t SBSBigBite::CoarseTrack()
   // Coarse track Reconstruction
   THaSpectrometer::CoarseTrack();
   // TODO
-
+  //std::cout << " call SBSBigBite::CoarseTrack" << std::endl;
   return 0;
 }
 
@@ -47,7 +47,8 @@ Int_t SBSBigBite::CoarseReconstruct()
   // Coarse Reconstruction of particles in spectrometer
   THaSpectrometer::CoarseReconstruct(); 
   // TODO
-
+  //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
+  THaSpectrometer::CoarseReconstruct();
   return 0;
 }
 
