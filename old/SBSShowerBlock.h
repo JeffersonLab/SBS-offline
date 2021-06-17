@@ -41,8 +41,6 @@ public:
 
 private:
 
-    static const double kBig; //  = 1e15;
-
     Float_t fX;       // x position of the center
     Float_t fY;       // y position of the center
     Float_t fPed;     // Pedestal

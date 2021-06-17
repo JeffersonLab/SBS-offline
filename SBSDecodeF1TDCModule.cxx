@@ -1,3 +1,6 @@
+/* Uncomment this to turn on high resolution mode */
+/* #define USE_HIRES */
+
 /////////////////////////////////////////////////////////////////////
 //
 //   SBSDecodeF1TDCModule
@@ -5,6 +8,9 @@
 //
 /////////////////////////////////////////////////////////////////////
 //
+// - 2021/02/24 Juan Carlos Cornejo
+//   * Modify it to support both high and low res in the same class
+//   * Module 3204 is high res, and 6401 is low res
 // - Version 1 - 2017/12/13 (Marco Carmignotto)
 //    * Tested for High Resolution only
 //    * Work with multiple modules in the same bank
@@ -31,10 +37,13 @@ namespace Decoder {
 //  const Int_t NTDCCHAN = 32;
   const Int_t MAXHIT   = 20;
 
-  Module::TypeIter_t SBSDecodeF1TDCModule::fgThisType =
-    DoRegister( ModuleType( "Decoder::SBSDecodeF1TDCModule" , 3204 ));
 
-SBSDecodeF1TDCModule::SBSDecodeF1TDCModule(Int_t crate, Int_t slot) : VmeModule(crate, slot) {
+  Module::TypeIter_t SBSDecodeF1TDCHighResModule::fgThisType =
+    DoRegister( ModuleType( "Decoder::SBSDecodeF1TDCHighResModule" , 3204 ));
+  Module::TypeIter_t SBSDecodeF1TDCLowResModule::fgThisType =
+    DoRegister( ModuleType( "Decoder::SBSDecodeF1TDCLowResModule" , 6401 ));
+
+SBSDecodeF1TDCModule::SBSDecodeF1TDCModule(Int_t crate, Int_t slot) : VmeModule(crate, slot), IsInit(0) {
   fDebugFile=0;
   Init();
 }
@@ -44,26 +53,24 @@ SBSDecodeF1TDCModule::~SBSDecodeF1TDCModule() {
   //if (fNumHits) delete [] fNumHits;
   if (fTdcData.size()>0) fTdcData.clear();
   if (fNumHits.size()>0) fNumHits.clear();
-  if(F1slots) delete [] F1slots;
+  if(F1slots.size()>0) F1slots.clear();
 }
 
-void SBSDecodeF1TDCModule::Init() {
+void SBSDecodeF1TDCModule::CommonInit() {
   //fTdcData = new Int_t[NTDCCHAN*MAXHIT];
   //fNumHits = new Int_t[NTDCCHAN*MAXHIT];
   fDebugFile=0;
+  //fDebugFile = new std::ofstream("hcal_tdc_test_decoder.log");
   Clear();
   IsInit = kTRUE;
-  fName = "My private F1 TDC 3204";
   nF1=0;
-  F1slots = new Int_t[50];
-  memset(F1slots, 0, 50*sizeof(Int_t));
-  fWdcntMask=0;
-  SetResolution(1);
-  fNumChan = 32;
-  if (fModelNum == 6401) {
-    SetResolution(0);
-    fNumChan = 64;
+  F1slots.resize(50);
+  for(size_t i = 0; i < F1slots.size(); i++) {
+    F1slots[i] = 0;
   }
+  //F1slots = new Int_t[50];
+  //memset(F1slots, 0, 50*sizeof(Int_t));
+  fWdcntMask=0;
 }
 
 
@@ -155,13 +162,16 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
    // To account for multiple slots
    Int_t lastSlot = 0;
    Int_t idxSlot = -1;
-   while ( loc <= pstop && IsSlot(*loc) ) {
+   Int_t trigTime = 0;
+   Int_t raw_cor = 0;
+   while ( loc <= pstop && *loc != 0xda0000ff  && IsSlot(*loc) ) {
       if ( !( (*loc) & DATA_MARKER ) ) {
-	// header/trailer word, to be ignored
+	// header/trailer word, to be ignored (except for trigTime)
+	 trigTime = ((*loc)>>7)&0x1FF;
 	 if(fDebug > 1 && fDebugFile!=0)
 	    *fDebugFile<< "[" << (loc-evbuffer) << "] header/trailer  0x"
 		       <<hex<<*loc<<dec<<endl;
-	} else {
+	} else if((*loc)!=0xf1daffff) {
 	    if (fDebug > 1 && fDebugFile!=0)
 	       *fDebugFile<< "[" << (loc-evbuffer) << "] data            0x"
 			  <<hex<<*loc<<dec<<endl;
@@ -179,6 +189,9 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 	     Int_t f1slot = ((*loc)&0xf8000000)>>27;
 		//FIXME: cross-check slot number here
 		// Make sure we have the current slot considered - important for multiple modules
+		if(fDebugFile) {
+                  *fDebugFile << "f1slot=" << f1slot << ", lastSlot=" << lastSlot << std::endl;
+		}
 		if(f1slot != lastSlot && f1slot!=30) { // we may have a new slot here
 			Bool_t newslot = 1;
 			for(Int_t k=0; k<nF1; k++) {
@@ -217,7 +230,14 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 		*fDebugFile<<" int_chn chan data "<<dec<<chn<<"  "<<chan
 		    <<"  0x"<<hex<<raw<<dec<<endl;
 	      }
-	      /*Int_t status = */sldat->loadData("tdc",chan,raw,raw);
+              // For now, only load data when our slot number matches that of
+              // the base class
+              if(fSlot == f1slot) {
+                raw_cor =  raw-trigTime;
+                if(raw<trigTime) // That means the roll-over already happened
+                  raw_cor += 512;
+	      /*Int_t status = */sldat->loadData("tdc",chan,raw_cor,raw);
+              }
 
 		  if((*loc)!=0xf1daffff && nF1>0 && f1slot!=30) { // Make sure memory is allocated to save data
 		    Int_t chSlot = idxSlot*fNumChan + chan;
@@ -235,6 +255,45 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
   return fWordsSeen;
 }
 
+SBSDecodeF1TDCLowResModule::SBSDecodeF1TDCLowResModule(Int_t crate, Int_t slot) :
+  SBSDecodeF1TDCModule(crate,slot)
+{
+  Init();
 }
 
+SBSDecodeF1TDCHighResModule::SBSDecodeF1TDCHighResModule(Int_t crate, Int_t slot) :
+  SBSDecodeF1TDCModule(crate,slot)
+{
+  Init();
+}
+
+
+
+void SBSDecodeF1TDCLowResModule::Init() {
+  fName = "My private F1 TDC 6401 (LoRes 64 Channels)";
+  SetResolution(0);
+  fNumChan = 64;
+  CommonInit();
+};
+
+void SBSDecodeF1TDCHighResModule::Init() {
+  fName = "My private F1 TDC 3204 (HighRes 32 Channels)";
+  SetResolution(1);
+  fNumChan = 32;
+  CommonInit();
+};
+
+SBSDecodeF1TDCLowResModule::~SBSDecodeF1TDCLowResModule()
+{
+}
+
+SBSDecodeF1TDCHighResModule::~SBSDecodeF1TDCHighResModule()
+{
+}
+
+}
+
+
 ClassImp(Decoder::SBSDecodeF1TDCModule)
+ClassImp(Decoder::SBSDecodeF1TDCLowResModule)
+ClassImp(Decoder::SBSDecodeF1TDCHighResModule)
