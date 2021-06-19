@@ -39,7 +39,9 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   // for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
   //     fadc[i] = NULL;
   // }
-
+  
+  fIsMC = false;
+  
   return;
 }
 
@@ -402,6 +404,62 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
   fUstripIndex.clear();
   fVstripIndex.clear();
+  
+  // The following till line 520 is a copy past from deprecated SBSGEMPlane for MC
+  if(fIsMC){
+    UInt_t nmodules = fDetMap->GetSize();
+    //std::cout << "nmodules " << nmodules << std::endl;
+    int strip0 = 0;
+    for( Int_t i = 0; i < nmodules; i++ ) {
+      THaDetMap::Module* d = fDetMap->GetModule( i );
+      //if(evdata.GetNumChan( d->crate, d->slot )>0)std::cout << fName << " " << d->crate << " " << d->slot << " " << evdata.GetNumChan( d->crate, d->slot ) << std::endl;
+      for( UInt_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+	
+	UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+	//std::cout << j << " chan " << chan << " first " << d->first << " lo " << d->lo << " hi " << d->hi << std::endl;
+	if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
+	int strip = strip0 + chan-d->lo;
+	assert(strip<fNch);
+	
+	UInt_t nsamps = evdata.GetNumHits(d->crate, d->slot, chan);
+	if(nsamps!=fN_MPD_TIME_SAMP)continue;
+	//std::cout << nsamps << " strip: " << strip << std::endl;
+	
+	double commonMode[fN_MPD_TIME_SAMP];
+	
+	//Regardless of whether we are doing common-mode subtraction, fill these temporary local arrays, so we don't need duplicate calls to evdata.GetRawData
+	// and evdata.GetData
+	vector<vector<int> > rawStrip(fN_MPD_TIME_SAMP);
+	vector<vector<int> > rawADCs(fN_MPD_TIME_SAMP); //by time sample and by ADC channel:
+	vector<vector<double> > commonModeSubtractedADC(fN_MPD_TIME_SAMP);
+	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	commonMode[isamp] = 0.0;
+	//for( int istrip=0; istrip<nstrips; istrip++ ){
+	int ADC = evdata.GetData(d->crate, d->slot, chan, isamp);
+	rawStrip[isamp].push_back( strip ); //APV25 channel number
+	rawADCs[isamp].push_back( ADC );
+	commonModeSubtractedADC[isamp].push_back( double(ADC) );
+	//}
+	
+	if( !fOnlineZeroSuppression /* && nstrips == fN_APV25_CHAN */ ){ //calculate common-mode: this implements the "sorting method" found in the ROOT_GUI_multiCrate program:
+	  vector<int> sortedADCs = rawADCs[isamp];
+	  std::sort(sortedADCs.begin(), sortedADCs.end());
+	  
+	  for( int k=28; k<100; k++ ){
+	    commonMode[isamp] += double(sortedADCs[k]);
+	  }
+	  commonMode[isamp] /= 72.0;
+	  //for( int istrip=0; istrip<nstrips; istrip++ ){
+	  commonModeSubtractedADC[isamp][strip] = double(rawADCs[isamp][strip]) - commonMode[isamp];
+
+	    // cout << "istrip, isample, common mode[isample], raw ADC, common-mode subtracted ADC = " << istrip << ", " << isamp << ", "
+	    // 	 << commonMode[isamp] << ", " << rawADCs[isamp][istrip] << ", " << commonModeSubtractedADC[isamp][istrip] << endl;
+	  }
+	}
+      }// end loop on j
+      strip0+= d->hi-d->lo;
+    }//end loop on modules
+  }else{
   //This could be written more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it too much:
   for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
     //loop over all decode map entries associated with this module (each decode map entry is one APV card)
@@ -581,7 +639,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       } //end loop over strips on this APV card
     } //end loop over APV cards with hits
   } //end loop on decode map entries for this module
-
+  }//end else if(fIsMC)
   std::cout << fName << " decoded, number of strips fired = " << fNstrips_hit << std::endl;
 
   fIsDecoded = true;
