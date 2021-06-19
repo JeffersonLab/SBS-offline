@@ -8,6 +8,9 @@
 
 #include "SBSGEMStand.h"
 #include "SBSGEMPlane.h"
+#include "Textvars.h"
+
+using namespace Podd;
 
 SBSGEMStand::SBSGEMStand( const char* name, const char* desc, THaApparatus* app ):
     THaTrackingDetector(name,desc,app) {
