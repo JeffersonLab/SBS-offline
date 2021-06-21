@@ -180,7 +180,8 @@ bool SBSSimADCEncoder::DecodeADC(SimEncoder::adc_data &data,
 }
 
 bool SBSSimTDCEncoder::DecodeTDC(SimEncoder::tdc_data &data,
-    const unsigned int *enc_data,unsigned short nwords)
+				 const unsigned int *enc_data,
+				 unsigned short nwords)
 {
   for(unsigned short n = 0; n < nwords; n++) {
     //std::cout << "n = " << n << ": encoded data " << enc_data[n] << " edge bit " << fEdgeBit << std::endl;

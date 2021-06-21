@@ -304,7 +304,8 @@ const  Int_t *SBSSimFile::GetEvBuffer() const
 #endif
 {
   if( !IsOpen() ) return 0;
-
+  // EPAF: this is the "reinterpret_cast" that is essential.
+  // It transforms the "tree" into a (stl?) vector of integers
 #if ANALYZER_VERSION_CODE >= ANALYZER_VERSION(1,6,0)
   return reinterpret_cast<UInt_t*>(fEvent);
 #else

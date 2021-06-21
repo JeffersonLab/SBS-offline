@@ -35,7 +35,7 @@ namespace Decoder {
     virtual void ClearDataVectors();
     virtual UInt_t LoadSlot(THaSlotData *sldat, const UInt_t* evbuffer, const UInt_t *pstop);
     virtual UInt_t LoadSlot( THaSlotData *sldat, const UInt_t* evbuffer, UInt_t pos, UInt_t len);
-
+    
     // We don't need these functions for simulated data, but must be defined
     // so that this won't be an abstract class
     UInt_t LoadNextEvBuffer(THaSlotData*) {return 0;};// needs return something for compilation

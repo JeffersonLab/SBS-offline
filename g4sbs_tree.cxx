@@ -129,8 +129,8 @@ void g4sbs_tree::Init(TTree *tree)//, std::vector<TString> det_list)
    
    //fChain->Print();
    
-   //Setup "Event branch": can be useful
-   fChain->SetBranchAddress("ev", &ev_count, &b_ev);
+   //Setup "Event branch": can be useful? But is it???
+   //fChain->SetBranchAddress("ev", &ev_count, &b_ev);
    
    for(int k = 0; k<det_list.size(); k++){
      //GMN/GEN

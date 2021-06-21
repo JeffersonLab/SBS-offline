@@ -74,11 +74,14 @@ public:
   */
   // Decoders
   virtual bool DecodeADC(SimEncoder::adc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; }
+			 const unsigned int *enc_data,
+			 unsigned short nwords) { return false; }
   virtual bool DecodeTDC(SimEncoder::tdc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; };
+			 const unsigned int *enc_data,
+			 unsigned short nwords) { return false; };
   virtual bool DecodeSADC(SimEncoder::sadc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; }
+			  const unsigned int *enc_data,
+			  unsigned short nwords) { return false; }
   /*
   virtual bool DecodeFADC(SimEncoder::sadc_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; }

@@ -30,6 +30,7 @@
 #include "SBSBBShower.h"
 #include "SBSBBTotalShower.h"
 #include "THaCrateMap.h"
+#include "Textvars.h"
 
 //#include <SBSSimFadc250Module.h>// we need not to need this
 #include "TList.h"
@@ -43,7 +44,7 @@
 #include <stdexcept>
 
 using namespace std;
-//using namespace Podd;
+using namespace Podd;
 
 class THaAnalysisObject;
 
@@ -845,7 +846,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   const string prefix = detname+".";
   // First, open the common db file and parse info there, later, the
   // digitization specific db can be used to override any values
-  FILE* file  = THaAnalysisObject::OpenFile(fileName.c_str(), date);
+  FILE* file  = Podd::OpenDBFile(fileName.c_str(), date);
   
   std::vector<int> detmap,chanmap;//, detmap_adc;
   uint nchan, nlogchan = 0, chanmapstart = 0;
@@ -889,7 +890,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     //cout << " prefix " << prefix.c_str() << " err " << err << " chambers " << chambers.c_str() << " size ? " << chambers.size() << endl;
     
     std::vector<std::string> chambers_names;
-    if(err==0)chambers_names = THaAnalysisObject::vsplit(chambers);
+    if(err==0)chambers_names = vsplit(chambers);
     
     if(!chambers_names.empty()){
       for (std::vector<std::string>::iterator it = chambers_names.begin() ; it != chambers_names.end(); ++it){
@@ -954,13 +955,6 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 		  return THaAnalysisObject::kInitError;
 		}
 		(fInvGEMDetMap[detname])[mod][ch_count]=gemstripinfo(crate, slot, i, apv_num);
-		/*
-		  if(detname.find("hodo")!=std::string::npos){
-		  cout << " crate " << crate << " slot " << slot 
-		  << " i " << i << " ch_count " << ch_count << endl;
-		  cout << &(fInvDetMap.at(detname)).at(ch_count) << endl;
-		  }
-		*/
 	      }
 	      
 	    }
