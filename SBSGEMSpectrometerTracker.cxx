@@ -11,6 +11,8 @@
 #include "THaTrack.h"
 #include "TClonesArray.h"
 
+using namespace Podd;
+
 SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const char* desc, THaApparatus* app ):
   THaTrackingDetector(name,desc,app), SBSGEMTrackerBase() {
 
