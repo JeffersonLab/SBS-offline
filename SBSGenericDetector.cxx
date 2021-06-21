@@ -124,7 +124,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "nlayers",       &nlayers,  kInt, 1, true }, ///< [Optional] Number of layers/divisions in each element of the detector
     { "angle",        &angle,   kFloat,  0, true },
     { "xyz",           &xyz,      kFloatV, 3 },  ///< If only 3 values specified, then assume as stating point for fist block and distribute according to dxyz
-    { "dxdydz",         &dxyz,     kFloatV, 3, true },  ///< element spacing (dx,dy,dz)
+    { "dxdydz",         &dxyz,     kFloatV, 3 },//, true },  ///< element spacing (dx,dy,dz) // not really optional...
     { "row_offset_pattern",        &row_offset_pattern,   kFloatV, 0, true }, ///< [Optional] conflicts with ncols
     { "is_mc",      &is_mc, kInt,    0, true }, ///< Optional channel map
     { 0 } ///< Request must end in a NULL

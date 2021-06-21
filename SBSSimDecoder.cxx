@@ -908,7 +908,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     //cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
     
     std::vector<std::string> modules_names;
-    if(err==0)modules_names = THaAnalysisObject::vsplit(modules);
+    if(err==0)modules_names = vsplit(modules);
     if(!modules_names.empty()){
       for (std::vector<std::string>::iterator jt = modules_names.begin() ; jt != modules_names.end(); ++jt){
 	std::string planeconfig;
@@ -921,7 +921,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	err+= THaAnalysisObject::LoadDB(file, date, req_planeconfig, pref_mod.c_str());
 	//cout << " prefix " << pref_mod.c_str() << " err " << err << " planeconfig " << planeconfig.c_str() << " size ? " << planeconfig.size() << endl;
 	std::vector<std::string> plane_readouts;
-	if(err==0)plane_readouts = THaAnalysisObject::vsplit(planeconfig);
+	if(err==0)plane_readouts = vsplit(planeconfig);
 	if(!plane_readouts.empty()){
 	  for (std::vector<std::string>::iterator kt = plane_readouts.begin() ; kt != plane_readouts.end(); ++kt){
 	    //mod++;
