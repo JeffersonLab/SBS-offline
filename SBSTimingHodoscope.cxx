@@ -111,6 +111,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   //}
 
   fCoarseProcessed = 1;
+  return 0;
 }
 
 Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
