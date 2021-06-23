@@ -313,6 +313,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       // of reference elements that will contain their data.
       if( d->refindex == -1) {
         for(Int_t chan = 0; chan < nchan; chan++) {
+	  fChanMap[i].resize(nchan);
           SBSElement *el = MakeElement(0,0,0,0,0,0,-1);
           if(d->IsADC()) {
             el->SetADC(0.,1.);
