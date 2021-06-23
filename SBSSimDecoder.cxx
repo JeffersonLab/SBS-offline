@@ -120,7 +120,7 @@ void SBSSimDecoder::Clear( Option_t* opt )
 
   SimDecoder::Clear(opt);   // clears fMCCherHits, fMCCherClus
   
-  fPMTMap.clear(); 
+  //fPMTMap.clear(); 
 }
 
 //-----------------------------------------------------------------------------
@@ -541,11 +541,13 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     for(int j = 0; j<simev->Tgmn->Earm_BBGEM_dighit_nstrips; j++){
       mod = simev->Tgmn->Earm_BBGEM_dighit_module->at(j);
       lchan = simev->Tgmn->Earm_BBGEM_dighit_strip->at(j);
+
+      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      //if(fDebug>3)
+      cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
+      
       if(cur_chan!=lchan){
 	//ChanToROC(detname, lchan, crate, slot, chan);
-	apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
-	//if(fDebug>3)
-	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
 	
 	if( crate >= 0 || slot >=  0 ) {
 	  sldat = crateslot[idx(crate,slot)].get();

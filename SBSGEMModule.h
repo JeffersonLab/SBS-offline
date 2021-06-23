@@ -96,7 +96,7 @@ struct sbsgemcluster_t {  //1D clusters;
 //Should these be hardcoded? Probably not!
 /* #define N_APV25_CHAN    128 */
 /* #define N_MPD_TIME_SAMP 6 */
-/* #defineM PDMAP_ROW_SIZE 8 */
+/* #define MPDMAP_ROW_SIZE 8 */
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //      GEM module class: a GEM module consists of one part of a tracking unit;
@@ -300,7 +300,7 @@ class SBSGEMModule : public THaSubDetector {
 
   //For geometry parameters, we will re-use the THaDetectorBase functionalities as much as possible
        
-  bool fIsMC;
+	
 	
   ClassDef(SBSGEMModule,0);
 

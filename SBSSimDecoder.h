@@ -89,10 +89,10 @@ protected:
 #endif
 
   //Utilities
-  typedef std::map<Int_t,Int_t> PMTMap_t;
+  //typedef std::map<Int_t,Int_t> PMTMap_t;
 
   // Event-by-event data
-  PMTMap_t      fPMTMap;   //! Map ROCKey -> index of corresponding PMT
+  //PMTMap_t      fPMTMap;   //! Map ROCKey -> index of corresponding PMT
   
   // retrive chanperslot, slotpercrate, etc...
   /*

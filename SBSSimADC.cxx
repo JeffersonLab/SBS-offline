@@ -122,7 +122,7 @@ namespace Decoder {
 	      //std::cout << i << " " << tmp_sadc_data.samples[i] << endl;
               sadc_data[chan].samples.push_back(tmp_sadc_data.samples[i]);
 	      //std::cout << i << " " << sadc_data[chan].samples.size() << " " << raw_buff << endl;
-              sldat->loadData("adc",chan,raw_buff,raw_buff);
+              sldat->loadData("adc",chan,raw_buff,chan%128);
             }
           } else if (enc->IsADC()) { // Integral of ADC
             SimEncoder::adc_data tmp_adc_data;
