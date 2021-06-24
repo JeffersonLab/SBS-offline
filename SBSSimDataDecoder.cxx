@@ -42,8 +42,8 @@ SBSSimDataDecoder* SBSSimDataDecoder::GetEncoderByName(
     fEncoders.push_back(new SBSSimADCEncoder("adc",ids++,12));
     fEncoders.push_back(new SBSSimADCEncoder("lecroy1881",ids++,14));
     fEncoders.push_back(new SBSSimADCEncoder("caen792",ids++,12));
-    fEncoders.push_back(new SBSSimSADCEncoder("mpd",ids++));
-    //fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
+    //fEncoders.push_back(new SBSSimSADCEncoder("mpd",ids++));
+    fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
   }
 
   TString name(enc_name);
@@ -199,13 +199,13 @@ bool SBSSimSADCEncoder::DecodeSADC(SimEncoder::sadc_data &data,
 {
   data.integral = 0;
   data.samples.clear(); // Clear out any samples already in the data
-  std::cout << " nwords: " << nwords << " => ";
+  //std::cout << " nwords: " << nwords << " => ";
   for(unsigned short i = 0; i<nwords; i++){
     data.integral+=enc_data[i];
     data.samples.push_back(enc_data[i]);
-    std::cout << enc_data[i] << " ";
+    //std::cout << enc_data[i] << " ";
   }
-  std::cout << std::endl;
+  //std::cout << std::endl;
 }
 
 /*
@@ -303,17 +303,17 @@ unsigned short SBSSimDataDecoder::DecodeNwords(unsigned int hdr) {
   return hdr&SBS_NWORDS_MASK;
 }
 
-/*
 SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
     unsigned short enc_id) : SBSSimDataDecoder(enc_name,enc_id)
 {
+/*
   fChannelBitMask  = MakeBitMask(8);
   fDataBitMask     = MakeBitMask(12);
   fOverflowBitMask = (1<<12);
   fSampleBitMask   = fDataBitMask|fOverflowBitMask;
   fValidBitMask    = (1<<13);
-}
 */
+}
 /*
 bool SBSSimMPDEncoder::EncodeMPD(SimEncoder::mpd_data data,
     unsigned int *enc_data, unsigned short &nwords)
@@ -410,20 +410,19 @@ void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
   data.gem_id   = (*hdr&SBS_MPD_GEM_ID_MASK)>>SBS_MPD_GEM_ID_BIT;
 }
 */
-/*
-bool SBSSimMPDEncoder::DecodeMPD(//SimEncoder::mpd_data &data,
-				 SimEncoder::sadc_data &data,
-    const unsigned int *enc_data,unsigned short nwords)
+bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
+				 const unsigned int *enc_data,unsigned short nwords)
 {
   data.samples.clear(); // Clear out any samples already in the data
   //std::cout << "nwords " << nwords << std::endl;
   for(unsigned short i = 0; i<nwords; i++){
     //std::cout << enc_data[i] << " ";
     
-    data.samples.push_back(enc_data[i]);
+    data.strips.push_back(enc_data[i]/8192);
+    data.samples.push_back(enc_data[i]%8192);
   }
   //std::cout << std::endl;
-
+  /*
   if(nwords<=1) {
     std::cerr << "Error, not enough words to read. Expected more than one,"
       << " got only: " << nwords << std::endl;
@@ -454,7 +453,9 @@ bool SBSSimMPDEncoder::DecodeMPD(//SimEncoder::mpd_data &data,
       << data.nstrips*data.nsamples << ")." << std::endl;
     return false;
   }
+  */
   return true;
 
 }
+/*
 */

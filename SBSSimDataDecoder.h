@@ -34,6 +34,7 @@ namespace SimEncoder {
   struct fadc_data : adc_data {
     std::vector<unsigned int> samples;
   };
+  */
   
   struct mpd_data : data {
     unsigned short nsamples; ///< Number of samples per channel
@@ -44,9 +45,9 @@ namespace SimEncoder {
     unsigned short i2c;
     unsigned short pos;
     unsigned short invert;
+    std::vector<unsigned int> strips;
     std::vector<unsigned int> samples;
   };
-  */
   
   struct tdc_data : data {
     std::vector<unsigned int> time;
@@ -82,6 +83,9 @@ public:
   virtual bool DecodeSADC(SimEncoder::sadc_data &data,
 			  const unsigned int *enc_data,
 			  unsigned short nwords) { return false; }
+  virtual bool DecodeMPD(SimEncoder::mpd_data &data,
+			 const unsigned int *enc_data,
+			 unsigned short nwords) { return false; }
   /*
   virtual bool DecodeFADC(SimEncoder::sadc_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; }
@@ -97,7 +101,7 @@ public:
   virtual bool IsTDC() { return false; }
   virtual bool IsSADC() { return false; }
   //virtual bool IsFADC() { return false; }
-  //virtual bool IsMPD() { return false; }
+  virtual bool IsMPD() { return false; }
 
   unsigned short GetId() { return fEncId; }
   std::string GetName() { return fName; }
@@ -191,7 +195,7 @@ public:
   //  bool *overflow, bool *valid);
 };
 */
-/*
+
 // MPD
 class SBSSimMPDEncoder : public SBSSimDataDecoder {
 public:
@@ -200,28 +204,27 @@ public:
 
   //virtual bool EncodeMPD(SimEncoder::mpd_data data, unsigned int *enc_data,
   //  unsigned short &nwords);
-  //virtual bool DecodeMPD(SimEncoder::mpd_data &data,
-  virtual bool DecodeMPD(SimEncoder::sadc_data &data,
+  virtual bool DecodeMPD(SimEncoder::mpd_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsMPD() { return true; }
 
   //void EncodeMPDHeader(SimEncoder::mpd_data data, unsigned int *enc_data,
   //  unsigned short &nwords);
   //void DecodeMPDHeader(const unsigned int *hdr, SimEncoder::mpd_data &data);
-
+  /*
 protected:
   unsigned int fChannelBitMask;
   unsigned int fDataBitMask;
   unsigned int fOverflowBitMask;
   unsigned int fSampleBitMask;
   unsigned int fValidBitMask;
-
+  */
   //protected:
   //unsigned int EncodeSingleSample(unsigned int dat);
   //void UnpackSamples(unsigned int enc_data,unsigned int *buff,
   //  bool *overflow, bool *valid);
 
 };
-*/
+/**/
 
 #endif // SBSSIMDATAENCODER_H

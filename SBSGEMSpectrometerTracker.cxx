@@ -116,6 +116,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
     fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this) );
     //fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
+    fModules[fModules.size()-1]->fIsMC = fIsMC;
   }
 
   //Define the number of modules from the "modules" string:

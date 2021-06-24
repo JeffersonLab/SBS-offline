@@ -554,8 +554,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
       }
       
-      //if(fDebug>3)
-      cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
+      if(fDebug>3)
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
       
       if(j==simev->Tgmn->Earm_BBGEM_dighit_nstrips-1){
 	loadevt = true;
@@ -573,14 +573,14 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	if(samps.size()){
 	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
 	  //I think I'm onto something here, but I also need to transmit strip num 
-	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
 	    //cout << " " << samps[k];
-	    myev->push_back(//strips[k]*8192+
+	    myev->push_back(strips[k]*8192+
 			    samps[k]);
 	  }
-	  for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
-	  cout << endl;
+	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
+	  //cout << endl;
 	}
 	//cout << endl;
 	
@@ -861,7 +861,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   //int cps, spc, fs, fc;
   
   bool isgem = (detname.find("gem")!=std::string::npos);
-  int apv_num = -1, mod = 0, pos = -1, axis = -1;
+  int apv_num = -1, mpd = -1, mod = 0, pos = -1, axis = -1;
   
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
@@ -932,14 +932,14 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	
 	int nparam_mod = 9;
 	int ax_prev = 0;
-	int n = 0, n_ax = 0;
-	int n_ax_x = 0, n_ax_y = 0;
+	int n_ax = 0, n_ax_x = 0, n_ax_y = 0;
 	for(size_t k = 0; k < chanmap.size(); k+=nparam_mod) {
 	  //for(int m = 0; m<nparam_mod; m++)std::cout << chanmap[k+m] << " ";
 	  //std::cout << std::endl;
 	  crate  = chanmap[k];
 	  slot   = chanmap[k+1];
-	  apv_num = chanmap[k+4];
+	  mpd   = chanmap[k+2];
+	  apv_num = mpd << 8 | chanmap[k+4];
 	  pos = chanmap[k+6];
 	  axis = chanmap[k+8];
 	  if(axis==0)n_ax_x++;
@@ -951,9 +951,8 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  ch_lo = 128*n_ax;
 	  ch_hi = 128*(n_ax+1)-1;
 	  //mod*2+axis???
-	  //std::cout << mod << " " << mod*2+axis << " " << fInvGEMDetMap[detname].size() << " " << n << " " << n_ax << endl;
+	  //std::cout << mod << " " << mod*2+axis << " " << fInvGEMDetMap[detname].size() << " " << apv_num << " " << n_ax << endl;
 	  (fInvGEMDetMap[detname])[mod*2+axis][n_ax]=gemstripinfo(crate, slot, apv_num);
-	  n++;
 	  n_ax++;
 	}
 	(fInvGEMDetMap[detname])[mod*2+0].resize(n_ax_x);

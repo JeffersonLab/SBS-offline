@@ -300,7 +300,7 @@ class SBSGEMModule : public THaSubDetector {
 
   //For geometry parameters, we will re-use the THaDetectorBase functionalities as much as possible
        
-	
+  Bool_t fIsMC;//we kinda want this guy no matter what don't we...
 	
   ClassDef(SBSGEMModule,0);
 

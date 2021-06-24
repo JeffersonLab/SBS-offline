@@ -408,7 +408,6 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     Int_t effChan = it->mpd_id << 8 | it->adc_id; //left-shift mpd id by 8 bits and take the bitwise OR with ADC_id to uniquely identify the APV card.
     //mpd_id is not necessarily equal to slot, but that seems to be the convention in many cases
     // Find channel for this crate/slot
-
     Int_t nchan = evdata.GetNumChan( it->crate, it->slot );
 
     SBSGEM::GEMaxis_t axis = it->axis == 0 ? SBSGEM::kUaxis : SBSGEM::kVaxis; 
@@ -417,6 +416,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
     for( Int_t ichan = 0; ichan < nchan; ++ichan ) { //this is looping over all the "channels" (APV cards) in the crate and slot containing this decode map entry/APV card:
       Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan ); //"chan" here refers to one APV card 
+      //std::cout << it->crate << " " << it->slot << " mpd_id ??? " << it->mpd_id << " " << chan << " " << effChan << std::endl;
+      
       if( chan != effChan ) continue; // 
 
 
@@ -441,7 +442,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  int strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip ); 
 	  int ADC = evdata.GetData( it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip );
 	  std::cout << it->crate << " " << it->slot << " " << chan << " " 
-		    << strip << " " << ADC << endl;
+	  	    << strip << " " << ADC << endl;
 	  rawStrip[isamp].push_back( strip ); //APV25 channel number
 	  rawADCs[isamp].push_back( ADC );
 	  commonModeSubtractedADC[isamp].push_back( double(ADC) ); 
@@ -499,16 +500,17 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//RstripNb=RstripNb+1+RstripNb%4-5*(((int)(RstripNb/4))%2);
 	// New: Use a pre-computed array from Danning to skip the above
 	// two steps.
-	Int_t RstripNb = APVMAP[strip];
-	RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
-	Int_t RstripPos = RstripNb + 128*it->pos;
-	strip = RstripPos; //At this point, "strip" should correspond to increasing order of position along the U or V axis; i.e., what we think it should!
-
+	if(!fIsMC){//if MC, apv chan num and strip num are equal...
+	  Int_t RstripNb = APVMAP[strip];
+	  RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
+	  Int_t RstripPos = RstripNb + 128*it->pos;
+	  strip = RstripPos; //At this point, "strip" should correspond to increasing order of position along the U or V axis; i.e., what we think it should!
+	}
 	//NOTE that we are replacing the value of "strip" with the line above!
 	// Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
 	// sample-to-sample: When operating without online zero suppression, these should all probably be set to zero, since we will
 	// generally do offline common-mode calculation and subtraction in that case:
-	std::cout << axis << " " << strip << std::endl;
+	//std::cout << axis << " " << strip << std::endl;
 	
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];

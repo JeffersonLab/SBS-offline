@@ -93,22 +93,22 @@ namespace Decoder {
     Clear();
     unsigned int nwords = 0;
     unsigned short chan = 0, type;
-    UInt_t raw_buff;
+    UInt_t raw_buff, strip;
     bool printed = false;
     bool is_first = true;
-    std::cout << "SBSSimADC load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
+    //std::cout << "SBSSimADC load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
     while(evbuffer < pstop) {
       // First, decode the header
       SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
-      std::cout << type << " " << chan << " " << nwords << endl;
+      //std::cout << type << " " << chan << " " << nwords << endl;
       SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find ADC decoder of type: " << type
           << ", is_first: " << is_first << std::endl;
       } else {
-        if(!enc->IsADC()) {
+        if(!enc->IsADC() && !enc->IsMPD()) {
           std::cerr << "Encoder " << enc->GetName() << " of type " << type
-            << " is not an ADC!" << std::endl;
+            << " is not an ADC nor an MPD!" << std::endl;
         } else if ( nwords > 0 ) {
           //if(enc->IsFADC() || enc->IsMPD()) { // FADC with samples
 	  if(enc->IsSADC()) { // FADC with samples
@@ -117,14 +117,24 @@ namespace Decoder {
 	    enc->DecodeSADC(tmp_sadc_data,evbuffer,nwords);
 	    //std::cout << tmp_sadc_data.samples.size() << std::endl;
 	    //std::cout << chan << " " << sadc_data[chan].samples.size() << std::endl;
-            for(size_t i = 0; i < tmp_sadc_data.samples.size(); i++) {
+	    for(size_t i = 0; i < tmp_sadc_data.samples.size(); i++) {
               raw_buff = tmp_sadc_data.samples[i];
 	      //std::cout << i << " " << tmp_sadc_data.samples[i] << endl;
               sadc_data[chan].samples.push_back(tmp_sadc_data.samples[i]);
 	      //std::cout << i << " " << sadc_data[chan].samples.size() << " " << raw_buff << endl;
-              sldat->loadData("adc",chan,raw_buff,chan%128);
+              sldat->loadData("adc",chan,raw_buff,raw_buff);
             }
-          } else if (enc->IsADC()) { // Integral of ADC
+          } else if(enc->IsMPD()){
+	    SimEncoder::mpd_data tmp_mpd_data;
+	    enc->DecodeMPD(tmp_mpd_data,evbuffer,nwords);
+	    for(size_t i = 0; i < tmp_mpd_data.samples.size(); i++) {
+	      raw_buff = tmp_mpd_data.samples[i];
+	      strip = tmp_mpd_data.strips[i];
+	      //std::cout << i << " " << tmp_mpd_data.strips[i] << " " << tmp_mpd_data.samples[i] << endl;
+	      //std::cout << i << " " << sadc_data[chan].samples.size() << " " << raw_buff << endl;
+	      sldat->loadData("adc",chan,raw_buff,strip);
+	    }
+	  } else if (enc->IsADC()) { // Integral of ADC
             SimEncoder::adc_data tmp_adc_data;
             enc->DecodeADC(tmp_adc_data,evbuffer,nwords);
             raw_buff = tmp_adc_data.integral;
