@@ -54,7 +54,6 @@ class SBSSimDecoder : public Podd::SimDecoder {
     uint crate;
     uint slot;
     uint chan;
-    //uint apvnum;
   detchaninfo(int cr = 0, int sl = 0, int ch = 0) ://, int apv = 0) : 
     crate(cr), slot(sl), chan(ch)//, apvnum(apv)
     {}
@@ -65,10 +64,14 @@ class SBSSimDecoder : public Podd::SimDecoder {
   struct gemstripinfo{
     uint crate;
     uint slot;
-    uint chan;
     uint apvnum;
-  gemstripinfo(int cr = 0, int sl = 0, int ch = 0, int apv = 0) : 
-    crate(cr), slot(sl), chan(ch), apvnum(apv)
+    //uint chan_lo;
+    //uint chan_hi;
+    //uint axis;
+  gemstripinfo(int cr = 0, int sl = 0, int apv = 0) :
+	       //, int ch_lo = 0, int ch_hi = 0, int ax) : 
+    crate(cr), slot(sl), apvnum(apv)
+      //, chan_lo(ch_lo), chan_hi(ch_hi), axis(ax)
     {}
     virtual ~gemstripinfo(){};
   };
@@ -139,7 +142,7 @@ protected:
 		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   int APVnum( const std::string detname, Int_t mod, Int_t h_chan, 
-	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
+	      Int_t &crate, Int_t &slot ) const;//, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
   

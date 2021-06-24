@@ -535,18 +535,18 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   
   if(strcmp(detname.c_str(), "bb.gem")==0){
-    int cur_chan = -1;
+    int cur_apv = -1;
     samps.clear();
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBGEM_dighit_nstrips << endl;
     for(int j = 0; j<simev->Tgmn->Earm_BBGEM_dighit_nstrips; j++){
       mod = simev->Tgmn->Earm_BBGEM_dighit_module->at(j);
       lchan = simev->Tgmn->Earm_BBGEM_dighit_strip->at(j);
 
-      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      apvnum = APVnum(detname, mod, lchan, crate, slot);//, chan);
       //if(fDebug>3)
       cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
       
-      if(cur_chan!=lchan){
+      if(cur_apv!=apvnum){
 	//ChanToROC(detname, lchan, crate, slot, chan);
 	
 	if( crate >= 0 || slot >=  0 ) {
@@ -568,7 +568,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  myev->push_back(simev->Tgmn->Earm_BBGEM_dighit_adc_5->at(j));
 	*/
 	if(samps.size()){
-	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  //I think I'm onto something here, but I also need to transmit strip num 
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
 	    //cout << " " << samps[k];
 	    myev->push_back(samps[k]);
@@ -577,7 +579,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	//cout << endl;
 	
 	samps.clear();
-	cur_chan = lchan;
+	cur_apv = apvnum;
 	
 	if(simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)>=0){
 	  samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
@@ -856,7 +858,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   //int cps, spc, fs, fc;
   
   bool isgem = (detname.find("gem")!=std::string::npos);
-  int apv_num = -1, mod = 0;
+  int apv_num = -1, mod = 0, pos = -1, axis = -1;
   
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
@@ -899,13 +901,14 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     */
     std::string modules;
     //std::string pref_cham = prefix+(*it)+".";
-    std::string pref_cham = prefix;//+".";
+    //std::string pref_cham = prefix;//+".";
     //cout << "prefix chamber "  << pref_cham.c_str() << endl;
     DBRequest req_modules[] = {
       {"modules", &modules, kString, 0, false}, //
       { 0 }
     };
-    err+= THaAnalysisObject::LoadDB(file, date, req_modules, pref_cham.c_str());
+    err+= THaAnalysisObject::LoadDB(file, date, req_modules, prefix.c_str());
+    
     
     //cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
     
@@ -913,8 +916,47 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     if(err==0)modules_names = vsplit(modules);
     if(!modules_names.empty()){
       for (std::vector<std::string>::iterator jt = modules_names.begin() ; jt != modules_names.end(); ++jt){
+	std::string pref_mod = prefix+(*jt)+".";
+	
+	DBRequest request_gem[] = {
+	  {"chanmap", &chanmap, kIntV, 0, false}, 
+	  { 0 }
+	};
+	err+= THaAnalysisObject::LoadDB(file, date, request_gem, pref_mod.c_str());
+
+	fInvGEMDetMap[detname].resize(fInvGEMDetMap[detname].size()+2);
+	for(int m = 0; m<2; m++)(fInvGEMDetMap[detname])[mod*2+m].resize(chanmap.size()/nparam_mod);
+	
+	int nparam_mod = 9;
+	int ax_prev = 0;
+	int n = 0, n_ax = 0;
+	int n_ax_x = 0, n_ax_y = 0;
+	for(size_t k = 0; k < chanmap.size(); k+=nparam_mod) {
+	  //for(int m = 0; m<nparam_mod; m++)std::cout << chanmap[k+m] << " ";
+	  //std::cout << std::endl;
+	  crate  = chanmap[k];
+	  slot   = chanmap[k+1];
+	  apv_num = chanmap[k+4];
+	  pos = chanmap[k+6];
+	  axis = chanmap[k+8];
+	  if(axis==0)n_ax_x++;
+	  if(axis==1)n_ax_y++;
+	  if(ax_prev!=axis){
+	    n_ax = 0;
+	    ax_prev = axis;
+	  }
+	  ch_lo = 128*n_ax;
+	  ch_hi = 128*(n_ax+1)-1;
+	  //mod*2+axis???
+	  std::cout << mod << " " << mod*2+axis << " " << fInvGEMDetMap[detname].size() << " " << n << " " << n_ax << endl;
+	  (fInvGEMDetMap[detname])[mod*2+axis][n_ax]=gemstripinfo(crate, slot, apv_num);
+	  n++;
+	  n_ax++;
+	}
+	(fInvGEMDetMap[detname])[mod*2+0].resize(n_ax_x);
+	(fInvGEMDetMap[detname])[mod*2+1].resize(n_ax_y);
+	/*
 	std::string planeconfig;
-	std::string pref_mod = pref_cham+(*jt)+".";
 	//cout << "prefix module "  << pref_mod.c_str() << endl;
 	DBRequest req_planeconfig[] = {
 	  {"planeconfig", &planeconfig, kString, 0, false}, //
@@ -960,9 +1002,10 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	      }
 	      
 	    }
-	    mod++;
 	  }//end loop on kt
 	}//end if !plane_readouts
+	*/
+	mod++;
       }//end loop on jt
     }//end if !modules_names
     //  }//end loop on it
@@ -1094,12 +1137,17 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
 }
 
 int SBSSimDecoder::APVnum(const std::string detname, Int_t mod, Int_t h_chan, 
-			  Int_t &crate, Int_t &slot, UShort_t &chan) const
+			  Int_t &crate, Int_t &slot ) const//, UShort_t &chan) const
 {
-  crate = ((fInvGEMDetMap.at(detname))[mod][h_chan]).crate;
-  slot = ((fInvGEMDetMap.at(detname))[mod][h_chan]).slot;
-  chan = ((fInvGEMDetMap.at(detname))[mod][h_chan]).chan;
-  return ((fInvGEMDetMap.at(detname))[mod][h_chan]).apvnum;
+  int n = h_chan/128;
+  //if((fInvGEMDetMap.at(detname))[mod][n].chan_lo<=h_chan &&
+  // hchan <= (fInvGEMDetMap.at(detname))[mod][n].chan_hi){
+  crate = ((fInvGEMDetMap.at(detname))[mod][n]).crate;
+  slot = ((fInvGEMDetMap.at(detname))[mod][n]).slot;
+  return ((fInvGEMDetMap.at(detname))[mod][n]).apvnum;
+  //}else{
+  //return -1;
+  //}
 }
 
 /*
