@@ -199,11 +199,13 @@ bool SBSSimSADCEncoder::DecodeSADC(SimEncoder::sadc_data &data,
 {
   data.integral = 0;
   data.samples.clear(); // Clear out any samples already in the data
-  
+  std::cout << " nwords: " << nwords << " => ";
   for(unsigned short i = 0; i<nwords; i++){
     data.integral+=enc_data[i];
     data.samples.push_back(enc_data[i]);
+    std::cout << enc_data[i] << " ";
   }
+  std::cout << std::endl;
 }
 
 /*

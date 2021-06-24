@@ -142,7 +142,7 @@ protected:
 		  Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   int APVnum( const std::string detname, Int_t mod, Int_t h_chan, 
-	      Int_t &crate, Int_t &slot ) const;//, UShort_t &chan ) const;
+	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
   
