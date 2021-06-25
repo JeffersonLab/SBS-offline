@@ -554,7 +554,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
       }
       
-      if(fDebug>3)
+      //if(fDebug>3)
 	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
       
       if(j==simev->Tgmn->Earm_BBGEM_dighit_nstrips-1){
