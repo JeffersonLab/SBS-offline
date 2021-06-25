@@ -116,7 +116,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   fChanMapStart = 0;
   DBRequest config_request[] = {
     { "detmap",       &detmap,  kIntV }, ///< Detector map
-    { "model_in_detmap", &model_in_detmap,  kInt, 0, true }, ///< Does detector map have module numbers?
+   { "model_in_detmap", &model_in_detmap,  kInt, 0, true }, ///< Does detector map have module numbers?
     { "chanmap",      &chanmap, kIntV,    0, true }, ///< Optional channel map
     { "start_chanmap",&fChanMapStart, kInt, 0, true}, ///< Optional start of channel numbering
     { "nrows",        &nrows,   kInt, 1, true }, ///< Number of rows in detector
@@ -258,7 +258,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       }
     } else if ( nelem != fNelem) {
       Error( Here(here), "Number of crate module channels (%d) "
-          "inconsistent with number of blocks (%d)", nelem, fNelem );
+	     "inconsistent with number of blocks (%d) nskipped (%d) nrefchans (%d)", nelem, fNelem , nskipped,nrefchans);
       err = kInitError;
     }
   }
@@ -430,8 +430,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     vr.push_back({ "adc.NPedBin",     &adc_NPedBin,   kIntV,0, 1 });
   }
   if(WithTDC()) {
-    vr.push_back({ "tdc.offset",   &tdc_offset, kFloatV, UInt_t(fNelem), 1 });
-    vr.push_back({ "tdc.calib",    &tdc_cal,    kFloatV, UInt_t(fNelem), 1 });
+    vr.push_back({ "tdc.offset",   &tdc_offset, kFloatV, 0, 1 });
+    vr.push_back({ "tdc.calib",    &tdc_cal,    kFloatV, 0, 1 });
   };
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
@@ -450,6 +450,29 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // Check that there were either only 1 calibratoin value specified per key
   // or fNelements
+
+  if(tdc_offset.size() == 0) { // set all ped to zero
+    ResetVector(tdc_offset,Float_t(0.0),fNelem);
+  } else if(tdc_offset.size() == 1) { // expand vector to specify calibration for all elements
+    Float_t temp=tdc_offset[0];
+    ResetVector(tdc_offset,temp,fNelem);    
+  } else if ( tdc_offset.size() != fNelem ) {
+    Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
+	   "%d but got %d",fNelem,int(tdc_offset.size()));
+    return kInitError;
+  }
+
+  if(tdc_cal.size() == 0) { // set all ped to zero
+    ResetVector(tdc_cal,Float_t(0.1),fNelem);
+  } else if(tdc_cal.size() == 1) { // expand vector to specify calibration for all elements
+    Float_t temp=tdc_cal[0];
+    ResetVector(tdc_cal,temp,fNelem);    
+  } else if ( tdc_cal.size() != fNelem ) {
+    Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
+	   "%d but got %d",fNelem,int(tdc_cal.size()));
+    return kInitError;
+  }
+
   if(adc_ped.size() == 0) { // set all ped to zero
     ResetVector(adc_ped,Float_t(0.0),fNelem);
   } else if(adc_ped.size() == 1) { // expand vector to specify calibration for all elements
