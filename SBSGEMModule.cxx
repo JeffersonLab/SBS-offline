@@ -426,7 +426,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
 
       //std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
-      //		<< it->adc_id << ", " << nstrips << std::endl;
+      //	<< it->adc_id << ", " << nstrips << std::endl;
       
       //declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
       double commonMode[fN_MPD_TIME_SAMP];
@@ -439,8 +439,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	commonMode[isamp] = 0.0;
 	for( int istrip=0; istrip<nstrips; istrip++ ){
-	  int strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip ); 
-	  int ADC = evdata.GetData( it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip );
+	  int strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
+	  int ADC = evdata.GetData( it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
 	  std::cout << it->crate << " " << it->slot << " " << chan << " " 
 	  	    << strip << " " << ADC << endl;
 	  rawStrip[isamp].push_back( strip ); //APV25 channel number
@@ -491,7 +491,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	Int_t strip = rawStrip[0][istrip];
 
-	std::cout << istrip << " " << strip << " " << APVMAP[strip] << std::endl;
+	//std::cout << istrip << " " << strip << std::endl;
 	
 	assert(strip>=0&&strip<128);
 	// Madness....   copy pasted from stand alone decoder
@@ -528,6 +528,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //Int_t rawADC = evdata.GetData(it->crate, it->slot, chan, ihit);
 	  Int_t rawADC = rawADCs[adc_samp][istrip];
 	  
+	  //cout << adc_samp << " " << istrip << " " << rawADC << " ";// << endl;
+	  
 	  rawADCtemp.push_back( rawADC );
 	  
 	  //double ADCvalue =  - pedtemp; "pedestal" subtraction seems redundant here, whether we are doing online or offline suppression:
@@ -539,7 +541,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  // 					 chan, isamp++) - fPedestal[strip];
 
 	  ADCsum_temp += ADCvalue;
-	  
+	  //cout << ADCvalue << " "<< endl;
 	  if( iSampMax < 0 || ADCvalue > maxADC ){
 	    maxADC = ADCvalue;
 	    iSampMax = adc_samp;
@@ -555,7 +557,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //assert( fNstrips_hit < fMPDmap.size()*fN_APV25_CHAN );
 	}
 	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
-
+	//cout << ADCsum_temp << " >? " << fThresholdStripSum << "; " 
+	//   << rmstemp << "; " << maxADC << " >? " << fZeroSuppressRMS*rmstemp 
+	//   << "; " << fThresholdSample << endl;
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
 	if(!fZeroSuppress ||

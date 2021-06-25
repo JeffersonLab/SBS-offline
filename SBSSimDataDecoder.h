@@ -6,10 +6,10 @@
 
 #define SBS_MAX_ENCODER_WORDS 1024 // Max number of words the encoder can encode
 #define SBS_NWORDS_MASK       0x3FFF
-#define SBS_CHANNEL_MASK      0x7FF // 0x1FF // 
-#define SBS_TYPE_MASK         0x7F // 0x1FF // 
+#define SBS_CHANNEL_MASK      0xFFF // 0x1FF // 
+#define SBS_TYPE_MASK         0x3F // 0x1FF // 
 #define SBS_CHANNEL_FIRST_BIT 14
-#define SBS_TYPE_FIRST_BIT    25 // 23 // 
+#define SBS_TYPE_FIRST_BIT    26 // 23 // 
 #define SBS_APV25_NCH 128 // Number of channels per APV25
 #define SBS_MPD_NAPV25 15 // Number of AVP25's per MPD
 
@@ -37,6 +37,7 @@ namespace SimEncoder {
   */
   
   struct mpd_data : data {
+    /*
     unsigned short nsamples; ///< Number of samples per channel
     unsigned short nstrips; ///< Number of strips in this block (128 for APV25)
     unsigned short mpd_id;
@@ -45,6 +46,7 @@ namespace SimEncoder {
     unsigned short i2c;
     unsigned short pos;
     unsigned short invert;
+    */
     std::vector<unsigned int> strips;
     std::vector<unsigned int> samples;
   };

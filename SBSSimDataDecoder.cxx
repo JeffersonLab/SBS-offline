@@ -275,8 +275,8 @@ unsigned int SBSSimDataDecoder::EncodeHeader(unsigned short type,
     unsigned short mult, unsigned int nwords)
 {
   // First word bits
-  // 31-23: encoder type
-  // 22-14: channel multiplier (to be converted to local channel by SimDecoder)
+  // 31-26: encoder type
+  // 25-14: channel multiplier (to be converted to local channel by SimDecoder)
   // 13-0 : number of words that follow
   return ((type&SBS_TYPE_MASK)<<SBS_TYPE_FIRST_BIT) |
     ((mult&SBS_CHANNEL_MASK)<<SBS_CHANNEL_FIRST_BIT) |
@@ -415,6 +415,7 @@ bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
 {
   data.samples.clear(); // Clear out any samples already in the data
   //std::cout << "nwords " << nwords << std::endl;
+  //data.nstrips = nwords/data.nsamples;
   for(unsigned short i = 0; i<nwords; i++){
     //std::cout << enc_data[i] << " ";
     

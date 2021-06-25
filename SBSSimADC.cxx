@@ -100,7 +100,7 @@ namespace Decoder {
     while(evbuffer < pstop) {
       // First, decode the header
       SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
-      //std::cout << type << " " << chan << " " << nwords << endl;
+      //std::cout << type << " " << sldat->getCrate() << " " << sldat->getSlot() << " " << chan << " " << nwords << endl;
       SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find ADC decoder of type: " << type
@@ -130,8 +130,7 @@ namespace Decoder {
 	    for(size_t i = 0; i < tmp_mpd_data.samples.size(); i++) {
 	      raw_buff = tmp_mpd_data.samples[i];
 	      strip = tmp_mpd_data.strips[i];
-	      //std::cout << i << " " << tmp_mpd_data.strips[i] << " " << tmp_mpd_data.samples[i] << endl;
-	      //std::cout << i << " " << sadc_data[chan].samples.size() << " " << raw_buff << endl;
+	      //std::cout << i << " " << chan << " " << tmp_mpd_data.strips[i] << " " << tmp_mpd_data.samples[i] << endl;
 	      sldat->loadData("adc",chan,raw_buff,strip);
 	    }
 	  } else if (enc->IsADC()) { // Integral of ADC
