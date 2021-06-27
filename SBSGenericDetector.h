@@ -122,6 +122,8 @@ public:
       THaDetMap::Module *d, Int_t chan);
   virtual Int_t      DecodeTDC( const THaEvData&, SBSElement *blk,
       THaDetMap::Module *d, Int_t chan);
+  virtual Int_t      DecodeRefTDC( const THaEvData&, SBSElement *blk,
+      THaDetMap::Module *d, Int_t chan);
 
   // Utility functions
   // Can be re-implemented by other classes to specify a different
@@ -173,6 +175,7 @@ protected:
 
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
+  Int_t      fNRefhits;     ///< Number of reference hits in event
   Int_t      fNGoodhits;     ///< Number of good hits in event
 
   // Flags for enabling and disabling various features
