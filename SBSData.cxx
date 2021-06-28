@@ -48,18 +48,21 @@ namespace SBSData {
   // TDC data functions
   TDC::TDC(Float_t offset, Float_t cal) : fHasData(false)
   {
-    fEdgeIdx[0] = fEdgeIdx[1];
+    fEdgeIdx[0] = fEdgeIdx[1]=0;
     SetOffset(offset);
     SetCal(cal);
   }
 
-  void TDC::Process(Float_t val, Int_t edge)
+  void TDC::Process(Float_t val, Float_t fedge)
   {
+    Int_t edge = int(fedge);
+    // std::cout << " tdc process " << val << " " << edge  << " ftdc hits size = " <<fTDC.hits.size() << " hits in edge "  << fEdgeIdx[edge]<< std::endl;
     if(edge < 0 || edge>1) {
       std::cerr << "Edge specified is not valid!" << std::endl;
       edge = 0;
     }
     size_t idx = fEdgeIdx[edge]++;
+    //  std::cout << " idx = " << idx  << " ftdc hits size = " <<fTDC.hits.size() << " hits in edge "  << fEdgeIdx[edge]<< std::endl;
     if(idx >= fTDC.hits.size()) {
       // Must grow the hits array to accomodate the new hit
       fTDC.hits.push_back(TDCHit());
@@ -75,6 +78,8 @@ namespace SBSData {
     if(fEdgeIdx[0] == fEdgeIdx[1]) { // Both leading and trailing edges now found
       hit->ToT.raw = hit->te.raw - hit->le.raw;
       hit->ToT.val = hit->te.val - hit->le.val;
+      fEdgeIdx[0] =0;
+      fEdgeIdx[1] =0;
     }
     fHasData = true;
   }

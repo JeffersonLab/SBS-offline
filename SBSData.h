@@ -148,7 +148,7 @@ namespace SBSData {
       void SetGoodHit(UInt_t i) { fTDC.good_hit = i; }
       
       // Process data sets raw value, ped-subtracted and calibrated data
-      virtual void Process(Float_t var, Int_t edge = 0);
+      virtual void Process(Float_t var, Float_t edge = 0);
 
       // Do we have TDC data for this event?
       Bool_t HasData() { return fHasData; }
