@@ -77,17 +77,14 @@ void SBSTimingHodoscope::ClearEvent()
 /*
  * FindGoodHit()
  */
-Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *)
+Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *blk)
 {
-  // The variable passed defines is one TimingHodoscope paddle PMT
-  // We can use it alone to find the good hits in that paddle or since
-  // we know the row and column of that paddle, we can find it's corresponding
-  // pair in fElementGrid[row][col][0]  (the last [0] is for the layer, we always
-  // use only one layer
-
-  // TODO: Implement logic here to determine good TDC Hit
-
-  return 0;
+  Int_t GoodHit=0;  
+  if (blk->TDC()&& blk->HasData()) {
+    blk->TDC()->SetGoodHit(0);
+    GoodHit=1;
+  }
+  return GoodHit;
 }
 
 Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
