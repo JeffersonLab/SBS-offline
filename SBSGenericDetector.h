@@ -152,7 +152,10 @@ protected:
   
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)
-  std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to calorimeter element number
+  std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to element number
+  std::vector<std::vector<Int_t> > fRefChanMap; //< Maps modules in THaDetMap to Ref Time number
+  std::vector<Int_t> fRefChanLo; //< Module Reftime Low channel number
+  std::vector<Int_t> fRefChanHi; //< Module Reftime High channel number
 
   // Output variable containers
   SBSGenericOutputData fGood;     //< Good data output
