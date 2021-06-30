@@ -124,7 +124,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "nlayers",       &nlayers,  kInt, 1, true }, ///< [Optional] Number of layers/divisions in each element of the detector
     { "angle",        &angle,   kFloat,  0, true },
     { "xyz",           &xyz,      kFloatV, 3 },  ///< If only 3 values specified, then assume as stating point for fist block and distribute according to dxyz
-    { "dxdydz",         &dxyz,     kFloatV, 3 },//, true },  ///< element spacing (dx,dy,dz) // not really optional...
+    { "dxdydz",         &dxyz,     kFloatV, 3},  ///< element spacing (dx,dy,dz)
     { "row_offset_pattern",        &row_offset_pattern,   kFloatV, 0, true }, ///< [Optional] conflicts with ncols
     { "is_mc",      &is_mc, kInt,    0, true }, ///< Optional channel map
     { 0 } ///< Request must end in a NULL
@@ -222,16 +222,14 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // Find out how many channels got skipped:
   int nskipped = 0;
-    int nreftdcchans = 0;
-    int nrefadcchans = 0;
+    int nrefchans = 0;
   if( !chanmap.empty() ) {
     for(auto i : chanmap) {
       if (i == -1) nskipped++;
-      if (i == -1000) nreftdcchans++;
-      if (i == -2000) nrefadcchans++;
+      if (i == -1000) nrefchans++;
     }
   }
-
+  fNRefElem= nrefchans;
   // Clear out the old channel map before reading a new one
   fChanMap.clear();
   Int_t detmap_flags = THaDetMap::kFillRefIndex; // Specify reference index/channel
@@ -242,7 +240,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   if( FillDetMap(detmap, detmap_flags, here) <= 0 ) {
     err = kInitError;  // Error already printed by FillDetMap
   } else {
-    nelem = fDetMap->GetTotNumChan() - nskipped - nreftdcchans - nrefadcchans; // Exclude skipped channels in count
+    nelem = fDetMap->GetTotNumChan() - nskipped - nrefchans ; // Exclude skipped channels in count
 
     if( WithTDC() && WithADC() ) {
       if(nelem != 2*fNelem ) {
@@ -253,7 +251,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       }
     } else if ( nelem != fNelem) {
       Error( Here(here), "Number of crate module channels (%d) "
-	     "inconsistent with number of blocks (%d) nskipped (%d) nreftdcchans (%d) nrefadcchans (%d)", nelem, fNelem , nskipped,nreftdcchans,nrefadcchans);
+	     "inconsistent with number of blocks (%d) nskipped (%d) nrefchans (%d) ", nelem, fNelem , nskipped,nrefchans);
       err = kInitError;
     }
   }
@@ -265,13 +263,13 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     // If a map is found in the database, ensure it has the correct size
     Int_t cmapsize = chanmap.size();
     if( WithTDC() && WithADC() ) {
-      if(cmapsize - nskipped- nreftdcchans- nrefadcchans != 2*fNelem ) {
+      if(cmapsize - nskipped- nrefchans != 2*fNelem ) {
         Error( Here(here), "Number of logical channel to detector block map (%d) "
             "inconsistent with 2 channels per block (%d, expected)", cmapsize,
             2*fNelem );
         err = kInitError;
       }
-    } else if ( cmapsize - nskipped- nreftdcchans- nrefadcchans != fNelem) {
+    } else if ( cmapsize - nskipped- nrefchans != fNelem) {
       Error( Here(here), "Number of logical channel to detector block map (%d) "
           "inconsistent with number of blocks (%d)", cmapsize, fNelem );
       err = kInitError;
@@ -632,7 +630,27 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   if( err != kOK)
     return err;
 
+
+
   std::vector<RVarDef> ve;
+
+  // TDC Reference Time variables 
+  if(WithTDC() && !fDisableRefTDC) {
+    ve.push_back({ "Ref.tdc", "Ref Time Calibrated TDC value", "fRefGood.t" });
+    if(fModeTDC != SBSModeTDC::kTDCSimple) {
+      // We have trailing edge and Time-Over-Threshold info to store
+      ve.push_back({"Ref.tdc_te","Ref Time Calibrated TDC trailing info","fRefGood.t_te"});
+      ve.push_back({"Ref.tdc_tot","Ref Time  Time Over Threshold","fRefGood.t_ToT"});
+    }
+    std::cout << " fstorerawhits = " << fStoreRawHits<< std::endl;
+    if(fStoreRawHits) {
+      ve.push_back({ "Ref.hits.t",   "Ref Time All TDC leading edge times",  "fRefRaw.t" });
+      if(fModeTDC != SBSModeTDC::kTDCSimple) {
+        ve.push_back({ "Ref.hits.t_te",   "Ref Time All TDC trailing edge times",  "fRefRaw.t_te" });
+        ve.push_back({ "Ref.hits.t_tot",  "Ref Time All TDC Time-over-threshold",  "fRefRaw.t_ToT" });
+      }
+    }
+  }
 
   // Do we have an ADC? Then define ADC variables
   if(WithADC()) {
@@ -841,17 +859,17 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   if(!fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
-      //      std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
+            std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
        Float_t MinDiff = 10000.;
-       Int_t HitIndex = 0;
+       UInt_t HitIndex = 0;
        Float_t RefCent = 0.;
-       for (Int_t ih=0;ih<nhits;ih++) {
+       for (UInt_t ih=0;ih<nhits;ih++) {
 	 if (abs(refblk->TDC()->GetDataRaw(ih)-RefCent) < MinDiff) HitIndex = ih;
        }      
       refval = refblk->TDC()->GetDataRaw(HitIndex);
-      //      std::cout << " ref val = " << refval << " ref index = " << d->refindex << " num ref tot = " << fNRefhits<< std::endl;
+      refblk->TDC()->SetGoodHit(HitIndex);
     }
   }
   
@@ -873,15 +891,15 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
        if (nhit==1)  {	 
           Float_t val= evdata.GetData(d->crate, d->slot, chan, 0);
 	  blk->TDC()->Process(val - refval , edge);
-	  std::cout << "Only one hit in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum() << std::endl;
+	  //	  std::cout << "Only one hit in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum() << std::endl;
        } else if (nhit==2) {
           Float_t val= evdata.GetData(d->crate, d->slot, chan, 0);
 	  blk->TDC()->Process(val - refval , edge);
-	  std::cout << "Only two hits in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum()<< std::endl;	 
+	  //  std::cout << "Only two hits in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum()<< std::endl;	 
        } else {
           Float_t val= evdata.GetData(d->crate, d->slot, chan, 0);
 	  blk->TDC()->Process(val - refval , edge);
-       std::cout << "More than two hits in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum()<< std::endl;
+	  // std::cout << "More than two hits in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum()<< std::endl;
        }	 
 
        }
@@ -934,6 +952,28 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
   SBSElement *blk = 0;
   size_t nsamples;
   size_t idx;
+
+  // Reference time
+  for(Int_t k = 0; k < fNRefElem; k++) {
+    blk = fRefElements[k];
+    if(!blk) continue;
+      if(WithTDC() && blk->TDC()->HasData()) {
+        const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
+        fRefGood.t.push_back(hit.le.val);
+        if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
+          fRefGood.t_te.push_back(hit.te.val);
+          fRefGood.t_ToT.push_back(hit.ToT.val);
+        }
+      } else if ( fStoreEmptyElements ) {
+        fRefGood.t.push_back(kBig);
+        if(fModeTDC == SBSModeTDC::kTDC) {
+          fRefGood.t_te.push_back(kBig);
+          fRefGood.t_ToT.push_back(kBig);
+        }
+      }
+  }
+
+  
   
   for(Int_t k = 0; k < fNelem; k++) {
     blk = fElements[k];
@@ -1045,6 +1085,8 @@ void SBSGenericDetector::ClearOutputVariables()
 {
   fGood.clear();
   fRaw.clear();
+  fRefGood.clear();
+  fRefRaw.clear();
 }
 
 

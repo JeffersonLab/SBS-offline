@@ -139,6 +139,7 @@ protected:
   virtual Int_t  FindGoodHit(SBSElement *){ return 0; } // Optionally implemented by derived classes
 
   // Configuration
+  Int_t  fNRefElem;        ///< Number of Ref Time elements
   Int_t  fNrows;        ///< Number of rows
   std::vector<Int_t>  fNcols; ///< Number of columns per row
   Int_t fNcolsMax;      ///< Max number of columns out of all rows
@@ -160,6 +161,8 @@ protected:
   // Output variable containers
   SBSGenericOutputData fGood;     //< Good data output
   SBSGenericOutputData fRaw;      //< All hits
+  SBSGenericOutputData fRefGood;     //< Good Ref time data output
+  SBSGenericOutputData fRefRaw;      //< All Ref time hits
 
   // Blocks, where the grid is just for easy access to the elements by row,col,layer
   std::vector<SBSElement*> fElements;
