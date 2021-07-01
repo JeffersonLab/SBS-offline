@@ -711,9 +711,9 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
   //static const char* const here = "Decode()";
   // Loop over modules for the reference time
   SBSElement *blk = 0;
+  if (!fDisableRefADC || !fDisableRefTDC) {
   for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
     THaDetMap::Module *d = fDetMap->GetModule( imod );
-    if (d->refindex == -1 ) continue;
     for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
       if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fChanMap[imod][chan - d->lo] >= -1) continue;
@@ -725,7 +725,7 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
          }
     }
   }
-
+  }
 
   // Loop over all modules decode accordingly
   blk = 0;
