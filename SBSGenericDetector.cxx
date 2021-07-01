@@ -300,6 +300,9 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       if(!model_in_detmap) {
         d->SetModel(cratemap->getModel(d->crate,d->slot));
       }
+      if( model_in_detmap) {
+	d->MakeTDC();
+      }
       if(!d->IsADC() && !d->IsTDC()) {
         // An unknown module was specified, complain and exit
         Error( Here(here), "Unknown module specified for module %d.", i);
