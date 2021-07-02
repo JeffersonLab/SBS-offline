@@ -14,6 +14,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fMinHitsOnTrack = 3;
 
+  fMaxHitCombinations = 100000;
+  
   fOnlineZeroSuppression = false;
   fZeroSuppress = true;
   fZeroSuppressRMS = 5.0; //5 sigma
@@ -315,6 +317,8 @@ void SBSGEMTrackerBase::InitFreeHitList(){
     
     int nbins_gridxy = fGridNbinsX_layer[layer]*fGridNbinsY_layer[layer];
 
+    //std::cout << "[SBSGEMTrackerBase::find_tracks]: layer, nbins_gridxy = " << layer << ", " << nbins_gridxy << std::endl;
+    
     //resize the free hit counter and free hit list for the 2D grid bins to the number of grid bins:
     Nfreehits_binxy_layer[layer].resize( nbins_gridxy );
     freehitlist_binxy_layer[layer].resize( nbins_gridxy );
@@ -324,9 +328,12 @@ void SBSGEMTrackerBase::InitFreeHitList(){
       Nfreehits_binxy_layer[layer][bin] = 0;
       freehitlist_binxy_layer[layer][bin].clear();
     }
-
+    
     //Now loop over all the hits and fill up the free hit list arrays:
     for( int ihit=0; ihit<N2Dhits_layer[layer]; ihit++ ){
+      // std::cout << "[SBSGEMTrackerBase::find_tracks]: layer, N2Dhits_layer[layer] = " << layer << ", "
+      // 		<< N2Dhits_layer[layer] << std::endl;
+      
       //Make sure this hit is not already used in a track:
       if( !hitused2D[layer][ihit] ){ //
 	Nfreehits_layer[layer]++;
@@ -374,9 +381,9 @@ void SBSGEMTrackerBase::hit_reconstruction(){
   for( int imodule=0; imodule<fNmodules; imodule++ ){
     SBSGEMModule *mod = fModules[imodule];
 
-    std::cout << "Calling hit reconstruction for module " << mod->GetName() << std::endl;
+    //std::cout << "Calling hit reconstruction for module " << mod->GetName() << std::endl;
 
-    std::cout << "N strips fired = " << mod->fNstrips_hit << std::endl;
+    //std::cout << "N strips fired = " << mod->fNstrips_hit << std::endl;
     
     if( !fUseConstraint ){ //call find_2D hits for the module without any constraint:
       mod->find_2Dhits();
@@ -426,12 +433,15 @@ void SBSGEMTrackerBase::find_tracks(){
   //should this method invoke clear()? Yes: Clear() just clears out all the track arrays. It is assumed that this method will only be called once per event.
   //Although that is probably not correct; it might be called as many as two times. Anyway, for now, let's use it, might need to revisit later:
   Clear();
+  //std::cout << "[SBSGEMTrackerBase::find_tracks]: finished clearing track arrays..." << std::endl;
   
   fNtracks_found = 0;
   
   if( !fclustering_done ){ //This shouldn't be called before hit reconstruction, but if it is, then this routine will call the hit reconstruction:
     hit_reconstruction();
   }
+
+  //std::cout << "[SBSGEMTrackerBase::find_tracks]: finished hit reconstruction..." << std::endl;
   
   ftracking_done = true;
   //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
@@ -439,13 +449,15 @@ void SBSGEMTrackerBase::find_tracks(){
   //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
   InitHitList();
 
+  //std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized hit lists..." << std::endl;
   //At this stage the static "hit lists" that we need for the tracking are initialized. Let's get started:
 
   if( layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
     //bool foundtrack = true; rendered unnecessary by the removal of the outermost, redundant while loop:
       
     int nhitsrequired = layers_with_2Dhits.size(); //initially we favor tracks with the largest possible number of hits; if we fail to find a track at this hit requirement, we decrement the number of required hits as long as it exceeds the minimum
-
+    //std::cout << "[SBSGEMTrackerBase::find_tracks]: nhitsrequired = " << nhitsrequired << endl;
+    
     while( nhitsrequired >= fMinHitsOnTrack ){ //as long as the current minimum hit requirement exceeds the minimum hits to define a track, we look for more tracks with
       // nhitsrequired hits:
       bool foundtrack = false;
@@ -461,6 +473,8 @@ void SBSGEMTrackerBase::find_tracks(){
       //will have been marked as used, reducing the number of "available" hits for finding additional tracks:
       InitFreeHitList(); 
 
+      //std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized 'free hit list', nhitsrequired = " << nhitsrequired << std::endl;
+      
       if( layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
 	//The basic algorithm should do the following:
 
@@ -648,6 +662,9 @@ void SBSGEMTrackerBase::find_tracks(){
 		  
 	      } //end loop on layers other than minlayer and maxlayer
 
+	      // std::cout << "[SBSGEMTrackerBase::find_tracks]: finished loop on layers other than minlayer and maxlayer, minlayer, maxlayer = "
+	      // 		<< minlayer << ", " << maxlayer << endl;
+	      
 		//Next, we will loop on all possible combinations of one hit from each of the layers other than minlayer and maxlayer:
 	      if( nextcomboexists ){
 		bool firstcombo = true;
