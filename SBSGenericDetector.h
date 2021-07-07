@@ -119,7 +119,7 @@ public:
   virtual Int_t      FineProcess(TClonesArray& tracks);
 
   virtual Int_t      DecodeADC( const THaEvData&, SBSElement *blk,
-      THaDetMap::Module *d, Int_t chan);
+				THaDetMap::Module *d, Int_t chan, Bool_t IsRef);
   virtual Int_t      DecodeTDC( const THaEvData&, SBSElement *blk,
       THaDetMap::Module *d, Int_t chan);
   virtual Int_t      DecodeRefTDC( const THaEvData&, SBSElement *blk,
@@ -154,7 +154,8 @@ protected:
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)
   std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to element number
-  std::vector<std::vector<Int_t> > fRefChanMap; //< Maps modules in THaDetMap to Ref Time number
+  std::vector<std::vector<Int_t> > fRefChanMap; //< Maps modules in THaDetMap to Reference time
+  std::vector<Bool_t> fModuleRefTimeFlag; //< If module has Reftime set to true
   std::vector<Int_t> fRefChanLo; //< Module Reftime Low channel number
   std::vector<Int_t> fRefChanHi; //< Module Reftime High channel number
 

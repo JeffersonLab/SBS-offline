@@ -187,6 +187,7 @@ namespace SBSData {
       SingleData GetAmplitude()   { return fSamples.pulse.amplitude; }
 
       // Setters
+      void SetValTime(Float_t var)  { fSamples.pulse.time.val = var; }
       void SetPed(Float_t var)  { fSamples.ped = var; }
       void SetGain(Float_t var) { fSamples.cal = var; }
       void SetChanTomV(Float_t var) { fSamples.ChanTomV = var; }
