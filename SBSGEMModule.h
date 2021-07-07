@@ -280,7 +280,7 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fUStripPitch;    //strip pitch along U, will virtually always be 0.4 mm
   Double_t fVStripPitch;    //strip pitch along V, will virtually always be 0.4 mm
   Double_t fUAngle;         //Angle between U strips and "X" axis of TRANSPORT coordinates;
-  Double_t fVangle;         //Angle between V strips and "X" axis of TRANSPORT coordinates;
+  Double_t fVAngle;         //Angle between V strips and "X" axis of TRANSPORT coordinates;
   Double_t fPxU;            //U Strip X projection = cos( UAngle );
   Double_t fPyU;            //U Strip Y projection = sin( UAngle );
   Double_t fPxV;            //V Strip X projection = cos( VAngle );

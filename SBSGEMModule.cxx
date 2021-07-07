@@ -73,8 +73,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   FILE* file = OpenFile( date );
   if( !file ) return kFileError;
 
-  std::vector<Double_t> rawped;
-  std::vector<Double_t> rawrms;
+  std::vector<Double_t> rawpedu,rawpedv;
+  std::vector<Double_t> rawrmsu,rawrmsv;
 
   //UShort_t layer;
   
@@ -93,13 +93,15 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
-    { "ped",            &rawped,        kDoubleV, 0, 1, 1}, // optional raw pedestal info (not clear how we want to use or organize yet)
-    { "rms",            &rawrms,        kDoubleV, 0, 1, 1}, // optional pedestal rms info (not clear how we want to use or organize yet)
+    { "pedu",           &rawpedu,        kDoubleV, 0, 0, 0}, // optional raw pedestal info (u strips)
+    { "pedv",           &rawpedv,        kDoubleV, 0, 0, 0}, // optional raw pedestal info (v strips)
+    { "rmsu",           &rawrmsu,        kDoubleV, 0, 0, 0}, // optional pedestal rms info (u strips)
+    { "rmsv",           &rawrmsv,        kDoubleV, 0, 0, 0}, // optional pedestal rms info (v strips)
     { "layer",          &fLayer,         kUShort, 0, 0, 0}, // mandatory: logical tracking layer must be specified for every module:
     { "nstripsu",       &fNstripsU,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along U axis
     { "nstripsv",       &fNstripsV,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along V axis
     { "uangle",         &fUAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "U" strips wrt X axis
-    { "vangle",         &fVangle,       kDouble, 0, 0, 1}, //mandatory: Angle of "V" strips wrt X axis
+    { "vangle",         &fVAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "V" strips wrt X axis
     { "upitch",         &fUStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of U strips
     { "vpitch",         &fVStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of V strips
     { "ugain",          &fUgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of U strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
@@ -120,6 +122,12 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
 
+  fPxU = cos( fUAngle * TMath::DegToRad() );
+  fPyU = sin( fUAngle * TMath::DegToRad() );
+  fPxV = cos( fVAngle * TMath::DegToRad() );
+  fPyV = sin( fVAngle * TMath::DegToRad() );
+  
+  
   if( status != 0 ){
     fclose(file);
     return status;
@@ -155,26 +163,25 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fPedRMSU.clear();
   fPedRMSU.resize( fNstripsU );
+
+  // std::cout << "got " << rawpedu.size() << " u pedestal mean values and " << rawrmsu.size() << " u pedestal rms values" << std::endl;
+  // std::cout << "got " << rawpedv.size() << " v pedestal mean values and " << rawrmsv.size() << " v pedestal rms values" << std::endl;
+
+  // for( int i=0; i<rawpedu.size(); i++ ){
+  //   cout << i << ", " << rawpedu[i] << endl;
+  // }
   
   for ( UInt_t istrip=0; istrip<fNstripsU; istrip++ ){
     fPedestalU[istrip] = 0.0;
     fPedRMSU[istrip] = 10.0; //placeholder to be replaced by value from database
+    
+    if( rawpedu.size() == fNstripsU ){
+      fPedestalU[istrip] = rawpedu[istrip];
+    } 
 
-    if( rawped.size() == fNstripsU ){
-      fPedestalU[istrip] = rawped[istrip];
-    } else if ( rawped.size() == fNstripsU/128 ) {
-      fPedestalU[istrip] = rawped[istrip/128];
-    } else if ( rawped.size() == 1 ){
-      fPedestalU[istrip] = rawped[0];
-    }
-
-    if( rawrms.size() == fNstripsU ){
-      fPedRMSU[istrip] = rawrms[istrip];
-    } else if ( rawrms.size() == fNstripsU/128 ) {
-      fPedRMSU[istrip] = rawrms[istrip/128];
-    } else if ( rawrms.size() == 1 ){
-      fPedRMSU[istrip] = rawrms[0];
-    }
+    if( rawrmsu.size() == fNstripsU ){
+      fPedRMSU[istrip] = rawrmsu[istrip];
+    } 
   }
 
   //Initialize all pedestals to zero, RMS values to default:
@@ -188,24 +195,30 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fPedestalV[istrip] = 0.0;
     fPedRMSV[istrip] = 10.0;
 
-    if( rawped.size() == fNstripsV ){
-      fPedestalV[istrip] = rawped[istrip];
-    } else if ( rawped.size() == fNstripsV/128 ) {
-      fPedestalV[istrip] = rawped[istrip/128];
-    } else if ( rawped.size() == 1 ){
-      fPedestalV[istrip] = rawped[0];
-    }
+    if( rawpedv.size() == fNstripsV ){
+      fPedestalV[istrip] = rawpedv[istrip];
+    } 
 
-    if( rawrms.size() == fNstripsV ){
-      fPedRMSV[istrip] = rawrms[istrip];
-    } else if ( rawrms.size() == fNstripsV/128 ) {
-      fPedRMSV[istrip] = rawrms[istrip/128];
-    } else if ( rawrms.size() == 1 ){
-      fPedRMSV[istrip] = rawrms[0];
-    }
-    
+    if( rawrmsv.size() == fNstripsV ){
+      fPedRMSV[istrip] = rawrmsv[istrip];
+    } 
   }
 
+  //default all gains to 1 if they were not loaded from the DB:
+  if( fUgain.size() != fNstripsU/128 ){
+    fUgain.resize(fNstripsU/128);
+    for( int iAPV=0; iAPV<fNstripsU/128; iAPV++ ){
+      fUgain[iAPV] = 1.0;
+    }
+  }
+
+  if( fVgain.size() != fNstripsV/128 ){
+    fVgain.resize(fNstripsV/128);
+    for( int iAPV=0; iAPV<fNstripsV/128; iAPV++ ){
+      fVgain[iAPV] = 1.0;
+    }
+  }
+  
   // for( UInt_t i = 0; i < rawped.size(); i++ ){
   //   if( (i % 2) == 1 ) continue;
   //   int idx = (int) rawped[i];
@@ -244,7 +257,7 @@ Int_t SBSGEMModule::ReadGeometry( FILE *file, const TDatime &date, Bool_t requir
   DBRequest request[] = {
     { "position", &position, kDoubleV, 0, optional, 0,
       "\"position\" (detector position [m])" },
-    { "size",     &size,     kDoubleV, 0, optional, 0,
+    { "size",     &size,     kDoubleV, 0, optional, 1,
       "\"size\" (detector size [m])" },
     { "angle",    &angles,   kDoubleV, 0, true, 0,
       "\"angle\" (detector angles(s) [deg]" },
@@ -316,10 +329,12 @@ Int_t SBSGEMModule::ReadGeometry( FILE *file, const TDatime &date, Bool_t requir
       // 
       // This definition ***appears**** to be consistent with the "sense" of the rotation as applied by the standalone code.
       // The detector axes are defined as the ROWS of the rotation matrix. We will have to test that it is working correctly, however:
-   
-      RotTemp.RotateX( angles[0] );
-      RotTemp.RotateY( angles[1] );
-      RotTemp.RotateZ( angles[2] );
+
+      
+      
+      RotTemp.RotateX( -angles[0] * TMath::DegToRad() );
+      RotTemp.RotateY( -angles[1] * TMath::DegToRad() );
+      RotTemp.RotateZ( -angles[2] * TMath::DegToRad() );
       
       fXax.SetXYZ( RotTemp.XX(), RotTemp.XY(), RotTemp.XZ() );
       fYax.SetXYZ( RotTemp.YX(), RotTemp.YY(), RotTemp.YZ() );
@@ -339,6 +354,7 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   //Raw strip info:
   RVarDef varstrip[] = {
     { "nstripsfired",   "Number of strips fired",   "fNstrips_hit" },
+    { "strip", "Strip index", "fStrip" },
     { "stripaxis", "axis of fired strips", "fStripAxis" },
     { "stripADCsamples", "ADC samples (index = isamp+Nsamples*istrip)", "fADCsamples1D" },
     { "striprawADCsamples", "raw ADC samples (no baseline subtraction)", "fRawADCsamples1D" },
@@ -441,8 +457,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	for( int istrip=0; istrip<nstrips; istrip++ ){
 	  int strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
 	  int ADC = evdata.GetData( it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
-	  //std::cout << it->crate << " " << it->slot << " " << chan << " " 
-	  //	    << strip << " " << ADC << endl;
+	  // std::cout << isamp << ", " << it->crate << " " << it->slot << " " << chan << " " 
+	  // 	    << strip << " " << ADC << endl;
 	  rawStrip[isamp].push_back( strip ); //APV25 channel number
 	  rawADCs[isamp].push_back( ADC );
 	  commonModeSubtractedADC[isamp].push_back( double(ADC) ); 
@@ -508,13 +524,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	}
 	//NOTE that we are replacing the value of "strip" with the line above!
 	// Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
-	// sample-to-sample: When operating without online zero suppression, these should all probably be set to zero, since we will
-	// generally do offline common-mode calculation and subtraction in that case:
+	// sample-to-sample: When operating with online zero suppression, these should all probably be set to zero, 
 	//std::cout << axis << " " << strip << std::endl;
 	
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
-
+	double gaintemp = ( axis == SBSGEM::kUaxis ) ? fUgain[strip/128] : fVgain[strip/128];
+	
 	// std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
 	//  	  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << std::endl;
 	
@@ -532,8 +548,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  
 	  rawADCtemp.push_back( rawADC );
 	  
-	  //double ADCvalue =  - pedtemp; "pedestal" subtraction seems redundant here, whether we are doing online or offline suppression:
-	  double ADCvalue = commonModeSubtractedADC[adc_samp][istrip] - pedtemp;
+	  double ADCvalue = (commonModeSubtractedADC[adc_samp][istrip] - pedtemp); //zero-suppress BEFORE we apply gain correction
 	  
 	  //pedestal-subtracted ADC values:
 	  ADCtemp.push_back( ADCvalue );
@@ -562,10 +577,22 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//   << "; " << fThresholdSample << endl;
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
+
+	//the ROOTgui multicrate uses a threshold on the AVERAGE ADC sample (not the MAX). To be consistent
+	// with how the "Hit" root files are produced, let's use the same threshold;
+	// this amounts to using a higher effective threshold than cutting on the max ADC sample would have been:
 	if(!fZeroSuppress ||
-	   ( rmstemp > 0.0 && std::max(0.0,maxADC) > fZeroSuppressRMS*rmstemp &&
+	   ( ADCsum_temp/double(fN_MPD_TIME_SAMP) > fZeroSuppressRMS*rmstemp &&
 	     maxADC > fThresholdSample && ADCsum_temp > fThresholdStripSum ) ){ //Default threshold is 5-sigma!
 	  //Increment hit count and populate decoded data structures:
+
+	  //NOW apply gain correction:
+	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	    ADCtemp[isamp] /= gaintemp;
+	  }
+
+	  //  ADCsum_temp /= gaintemp;
+	
 	  
 	  fStrip.push_back( strip );
 	  fAxis.push_back( axis );
@@ -577,7 +604,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    fRawADCsamples1D.push_back( rawADCtemp[isamp] );
 	  }
 	  fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
-	  fADCsums.push_back( ADCsum_temp ); //sum of all (pedestal-subtracted) samples
+	  
 	  fKeepStrip.push_back( true ); //keep all strips by default
 	  fMaxSamp.push_back( iSampMax );
 	  fADCmax.push_back( maxADC );
@@ -585,6 +612,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
 	  fTcorr.push_back( fTmean.back() ); //don't apply any corrections for now
 
+	  ADCsum_temp /= gaintemp;
+
+	  fADCsums.push_back( ADCsum_temp ); //sum of all (pedestal-subtracted) samples
+	  
 	  if( axis == SBSGEM::kUaxis ) fUstripIndex[strip] = fNstrips_hit; 
 	  if( axis == SBSGEM::kVaxis ) fVstripIndex[strip] = fNstrips_hit;
 	  
@@ -611,13 +642,17 @@ void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster f
   //std::cout << "Module " << fName << ", found (nu, nv)" << fNclustU << ", " << fNclustV << ") clusters" << std::endl; 
   //Now make 2D clusters:
 
-  fxcmin = -1.e12;
-  fxcmax = 1.e12;
-  fycmin = -1.e12;
-  fycmax = 1.e12;
+  if( fNclustU > 0 && fNclustV > 0 ){
   
-  fill_2D_hit_arrays();
+    fxcmin = -1.e12;
+    fxcmax = 1.e12;
+    fycmin = -1.e12;
+    fycmax = 1.e12;
   
+    fill_2D_hit_arrays();
+
+    //std::cout << "Module " << fName << ", found " << fHits.size() << " 2D cluster candidates" << std::endl;
+  }
 }
 
 void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_width ){
@@ -853,7 +888,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
     //If peak position falls inside the "track search region" constraint, add a new cluster: 
     if( fabs( maxpos - constraint_center ) <= constraint_width ){
-    
+      
       //create a cluster, but don't add it to the 1D cluster array unless it passes the track search region constraint:
       sbsgemcluster_t clusttemp;
       clusttemp.nstrips = nstrips;
@@ -909,7 +944,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       clusttemp.clusterADCsum = sumADC;
       clusttemp.t_mean = sumt / sumwx;
       clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
-
+      
       if( sumADC >= fThresholdClusterSum ){
 	if( axis == SBSGEM::kVaxis ){
 	  fVclusters.push_back( clusttemp );
@@ -918,6 +953,11 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 	  fUclusters.push_back( clusttemp );
 	  fNclustU++;
 	}
+
+	// std::cout << "found cluster, (axis, istripmax, nstrips, ADCsum, hit pos (mm) )=(" << axis << ", " << clusttemp.istripmax << ", "
+	// 	  << clusttemp.nstrips << ", " << clusttemp.clusterADCsum
+	// 	  << ", " << clusttemp.hitpos_mean*1000.0 << ")" << std::endl;
+	
       }
     } //Check if peak is inside track search region constraint
   } //end loop on local maxima
@@ -926,6 +966,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 void SBSGEMModule::fill_2D_hit_arrays(){
   //Clear out the 2D hit array to get rid of any leftover junk from prior events:
   fHits.clear();
+
+  //std::cout << "starting fill_2D_hit_arrays(), nu, nv = " << fUclusters.size() << ", " << fVclusters.size() << std::endl;
   
   //This routine is simple: just form all possible 2D hits from combining one "U" cluster with one "V" cluster. Here we assume that find_clusters_1D has already
   //been called, if that is NOT the case, then this routine will just do nothing:
@@ -961,6 +1003,16 @@ void SBSGEMModule::fill_2D_hit_arrays(){
       hittemp.xhit = XYtemp.X();
       hittemp.yhit = XYtemp.Y();
 
+      // std::cout << "(uhit,vhit): ";
+      // UVtemp.Print();
+      // std::cout << endl;
+
+      // std::cout << "(xhit,yhit): ";
+      // XYtemp.Print();
+      // std::cout << endl;
+      
+      //std::cout << "constraint (xmin, xmax, ymin, ymax)=(" << fxcmin << ", " << fxcmax << ", " << fycmin << ", " << fycmax << ")" << std::endl;
+      
       //Check if candidate 2D hit is inside the constraint region before doing anything else:
       if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
 	  fycmin <= hittemp.yhit && hittemp.yhit <= fycmax ){
@@ -1018,7 +1070,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
 }
 
 //utility method to calculate correlation coefficient of U and V samples: 
-Double_t CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples ){
+Double_t SBSGEMModule::CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples ){
   double sumu=0.0, sumv=0.0, sumu2=0.0, sumv2=0.0, sumuv=0.0;
 
   if ( Usamples.size() < nsamples || Vsamples.size() < nsamples ){
