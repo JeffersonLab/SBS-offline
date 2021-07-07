@@ -374,9 +374,9 @@ void SBSGEMTrackerBase::hit_reconstruction(){
   for( int imodule=0; imodule<fNmodules; imodule++ ){
     SBSGEMModule *mod = fModules[imodule];
 
-    std::cout << "Calling hit reconstruction for module " << mod->GetName() << std::endl;
+    //std::cout << "Calling hit reconstruction for module " << mod->GetName() << std::endl;
 
-    std::cout << "N strips fired = " << mod->fNstrips_hit << std::endl;
+    //std::cout << "N strips fired = " << mod->fNstrips_hit << std::endl;
     
     if( !fUseConstraint ){ //call find_2D hits for the module without any constraint:
       mod->find_2Dhits();

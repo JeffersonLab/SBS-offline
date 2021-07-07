@@ -396,7 +396,7 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
 }
 
 Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
-  std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
+  //std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
 
   fNstrips_hit = 0;
 
@@ -441,8 +441,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	for( int istrip=0; istrip<nstrips; istrip++ ){
 	  int strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
 	  int ADC = evdata.GetData( it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
-	  std::cout << it->crate << " " << it->slot << " " << chan << " " 
-	  	    << strip << " " << ADC << endl;
+	  //std::cout << it->crate << " " << it->slot << " " << chan << " " 
+	  //	    << strip << " " << ADC << endl;
 	  rawStrip[isamp].push_back( strip ); //APV25 channel number
 	  rawADCs[isamp].push_back( ADC );
 	  commonModeSubtractedADC[isamp].push_back( double(ADC) ); 
@@ -594,7 +594,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     } //end loop over APV cards with hits
   } //end loop on decode map entries for this module
 
-  std::cout << fName << " decoded, number of strips fired = " << fNstrips_hit << std::endl;
+  //std::cout << fName << " decoded, number of strips fired = " << fNstrips_hit << std::endl;
 
   fIsDecoded = true;
   
@@ -608,7 +608,7 @@ void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster f
   find_clusters_1D(SBSGEM::kVaxis); //v strips
 
   
-  std::cout << "Module " << fName << ", found (nu, nv)" << fNclustU << ", " << fNclustV << ") clusters" << std::endl; 
+  //std::cout << "Module " << fName << ", found (nu, nv)" << fNclustU << ", " << fNclustV << ") clusters" << std::endl; 
   //Now make 2D clusters:
 
   fxcmin = -1.e12;
@@ -750,7 +750,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     } 
   } // end loop over list of strips along this axis:
 
-  cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
+  //cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
   
   vector<int> peakstoerase; 
 
@@ -821,7 +821,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     islocalmax[peakstoerase[ipeak]] = false;
   }
 
-  cout << "After peak erasing, n local maxima = " << localmaxima.size() << endl;
+  //cout << "After peak erasing, n local maxima = " << localmaxima.size() << endl;
   
   
   //Cluster formation and cluster splitting from remaining local maxima:

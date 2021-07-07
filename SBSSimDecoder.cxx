@@ -554,7 +554,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
       }
       
-      //if(fDebug>3)
+      if(fDebug>3)
 	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
       
       if(j==simev->Tgmn->Earm_BBGEM_dighit_nstrips-1){
@@ -951,7 +951,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  ch_lo = 128*n_ax;
 	  ch_hi = 128*(n_ax+1)-1;
 	  //mod*2+axis???
-	  std::cout << mod << " " << mod*2+axis << " " << fInvGEMDetMap[detname].size() << " " << mpd << " " << chanmap[k+4] << " " << apv_num << " " << n_ax << endl;
+	  //std::cout << mod << " " << mod*2+axis << " " << fInvGEMDetMap[detname].size() << " " << mpd << " " << chanmap[k+4] << " " << apv_num << " " << n_ax << endl;
 	  (fInvGEMDetMap[detname])[mod*2+axis][n_ax]=gemstripinfo(crate, slot, apv_num);
 	  n_ax++;
 	}
