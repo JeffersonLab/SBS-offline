@@ -54,6 +54,7 @@ struct SBSGenericOutputData {
   std::vector<Int_t> col;         //< [] col
   std::vector<Int_t> ped;         //< [] pedestal
   std::vector<Int_t> layer;       //< [] layer
+  std::vector<Int_t> elemID;      //< [] element ID
   // ADC variables
   std::vector<Float_t> a;         //< [] ADC integral
   std::vector<Float_t> a_p;         //< [] ADC integral -pedestal
@@ -75,6 +76,7 @@ struct SBSGenericOutputData {
     row.clear();
     col.clear();
     ped.clear();
+    elemID.clear();
     layer.clear();
     a.clear();
     a_p.clear();
@@ -121,13 +123,11 @@ public:
   virtual Int_t      DecodeADC( const THaEvData&, SBSElement *blk,
 				THaDetMap::Module *d, Int_t chan, Bool_t IsRef);
   virtual Int_t      DecodeTDC( const THaEvData&, SBSElement *blk,
-      THaDetMap::Module *d, Int_t chan);
-  virtual Int_t      DecodeRefTDC( const THaEvData&, SBSElement *blk,
-      THaDetMap::Module *d, Int_t chan);
+      THaDetMap::Module *d, Int_t chan, Bool_t IsRef);
 
   // Utility functions
   // Can be re-implemented by other classes to specify a different
-  // SBSElement sub-class (i.e. useful when one wants to change the logic
+  // SBSElement sub-class (i.e. useful when one wants to chang  the logic
   // in SBSElement::CoarseProcess()
   virtual SBSElement* MakeElement(Float_t x, Float_t y, Float_t z, Int_t row,
       Int_t col, Int_t layer, Int_t id = 0);
@@ -136,7 +136,7 @@ protected:
 
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
-  virtual Int_t  FindGoodHit(SBSElement *){ return 0; } // Optionally implemented by derived classes
+  virtual Int_t  FindGoodHit(SBSElement *); // 
 
   // Configuration
   Int_t  fNRefElem;        ///< Number of Ref Time elements
