@@ -56,6 +56,7 @@ struct SBSGenericOutputData {
   std::vector<Int_t> layer;       //< [] layer
   std::vector<Int_t> elemID;      //< [] element ID
   // ADC variables
+  std::vector<Int_t> a_mult;         //< [] ADC # of hits per channel
   std::vector<Float_t> a;         //< [] ADC integral
   std::vector<Float_t> a_p;         //< [] ADC integral -pedestal
   std::vector<Float_t> a_c;         //< [] (ADC integral -pedestal)*calib
@@ -63,6 +64,7 @@ struct SBSGenericOutputData {
   std::vector<Float_t> a_amp_p;     //< [] ADC pulse amplitude -pedestal
   std::vector<Float_t> a_time;    //< [] ADC pulse time
   // TDC variables
+  std::vector<Int_t> t_mult;         //< [] TDC # of hits per channel
   std::vector<Float_t> t;         //< [] TDC (leading edge) time
   std::vector<Float_t> t_te;      //< [] TDC trailing edge time
   std::vector<Float_t> t_ToT;     //< [] TDC Time-Over-Threshold
@@ -78,6 +80,7 @@ struct SBSGenericOutputData {
     ped.clear();
     elemID.clear();
     layer.clear();
+    a_mult.clear();
     a.clear();
     a_p.clear();
     a_c.clear();
@@ -85,6 +88,7 @@ struct SBSGenericOutputData {
     a_amp_p.clear();
     a_time.clear();
     t.clear();
+    t_mult.clear();
     t_te.clear();
     t_ToT.clear();
     nsamps.clear();
