@@ -814,6 +814,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   // TDC Reference Time variables 
   if(WithTDC() && !fDisableRefTDC) {
     ve.push_back({ "Ref.tdc", "Ref Time Calibrated TDC value", "fRefGood.t" });
+    ve.push_back({ "Ref.tdc_mult", "Ref Time # hits in channel", "fRefGood.t_mult" });
     if(fModeTDC != SBSModeTDC::kTDCSimple) {
       // We have trailing edge and Time-Over-Threshold info to store
       ve.push_back({"Ref.tdc_te","Ref Time Calibrated TDC trailing info","fRefGood.t_te"});
@@ -834,6 +835,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     // Register variables in global list
     ve.push_back({ "ped", "Pedestal for block in data vectors",  "fGood.ped" }),
      ve.push_back( {"a","ADC integral", "fGood.a"} );
+     ve.push_back( {"a_mult","ADC # hits in channel", "fGood.a_mult"} );
     ve.push_back( {"a_p","ADC integral - ped", "fGood.a_p"} );
     ve.push_back( {"a_c","(ADC integral - ped)*gain", "fGood.a_c"} );
     if(fModeADC != SBSModeADC::kADCSimple) {
@@ -851,6 +853,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   // Are we using TDCs? If so, define variables for TDCs
   if(WithTDC()) {
     ve.push_back({ "tdc", "Calibrated TDC value", "fGood.t" });
+    ve.push_back({ "tdc_mult", "TDC # of hits per channel", "fGood.t_mult" });
     if(fModeTDC != SBSModeTDC::kTDCSimple) {
       // We have trailing edge and Time-Over-Threshold info to store
       ve.push_back({"tdc_te","Calibrated TDC trailing info","fGood.t_te"});
@@ -1108,11 +1111,13 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
       if ( blk->TDC()->HasData()) {
         const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
         fRefGood.t.push_back(hit.le.val);
+        fRefGood.t_mult.push_back(blk->TDC()->GetNHits());
         if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
           fRefGood.t_te.push_back(hit.te.val);
           fRefGood.t_ToT.push_back(hit.ToT.val);
         }
       } else if ( fStoreEmptyElements ) {
+        fRefGood.t_mult.push_back(0);
         fRefGood.t.push_back(kBig);
         if(fModeTDC == SBSModeTDC::kTDC) {
           fRefGood.t_te.push_back(kBig);
@@ -1157,12 +1162,14 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
       if(blk->TDC()->HasData() ) {
         const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
         fGood.t.push_back(hit.le.val);
+        fGood.t_mult.push_back(blk->TDC()->GetNHits());
         if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
           fGood.t_te.push_back(hit.te.val);
           fGood.t_ToT.push_back(hit.ToT.val);
         }
       } else if ( fStoreEmptyElements ) {
         fGood.t.push_back(kBig);
+        fGood.t_mult.push_back(0);
         if(fModeTDC == SBSModeTDC::kTDC) {
           fGood.t_te.push_back(kBig);
           fGood.t_ToT.push_back(kBig);
@@ -1189,6 +1196,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fGood.ped.push_back(ped);
           const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
           fGood.a.push_back(hit.integral.raw);
+          fGood.a_mult.push_back(blk->ADC()->GetNHits());
           fGood.a_p.push_back(hit.integral.raw-ped);
           fGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
@@ -1208,6 +1216,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           }
         } else if (fStoreEmptyElements) {
           fGood.a.push_back(0.0);
+          fGood.a_mult.push_back(0);
           fGood.a_p.push_back(0.0);
           fGood.a_c.push_back(0.0);
           if(fModeADC == SBSModeADC::kADC) {
