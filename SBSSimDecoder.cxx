@@ -77,6 +77,9 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   // we shouldn't have to do that to initialize all encoders... shall we?
   fDecoderMPD = dynamic_cast<SBSSimSADCEncoder*>
     (SBSSimDataDecoder::GetEncoderByName("mpd"));
+  
+  
+  
 }
 
 //-----------------------------------------------------------------------------
@@ -105,6 +108,24 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   cout << "Read SBSSimDecoder variables " << endl;
   
   RVarDef vars[] = {
+    {"nbbtracks",   "number of BB MC tracks",   "fNBBtracks"},
+    {"bbtrack_nhits",   "BB MC track hit mult",   "fBBtrack_Nhits"},
+    {"bbtrack_tid",   "BB MC track TID",   "fBBtrack_TID"},
+    {"bbtrack_pid",   "BB MC track PID",   "fBBtrack_PID"},
+    {"bbtrack_mid",   "BB MC track MID",   "fBBtrack_MID"},
+    {"bbtrack_p",   "BB MC track momentum",   "fBBtrack_P"},
+    {"bbtrack_x",   "BB MC track transport X position",   "fBBtrack_X"},
+    {"bbtrack_y",   "BB MC track transport Y position",   "fBBtrack_Y"},
+    {"bbtrack_dx",   "BB MC track transport dX slope",   "fBBtrack_dX"},
+    {"bbtrack_dy",   "BB MC track transport dY slope",   "fBBtrack_dY"},
+    {"nbbgemhits",   "number of BBGEM MC hits",   "fNBBGEMhits"},
+    {"bbgemhit_plane",   "BBGEM MC hit plane",   "fBBGEMhit_plane"},
+    {"bbgemhit_tid",   "BBGEM MC hit TID",   "fBBGEMhit_trid"},
+    {"bbgemhit_pid",   "BBGEM MC hit PID",   "fBBGEMhit_pid"},
+    {"bbgemhit_mid",   "BBGEM MC hit MID",   "fBBGEMhit_mid"},
+    {"bbgemhit_edep",   "BBGEM MC hit edep",   "fBBGEMhit_edep"},
+    {"bbgemhit_x",   "BBGEM MC hit transport X",   "fBBGEMhit_tx"},
+    {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_ty"},
     { 0 }
   };
 
@@ -179,6 +200,22 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
   
+  fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
+  fBBtrack_Nhits = *(simEvent->Tgmn->Earm_BBGEM_Track_NumHits);
+  fBBtrack_TID = *(simEvent->Tgmn->Earm_BBGEM_Track_TID);
+  fBBtrack_PID = *(simEvent->Tgmn->Earm_BBGEM_Track_PID);
+  fBBtrack_MID = *(simEvent->Tgmn->Earm_BBGEM_Track_MID);
+  fBBtrack_P = *(simEvent->Tgmn->Earm_BBGEM_Track_P);
+  fBBtrack_X = *(simEvent->Tgmn->Earm_BBGEM_Track_X);
+  fBBtrack_Y = *(simEvent->Tgmn->Earm_BBGEM_Track_Y);
+  fBBtrack_dX = *(simEvent->Tgmn->Earm_BBGEM_Track_Xp);
+  fBBtrack_dY = *(simEvent->Tgmn->Earm_BBGEM_Track_Yp);
+  fNBBGEMhits = simEvent->Tgmn->Earm_BBGEM_hit_nhits;
+  fBBGEMhit_plane = *(simEvent->Tgmn->Earm_BBGEM_hit_plane);
+  fBBGEMhit_TID = *(simEvent->Tgmn->Earm_BBGEM_hit_trid);
+  fBBGEMhit_PID = *(simEvent->Tgmn->Earm_BBGEM_hit_pid);
+  fBBGEMhit_MID = *(simEvent->Tgmn->Earm_BBGEM_hit_mid);
+  fBBGEMhit_edep = *(simEvent->Tgmn->Earm_BBGEM_hit_edep);
   
   
   Int_t ret = HED_OK;

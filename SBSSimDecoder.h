@@ -145,6 +145,24 @@ protected:
 	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
+  Int_t fNBBtracks;
+  std::vector<Int_t> fBBtrack_Nhits;
+  std::vector<Int_t> fBBtrack_TID;
+  std::vector<Int_t> fBBtrack_PID;
+  std::vector<Int_t> fBBtrack_MID;
+  std::vector<Double_t> fBBtrack_P;
+  std::vector<Double_t> fBBtrack_X;
+  std::vector<Double_t> fBBtrack_Y;
+  std::vector<Double_t> fBBtrack_dX;
+  std::vector<Double_t> fBBtrack_dY;
+  Int_t fNBBGEMhits; 
+  std::vector<Int_t> fBBGEMhit_plane;
+  std::vector<Int_t> fBBGEMhit_TID;
+  std::vector<Int_t> fBBGEMhit_PID;
+  std::vector<Int_t> fBBGEMhit_MID;
+  std::vector<Double_t> fBBGEMhit_edep;
+  std::vector<Double_t> fBBGEMhit_x;
+  std::vector<Double_t> fBBGEMhit_y;
   
   //TH1D* h1_sizeHCal;
   //TH1D* h1_sizeGEMs;

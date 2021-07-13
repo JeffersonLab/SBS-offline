@@ -374,6 +374,42 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   if( ret != kOK )
     return ret;
   
+
+  RVarDef varclust[] = {
+    { "nclustu",   "Number of clusters in u",   "fNclustU" },
+    { "clustu_strips",   "u clusters strip multiplicity",   "fUclusters.nstrips" },
+    { "clustu_pos",   "u clusters position",   "fUclusters.hitpos_mean" },
+    { "clustu_adc",   "u clusters adc sum",   "fUclusters.clusterADCsum" },
+    { "clustu_time",   "u clusters time",   "fUclusters.t_mean" },
+    { "nclustv",   "Number of clusters in v",   "fNclustV" },
+    { "clustv_strips",   "v clusters strip multiplicity",   "fVclusters.nstrips" },
+    { "clustv_pos",   "v clusters position",   "fVclusters.hitpos_mean" },
+    { "clustv_adc",   "v clusters adc sum",   "fVclusters.clusterADCsum" },
+    { "clustv_time",   "v clusters time",   "fVclusters.t_mean" },
+    { nullptr },
+  };
+
+  ret = DefineVarsFromList( varclust, mode );
+
+  if( ret != kOK )
+    return ret;
+
+  RVarDef varhits[] = {
+    { "nhits2d",   "Number of 2d hits",   "fN2Dhits" },
+    { "hitx",   "local X coordinate of hit",   "fHits.xhit" },
+    { "hity",   "local Y coordinate of hit",   "fHits.yhit" },
+    { "hitxg",   "transport X coordinate of hit",   "fHits.xghit" },
+    { "hityg",   "transport Y coordinate of hit",   "fHits.yghit" },
+    { "hitADCasym",   "hit ADC asymmetry",   "fHits.ADCasym" },
+    { "hitTdiff",   "hit time difference (u-v)",   "fHits.tdiff" },
+    { nullptr },
+  };
+
+  ret = DefineVarsFromList( varhits, mode );
+
+  if( ret != kOK )
+    return ret;
+
   return kOK;
     
 }
@@ -1050,7 +1086,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	
 	//Okay, that should be everything. Now add it to the 2D hit array:
 	fHits.push_back( hittemp );
-	
+	fN2Dhits++;
       } //end check that 2D point is inside track search region
     } //end loop over "V" clusters
   } //end loop over "U" clusters
