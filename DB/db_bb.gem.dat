@@ -611,6 +611,6 @@ bb.gem.bt0_m3.vpitch = 0.0004
 bb.gem.bt0_m3.ped = 1500
 bb.gem.bt0_m3.rms = 20
 
-bb.gem.bt0_m3.position = 0.256 0.0 2.33
+bb.gem.bt0_m3.position = 0.768 0.0 2.33
 bb.gem.bt0_m3.size = 0.512 0.6144 0.003
 bb.gem.bt0_m3.angle = 0. 0. 0.

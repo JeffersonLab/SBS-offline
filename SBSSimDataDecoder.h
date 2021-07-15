@@ -6,10 +6,10 @@
 
 #define SBS_MAX_ENCODER_WORDS 1024 // Max number of words the encoder can encode
 #define SBS_NWORDS_MASK       0x3FFF
-#define SBS_CHANNEL_MASK      0xFFF // 0x1FF // 
-#define SBS_TYPE_MASK         0x3F // 0x1FF // 
+#define SBS_CHANNEL_MASK      0x3FFF // 0x1FF // 
+#define SBS_TYPE_MASK         0xF // 0x1FF // 
 #define SBS_CHANNEL_FIRST_BIT 14
-#define SBS_TYPE_FIRST_BIT    26 // 23 // 
+#define SBS_TYPE_FIRST_BIT    28 // 23 // 
 #define SBS_APV25_NCH 128 // Number of channels per APV25
 #define SBS_MPD_NAPV25 15 // Number of AVP25's per MPD
 
