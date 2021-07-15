@@ -282,7 +282,7 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
       Track->SetIndex( index );
     }
 
-    std::cout << "found " << fNtracks_found << " tracks" << std::endl;
+    //std::cout << "found " << fNtracks_found << " tracks" << std::endl;
     
   }
   

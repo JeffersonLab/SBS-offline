@@ -120,12 +120,12 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"bbtrack_dy",   "BB MC track transport dY slope",   "fBBtrack_dY"},
     {"nbbgemhits",   "number of BBGEM MC hits",   "fNBBGEMhits"},
     {"bbgemhit_plane",   "BBGEM MC hit plane",   "fBBGEMhit_plane"},
-    {"bbgemhit_tid",   "BBGEM MC hit TID",   "fBBGEMhit_trid"},
-    {"bbgemhit_pid",   "BBGEM MC hit PID",   "fBBGEMhit_pid"},
-    {"bbgemhit_mid",   "BBGEM MC hit MID",   "fBBGEMhit_mid"},
+    {"bbgemhit_tid",   "BBGEM MC hit TID",   "fBBGEMhit_TID"},
+    {"bbgemhit_pid",   "BBGEM MC hit PID",   "fBBGEMhit_PID"},
+    {"bbgemhit_mid",   "BBGEM MC hit MID",   "fBBGEMhit_MID"},
     {"bbgemhit_edep",   "BBGEM MC hit edep",   "fBBGEMhit_edep"},
-    {"bbgemhit_x",   "BBGEM MC hit transport X",   "fBBGEMhit_tx"},
-    {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_ty"},
+    {"bbgemhit_x",   "BBGEM MC hit transport X",   "fBBGEMhit_x"},
+    {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_y"},
     { 0 }
   };
 
@@ -216,7 +216,9 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fBBGEMhit_PID = *(simEvent->Tgmn->Earm_BBGEM_hit_pid);
   fBBGEMhit_MID = *(simEvent->Tgmn->Earm_BBGEM_hit_mid);
   fBBGEMhit_edep = *(simEvent->Tgmn->Earm_BBGEM_hit_edep);
-  
+  fBBGEMhit_x = *(simEvent->Tgmn->Earm_BBGEM_hit_tx);
+  fBBGEMhit_y = *(simEvent->Tgmn->Earm_BBGEM_hit_ty);
+ 
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {

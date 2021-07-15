@@ -557,7 +557,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
 	  Int_t RstripPos = RstripNb + 128*it->pos;
 	  strip = RstripPos; //At this point, "strip" should correspond to increasing order of position along the U or V axis; i.e., what we think it should!
+	}else{
+	  strip+= 128*it->pos;
 	}
+	
 	//NOTE that we are replacing the value of "strip" with the line above!
 	// Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
 	// sample-to-sample: When operating with online zero suppression, these should all probably be set to zero, 
