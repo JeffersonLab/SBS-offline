@@ -1256,6 +1256,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 Int_t SBSGenericDetector::FindGoodHit(SBSElement *blk)
 {
   Int_t GoodHit=0;  
+  if (blk->TDC()) blk->TDC()->SetGoodHit(-1);
   if (blk->TDC()&& blk->HasData()) {
        Int_t nhits = blk->TDC()->GetNHits(); 
        Float_t MinDiff = 10000.;
