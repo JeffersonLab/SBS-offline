@@ -132,7 +132,8 @@ namespace SBSData {
       // Getters
       Float_t GetOffset()           const { return fTDC.offset;     }
       Float_t GetCal()              const { return fTDC.cal;        }
-      Float_t GetGoodTimeCut()              const { return fTDC.GoodTimeCut;        }
+      Float_t GetGoodTimeCut()              const { return fTDC.GoodTimeCut;}
+      Float_t GetGoodHitIndex()            const { return fTDC.good_hit; }
       TDCHit GetHit(UInt_t i)       const { return fTDC.hits[i];    }
       SingleData GetLead(UInt_t i)  const { return GetHit(i).le;    }
       SingleData GetTrail(UInt_t i) const { return GetHit(i).te;    }
