@@ -69,6 +69,7 @@ struct SBSGenericOutputData {
   std::vector<Float_t> t_te;      //< [] TDC trailing edge time
   std::vector<Float_t> t_ToT;     //< [] TDC Time-Over-Threshold
   // Waveform variables
+  std::vector<Int_t> samps_elemID;      //< [] Element ID of samples
   std::vector<Int_t> nsamps;      //< [] Number of ADC samples
   std::vector<Int_t> sidx;        //< [] Index of start of ADC samples in for this row-col-layer
   std::vector<Float_t> samps;     //< []*nsamps ADC samples
@@ -94,6 +95,7 @@ struct SBSGenericOutputData {
     nsamps.clear();
     sidx.clear();
     samps.clear();
+    samps_elemID.clear();
   }
 };
 
