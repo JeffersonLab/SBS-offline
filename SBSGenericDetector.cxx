@@ -876,6 +876,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     ve.push_back({ "nsamps" , "Number of samples for given row-col",
         "fGood.nsamps"});
     ve.push_back({ "samps", "Calibrated ADC samples",  "fGood.samps" });
+    ve.push_back({ "samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
   }
 
   ve.push_back({0}); // Needed to specify the end of list
@@ -972,10 +973,8 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
   } else {
     std::vector<Float_t> samples;
     samples.resize(nhit);
-    //std::cout << " nhit = " << nhit << ": ";  
     for(Int_t i = 0; i < nhit; i++) {
       samples[i] = evdata.GetData(d->crate, d->slot, chan, i);
-      //std::cout << "  " << samples[i];
     }
     //std::cout << std::endl;
     //std::cout << blk << std::endl;
@@ -1021,7 +1020,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
     }
   }
   
-  if(fIsMC)refval = 1000;
+  if(fIsMC)reftime = 1000;
   
   Int_t edge = 0;
   Int_t elemID=blk->GetID();
@@ -1098,7 +1097,6 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
   SBSElement *blk = 0;
   size_t nsamples;
   size_t idx;
-
   // Reference time
   for(Int_t k = 0; k < fNRefElem; k++) {
     blk = fRefElements[k];
@@ -1190,7 +1188,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 
     if(WithADC()) {
       if(fModeADC != SBSModeADC::kWaveform) {
-        if(blk->ADC()->HasData() ){
+          if(blk->ADC()->HasData() ){
 	  if (blk->ADC()->GetGoodHitIndex() >=0) {
           Float_t ped=blk->ADC()->GetPed();
           fGood.ped.push_back(ped);
@@ -1214,7 +1212,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
               fRaw.a_time.push_back(hit.time.val);
              }
           }
-        } else if (fStoreEmptyElements) {
+	  } else if (fStoreEmptyElements) {
           fGood.a.push_back(0.0);
           fGood.a_mult.push_back(0);
           fGood.a_p.push_back(0.0);
@@ -1224,14 +1222,16 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
             fGood.a_amp_p.push_back(0.0);
             fGood.a_time.push_back(0.0);
           }
-        }
+         }
       } else { // Waveform mode
         SBSData::Waveform *wave = blk->Waveform();
+	if(wave->HasData()) {		
         std::vector<Float_t> &s_r =wave->GetDataRaw();
         std::vector<Float_t> &s_c = wave->GetData();
         nsamples = s_r.size();
         idx = fGood.samps.size();
         fGood.sidx.push_back(idx);
+        fGood.samps_elemID.push_back(k);
         fGood.nsamps.push_back(nsamples);
         fGood.samps.resize(idx+nsamples);
         for(size_t s = 0; s < nsamples; s++) {
@@ -1244,6 +1244,15 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
         fGood.a_amp.push_back(wave->GetAmplitude().raw);
         fGood.a_amp_p.push_back(wave->GetAmplitude().val);
         fGood.a_time.push_back(wave->GetTime().val);
+       } else if (fStoreEmptyElements) {
+          fGood.a.push_back(0.0);
+          fGood.a_mult.push_back(0);
+          fGood.a_p.push_back(0.0);
+          fGood.a_c.push_back(0.0);
+            fGood.a_amp.push_back(0.0);
+            fGood.a_amp_p.push_back(0.0);
+            fGood.a_time.push_back(0.0);
+	}
       }
     }
   }
