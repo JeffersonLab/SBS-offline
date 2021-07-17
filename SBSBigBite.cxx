@@ -48,7 +48,7 @@ Int_t SBSBigBite::CoarseReconstruct()
   THaSpectrometer::CoarseReconstruct(); 
   // TODO
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
-  THaSpectrometer::CoarseReconstruct();
+  //THaSpectrometer::CoarseReconstruct();
   return 0;
 }
 
