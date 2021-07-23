@@ -584,7 +584,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//NOTE that we are replacing the value of "strip" with the line above!
 	// Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
 	// sample-to-sample: When operating with online zero suppression, these should all probably be set to zero, 
-	//std::cout << axis << " " << strip << std::endl;
+	//std::cout << GetName() << " " << axis << " " << strip << std::endl;
 	
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
