@@ -111,11 +111,11 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     Error("", "[SBSGEMSpectrometerTracker::ReadDatabase] No modules defined");
   }
 
-  //int modcounter = 0;
-  
+  int modcounter = 0;
+
   for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
     fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this) );
-    //fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
+    fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
     fModules[fModules.size()-1]->fIsMC = fIsMC;
   }
 
@@ -254,6 +254,15 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
     { "hit.ccor_clust", "correlation coefficient between cluster-summed U and V samples", "fHitCorrCoeffClust" },
     { "hit.ccor_strip", "correlation coefficient between U and V samples on strips with max ADC", "fHitCorrCoeffMaxStrip" },
+    { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
+    { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
+    { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },
+    { "nlayershituv", "number of layers with at least one 2D hit", "fNlayers_hitUV" },
+    { "nstripsu_layer", "total number of U strips fired by layer", "fNstripsU_layer" },
+    { "nstripsv_layer", "total number of V strips fired by layer", "fNstripsV_layer" },
+    { "nclustu_layer", "total number of U clusters by layer", "fNclustU_layer" },
+    { "nclustv_layer", "total number of V clusters by layer", "fNclustV_layer" },
+    { "n2Dhit_layer", "total_number of 2D hits by layer", "fN2Dhit_layer" },
     { nullptr }
   };
   DefineVarsFromList( vars, mode );

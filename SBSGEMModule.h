@@ -196,7 +196,9 @@ class SBSGEMModule : public THaSubDetector {
   //BASIC DECODED STRIP HIT INFO:
   //By the time the information is populated here, the ADC values are already assumed to be pedestal/common-mode subtracted and/or zero-suppressed as appropriate:
   UInt_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
-
+  UInt_t fNstrips_hitU; //total number of U strips fired
+  UInt_t fNstrips_hitV; //total number of V strips fired
+  
   //Map strip indices in this array:
   //key = U or V  strip number, mapped value is position of that strip's information in the "decoded strip" arrays below:
   std::map<UInt_t,UInt_t> fUstripIndex; 
@@ -229,8 +231,14 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripAxis; //redundant with fAxis, but more convenient for Podd global variable definition
   std::vector<Double_t> fADCsamples1D; //1D array to hold ADC samples; should end up with dimension fNstrips_hit*fN_MPD_TIME_SAMP
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
-  std::vector<Int_t> fRawADCsamples1D; 
+  std::vector<Int_t> fRawADCsamples1D;
   /////////////////////// End of global variables needed for ROOT Tree/Histogram output ///////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////
+  //  Define some global variables for tests/cuts                                             //
+  //bool fDidHit; //a good track passed within the active area of this module AND a hit occurred within some small distance from the projected track
+  //bool fShouldHit; //a good track passed within the active area of this module
+  //moved the above to TrackerBase
+  //////////////////////////////////////////////////////////////////////////////////////////////
   
   //Constant, module-specific parameters:
   UShort_t fModule; // Module index within a tracker. Should be unique! Since this is a GEM module class, this parameter should be unchanging

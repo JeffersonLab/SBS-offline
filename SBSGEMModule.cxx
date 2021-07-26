@@ -471,7 +471,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   //std::cout << "[SBSGEMModule::Decode " << fName << "]" << std::endl;
 
   fNstrips_hit = 0;
-
+  //initialize "U" and "V" strip counters to zero:
+  fNstrips_hitU = 0;
+  fNstrips_hitV = 0;
+  
   fUstripIndex.clear();
   fVstripIndex.clear();
   //This could be written more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it too much:
@@ -677,7 +680,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	  fADCsums.push_back( ADCsum_temp ); //sum of all (pedestal-subtracted) samples
 	  
-	  if( axis == SBSGEM::kUaxis ) fUstripIndex[strip] = fNstrips_hit; 
+	  if( axis == SBSGEM::kUaxis ) fUstripIndex[strip] = fNstrips_hit;
 	  if( axis == SBSGEM::kVaxis ) fVstripIndex[strip] = fNstrips_hit;
 	  
 	  fNstrips_hit++;
@@ -686,6 +689,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     } //end loop over APV cards with hits
   } //end loop on decode map entries for this module
 
+  fNstrips_hitU = fUstripIndex.size();
+  fNstrips_hitV = fVstripIndex.size();
+  
   //std::cout << fName << " decoded, number of strips fired = " << fNstrips_hit << std::endl;
 
   fIsDecoded = true;
@@ -1054,7 +1060,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
       double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch;
       double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch;
 
-      //"Cluster moments" defined as difference between reconstructed hit position and center of strip with max. signal in the cluster:
+      //"Cluster moments" defined as differences between reconstructed hit position and center of strip with max. signal in the cluster:
       hittemp.umom = (hittemp.uhit - pos_maxstripu)/fUStripPitch;
       hittemp.vmom = (hittemp.vhit - pos_maxstripv)/fVStripPitch;
       
