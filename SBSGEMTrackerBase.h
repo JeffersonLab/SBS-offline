@@ -105,6 +105,7 @@ protected:
 
   std::set<int> fLayers;
   std::vector<int> fLayerByIndex; //idiot-proofing just in case the user defines something stupid:
+  std::map<int,int> fIndexByLayer;  //idiot-proofing in case the user defines something stupid.
   std::map<int,int> fNumModulesByLayer; //key = unique layer ID (logical tracking layer), mapped value = number of modules per layer
   std::map<int, std::set<int> > fModuleListByLayer;  //key = unique layer ID, mapped value = list of unique modules associated with this layer
 
@@ -246,6 +247,26 @@ protected:
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
   std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC. 
   //And I THINK that's all we need to get started!
+
+  //number of layers fired per event
+  int fNlayers_hit; //number of layers with ANY strip fired in this layer (U or V)
+  int fNlayers_hitU; //number of layers with any U strip fired
+  int fNlayers_hitV; //number of layers with any V strip fired
+  int fNlayers_hitUV; //number of layers with at least one U and V hit
+
+  std::vector<int> fNstripsU_layer;
+  std::vector<int> fNstripsV_layer;
+  std::vector<int> fNclustU_layer;
+  std::vector<int> fNclustV_layer;
+  std::vector<int> fN2Dhit_layer;
+
+  //"did hit" and "should hit" by module (numerators and denominators for efficiency determination)
+  std::vector<int> fDidHit_Module;
+  std::vector<int> fShouldHit_Module;
+
+  
+
+  
   
 };
 
