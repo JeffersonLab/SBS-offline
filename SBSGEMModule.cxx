@@ -128,6 +128,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fPyV = sin( fVAngle * TMath::DegToRad() );
   
   
+  //std::cout << GetName() << " fThresholdStripSum " << fThresholdStripSum 
+  //<< " fThresholdSample " << fThresholdSample << std::endl;
+  
   if( status != 0 ){
     fclose(file);
     return status;
@@ -163,7 +166,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fPedRMSU.clear();
   fPedRMSU.resize( fNstripsU );
-
+  
   // std::cout << "got " << rawpedu.size() << " u pedestal mean values and " << rawrmsu.size() << " u pedestal rms values" << std::endl;
   // std::cout << "got " << rawpedv.size() << " v pedestal mean values and " << rawrmsv.size() << " v pedestal rms values" << std::endl;
 
@@ -177,11 +180,20 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     
     if( rawpedu.size() == fNstripsU ){
       fPedestalU[istrip] = rawpedu[istrip];
-    } 
+    }else if( rawpedu.size() == fNstripsU/128 ){
+      fPedestalU[istrip] = rawpedu[istrip/128];
+    }else if(rawpedu.size()){ 
+      fPedestalU[istrip] = rawpedu[0];
+    }
 
     if( rawrmsu.size() == fNstripsU ){
       fPedRMSU[istrip] = rawrmsu[istrip];
-    } 
+    }else if( rawrmsu.size() == fNstripsU/128 ){
+      fPedRMSU[istrip] = rawrmsu[istrip/128];
+    }else if(rawrmsu.size()){ 
+      fPedRMSU[istrip] = rawrmsu[0];
+    }
+ 
   }
 
   //Initialize all pedestals to zero, RMS values to default:
@@ -197,10 +209,18 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
     if( rawpedv.size() == fNstripsV ){
       fPedestalV[istrip] = rawpedv[istrip];
-    } 
+    }else if( rawpedv.size() == fNstripsV/128 ){
+      fPedestalV[istrip] = rawpedv[istrip/128];
+    }else if(rawpedv.size()){ 
+      fPedestalV[istrip] = rawpedv[0];
+    }
 
     if( rawrmsv.size() == fNstripsV ){
       fPedRMSV[istrip] = rawrmsv[istrip];
+    }else if( rawrmsv.size() == fNstripsV/128 ){
+      fPedRMSV[istrip] = rawrmsv[istrip/128];
+    }else if(rawrmsv.size()){ 
+      fPedRMSV[istrip] = rawrmsv[0];
     } 
   }
 
@@ -567,14 +587,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//NOTE that we are replacing the value of "strip" with the line above!
 	// Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
 	// sample-to-sample: When operating with online zero suppression, these should all probably be set to zero, 
-	//std::cout << axis << " " << strip << std::endl;
+	//std::cout << GetName() << " " << axis << " " << strip << std::endl;
 	
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
 	double gaintemp = ( axis == SBSGEM::kUaxis ) ? fUgain[strip/128] : fVgain[strip/128];
 	
 	// std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
-	//  	  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << std::endl;
+	//   	  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << std::endl;
 	
 	//Now loop over the time samples:
 	for( Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++ ){
@@ -614,12 +634,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //assert( fNstrips_hit < fMPDmap.size()*fN_APV25_CHAN );
 	}
 	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
-	//cout << ADCsum_temp << " >? " << fThresholdStripSum << "; " 
-	//   << rmstemp << "; " << maxADC << " >? " << fZeroSuppressRMS*rmstemp 
-	//   << "; " << fThresholdSample << endl;
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
 
+	//cout << ADCsum_temp << " >? " << fThresholdStripSum << "; " 
+	//   << ADCsum_temp/double(fN_MPD_TIME_SAMP) << " >? " << fZeroSuppressRMS*rmstemp << "; " 
+	//   << maxADC << " >? " << fZeroSuppressRMS*rmstemp 
+	//   << "; " << fThresholdSample << endl;
+	
 	//the ROOTgui multicrate uses a threshold on the AVERAGE ADC sample (not the MAX). To be consistent
 	// with how the "Hit" root files are produced, let's use the same threshold;
 	// this amounts to using a higher effective threshold than cutting on the max ADC sample would have been:
@@ -627,7 +649,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	   ( ADCsum_temp/double(fN_MPD_TIME_SAMP) > fZeroSuppressRMS*rmstemp &&
 	     maxADC > fThresholdSample && ADCsum_temp > fThresholdStripSum ) ){ //Default threshold is 5-sigma!
 	  //Increment hit count and populate decoded data structures:
-
+	  
 	  //NOW apply gain correction:
 	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	    ADCtemp[isamp] /= gaintemp;

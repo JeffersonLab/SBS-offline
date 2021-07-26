@@ -32,6 +32,8 @@ bb.gem.ft0_m0.chanmap =
       19    1   1   0   1   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft0_m0.layer = 0
+bb.gem.ft0_m0.threshold_stripsum = 240
+bb.gem.ft0_m0.threshold_sample = 100
 bb.gem.ft0_m0.nstripsu = 1280
 bb.gem.ft0_m0.nstripsv = 1024
 bb.gem.ft0_m0.uangle = 0.
@@ -39,8 +41,10 @@ bb.gem.ft0_m0.vangle = 90.
 bb.gem.ft0_m0.upitch = 0.0004
 bb.gem.ft0_m0.vpitch = 0.0004
 
-bb.gem.ft0_m0.ped = 1500
-bb.gem.ft0_m0.rms = 20
+bb.gem.ft0_m0.pedu = 1500
+bb.gem.ft0_m0.rmsu = 8
+bb.gem.ft0_m0.pedv = 1500
+bb.gem.ft0_m0.rmsv = 8
 
 bb.gem.ft0_m0.position = -0.512 0.0 0.85
 bb.gem.ft0_m0.size = 0.512 0.4096 0.003
@@ -69,6 +73,8 @@ bb.gem.ft0_m1.chanmap =
       19    2   2   0   3   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft0_m1.layer = 0
+bb.gem.ft0_m1.threshold_stripsum = 240
+bb.gem.ft0_m1.threshold_sample = 100
 bb.gem.ft0_m1.nstripsu = 1280
 bb.gem.ft0_m1.nstripsv = 1024
 bb.gem.ft0_m1.uangle = 0.
@@ -76,8 +82,10 @@ bb.gem.ft0_m1.vangle = 90.
 bb.gem.ft0_m1.upitch = 0.0004
 bb.gem.ft0_m1.vpitch = 0.0004
 
-bb.gem.ft0_m1.ped = 1500
-bb.gem.ft0_m1.rms = 20
+bb.gem.ft0_m1.pedu = 1500
+bb.gem.ft0_m1.rmsu = 8
+bb.gem.ft0_m1.pedv = 1500
+bb.gem.ft0_m1.rmsv = 8
 
 bb.gem.ft0_m1.position = 0.0 0.0 0.85
 bb.gem.ft0_m1.size = 0.512 0.4096 0.003
@@ -106,6 +114,8 @@ bb.gem.ft0_m2.chanmap =
       19    3   3   0   5   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft0_m2.layer = 0
+bb.gem.ft0_m2.threshold_stripsum = 240
+bb.gem.ft0_m2.threshold_sample = 100
 bb.gem.ft0_m2.nstripsu = 1280
 bb.gem.ft0_m2.nstripsv = 1024
 bb.gem.ft0_m2.uangle = 0.
@@ -113,8 +123,10 @@ bb.gem.ft0_m2.vangle = 90.
 bb.gem.ft0_m2.upitch = 0.0004
 bb.gem.ft0_m2.vpitch = 0.0004
 
-bb.gem.ft0_m2.ped = 1500
-bb.gem.ft0_m2.rms = 20
+bb.gem.ft0_m2.pedu = 1500
+bb.gem.ft0_m2.rmsu = 8
+bb.gem.ft0_m2.pedv = 1500
+bb.gem.ft0_m2.rmsv = 8
 
 bb.gem.ft0_m2.position = 0.512 0.0 0.85
 bb.gem.ft0_m2.size = 0.512 0.4096 0.003
@@ -143,6 +155,8 @@ bb.gem.ft1_m0.chanmap =
       19    4   4   0   7   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft1_m0.layer = 1
+bb.gem.ft1_m0.threshold_stripsum = 240
+bb.gem.ft1_m0.threshold_sample = 100
 bb.gem.ft1_m0.nstripsu = 1280
 bb.gem.ft1_m0.nstripsv = 1024
 bb.gem.ft1_m0.uangle = 0.
@@ -150,8 +164,10 @@ bb.gem.ft1_m0.vangle = 90.
 bb.gem.ft1_m0.upitch = 0.0004
 bb.gem.ft1_m0.vpitch = 0.0004
 
-bb.gem.ft1_m0.ped = 1500
-bb.gem.ft1_m0.rms = 20
+bb.gem.ft1_m0.pedu = 1500
+bb.gem.ft1_m0.rmsu = 8
+bb.gem.ft1_m0.pedv = 1500
+bb.gem.ft1_m0.rmsv = 8
 
 bb.gem.ft1_m0.position = -0.512 0.0 1.00
 bb.gem.ft1_m0.size = 0.512 0.4096 0.003
@@ -180,6 +196,8 @@ bb.gem.ft1_m1.chanmap =
       19    5   5   0   9   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft1_m1.layer = 1
+bb.gem.ft1_m1.threshold_stripsum = 240
+bb.gem.ft1_m1.threshold_sample = 100
 bb.gem.ft1_m1.nstripsu = 1280
 bb.gem.ft1_m1.nstripsv = 1024
 bb.gem.ft1_m1.uangle = 0.
@@ -187,8 +205,10 @@ bb.gem.ft1_m1.vangle = 90.
 bb.gem.ft1_m1.upitch = 0.0004
 bb.gem.ft1_m1.vpitch = 0.0004
 
-bb.gem.ft1_m1.ped = 1500
-bb.gem.ft1_m1.rms = 20
+bb.gem.ft1_m1.pedu = 1500
+bb.gem.ft1_m1.rmsu = 8
+bb.gem.ft1_m1.pedv = 1500
+bb.gem.ft1_m1.rmsv = 8
 
 bb.gem.ft1_m1.position = 0.0 0.0 1.00
 bb.gem.ft1_m1.size = 0.512 0.4096 0.003
@@ -216,6 +236,8 @@ bb.gem.ft1_m2.chanmap =
       19    6   6   0  11   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft1_m2.layer = 1
+bb.gem.ft1_m2.threshold_stripsum = 240
+bb.gem.ft1_m2.threshold_sample = 100
 bb.gem.ft1_m2.nstripsu = 1280
 bb.gem.ft1_m2.nstripsv = 1024
 bb.gem.ft1_m2.uangle = 0.
@@ -223,8 +245,10 @@ bb.gem.ft1_m2.vangle = 90.
 bb.gem.ft1_m2.upitch = 0.0004
 bb.gem.ft1_m2.vpitch = 0.0004
 
-bb.gem.ft1_m2.ped = 1500
-bb.gem.ft1_m2.rms = 20
+bb.gem.ft1_m2.pedu = 1500
+bb.gem.ft1_m2.rmsu = 8
+bb.gem.ft1_m2.pedv = 1500
+bb.gem.ft1_m2.rmsv = 8
 
 bb.gem.ft1_m2.position = 0.512 0.0 1.00
 bb.gem.ft1_m2.size = 0.512 0.4096 0.003
@@ -252,6 +276,8 @@ bb.gem.ft2_m0.chanmap =
       19    7   7   0  13   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft2_m0.layer = 2
+bb.gem.ft2_m0.threshold_stripsum = 240
+bb.gem.ft2_m0.threshold_sample = 100
 bb.gem.ft2_m0.nstripsu = 1280
 bb.gem.ft2_m0.nstripsv = 1024
 bb.gem.ft2_m0.uangle = 0.
@@ -259,8 +285,10 @@ bb.gem.ft2_m0.vangle = 90.
 bb.gem.ft2_m0.upitch = 0.0004
 bb.gem.ft2_m0.vpitch = 0.0004
 
-bb.gem.ft2_m0.ped = 1500
-bb.gem.ft2_m0.rms = 20
+bb.gem.ft2_m0.pedu = 1500
+bb.gem.ft2_m0.rmsu = 8
+bb.gem.ft2_m0.pedv = 1500
+bb.gem.ft2_m0.rmsv = 8
 
 bb.gem.ft2_m0.position = -0.512 0.0 1.15
 bb.gem.ft2_m0.size = 0.512 0.4096 0.003
@@ -289,6 +317,8 @@ bb.gem.ft2_m1.chanmap =
       19    8   8   0  15   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft2_m1.layer = 2
+bb.gem.ft2_m1.threshold_stripsum = 240
+bb.gem.ft2_m1.threshold_sample = 100
 bb.gem.ft2_m1.nstripsu = 1280
 bb.gem.ft2_m1.nstripsv = 1024
 bb.gem.ft2_m1.uangle = 0.
@@ -296,8 +326,10 @@ bb.gem.ft2_m1.vangle = 90.
 bb.gem.ft2_m1.upitch = 0.0004
 bb.gem.ft2_m1.vpitch = 0.0004
 
-bb.gem.ft2_m1.ped = 1500
-bb.gem.ft2_m1.rms = 20
+bb.gem.ft2_m1.pedu = 1500
+bb.gem.ft2_m1.rmsu = 8
+bb.gem.ft2_m1.pedv = 1500
+bb.gem.ft2_m1.rmsv = 8
 
 bb.gem.ft2_m1.position = 0.0 0.0 1.15
 bb.gem.ft2_m1.size = 0.512 0.4096 0.003
@@ -326,6 +358,8 @@ bb.gem.ft2_m2.chanmap =
       19   10  10   0   1   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft2_m2.layer = 2
+bb.gem.ft2_m2.threshold_stripsum = 240
+bb.gem.ft2_m2.threshold_sample = 100
 bb.gem.ft2_m2.nstripsu = 1280
 bb.gem.ft2_m2.nstripsv = 1024
 bb.gem.ft2_m2.uangle = 0.
@@ -333,8 +367,10 @@ bb.gem.ft2_m2.vangle = 90.
 bb.gem.ft2_m2.upitch = 0.0004
 bb.gem.ft2_m2.vpitch = 0.0004
 
-bb.gem.ft2_m2.ped = 1500
-bb.gem.ft2_m2.rms = 20
+bb.gem.ft2_m2.pedu = 1500
+bb.gem.ft2_m2.rmsu = 8
+bb.gem.ft2_m2.pedv = 1500
+bb.gem.ft2_m2.rmsv = 8
 
 bb.gem.ft2_m2.position = 0.512 0.0 1.15
 bb.gem.ft2_m2.size = 0.512 0.4096 0.003
@@ -363,6 +399,8 @@ bb.gem.ft3_m0.chanmap =
       19   11  11   0   3   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft3_m0.layer = 3
+bb.gem.ft3_m0.threshold_stripsum = 240
+bb.gem.ft3_m0.threshold_sample = 100
 bb.gem.ft3_m0.nstripsu = 1280
 bb.gem.ft3_m0.nstripsv = 1024
 bb.gem.ft3_m0.uangle = 0.
@@ -370,8 +408,10 @@ bb.gem.ft3_m0.vangle = 90.
 bb.gem.ft3_m0.upitch = 0.0004
 bb.gem.ft3_m0.vpitch = 0.0004
 
-bb.gem.ft3_m0.ped = 1500
-bb.gem.ft3_m0.rms = 20
+bb.gem.ft3_m0.pedu = 1500
+bb.gem.ft3_m0.rmsu = 8
+bb.gem.ft3_m0.pedv = 1500
+bb.gem.ft3_m0.rmsv = 8
 
 bb.gem.ft3_m0.position = -0.512 0.0 1.30
 bb.gem.ft3_m0.size = 0.512 0.4096 0.003
@@ -400,6 +440,8 @@ bb.gem.ft3_m1.chanmap =
       19   12  12   0   5   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft3_m1.layer = 3
+bb.gem.ft3_m1.threshold_stripsum = 240
+bb.gem.ft3_m1.threshold_sample = 100
 bb.gem.ft3_m1.nstripsu = 1280
 bb.gem.ft3_m1.nstripsv = 1024
 bb.gem.ft3_m1.uangle = 0.
@@ -407,8 +449,10 @@ bb.gem.ft3_m1.vangle = 90.
 bb.gem.ft3_m1.upitch = 0.0004
 bb.gem.ft3_m1.vpitch = 0.0004
 
-bb.gem.ft3_m1.ped = 1500
-bb.gem.ft3_m1.rms = 20
+bb.gem.ft3_m1.pedu = 1500
+bb.gem.ft3_m1.rmsu = 8
+bb.gem.ft3_m1.pedv = 1500
+bb.gem.ft3_m1.rmsv = 8
 
 bb.gem.ft3_m1.position = 0.0 0.0 1.30
 bb.gem.ft3_m1.size = 0.512 0.4096 0.003
@@ -437,6 +481,8 @@ bb.gem.ft3_m2.chanmap =
       19   13  13   0   7   0   7   0    1 # Strip  896-1023
 
 bb.gem.ft3_m2.layer = 3
+bb.gem.ft3_m2.threshold_stripsum = 240
+bb.gem.ft3_m2.threshold_sample = 100
 bb.gem.ft3_m2.nstripsu = 1280
 bb.gem.ft3_m2.nstripsv = 1024
 bb.gem.ft3_m2.uangle = 0.
@@ -444,8 +490,10 @@ bb.gem.ft3_m2.vangle = 90.
 bb.gem.ft3_m2.upitch = 0.0004
 bb.gem.ft3_m2.vpitch = 0.0004
 
-bb.gem.ft3_m2.ped = 1500
-bb.gem.ft3_m2.rms = 20
+bb.gem.ft3_m2.pedu = 1500
+bb.gem.ft3_m2.rmsu = 8
+bb.gem.ft3_m2.pedv = 1500
+bb.gem.ft3_m2.rmsv = 8
 
 bb.gem.ft3_m2.position = 0.512 0.0 1.30
 bb.gem.ft3_m2.size = 0.512 0.4096 0.003
@@ -478,6 +526,8 @@ bb.gem.bt0_m0.chanmap =
       19   14  14   0  13   0  11   0    1 # Strip 1408-1535
 
 bb.gem.bt0_m0.layer = 4
+bb.gem.bt0_m0.threshold_stripsum = 240
+bb.gem.bt0_m0.threshold_sample = 100
 bb.gem.bt0_m0.nstripsu = 1280
 bb.gem.bt0_m0.nstripsv = 1536
 bb.gem.bt0_m0.uangle = 0.
@@ -485,8 +535,10 @@ bb.gem.bt0_m0.vangle = 90.
 bb.gem.bt0_m0.upitch = 0.0004
 bb.gem.bt0_m0.vpitch = 0.0004
 
-bb.gem.bt0_m0.ped = 1500
-bb.gem.bt0_m0.rms = 20
+bb.gem.bt0_m0.pedu = 1500
+bb.gem.bt0_m0.rmsu = 8
+bb.gem.bt0_m0.pedv = 1500
+bb.gem.bt0_m0.rmsv = 8
 
 bb.gem.bt0_m0.position = -0.768 0.0 2.33
 bb.gem.bt0_m0.size = 0.512 0.6144 0.003
@@ -519,6 +571,8 @@ bb.gem.bt0_m1.chanmap =
       19   16  16   0   3   0  11   0    1 # Strip 1408-1535
 
 bb.gem.bt0_m1.layer = 4
+bb.gem.bt0_m1.threshold_stripsum = 240
+bb.gem.bt0_m1.threshold_sample = 100
 bb.gem.bt0_m1.nstripsu = 1280
 bb.gem.bt0_m1.nstripsv = 1536
 bb.gem.bt0_m1.uangle = 0.
@@ -526,8 +580,10 @@ bb.gem.bt0_m1.vangle = 90.
 bb.gem.bt0_m1.upitch = 0.0004
 bb.gem.bt0_m1.vpitch = 0.0004
 
-bb.gem.bt0_m1.ped = 1500
-bb.gem.bt0_m1.rms = 20
+bb.gem.bt0_m1.pedu = 1500
+bb.gem.bt0_m1.rmsu = 8
+bb.gem.bt0_m1.pedv = 1500
+bb.gem.bt0_m1.rmsv = 8
 
 bb.gem.bt0_m1.position = -0.256 0.0 2.33
 bb.gem.bt0_m1.size = 0.512 0.6144 0.003
@@ -560,6 +616,8 @@ bb.gem.bt0_m2.chanmap =
       19   17  17   0   9   0  11   0    1 # Strip 1408-1535
 
 bb.gem.bt0_m2.layer = 4
+bb.gem.bt0_m2.threshold_stripsum = 240
+bb.gem.bt0_m2.threshold_sample = 100
 bb.gem.bt0_m2.nstripsu = 1280
 bb.gem.bt0_m2.nstripsv = 1536
 bb.gem.bt0_m2.uangle = 0.
@@ -567,8 +625,10 @@ bb.gem.bt0_m2.vangle = 90.
 bb.gem.bt0_m2.upitch = 0.0004
 bb.gem.bt0_m2.vpitch = 0.0004
 
-bb.gem.bt0_m2.ped = 1500
-bb.gem.bt0_m2.rms = 20
+bb.gem.bt0_m2.pedu = 1500
+bb.gem.bt0_m2.rmsu = 8
+bb.gem.bt0_m2.pedv = 1500
+bb.gem.bt0_m2.rmsv = 8
 
 bb.gem.bt0_m2.position = 0.256 0.0 2.33
 bb.gem.bt0_m2.size = 0.512 0.6144 0.003
@@ -601,6 +661,8 @@ bb.gem.bt0_m3.chanmap =
       19   18  18   0  15   0  11   0    1 # Strip 1408-1535
 
 bb.gem.bt0_m3.layer = 4
+bb.gem.bt0_m3.threshold_stripsum = 240
+bb.gem.bt0_m3.threshold_sample = 100
 bb.gem.bt0_m3.nstripsu = 1280
 bb.gem.bt0_m3.nstripsv = 1536
 bb.gem.bt0_m3.uangle = 0.
@@ -608,8 +670,10 @@ bb.gem.bt0_m3.vangle = 90.
 bb.gem.bt0_m3.upitch = 0.0004
 bb.gem.bt0_m3.vpitch = 0.0004
 
-bb.gem.bt0_m3.ped = 1500
-bb.gem.bt0_m3.rms = 20
+bb.gem.bt0_m3.pedu = 1500
+bb.gem.bt0_m3.rmsu = 8
+bb.gem.bt0_m3.pedv = 1500
+bb.gem.bt0_m3.rmsv = 8
 
 bb.gem.bt0_m3.position = 0.768 0.0 2.33
 bb.gem.bt0_m3.size = 0.512 0.6144 0.003

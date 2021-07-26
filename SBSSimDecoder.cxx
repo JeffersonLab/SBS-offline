@@ -595,11 +595,14 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       if(fDebug>3)
 	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
+      //if(mod>=26 && simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
       
       if(j==simev->Tgmn->Earm_BBGEM_dighit_nstrips-1){
 	loadevt = true;
-      }else if(fabs(lchan-simev->Tgmn->Earm_BBGEM_dighit_strip->at(j+1))>=128 || 
-	       mod!=simev->Tgmn->Earm_BBGEM_dighit_module->at(j+1)){
+      }else if(mod!=simev->Tgmn->Earm_BBGEM_dighit_module->at(j+1) ||
+	       //fabs(lchan-simev->Tgmn->Earm_BBGEM_dighit_strip->at(j+1))>=128
+	       floor(simev->Tgmn->Earm_BBGEM_dighit_strip->at(j+1)/128)!=floor(lchan/128)
+	       ){
 	loadevt = true;
       }
 	
@@ -614,9 +617,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  //I think I'm onto something here, but I also need to transmit strip num 
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<samps.size(); k++){
-	    //cout << " " << samps[k];
-	    myev->push_back(strips[k]*8192+
-			    samps[k]);
+	    // cout << " " << samps[k];
+	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
