@@ -509,9 +509,9 @@ void SBSGEMTrackerBase::find_tracks(){
     int nhitsrequired = layers_with_2Dhits.size(); //initially we favor tracks with the largest possible number of hits; if we fail to find a track at this hit requirement, we decrement the number of required hits as long as it exceeds the minimum
     //std::cout << "[SBSGEMTrackerBase::find_tracks]: nhitsrequired = " << nhitsrequired << endl;
 
-    bool foundtrack = true;
+    bool foundtrack = false;
     
-    while( foundtrack && nhitsrequired >= fMinHitsOnTrack ){ //as long as the current minimum hit requirement exceeds the minimum hits to define a track, we look for more tracks with
+    while( nhitsrequired >= fMinHitsOnTrack ){ //as long as the current minimum hit requirement exceeds the minimum hits to define a track, we look for more tracks with
       // nhitsrequired hits:
       foundtrack = false;
 
@@ -682,7 +682,9 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	      //clear out the "free hit" counter for looping over combinations:
 	      freehitcounter.clear(); //these were all initialized to zero in InitFreeHitList, but it makes sense to clear them out here:
-		
+
+	      long ncombos_otherlayers=1;
+	      
 	      for( auto ilay = otherlayers.begin(); ilay != otherlayers.end(); ++ilay ){
 		int layer = *ilay;
 
@@ -707,8 +709,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		  double binxdiff = xproj - (fGridXmin_layer[layer]+binxtemp*fGridBinWidthX);
 		  double binydiff = yproj - (fGridYmin_layer[layer]+binytemp*fGridBinWidthY);
 
-		  std::cout << "(binxdiff, binydiff)=(" << binxdiff/fGridBinWidthX << ", "
-			    << binydiff/fGridBinWidthY << ")" << endl;
+		  
 		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
 		  if( binxdiff < fGridEdgeToleranceX && binxtemp > 0 ) binxlo = binxtemp-1;
 		  if( binydiff < fGridEdgeToleranceY && binytemp > 0 ) binylo = binytemp-1;
@@ -716,6 +717,12 @@ void SBSGEMTrackerBase::find_tracks(){
 		  if( fGridBinWidthX - binxdiff < fGridEdgeToleranceX && binxtemp + 1 < fGridNbinsX_layer[layer] ) binxhi = binxtemp+1;
 		  if( fGridBinWidthY - binydiff < fGridEdgeToleranceY && binytemp + 1 < fGridNbinsY_layer[layer] ) binyhi = binytemp+1;
 
+		  std::cout << "(binxtemp, binytemp, binxdiff, binydiff)=(" << binxtemp << ", " << binytemp << ", "
+			    << binxdiff/fGridBinWidthX << ", "
+			    << binydiff/fGridBinWidthY << ")" << std::endl;
+		  std::cout << "(binxlo,binxhi,binylo,binyhi)=(" << binxlo << ", " << binxhi << ", "
+			    << binylo << ", " << binyhi << ")" << std::endl;
+		  
 		  //now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
 		  for( int binx = binxlo; binx <= binxhi; binx++ ){
 		    for( int biny = binylo; biny <= binyhi; biny++ ){
@@ -731,7 +738,15 @@ void SBSGEMTrackerBase::find_tracks(){
 		} //end check on grid bin of projected track in range
 
 		  //This check enforces that all layers other than minlayer and maxlayer have at least one hit in the relevant 2D grid bins:
-		if( freehitlist_goodxy.find(layer) == freehitlist_goodxy.end() ) nextcomboexists = false;
+
+		
+		if( freehitlist_goodxy.find(layer) == freehitlist_goodxy.end() ) {
+		  nextcomboexists = false;
+		  std::cout << "No free hits found in good xy bins in layer " << layer << std::endl;
+		} else {
+		  std::cout << "layer, nfree hits in good xy bins = " << layer << ", " << freehitlist_goodxy[layer].size() << std::endl;
+		  ncombos_otherlayers *= freehitlist_goodxy[layer].size(); 
+		}
 
 		freehitcounter[layer] = 0;
 		  
@@ -744,7 +759,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	      int ncombostested = 0;
 	      
-	      if( nextcomboexists ){
+	      if( nextcomboexists && ncombos_otherlayers * ncombos_minmax <= 100000 && ncombos_minmax >= 0 ){
 		bool firstcombo = true;
 
 		std::map<int,int> hitcombo;
@@ -845,7 +860,9 @@ void SBSGEMTrackerBase::find_tracks(){
 	    
 	}
 	  
-      } //end check on layers with free hits >= nhitsrequired
+      } else {
+	break;
+      }//end check on layers with free hits >= nhitsrequired
 		
       if( !foundtrack ){ //If we didn't find any tracks at the current minimum hit requirement, then reduce the minimum, and see if we can find a good track
 	// (or tracks) with one fewer hit. Otherwise, we search again at the current minimum hit requirement:

@@ -54,7 +54,7 @@ void replay(){
   // We just set up one, but this could be many.
 //  THaRun* run = new THaRun( "prod12_4100V_TrigRate25_4.dat" );
   //THaRun* run = new THaRun( "5GEM_sample.dat" );
-  THaRun* run = new THaRun( "/Users/puckett/WORK/GEM_ALIGNMENT/RAWDATA/gem_cleanroom_2811.evio.31" );
+  THaRun* run = new THaRun( "/Users/puckett/WORK/GEM_ALIGNMENT/RAWDATA/gem_cleanroom_2811.evio.15" );
   run->SetLastEvent(1000);
 
   run->SetDataRequired(0);
@@ -64,7 +64,7 @@ void replay(){
   
   // Define the analysis parameters
   analyzer->SetEvent( event );
-  analyzer->SetOutFile( "temp.root" );
+  analyzer->SetOutFile( "temp15.root" );
   // File to record cuts accounting information
   analyzer->SetSummaryFile("summary_example.log"); // optional
 
