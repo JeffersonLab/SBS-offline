@@ -42,8 +42,8 @@ SBSSimDataDecoder* SBSSimDataDecoder::GetEncoderByName(
     fEncoders.push_back(new SBSSimADCEncoder("adc",ids++,12));
     fEncoders.push_back(new SBSSimADCEncoder("lecroy1881",ids++,14));
     fEncoders.push_back(new SBSSimADCEncoder("caen792",ids++,12));
-    fEncoders.push_back(new SBSSimSADCEncoder("mpd",ids++));
-    //fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
+    //fEncoders.push_back(new SBSSimSADCEncoder("mpd",ids++));
+    fEncoders.push_back(new SBSSimMPDEncoder("mpd",ids++));
   }
 
   TString name(enc_name);
@@ -185,9 +185,11 @@ bool SBSSimTDCEncoder::DecodeTDC(SimEncoder::tdc_data &data,
 {
   for(unsigned short n = 0; n < nwords; n++) {
     //std::cout << "n = " << n << ": encoded data " << enc_data[n] << " edge bit " << fEdgeBit << std::endl;
-    data.time.push_back(((enc_data[n]>>fEdgeBit)<<31) |
-        (enc_data[n]&fBitMask));
-    //std::cout << "decoded data " << (((enc_data[n]>>fEdgeBit)<<31) | (enc_data[n]&fBitMask)) << " edge bit " << fEdgeBit << std::endl;
+    //data.time.push_back(((enc_data[n]>>fEdgeBit)<<31) |
+    //  (enc_data[n]&fBitMask));
+    data.time.push_back(enc_data[n]);
+    //std::cout << " decoded data " << (((enc_data[n]>>fEdgeBit)<<31) | (enc_data[n]&fBitMask)) << " edge bit " << fEdgeBit << std::endl;
+    //std::cout << data.time[n] << " " << data.getTime(n) << " " << data.getEdge(n) << std::endl;
   }
   return !data.time.empty();
 }
@@ -197,11 +199,13 @@ bool SBSSimSADCEncoder::DecodeSADC(SimEncoder::sadc_data &data,
 {
   data.integral = 0;
   data.samples.clear(); // Clear out any samples already in the data
-  
+  //std::cout << " nwords: " << nwords << " => ";
   for(unsigned short i = 0; i<nwords; i++){
     data.integral+=enc_data[i];
     data.samples.push_back(enc_data[i]);
+    //std::cout << enc_data[i] << " ";
   }
+  //std::cout << std::endl;
 }
 
 /*
@@ -271,8 +275,8 @@ unsigned int SBSSimDataDecoder::EncodeHeader(unsigned short type,
     unsigned short mult, unsigned int nwords)
 {
   // First word bits
-  // 31-23: encoder type
-  // 22-14: channel multiplier (to be converted to local channel by SimDecoder)
+  // 31-26: encoder type
+  // 25-14: channel multiplier (to be converted to local channel by SimDecoder)
   // 13-0 : number of words that follow
   return ((type&SBS_TYPE_MASK)<<SBS_TYPE_FIRST_BIT) |
     ((mult&SBS_CHANNEL_MASK)<<SBS_CHANNEL_FIRST_BIT) |
@@ -299,17 +303,17 @@ unsigned short SBSSimDataDecoder::DecodeNwords(unsigned int hdr) {
   return hdr&SBS_NWORDS_MASK;
 }
 
-/*
 SBSSimMPDEncoder::SBSSimMPDEncoder(const char *enc_name,
     unsigned short enc_id) : SBSSimDataDecoder(enc_name,enc_id)
 {
+/*
   fChannelBitMask  = MakeBitMask(8);
   fDataBitMask     = MakeBitMask(12);
   fOverflowBitMask = (1<<12);
   fSampleBitMask   = fDataBitMask|fOverflowBitMask;
   fValidBitMask    = (1<<13);
-}
 */
+}
 /*
 bool SBSSimMPDEncoder::EncodeMPD(SimEncoder::mpd_data data,
     unsigned int *enc_data, unsigned short &nwords)
@@ -406,20 +410,20 @@ void SBSSimMPDEncoder::DecodeMPDHeader(const unsigned int *hdr,
   data.gem_id   = (*hdr&SBS_MPD_GEM_ID_MASK)>>SBS_MPD_GEM_ID_BIT;
 }
 */
-/*
-bool SBSSimMPDEncoder::DecodeMPD(//SimEncoder::mpd_data &data,
-				 SimEncoder::sadc_data &data,
-    const unsigned int *enc_data,unsigned short nwords)
+bool SBSSimMPDEncoder::DecodeMPD(SimEncoder::mpd_data &data,
+				 const unsigned int *enc_data,unsigned short nwords)
 {
   data.samples.clear(); // Clear out any samples already in the data
   //std::cout << "nwords " << nwords << std::endl;
+  //data.nstrips = nwords/data.nsamples;
   for(unsigned short i = 0; i<nwords; i++){
     //std::cout << enc_data[i] << " ";
     
-    data.samples.push_back(enc_data[i]);
+    data.strips.push_back(enc_data[i]/8192);
+    data.samples.push_back(enc_data[i]%8192);
   }
   //std::cout << std::endl;
-
+  /*
   if(nwords<=1) {
     std::cerr << "Error, not enough words to read. Expected more than one,"
       << " got only: " << nwords << std::endl;
@@ -450,7 +454,9 @@ bool SBSSimMPDEncoder::DecodeMPD(//SimEncoder::mpd_data &data,
       << data.nstrips*data.nsamples << ")." << std::endl;
     return false;
   }
+  */
   return true;
 
 }
+/*
 */

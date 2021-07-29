@@ -54,7 +54,9 @@ struct SBSGenericOutputData {
   std::vector<Int_t> col;         //< [] col
   std::vector<Int_t> ped;         //< [] pedestal
   std::vector<Int_t> layer;       //< [] layer
+  std::vector<Int_t> elemID;      //< [] element ID
   // ADC variables
+  std::vector<Int_t> a_mult;         //< [] ADC # of hits per channel
   std::vector<Float_t> a;         //< [] ADC integral
   std::vector<Float_t> a_p;         //< [] ADC integral -pedestal
   std::vector<Float_t> a_c;         //< [] (ADC integral -pedestal)*calib
@@ -62,10 +64,12 @@ struct SBSGenericOutputData {
   std::vector<Float_t> a_amp_p;     //< [] ADC pulse amplitude -pedestal
   std::vector<Float_t> a_time;    //< [] ADC pulse time
   // TDC variables
+  std::vector<Int_t> t_mult;         //< [] TDC # of hits per channel
   std::vector<Float_t> t;         //< [] TDC (leading edge) time
   std::vector<Float_t> t_te;      //< [] TDC trailing edge time
   std::vector<Float_t> t_ToT;     //< [] TDC Time-Over-Threshold
   // Waveform variables
+  std::vector<Int_t> samps_elemID;      //< [] Element ID of samples
   std::vector<Int_t> nsamps;      //< [] Number of ADC samples
   std::vector<Int_t> sidx;        //< [] Index of start of ADC samples in for this row-col-layer
   std::vector<Float_t> samps;     //< []*nsamps ADC samples
@@ -75,7 +79,9 @@ struct SBSGenericOutputData {
     row.clear();
     col.clear();
     ped.clear();
+    elemID.clear();
     layer.clear();
+    a_mult.clear();
     a.clear();
     a_p.clear();
     a_c.clear();
@@ -83,11 +89,13 @@ struct SBSGenericOutputData {
     a_amp_p.clear();
     a_time.clear();
     t.clear();
+    t_mult.clear();
     t_te.clear();
     t_ToT.clear();
     nsamps.clear();
     sidx.clear();
     samps.clear();
+    samps_elemID.clear();
   }
 };
 
@@ -119,13 +127,13 @@ public:
   virtual Int_t      FineProcess(TClonesArray& tracks);
 
   virtual Int_t      DecodeADC( const THaEvData&, SBSElement *blk,
-      THaDetMap::Module *d, Int_t chan);
+				THaDetMap::Module *d, Int_t chan, Bool_t IsRef);
   virtual Int_t      DecodeTDC( const THaEvData&, SBSElement *blk,
-      THaDetMap::Module *d, Int_t chan);
+      THaDetMap::Module *d, Int_t chan, Bool_t IsRef);
 
   // Utility functions
   // Can be re-implemented by other classes to specify a different
-  // SBSElement sub-class (i.e. useful when one wants to change the logic
+  // SBSElement sub-class (i.e. useful when one wants to chang  the logic
   // in SBSElement::CoarseProcess()
   virtual SBSElement* MakeElement(Float_t x, Float_t y, Float_t z, Int_t row,
       Int_t col, Int_t layer, Int_t id = 0);
@@ -134,9 +142,10 @@ protected:
 
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
-  virtual Int_t  FindGoodHit(SBSElement *){ return 0; } // Optionally implemented by derived classes
+  virtual Int_t  FindGoodHit(SBSElement *); // 
 
   // Configuration
+  Int_t  fNRefElem;        ///< Number of Ref Time elements
   Int_t  fNrows;        ///< Number of rows
   std::vector<Int_t>  fNcols; ///< Number of columns per row
   Int_t fNcolsMax;      ///< Max number of columns out of all rows
@@ -146,14 +155,21 @@ protected:
   Bool_t fDisableRefADC; //< Reference ADC may be optionally disabled
   Bool_t fDisableRefTDC; //< Reference TDC may be optionally disabled
   Bool_t fStoreEmptyElements; //< Do not store data for empty elements in rootfile
-
+  Bool_t fIsMC; // flag to indicate if data are simulated;
+  
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)
-  std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to calorimeter element number
+  std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to element number
+  std::vector<std::vector<Int_t> > fRefChanMap; //< Maps modules in THaDetMap to Reference time
+  std::vector<Bool_t> fModuleRefTimeFlag; //< If module has Reftime set to true
+  std::vector<Int_t> fRefChanLo; //< Module Reftime Low channel number
+  std::vector<Int_t> fRefChanHi; //< Module Reftime High channel number
 
   // Output variable containers
   SBSGenericOutputData fGood;     //< Good data output
   SBSGenericOutputData fRaw;      //< All hits
+  SBSGenericOutputData fRefGood;     //< Good Ref time data output
+  SBSGenericOutputData fRefRaw;      //< All Ref time hits
 
   // Blocks, where the grid is just for easy access to the elements by row,col,layer
   std::vector<SBSElement*> fElements;
@@ -172,6 +188,7 @@ protected:
 
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
+  Int_t      fNRefhits;     ///< Number of reference hits in event
   Int_t      fNGoodhits;     ///< Number of good hits in event
 
   // Flags for enabling and disabling various features

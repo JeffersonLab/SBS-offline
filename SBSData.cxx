@@ -46,15 +46,18 @@ namespace SBSData {
 
   /////////////////////////////////////////////////////////////////////////////
   // TDC data functions
-  TDC::TDC(Float_t offset, Float_t cal) : fHasData(false)
+  TDC::TDC(Float_t offset, Float_t cal, Float_t GoodTimeCut) : fHasData(false)
   {
-    fEdgeIdx[0] = fEdgeIdx[1];
+    fEdgeIdx[0] = fEdgeIdx[1]=0;
     SetOffset(offset);
     SetCal(cal);
+    SetGoodTimeCut(GoodTimeCut);
   }
 
-  void TDC::Process(Float_t val, Int_t edge)
+  void TDC::Process(Int_t elemID, Float_t val, Float_t fedge)
   {
+    Int_t edge = int(fedge);
+    // std::cout << " tdc process " << val << " " << edge  << " ftdc hits size = " <<fTDC.hits.size() << " hits in edge "  << fEdgeIdx[edge]<< std::endl;
     if(edge < 0 || edge>1) {
       std::cerr << "Edge specified is not valid!" << std::endl;
       edge = 0;
@@ -62,9 +65,11 @@ namespace SBSData {
     size_t idx = fEdgeIdx[edge]++;
     if(idx >= fTDC.hits.size()) {
       // Must grow the hits array to accomodate the new hit
+      // if ( edge ==1)   std::cout << " First edge is TE , this is not right: " << "  idx = " << idx  << " ftdc hits size = " <<fTDC.hits.size() << " hits with LE ="  << fEdgeIdx[0] << " hits with TE ="  << fEdgeIdx[1] << std::endl;
       fTDC.hits.push_back(TDCHit());
     }
     TDCHit *hit = &fTDC.hits[idx];
+    hit->elemID = elemID;
     if( edge == 0 ) { // Leading edge
       hit->le.raw = val;
       hit->le.val = (val-fTDC.offset)*fTDC.cal;
@@ -75,7 +80,8 @@ namespace SBSData {
     if(fEdgeIdx[0] == fEdgeIdx[1]) { // Both leading and trailing edges now found
       hit->ToT.raw = hit->te.raw - hit->le.raw;
       hit->ToT.val = hit->te.val - hit->le.val;
-    }
+   }
+    if(fEdgeIdx[1] > fEdgeIdx[0]) fEdgeIdx[0] = fEdgeIdx[1]; // if TE found first force LE count to increase
     fHasData = true;
   }
 
@@ -101,6 +107,7 @@ namespace SBSData {
 
   void Waveform::Process(std::vector<Float_t> &vals)
   {
+    //printf("vals size %d, samples raw size %d\n", vals.size(), fSamples.samples_raw.size());
     if( vals.size() != fSamples.samples_raw.size()) {
       // Resize our data vector
       fSamples.samples_raw.resize(vals.size());
@@ -139,6 +146,7 @@ namespace SBSData {
     Float_t max  = 0;
     Float_t sum = 0;
     Float_t sped = 0;
+    
     Bool_t PeakFound= kFALSE;
       UInt_t PeakBin= 0;
       UInt_t IntMinBin= 0;

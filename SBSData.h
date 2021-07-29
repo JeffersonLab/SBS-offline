@@ -57,6 +57,7 @@ namespace SBSData {
     SingleData le;  //< Leading edge time
     SingleData te; //< Trailing edge time
     SingleData ToT;   //< Time-over-Threshold (if trailing edge provided)
+    Int_t elemID; //< Element ID
   };
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -65,6 +66,7 @@ namespace SBSData {
     // all public variables
     Float_t offset; //< Time offset
     Float_t cal;    //< Conversion factor
+    Float_t GoodTimeCut;    //< Time Cut to select good hit in multihit TDC.
     std::vector<TDCHit> hits;
     UInt_t good_hit; //< Index of good hit
   };
@@ -124,12 +126,14 @@ namespace SBSData {
   // TDC single valued
   class TDC {
     public:
-      TDC(Float_t offset = 0.0, Float_t cal = 1.0);
+      TDC(Float_t offset = 0.0, Float_t cal = 1.0, Float_t GoodTimeCut = 1.0);
       virtual ~TDC() {};
 
       // Getters
       Float_t GetOffset()           const { return fTDC.offset;     }
       Float_t GetCal()              const { return fTDC.cal;        }
+      Float_t GetGoodTimeCut()              const { return fTDC.GoodTimeCut;}
+      Float_t GetGoodHitIndex()            const { return fTDC.good_hit; }
       TDCHit GetHit(UInt_t i)       const { return fTDC.hits[i];    }
       SingleData GetLead(UInt_t i)  const { return GetHit(i).le;    }
       SingleData GetTrail(UInt_t i) const { return GetHit(i).te;    }
@@ -145,10 +149,11 @@ namespace SBSData {
       // Setters
       void SetOffset(Float_t var)  { fTDC.offset = var; }
       void SetCal(Float_t var) { fTDC.cal = var; }
+      void SetGoodTimeCut(Float_t var) { fTDC.GoodTimeCut = var; }
       void SetGoodHit(UInt_t i) { fTDC.good_hit = i; }
       
       // Process data sets raw value, ped-subtracted and calibrated data
-      virtual void Process(Float_t var, Int_t edge = 0);
+      virtual void Process(Int_t elemID, Float_t var, Float_t edge = 0);
 
       // Do we have TDC data for this event?
       Bool_t HasData() { return fHasData; }
@@ -187,6 +192,7 @@ namespace SBSData {
       SingleData GetAmplitude()   { return fSamples.pulse.amplitude; }
 
       // Setters
+      void SetValTime(Float_t var)  { fSamples.pulse.time.val = var; }
       void SetPed(Float_t var)  { fSamples.ped = var; }
       void SetGain(Float_t var) { fSamples.cal = var; }
       void SetChanTomV(Float_t var) { fSamples.ChanTomV = var; }

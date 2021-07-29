@@ -34,6 +34,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   //if( !file ) return kFileError;
   //Int_t err;
 
+  std::cout << "******** Detector " << GetName() << " ReadDatabase ********" << std::endl;
 
   // Make sure to call parent class so that the generic variables can be read
   return SBSGenericDetector::ReadDatabase(date);
@@ -76,9 +77,14 @@ void SBSTimingHodoscope::ClearEvent()
 /*
  * FindGoodHit()
  */
-Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *)
+Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *blk)
 {
-   return 0;
+  Int_t GoodHit=0;  
+  if (blk->TDC()&& blk->HasData()) {
+    blk->TDC()->SetGoodHit(0);
+    GoodHit=1;
+  }
+  return GoodHit;
 }
 
 Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
@@ -102,6 +108,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   //}
 
   fCoarseProcessed = 1;
+  return 0;
 }
 
 Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )

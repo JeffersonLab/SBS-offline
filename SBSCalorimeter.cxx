@@ -93,8 +93,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     { "acc_charge", &fAccCharge, kFloat, 0, true }, ///< accumulated charge
     { 0 } ///< Request must end in a NULL
   };
-  err = LoadDB( file, date, config_request, fPrefix );
-
+  
   // Reinitialization only possible for same basic configuration
   if( !err ) {
     // Compute the max possible cluster size (which at most should be
@@ -278,7 +277,13 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     fMainclus.n.push_back(clus->GetMult());
     fMainclus.blk_e.push_back(clus->GetEblk());
     fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
-    fMainclus.id.push_back(clus->GetMaxElement()->GetID());
+    if(clus->GetMaxElement()){
+      //EPAF: not sure whether it should be expected to not have a max element 
+      // - perhaps need more of an assertion? - but at least we should not crash...
+      fMainclus.id.push_back(clus->GetMaxElement()->GetID());
+    }else{
+      fMainclus.id.push_back(-1);
+    }
     fMainclus.row.push_back(clus->GetRow());
     fMainclus.col.push_back(clus->GetCol());
 
@@ -322,7 +327,13 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
         fOutclus.blk_e_c.push_back(cluster->GetEblk()*(fConst + fSlope*fAccCharge));
         fOutclus.row.push_back(cluster->GetRow());
         fOutclus.col.push_back(cluster->GetCol());
-        fOutclus.id.push_back(cluster->GetMaxElement()->GetID());
+	if(cluster->GetMaxElement()){
+	  //EPAF: not sure whether it should be expected to not have a max element 
+	  // - perhaps need more of an assertion? - but at least we should not crash...
+	  fOutclus.id.push_back(cluster->GetMaxElement()->GetID());
+	}else{
+	  fOutclus.id.push_back(-1);
+	}
       }
       nclus++;
     }

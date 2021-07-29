@@ -13,9 +13,10 @@
 #pragma link C++ class Decoder::SBSDecodeF1TDCLowResModule+;
 #pragma link C++ class Decoder::SBSDecodeF1TDCHighResModule+;
 #pragma link C++ class Decoder::MPDModule+;
+#pragma link C++ class Decoder::MPDModuleVMEv4+;
 #pragma link C++ class SBSBigBite+;
-#pragma link C++ class SBSGEMStand+;
-#pragma link C++ class SBSGEMPlane+;
+#pragma link C++ class SBSGEMSpectrometerTracker+;
+#pragma link C++ class SBSGEMModule+;
 #pragma link C++ class SBSGRINCH+;
 #pragma link C++ class SBSGRINCH_Cluster+;
 #pragma link C++ class SBSGRINCH_Hit+;
@@ -51,7 +52,7 @@
 #pragma link C++ class SBSSimFile+;
 #pragma link C++ class SBSSimEvent+;
 #pragma link C++ class SBSSimDecoder+;
-#pragma link C++ class g4sbs_tree+;
+#pragma link C++ class gmn_tree_digitized+;
 #pragma link C++ class SBSManager+;
 //#pragma link C++ class Decoder::SBSSimMPD+;
 //#pragma link C++ class gmn_dig_tree+;

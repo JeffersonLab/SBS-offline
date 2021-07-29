@@ -12,7 +12,7 @@
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Generic Calorimeter Block
+
 class SBSElement : public TObject {
 
 public:
@@ -46,7 +46,7 @@ public:
   void SetStat(Int_t var)   { fStat = var; }
   void SetID(Int_t var)     { fID = var; }
   void SetADC(Float_t ped, Float_t gain);
-  void SetTDC(Float_t offset, Float_t cal);
+  void SetTDC(Float_t offset, Float_t cal, Float_t GoodTimeCut);
   void SetWaveform(Float_t ped, Float_t gain,Float_t ChanToMv);
 
   // Sub-classes may want a more comprehensive clear
@@ -68,7 +68,7 @@ protected:
   Int_t   fCol;     ///< Column of the block
   Int_t   fLayer;   ///< Layer of the block
   Int_t   fStat;    ///< Status: 0: not seen, 1: seen, 2: local max
-  Int_t   fID;      ///< [Optional] Could specify a logical number to this element
+  Int_t   fID;      ///< a logical number to this element
 
   SBSData::ADC *fADC; //< All ADC hits
   SBSData::TDC *fTDC; //< All TDC hits

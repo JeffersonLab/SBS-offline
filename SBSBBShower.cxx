@@ -56,6 +56,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   if(err) {
     return err;
   }
+  
   fClusBlockRadX = Int_t(fClusRadius/dxyz[0]);
   fClusBlockRadY = Int_t(fClusRadius/dxyz[1]);
 
@@ -120,6 +121,7 @@ Int_t SBSBBShower::FindGoodHit(SBSElement *blk) {
 	// }
   return GoodHit;
 }
+
 //_____________________________________________________________________________
 Int_t SBSBBShower::CoarseProcess(TClonesArray& tracks) 
 {

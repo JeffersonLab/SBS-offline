@@ -54,11 +54,11 @@ void SBSElement::SetADC(Float_t ped, Float_t gain)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create a TDC data structure
-void SBSElement::SetTDC(Float_t offset, Float_t cal)
+void SBSElement::SetTDC(Float_t offset, Float_t cal, Float_t GoodTimeCut)
 {
   if(fTDC)
     delete fTDC;
-  fTDC = new SBSData::TDC(offset,cal);
+  fTDC = new SBSData::TDC(offset,cal,GoodTimeCut);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
