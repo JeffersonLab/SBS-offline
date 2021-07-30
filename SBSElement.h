@@ -52,8 +52,6 @@ public:
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();
 
-  // Coarse process this event for this block
-  virtual void CoarseProcess();
 
   // Check if this block has any data
   virtual Bool_t HasData();
@@ -73,7 +71,6 @@ protected:
   SBSData::ADC *fADC; //< All ADC hits
   SBSData::TDC *fTDC; //< All TDC hits
   SBSData::Waveform *fWaveform;
-  Bool_t fCoarseProcessed; //< Did we already process this block in another class?
 
   ClassDef(SBSElement,1) ///< Generic shower block class (no data)
 };
