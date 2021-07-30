@@ -741,18 +741,18 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     int ll = 0;
     fElementGrid.resize(fNrows);
     for(int r = 0; r < fNrows; r++) {
-      rr = r+fChanMapStart;
+      rr = r;
       fElementGrid[r].resize(fNcols[r]);
       for(int c = 0; c < fNcols[r]; c++) {
-        cc = c+fChanMapStart;
+        cc = c;
         for(int l = 0; l < fNlayers; l++, k++) {
           fElementGrid[r][c].resize(fNlayers);
-          ll = l+fChanMapStart;
+          ll = l;
           //k = blkidx(r,c,l);
           x = xyz[0] - c*dxyz[0];
           y = xyz[1] - r*dxyz[1];
           z = xyz[2] - l*dxyz[2];
-          SBSElement *e = MakeElement(x,y,z,rr,cc,ll,k);
+          SBSElement *e = MakeElement(x,y,z,rr,cc,ll,k+fChanMapStart);
           if( WithADC() ) {
             if( fModeADC == SBSModeADC::kWaveform ) {
               e->SetWaveform(adc_ped[k],adc_gain[k],adc_conv[k]);
