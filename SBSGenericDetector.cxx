@@ -1143,7 +1143,6 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     if(!blk)
       continue;
  
-     blk->CoarseProcess(); 
     // If the above did not define the good hit, the sub-class is expected
     // to use re-implement the following function to find the good hit.
     fNGoodhits=fNGoodhits+FindGoodHit(blk);
