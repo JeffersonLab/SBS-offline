@@ -164,7 +164,7 @@ namespace SBSData {
     for(size_t i =IntMinBin ; i <IntMaxBin ; i++ ) {
          sped+=fSamples.ped*pC_Conv;
          sum+=fSamples.samples_raw[i]*pC_Conv;
-         if ( i > ThresCrossBin && !PeakFound) {
+         if ( i >= ThresCrossBin && !PeakFound) {
 	   if (fSamples.samples_raw[i] > max) {
 	     max = fSamples.samples_raw[i];
 	   } else {
