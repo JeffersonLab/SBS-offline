@@ -18,7 +18,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
 
   fModules.clear();
   fIsMC = false;//by default!
-  //fCrateMap = 0;	
+  //fCrateMap = 0;
+  fPedestalMode = false;
 }
 
 SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
@@ -94,13 +95,18 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
+    { "pedestalmode", &fPedestalMode, kInt, 0, 1, 1},
     {0}
   };
 
   fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
-    
+
+  if( fPedestalMode ){ //then we will just dump raw data to the tree:
+    fZeroSuppress = false;
+  }
+  
   Int_t status = kInitError;
   LoadDB( file, date, request, fPrefix );
   fclose(file);
@@ -115,8 +121,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
     fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this) );
+
+    modcounter = fModules.size()-1;
     fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
-    fModules[fModules.size()-1]->fIsMC = fIsMC;
+    fModules[modcounter]->fIsMC = fIsMC;
   }
 
   //Define the number of modules from the "modules" string:
@@ -274,7 +282,7 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 
   //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack" << std::endl;
-  if( !fUseConstraint ){
+  if( !fUseConstraint && !fPedestalMode ){
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
     find_tracks();
@@ -300,7 +308,7 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 
   //std::cout << "SBSGEMSpectrometerTracker::FineTrack" << std::endl;
-  if( fUseConstraint ){ //
+  if( fUseConstraint && !fPedestalMode ){ //
 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;

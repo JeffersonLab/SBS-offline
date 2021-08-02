@@ -87,6 +87,8 @@ protected:
   bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
   bool fZeroSuppress;
   double fZeroSuppressRMS;
+
+  bool fPedestalMode;
   
   bool fIsMC;
 

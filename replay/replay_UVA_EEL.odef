@@ -12,3 +12,4 @@ th2f hNclustU_layer 'Number of U clusters by layer' [I] sbs.uvagem.nclustu_layer
 th2f hNclustV_layer 'Number of V clusters by layer' [I] sbs.uvagem.nclustv_layer 5 -0.5 4.5 51 -0.5 50.5
 
 
+#th2f hPedU_m0 'U strip pedestal data, module 0' sbs.uvagem.m0.strip sbs.uvagem.m0.stripADCsamples

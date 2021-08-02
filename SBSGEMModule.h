@@ -165,6 +165,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
+  Bool_t fPedestalMode;
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
   //Moved to the MPD module class:
@@ -201,7 +202,7 @@ class SBSGEMModule : public THaSubDetector {
   
   //Map strip indices in this array:
   //key = U or V  strip number, mapped value is position of that strip's information in the "decoded strip" arrays below:
-  std::map<UInt_t,UInt_t> fUstripIndex; 
+  std::map<UInt_t, UInt_t> fUstripIndex; 
   std::map<UInt_t, UInt_t> fVstripIndex; 
   
   std::vector<UInt_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
@@ -209,6 +210,9 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<std::vector<Double_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
   std::vector<std::vector<Int_t> > fRawADCsamples; //2D array of raw (non-baseline-subtracted) ADC values.
   std::vector<Double_t> fADCsums;
+  std::vector<Double_t> fStripADCavg;
+  std::vector<UInt_t> fStripIsU; // is this a U strip? 0/1
+  std::vector<UInt_t> fStripIsV; // is this a V strip? 0/1
   std::vector<bool> fKeepStrip; //keep this strip?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
@@ -228,7 +232,7 @@ class SBSGEMModule : public THaSubDetector {
 
   /////////////////////// Global variables that are more convenient for ROOT Tree/Histogram Output (to the extent needed): ///////////////////////
   //Raw strip info:
-  std::vector<UInt_t> fStripAxis; //redundant with fAxis, but more convenient for Podd global variable definition
+  //std::vector<UInt_t> fStripAxis; //redundant with fAxis, but more convenient for Podd global variable definition
   std::vector<Double_t> fADCsamples1D; //1D array to hold ADC samples; should end up with dimension fNstrips_hit*fN_MPD_TIME_SAMP
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<Int_t> fRawADCsamples1D;
