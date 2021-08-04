@@ -4,6 +4,8 @@
 #include "TDatime.h"
 #include "THaEvData.h"
 #include "TRotation.h"
+#include "TH1F.h"
+#include "TH2F.h"
 #include <algorithm>
 
 using namespace std;
@@ -120,6 +122,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "maxnu_pos", &fMaxNeighborsU_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
     { "maxnv_pos", &fMaxNeighborsV_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
     { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1}, //(optional): width parameter for cluster-splitting algorithm
+    { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1}, //(optional): 
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -1160,10 +1163,63 @@ void    SBSGEMModule::Print( Option_t* opt) const{
 }
 
 Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
+  //Here we can create some histograms that will be written to the ROOT file:
+  //This is a natural place to do the hit maps/efficiency maps:
+
+  TString histname;
+  
+  fhdidhitx = new TH1F( histname.Format( "hdidhitx_%s", GetName() ), "local x coordinate of hits on good tracks (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
+  fhdidhity = new TH1F( histname.Format( "hdidhity_%s", GetName() ), "local y coordinate of hits on good tracks (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
+  fhdidhitxy = new TH2F( histname.Format( "hdidhitxy_%s", GetName() ), "x vs y of hits on good tracks (m)",
+			100, -0.51*GetYSize(), 0.51*GetYSize(),
+			100, -0.51*GetXSize(), 0.51*GetXSize() );
+
+  fhshouldhitx = new TH1F( histname.Format( "hshouldhitx_%s", GetName() ), "x of good track passing through (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
+  fhshouldhity = new TH1F( histname.Format( "hshouldhity_%s", GetName() ), "y of good track passing through (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
+  fhshouldhitxy = new TH2F( histname.Format( "hshouldhitxy_%s", GetName() ), "x vs y of good track passing through (m)",
+			   100, -0.51*GetYSize(), 0.51*GetYSize(),
+			   100, -0.51*GetXSize(), 0.51*GetXSize() );			
+  
   return 0;
 }
 
 Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
+
+  //Create the track-based efficiency histograms at the end of the run:
+  TString histname;
+  
+  if( fhdidhitx != NULL && fhshouldhitx != NULL ){ //Create efficiency histograms and write to the ROOT file:
+    TH1F *hefficiency_vs_x = new TH1F(*fhdidhitx);
+    hefficiency_vs_x->SetName( histname.Format( "hefficiency_vs_x_%s", GetName() ) );
+    hefficiency_vs_x->SetTitle( histname.Format( "Track-based efficiency vs x, module %s", GetName() ) );
+    hefficiency_vs_x->Divide( fhshouldhitx );
+    hefficiency_vs_x->Write();
+  }
+
+  if( fhdidhity != NULL && fhshouldhity != NULL ){ //Create efficiency histograms and write to the ROOT file:
+    TH1F *hefficiency_vs_y = new TH1F(*fhdidhity);
+    hefficiency_vs_y->SetName( histname.Format( "hefficiency_vs_y_%s", GetName() ) );
+    hefficiency_vs_y->SetTitle( histname.Format( "Track-based efficiency vs y, module %s", GetName() ) );
+    hefficiency_vs_y->Divide( fhshouldhity );
+    hefficiency_vs_y->Write();
+  }
+
+  if( fhdidhitxy != NULL && fhshouldhitxy != NULL ){ //Create efficiency histograms and write to the ROOT file:
+    TH2F *hefficiency_vs_xy = new TH2F(*fhdidhitxy);
+    hefficiency_vs_xy->SetName( histname.Format( "hefficiency_vs_xy_%s", GetName() ) );
+    hefficiency_vs_xy->SetTitle( histname.Format( "Track-based efficiency vs x and y, module %s", GetName() ) );
+    hefficiency_vs_xy->Divide( fhshouldhitxy );
+    hefficiency_vs_xy->Write();
+  }
+  
+  if( fhdidhitx != NULL  ) fhdidhitx->Write();
+  if( fhdidhity != NULL  ) fhdidhity->Write();
+  if( fhdidhitxy != NULL  ) fhdidhitxy->Write();
+
+  if( fhshouldhitx != NULL  ) fhshouldhitx->Write();
+  if( fhshouldhity != NULL  ) fhshouldhity->Write();
+  if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write();
+  
   return 0;
 }
 

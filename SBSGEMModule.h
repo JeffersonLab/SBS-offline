@@ -11,6 +11,8 @@
 class THaDetectorBase;
 class THaEvData;
 class THaRunBase;
+class TH1F;
+class TH2F;
 
 namespace SBSGEM {
   enum GEMaxis_t { kUaxis=0, kVaxis };
@@ -313,7 +315,16 @@ class SBSGEMModule : public THaSubDetector {
   //For geometry parameters, we will re-use the THaDetectorBase functionalities as much as possible
        
   Bool_t fIsMC;//we kinda want this guy no matter what don't we...
-	
+
+  //Efficiency histograms:
+  TH1F *fhdidhitx;
+  TH1F *fhdidhity;
+  TH2F *fhdidhitxy;
+
+  TH1F *fhshouldhitx;
+  TH1F *fhshouldhity;
+  TH2F *fhshouldhitxy;
+  
   ClassDef(SBSGEMModule,0);
 
 };

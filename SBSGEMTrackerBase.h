@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
-#include "SBSGEMModule.h"
+//#include "SBSGEMModule.h"
 #include "TVector3.h"
 #include "TVector2.h"
 //#include <THaTrackingDetector.h>
@@ -13,6 +13,7 @@
 //class THaApparatus;
 //class THaEvData;
 class SBSGEMModule;
+//class TClonesArray;
 //class THaCrateMap;
 
 //This class is not going to inherit from THaAnything or from TObject.
@@ -65,6 +66,8 @@ protected:
   //Utility method to iterate over combinations of hits in layers, used by find_tracks()
   bool GetNextCombo( const std::set<int> &layers, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo );
 
+  int GetNearestModule( int layer, TVector3 track_origin, TVector3 track_direction, TVector3 &intersect );
+  
   // Utility method to take a list of hits mapped by layer as input, and give track parameters and chi2 as output.
   // This relies on the "hit list" and "free hit list" information also being sensibly populated
   //FitTrack calculates chi2 and residuals as well as best fit parameters
@@ -267,7 +270,6 @@ protected:
   std::vector<int> fShouldHit_Module;
 
   
-
   
   
 };

@@ -1,6 +1,9 @@
 #include "SBSGEMTrackerBase.h"
 #include "SBSGEMModule.h"
+#include "TH1F.h"
+#include "TH2F.h"
 #include "TRotation.h"
+//#include "TClonesArray.h"
 
 using namespace std;
 
@@ -692,34 +695,62 @@ void SBSGEMTrackerBase::find_tracks(){
 	      for( auto ilay = otherlayers.begin(); ilay != otherlayers.end(); ++ilay ){
 		int layer = *ilay;
 
-		//Using the average z coordinate of the layer may not give the most accurate results
+		//Projecting to the average z coordinate of the layer may not give the most accurate results.
+		//Perhaps better to project to each module within the test layer for which the track projection is within the active area:
+		//we use the track projection to the average Z coordinate of the layer as a starting point:
 		double xproj = xtrtemp + xptrtemp * fZavgLayer[layer];
 		double yproj = ytrtemp + yptrtemp * fZavgLayer[layer];
+		//double xproj = xtrtemp + xptrtemp * zmod;
+		//double yproj = ytrtemp + yptrtemp * zmod;
+		//We will also calculate the exact projection to any module for which the track projection lies
+		//within the active area, and define a range of projected x and y coordinates for choosing the grid bins:
+		double xprojmin = xproj, xprojmax=xproj;
+		double yprojmin = yproj, yprojmax=yproj;
+		
+		TVector3 TrackPosTemp( xtrtemp, ytrtemp, 0.0 );
+		TVector3 TrackDirTemp( xptrtemp, yptrtemp, 1.0 );
 
-		int binxtemp = int( (xproj - fGridXmin_layer[layer])/fGridBinWidthX );
-		int binytemp = int( (yproj - fGridYmin_layer[layer])/fGridBinWidthY );
+		TrackDirTemp = TrackDirTemp.Unit();
+		//loop over all modules in this layer, test projection to any module for which the track projection falls in the
+		//active area:
+		for( auto imod = fModuleListByLayer[layer].begin(); imod != fModuleListByLayer[layer].end(); ++imod ){
+		  double sdummy;
+		  int modtemp = *imod;
+		  TVector3 intercept = TrackIntersect( modtemp, TrackPosTemp, TrackDirTemp, sdummy );
 
-		//check if this bin is in-range:
+		  if( fModules[modtemp]->IsInActiveArea( intercept ) ){ //test
+		    // double xmod = xtrtemp + xptrtemp * (fModules[modtemp]->fOrigin).Z();
+		    // double ymod = ytrtemp + yptrtemp * (fModules[modtemp]->fOrigin).Z();
 
-		if( binxtemp >= 0 && binxtemp < fGridNbinsX_layer[layer] &&
-		    binytemp >= 0 && binytemp < fGridNbinsY_layer[layer] ){
+		    double xmod = intercept.X();
+		    double ymod = intercept.Y();
+		    
+		    xprojmin = (xmod < xprojmin) ? xmod : xprojmin;
+		    xprojmax = (xmod > xprojmax) ? xmod : xprojmax;
 
-		  int binxhi = binxtemp;
-		  int binxlo = binxtemp;
-		  int binyhi = binytemp;
-		  int binylo = binytemp;
+		    yprojmin = (ymod < yprojmin) ? ymod : yprojmin;
+		    yprojmax = (ymod > yprojmax) ? ymod : yprojmax;
+		  }
+		}	
 
-		  //the following two variables are the differences between the track projection to this layer and the low edge of the bin in both X and Y:
-		  double binxdiff = xproj - (fGridXmin_layer[layer]+binxtemp*fGridBinWidthX);
-		  double binydiff = yproj - (fGridYmin_layer[layer]+binytemp*fGridBinWidthY);
+		int binxlo = int( (xprojmin - fGridXmin_layer[layer])/fGridBinWidthX );
+		int binxhi = int( (xprojmax - fGridXmin_layer[layer])/fGridBinWidthX );
+		int binylo = int( (yprojmin - fGridYmin_layer[layer])/fGridBinWidthY );
+		int binyhi = int( (yprojmax - fGridYmin_layer[layer])/fGridBinWidthY );
+
+		
+		double binxdifflo = xprojmin - (fGridXmin_layer[layer]+binxlo*fGridBinWidthX);
+		double binxdiffhi = xprojmax - (fGridXmin_layer[layer]+binxhi*fGridBinWidthX);
+		double binydifflo = yprojmin - (fGridYmin_layer[layer]+binylo*fGridBinWidthY);
+		double binydiffhi = yprojmax - (fGridYmin_layer[layer]+binyhi*fGridBinWidthY);
 
 		  
 		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
-		  if( binxdiff < fGridEdgeToleranceX && binxtemp > 0 ) binxlo = binxtemp-1;
-		  if( binydiff < fGridEdgeToleranceY && binytemp > 0 ) binylo = binytemp-1;
+		if( binxdifflo < fGridEdgeToleranceX && binxlo > 0 ) binxlo--;
+		if( binydifflo < fGridEdgeToleranceY && binylo > 0 ) binylo--;
 		  //I x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
-		  if( fGridBinWidthX - binxdiff < fGridEdgeToleranceX && binxtemp + 1 < fGridNbinsX_layer[layer] ) binxhi = binxtemp+1;
-		  if( fGridBinWidthY - binydiff < fGridEdgeToleranceY && binytemp + 1 < fGridNbinsY_layer[layer] ) binyhi = binytemp+1;
+		if( fGridBinWidthX - binxdiffhi < fGridEdgeToleranceX && binxhi + 1 < fGridNbinsX_layer[layer] ) binxhi++;
+		if( fGridBinWidthY - binydiffhi < fGridEdgeToleranceY && binyhi + 1 < fGridNbinsY_layer[layer] ) binyhi++;
 
 		  // std::cout << "(binxtemp, binytemp, binxdiff, binydiff)=(" << binxtemp << ", " << binytemp << ", "
 		  // 	    << binxdiff/fGridBinWidthX << ", "
@@ -728,22 +759,21 @@ void SBSGEMTrackerBase::find_tracks(){
 		  // 	    << binylo << ", " << binyhi << ")" << std::endl;
 		  
 		  //now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
-		  for( int binx = binxlo; binx <= binxhi; binx++ ){
-		    for( int biny = binylo; biny <= binyhi; biny++ ){
-		      int binxy = binx + fGridNbinsX_layer[layer]*biny;
-
+		for( int binx = binxlo; binx <= binxhi; binx++ ){
+		  for( int biny = binylo; biny <= binyhi; biny++ ){
+		    int binxy = binx + fGridNbinsX_layer[layer]*biny;
+		    
+		    if( binx >= 0 && binx < fGridNbinsX_layer[layer] &&
+			biny >= 0 && biny < fGridNbinsY_layer[layer] ) { 
 		      for( int khit=0; khit<freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
 			//this step can be computationally expensive:
 			freehitlist_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
 		      }
-			
-		    }
+		    }  
 		  }
-		} //end check on grid bin of projected track in range
+		}
 
-		  //This check enforces that all layers other than minlayer and maxlayer have at least one hit in the relevant 2D grid bins:
-
-		
+		//The following check enforces that all layers other than minlayer and maxlayer have at least one hit in the relevant 2D grid bins:
 		if( freehitlist_goodxy.find(layer) == freehitlist_goodxy.end() ) {
 		  nextcomboexists = false;
 		  //std::cout << "No free hits found in good xy bins in layer " << layer << std::endl;
@@ -883,10 +913,22 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
   // fill information that will be written to the ROOT tree: this should never be called directly, but check whether tracking is already done
   // anyway, and if NOT, do the tracking:
   if( !ftracking_done ) find_tracks();
+
+  //This is probably also the place to fill the efficiency histograms. Need to refresh on how this was done in the standalone:
   
   fBestTrackIndex = 0; //for now
   fNgoodhits = 0; //number of hits on good tracks:
   for( int itrack=0; itrack<fNtracks_found; itrack++ ){ //loop over tracks
+
+    TVector3 TrackOrigin( fXtrack[itrack], fYtrack[itrack], 0.0 );
+    TVector3 TrackDirection( fXptrack[itrack], fYptrack[itrack], 1.0 );
+    TrackDirection = TrackDirection.Unit();
+
+    
+    
+    std::set<int> layersontrack;
+    std::map<int, int> modulesontrack_by_layer;
+    
     for( int ihit=0; ihit<fNhitsOnTrack[itrack]; ihit++ ){ //loop over hits on tracks:
       fHitTrackIndex.push_back( itrack );
       int module = fModListTrack[itrack][ihit];
@@ -934,8 +976,58 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitDeltaT.push_back( hitinfo->tdiff );
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );
       fHitCorrCoeffMaxStrip.push_back( hitinfo->corrcoeff_strip );
+
+      
+      if( fNhitsOnTrack[itrack] >= 4 ){ //fill "did hit" efficiency histos (numerator for efficiency determination):
+	double sdummy;
+	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
+       
+	TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
+	  
+	if( fModules[module]->fhdidhitx != NULL ) fModules[module]->fhdidhitx->Fill( LocalCoord.X() );
+	if( fModules[module]->fhdidhity != NULL ) fModules[module]->fhdidhity->Fill( LocalCoord.Y() );
+	if( fModules[module]->fhdidhitxy != NULL ) fModules[module]->fhdidhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
+      
+      }
+      
+      layersontrack.insert( layer );
+      modulesontrack_by_layer[layer] = module;
       
       fNgoodhits++;
+    }
+
+    //Now loop on all layers and fill the "should hit" histograms (denominator for track-based efficiency calculation): 
+    for( int ilayer = 0; ilayer < fNlayers; ilayer++ ){
+      int minhits=3; //need to loop over all layers/modules:
+      int moduleontrack = -1;
+      if( layersontrack.find( ilayer ) != layersontrack.end() ){ //reduce bias in efficiency determination by requiring hits in at least three layers OTHER than the one in question if this layer is on the track:
+	minhits=4;
+	moduleontrack = modulesontrack_by_layer[ilayer]; 
+      }
+
+      if( fNhitsOnTrack[itrack] >= minhits ){
+	// Check ALL modules in the layer:
+	for( auto imod=fModuleListByLayer[ilayer].begin(); imod != fModuleListByLayer[ilayer].end(); ++imod ){
+	  int module = *imod; 
+	  double sdummy;
+	  TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
+	  
+	  // If the projected track passes through the active area of the module AND/OR the module contains a hit on the track,
+	  // fill "should hit" histogram for the module (denominator for efficiency determination).
+	  // The latter condition is required to ensure that the "denominator" histogram is always filled for the modules
+	  // containing hits on the track:
+	  if( fModules[module]->IsInActiveArea( Intersect ) || module == moduleontrack ){
+	    TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
+	    
+	    if( fModules[module]->fhshouldhitx  != NULL ) fModules[module]->fhshouldhitx->Fill( LocalCoord.X() );
+	    if( fModules[module]->fhshouldhity  != NULL ) fModules[module]->fhshouldhity->Fill( LocalCoord.Y() );
+	    if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
+	  }
+	}
+	  //}
+      }
+      
+      
     }
   }
   
@@ -1198,4 +1290,25 @@ TVector2 SBSGEMTrackerBase::GetUVTrack( int module, TVector3 track_origin, TVect
 
   TVector2 XYtrack( TrackIntersect_Local.X(), TrackIntersect_Local.Y() );
   return fModules[module]->XYtoUV( XYtrack );
+}
+
+int SBSGEMTrackerBase::GetNearestModule( int layer, TVector3 track_origin, TVector3 track_direction, TVector3 &track_intersect ){
+
+  int nearestmod = -1;
+  double mindist = 0.0;
+  for ( auto imod = fModuleListByLayer[layer].begin(); imod != fModuleListByLayer[layer].end(); ++imod ){
+    int module = *imod;
+
+    double sdummy;
+    TVector3 intersect = TrackIntersect( module, track_origin, track_direction, sdummy );
+
+    double distfromcenter = (intersect - fModules[module]->GetOrigin()).Mag();
+    if( nearestmod < 0 || distfromcenter < mindist ){
+      mindist = distfromcenter;
+      nearestmod = module;
+      track_intersect = intersect;
+    }
+  }
+
+  return nearestmod;
 }
