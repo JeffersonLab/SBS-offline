@@ -172,6 +172,8 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   }// adc mode
 
   
+  // call the function to build the bars
+  SBSTimingHodoscope::ConstructHodoscope();
   
   // Finally go back
   return err;
@@ -209,9 +211,6 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   // it finds the tdc hit closest to the good timing window cut
   // so we need to be careful about setting this number in the db file
   // and figuring out the value in the expt
-
-  // call the function to build the bars
-  SBSTimingHodoscope::ConstructHodoscope();
   
   // now loop through bars to find good hits in bars
   // should we move this code into findgoodhit?
@@ -455,7 +454,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
     return kInitError;
   }
   fBars.clear();
-  for(Int_t BarInc=0; BarInc<(nElements/2); BarInc++){
+  for(Int_t BarInc=0; BarInc<(Int_t)(nElements/2); BarInc++){
     // bar constructor is barid, pmt left, pmt right, bar offset mostly for adc sections
     if( WithTDC() ){
       // std::cout << fPMTMapL.at(BarInc)->GetTdcFlag() << std::endl;
@@ -487,9 +486,9 @@ void SBSTimingHodoscope::ClearEvent()
 {
   // If we defined any new variables that we need to clear prior to the next event
   // clear them here:
-  fPMTMapL.clear();
-  fPMTMapR.clear();
-  fBars.clear();
+  // fPMTMapL.clear();
+  // fPMTMapR.clear();
+  // fBars.clear();
   fGoodBarIDsTDC.clear();
   fGoodBarTDCmean.clear();
   fGoodBarTDCdiff.clear();
