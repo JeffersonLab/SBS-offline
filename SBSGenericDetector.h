@@ -229,7 +229,7 @@ private:
   }
 
   ClassDef(SBSGenericDetector,0)     //Generic shower detector class
-};
+    };
 
 /*inline Int_t SBSGenericDetector::blkidx(Int_t row, Int_t col, Int_t layer)
 {

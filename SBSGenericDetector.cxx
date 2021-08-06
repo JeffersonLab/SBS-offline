@@ -34,8 +34,8 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   THaNonTrackingDetector(name,description,apparatus), fNrows(0),fNcolsMax(0),
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(true),fDisableRefTDC(true),
-  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
-  fStoreEmptyElements(true), fIsMC(true)
+  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(true),
+  fStoreEmptyElements(true), fIsMC(false)
 {
   // Constructor.
   fCoarseProcessed = 0;
@@ -1142,7 +1142,6 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     blk = fElements[k];
     if(!blk)
       continue;
- 
      blk->CoarseProcess(); 
     // If the above did not define the good hit, the sub-class is expected
     // to use re-implement the following function to find the good hit.
