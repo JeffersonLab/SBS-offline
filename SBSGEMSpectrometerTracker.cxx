@@ -156,6 +156,9 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
     (*it)->Begin(run);
   }
 
+  InitEfficiencyHistos(GetName()); //create efficiency histograms (see SBSGEMTrackerBase)
+  
+  
   return 0;
 }
 
@@ -186,7 +189,32 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     (*it)->End(run);
   }
 
+  CalcEfficiency();
+  
+  hdidhit_x_layer->Compress();
+  hdidhit_y_layer->Compress();
+  hdidhit_xy_layer->Compress();
 
+  hshouldhit_x_layer->Compress();
+  hshouldhit_y_layer->Compress();
+  hshouldhit_xy_layer->Compress();
+
+  hefficiency_x_layer->Compress();
+  hefficiency_y_layer->Compress();
+  hefficiency_xy_layer->Compress();
+
+  hdidhit_x_layer->Write();
+  hdidhit_y_layer->Write();
+  hdidhit_xy_layer->Write();
+
+  hshouldhit_x_layer->Write();
+  hshouldhit_y_layer->Write();
+  hshouldhit_xy_layer->Write();
+
+  hefficiency_x_layer->Write();
+  hefficiency_y_layer->Write();
+  hefficiency_xy_layer->Write();
+  
   return 0;
 }
 

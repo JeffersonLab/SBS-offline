@@ -13,7 +13,7 @@
 //class THaApparatus;
 //class THaEvData;
 class SBSGEMModule;
-//class TClonesArray;
+class TClonesArray;
 //class THaCrateMap;
 
 //This class is not going to inherit from THaAnything or from TObject.
@@ -50,7 +50,9 @@ protected:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void InitLayerCombos();
   void InitGridBins(); //initialize 
-
+  void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
+  void CalcEfficiency(); //essentially, divide "did hit/should hit" histograms
+  
   void InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
   void InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
@@ -268,8 +270,24 @@ protected:
   //"did hit" and "should hit" by module (numerators and denominators for efficiency determination)
   std::vector<int> fDidHit_Module;
   std::vector<int> fShouldHit_Module;
-
   
+  //We'll define hit map/efficiency histograms here.
+  // NOTE: in order for these to actually show up in output, derived classes must initialize these histograms
+  // in SBSGEMSpectrometerTracker::Begin() or SBSGEMPolarimeterTracker::Begin() and
+  // write them to the output ROOT file in SBSGEMSpectrometerTracker::End() or SBSGEMPolarimeterTracker::End()
+  TClonesArray *hdidhit_x_layer;
+  TClonesArray *hdidhit_y_layer;
+  TClonesArray *hdidhit_xy_layer;
+
+  TClonesArray *hshouldhit_x_layer;
+  TClonesArray *hshouldhit_y_layer;
+  TClonesArray *hshouldhit_xy_layer;
+
+  TClonesArray *hefficiency_x_layer;
+  TClonesArray *hefficiency_y_layer;
+  TClonesArray *hefficiency_xy_layer;
+
+  bool fEfficiencyInitialized;
   
   
 };

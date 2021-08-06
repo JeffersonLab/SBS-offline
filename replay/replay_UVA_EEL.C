@@ -70,6 +70,8 @@ void replay( int runnum=2811, int segment=31, const char *outfilename="temp.root
   run->SetDate(TDatime());
 
   analyzer->SetVerbosity(0);
+
+  analyzer->EnableBenchmarks();
   
   // Define the analysis parameters
   analyzer->SetEvent( event );

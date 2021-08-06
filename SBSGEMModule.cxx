@@ -1167,16 +1167,20 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   //This is a natural place to do the hit maps/efficiency maps:
 
   TString histname;
+  TString detname = GetParent()->GetName();
+  detname.ReplaceAll(".","_");
+  detname += "_";
+  detname += GetName();
   
-  fhdidhitx = new TH1F( histname.Format( "hdidhitx_%s", GetName() ), "local x coordinate of hits on good tracks (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
-  fhdidhity = new TH1F( histname.Format( "hdidhity_%s", GetName() ), "local y coordinate of hits on good tracks (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
-  fhdidhitxy = new TH2F( histname.Format( "hdidhitxy_%s", GetName() ), "x vs y of hits on good tracks (m)",
+  fhdidhitx = new TH1F( histname.Format( "hdidhitx_%s", detname.Data() ), "local x coordinate of hits on good tracks (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
+  fhdidhity = new TH1F( histname.Format( "hdidhity_%s", detname.Data() ), "local y coordinate of hits on good tracks (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
+  fhdidhitxy = new TH2F( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks (m)",
 			100, -0.51*GetYSize(), 0.51*GetYSize(),
 			100, -0.51*GetXSize(), 0.51*GetXSize() );
 
-  fhshouldhitx = new TH1F( histname.Format( "hshouldhitx_%s", GetName() ), "x of good track passing through (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
-  fhshouldhity = new TH1F( histname.Format( "hshouldhity_%s", GetName() ), "y of good track passing through (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
-  fhshouldhitxy = new TH2F( histname.Format( "hshouldhitxy_%s", GetName() ), "x vs y of good track passing through (m)",
+  fhshouldhitx = new TH1F( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
+  fhshouldhity = new TH1F( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
+  fhshouldhitxy = new TH2F( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m)",
 			   100, -0.51*GetYSize(), 0.51*GetYSize(),
 			   100, -0.51*GetXSize(), 0.51*GetXSize() );			
   
@@ -1187,10 +1191,14 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
 
   //Create the track-based efficiency histograms at the end of the run:
   TString histname;
+  TString detname = GetParent()->GetName();
+  detname.ReplaceAll(".","_");
+  detname += "_";
+  detname += GetName();
   
   if( fhdidhitx != NULL && fhshouldhitx != NULL ){ //Create efficiency histograms and write to the ROOT file:
     TH1F *hefficiency_vs_x = new TH1F(*fhdidhitx);
-    hefficiency_vs_x->SetName( histname.Format( "hefficiency_vs_x_%s", GetName() ) );
+    hefficiency_vs_x->SetName( histname.Format( "hefficiency_vs_x_%s", detname.Data() ) );
     hefficiency_vs_x->SetTitle( histname.Format( "Track-based efficiency vs x, module %s", GetName() ) );
     hefficiency_vs_x->Divide( fhshouldhitx );
     hefficiency_vs_x->Write();
@@ -1198,7 +1206,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
 
   if( fhdidhity != NULL && fhshouldhity != NULL ){ //Create efficiency histograms and write to the ROOT file:
     TH1F *hefficiency_vs_y = new TH1F(*fhdidhity);
-    hefficiency_vs_y->SetName( histname.Format( "hefficiency_vs_y_%s", GetName() ) );
+    hefficiency_vs_y->SetName( histname.Format( "hefficiency_vs_y_%s", detname.Data() ) );
     hefficiency_vs_y->SetTitle( histname.Format( "Track-based efficiency vs y, module %s", GetName() ) );
     hefficiency_vs_y->Divide( fhshouldhity );
     hefficiency_vs_y->Write();
@@ -1206,7 +1214,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
 
   if( fhdidhitxy != NULL && fhshouldhitxy != NULL ){ //Create efficiency histograms and write to the ROOT file:
     TH2F *hefficiency_vs_xy = new TH2F(*fhdidhitxy);
-    hefficiency_vs_xy->SetName( histname.Format( "hefficiency_vs_xy_%s", GetName() ) );
+    hefficiency_vs_xy->SetName( histname.Format( "hefficiency_vs_xy_%s", detname.Data() ) );
     hefficiency_vs_xy->SetTitle( histname.Format( "Track-based efficiency vs x and y, module %s", GetName() ) );
     hefficiency_vs_xy->Divide( fhshouldhitxy );
     hefficiency_vs_xy->Write();

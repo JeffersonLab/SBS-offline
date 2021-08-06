@@ -37,6 +37,8 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrack
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
+  
+  
  private:
   // std::vector <SBSGEMModule *> fPlanes; storing the modules moved to SBSGEMTrackerBase
 	

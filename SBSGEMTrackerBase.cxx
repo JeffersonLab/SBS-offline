@@ -3,7 +3,7 @@
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TRotation.h"
-//#include "TClonesArray.h"
+#include "TClonesArray.h"
 
 using namespace std;
 
@@ -39,7 +39,9 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   //wide-open constraints for now (the units are meters here (mm or cm would be more natural but whatever))
   fConstraintWidth_Front.Set( 1.5, 0.5 );
-  fConstraintWidth_Back.Set( 1.5, 0.5 ); 
+  fConstraintWidth_Back.Set( 1.5, 0.5 );
+
+  fEfficiencyInitialized = false;
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -158,6 +160,81 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   
   InitLayerCombos();
   InitGridBins();
+}
+
+void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
+  //Here is the place to book efficiency histograms by layer:
+  hdidhit_x_layer = new TClonesArray( "TH1F", fNlayers );
+  hdidhit_y_layer = new TClonesArray( "TH1F", fNlayers );
+  hdidhit_xy_layer = new TClonesArray( "TH2F", fNlayers );
+  
+  hshouldhit_x_layer = new TClonesArray( "TH1F", fNlayers );
+  hshouldhit_y_layer = new TClonesArray( "TH1F", fNlayers );
+  hshouldhit_xy_layer = new TClonesArray( "TH2F", fNlayers );
+
+  hefficiency_x_layer = new TClonesArray( "TH1F", fNlayers );
+  hefficiency_y_layer = new TClonesArray( "TH1F", fNlayers );
+  hefficiency_xy_layer = new TClonesArray( "TH2F", fNlayers );
+
+  TString histname;
+  TString detname = dname;
+  detname.ReplaceAll(".","_");
+  for( int ilayer=0; ilayer<fNlayers; ilayer++ ){
+    //TODO: don't hard-code the number of bins for these histograms:
+    new( (*hdidhit_x_layer)[ilayer] ) TH1F( histname.Format( "hdidhit_x_%s_layer%d", detname.Data(), ilayer ), "x of hits on good tracks (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+    new( (*hdidhit_y_layer)[ilayer] ) TH1F( histname.Format( "hdidhit_y_%s_layer%d", detname.Data(), ilayer ), "y of hits on good tracks (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+    new( (*hdidhit_xy_layer)[ilayer] ) TH2F( histname.Format( "hdidhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of hits on good tracks (m)",
+					     100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+					     100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+
+    new( (*hshouldhit_x_layer)[ilayer] ) TH1F( histname.Format( "hshouldhit_x_%s_layer%d", detname.Data(), ilayer ), "x of good track crossing layer (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+    new( (*hshouldhit_y_layer)[ilayer] ) TH1F( histname.Format( "hshouldhit_y_%s_layer%d", detname.Data(), ilayer ), "y of good track crossing layer (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+    new( (*hshouldhit_xy_layer)[ilayer] ) TH2F( histname.Format( "hshouldhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of good track crossing layer (m)", 
+					     100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+					     100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+
+    //Don't create these until the end of the run:
+    // new( (*hefficiency_x_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+    // new( (*hefficiency_y_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+    // new( (*hefficiency_xy_layer)[ilayer] ) TH2F( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y", 
+    // 					     100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+    // 					     100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+  }
+
+  fEfficiencyInitialized = true;
+}
+
+void SBSGEMTrackerBase::CalcEfficiency(){
+  if( !fEfficiencyInitialized ) return;
+
+  TString histname;
+  
+  for( int i=0; i<fNlayers; i++ ){
+    new( (*hefficiency_x_layer)[i] ) TH1F( *( (TH1F*) (*hdidhit_x_layer)[i] ) );
+    new( (*hefficiency_y_layer)[i] ) TH1F( *( (TH1F*) (*hdidhit_y_layer)[i] ) );
+    new( (*hefficiency_xy_layer)[i] ) TH2F( *( (TH2F*) (*hdidhit_xy_layer)[i] ) );
+
+    histname = ( (TH1F*) (*hefficiency_x_layer)[i] )->GetName();
+    histname.ReplaceAll( "didhit", "efficiency" );
+    
+    ( (TH1F*) (*hefficiency_x_layer)[i] )->SetName( histname );
+    ( (TH1F*) (*hefficiency_x_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs x, layer %d", i ) );
+    ( (TH1F*) (*hefficiency_x_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_x_layer)[i] ) );
+
+    histname = ( (TH1F*) (*hefficiency_y_layer)[i] )->GetName();
+    histname.ReplaceAll( "didhit", "efficiency" );
+    
+    ( (TH1F*) (*hefficiency_y_layer)[i] )->SetName( histname );
+    ( (TH1F*) (*hefficiency_y_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs y, layer %d", i ) );
+    ( (TH1F*) (*hefficiency_y_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_y_layer)[i] ) );
+
+    histname = ( (TH1F*) (*hefficiency_xy_layer)[i] )->GetName();
+    histname.ReplaceAll( "didhit", "efficiency" );
+    
+    ( (TH2F*) (*hefficiency_xy_layer)[i] )->SetName( histname );
+    ( (TH2F*) (*hefficiency_xy_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs (x,y), layer %d", i ) );
+    ( (TH2F*) (*hefficiency_xy_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_xy_layer)[i] ) );
+  }
 }
 
 //This only needs to be done ONCE (after loading the geometry from the database!)
@@ -914,6 +991,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
   // anyway, and if NOT, do the tracking:
   if( !ftracking_done ) find_tracks();
 
+  if( !fEfficiencyInitialized ) InitEfficiencyHistos("generic_gemtracker"); //this guarantees that the efficiency histograms will exist when we try to fill them:
+  
   //This is probably also the place to fill the efficiency histograms. Need to refresh on how this was done in the standalone:
   
   fBestTrackIndex = 0; //for now
@@ -987,7 +1066,10 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	if( fModules[module]->fhdidhitx != NULL ) fModules[module]->fhdidhitx->Fill( LocalCoord.X() );
 	if( fModules[module]->fhdidhity != NULL ) fModules[module]->fhdidhity->Fill( LocalCoord.Y() );
 	if( fModules[module]->fhdidhitxy != NULL ) fModules[module]->fhdidhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
-      
+
+	( (TH1F*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
+	( (TH1F*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
+	( (TH2F*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
       }
       
       layersontrack.insert( layer );
@@ -1015,19 +1097,21 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	  // If the projected track passes through the active area of the module AND/OR the module contains a hit on the track,
 	  // fill "should hit" histogram for the module (denominator for efficiency determination).
 	  // The latter condition is required to ensure that the "denominator" histogram is always filled for the modules
-	  // containing hits on the track:
+	  // containing hits on the track, so you don't have the possibility for apparent efficiencies exceeding 100%:
 	  if( fModules[module]->IsInActiveArea( Intersect ) || module == moduleontrack ){
 	    TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
 	    
 	    if( fModules[module]->fhshouldhitx  != NULL ) fModules[module]->fhshouldhitx->Fill( LocalCoord.X() );
 	    if( fModules[module]->fhshouldhity  != NULL ) fModules[module]->fhshouldhity->Fill( LocalCoord.Y() );
 	    if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
+
+	    //For the layer coordinates, we should use the global X and Y coordinates:
+	    ( (TH1F*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
+	    ( (TH1F*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
+	    ( (TH2F*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
 	  }
 	}
-	  //}
-      }
-      
-      
+      }  
     }
   }
   
