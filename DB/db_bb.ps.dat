@@ -14,7 +14,7 @@ bb.ps.nchan = 52
 
 bb.ps.detmap = 
 ##
-  6     20    2     2  -1 
+#  6     20    2     2  -1 
   6     3     0     15   0 
   6     4     0     15   0 
   6     5     0     15   0 
@@ -48,32 +48,16 @@ bb.ps.dxdydz =  0.085 -0.370  0.000
 ## Mininum energy  for a cluster center (not really used right now)
 bb.ps.emin  = 0.0
 
-bb.ps.pedestal = 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
- 600.0  600.0  600.0  600.0 
-
-bb.ps.gain = 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
- 1.0  1.0  1.0  1.0 
+bb.ps.adc.conv = 0.4882
+# Number of bins (bin=4ns) at the beginning of waveform used to determing average Pedestal
+bb.ps.adc.NPedBin = 4
+# Threshold for pulse finding in waveform (mV)
+bb.ps.adc.thres = 5.0
+# Number of bins (bin=4ns) before Threshold Bin to use in integrating pulse
+bb.ps.adc.NSB = 3
+# Number of bins (bin=4ns) before Threshold Bin to use in integrating pulse
+bb.ps.adc.NSA = 10
+# Number of bin for fixed Threshold if no Threshold Crossing is found
+bb.ps.adc.FixThresBin = 14
+#Convert adc integral in pC to GeV
+bb.ps.adc.gain = 1.0
