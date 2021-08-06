@@ -238,103 +238,100 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   fGoodBarADCRa.clear();
   fGoodBarADCRap.clear();
   fGoodBarADCRac.clear();
+
   Int_t NBars = fBars.size();
+  Bool_t flagTDCHitL;
+  Bool_t flagTDCHitR;
+  Bool_t flagADCHitL;
+  Bool_t flagADCHitR;
   // std::cout << "fTDCBarOffset " << fTDCBarOffset << std::endl;
   // std::cout << "fADCBarOffset " << fADCBarOffset << std::endl;
   // std::cout << "NBars " << NBars << " fElements.size()/2 " << fElements.size()/2 << std::endl;
   if(NBars!=(fElements.size()/2)){
     Error( Here("CoarseProcess"),
-	   "hodoscope bar length not of correct size");
+	   "hodoscope #bars length not of correct size ie !=#elements/2");
     return kInitError;
   }
   for(Int_t BarInc=0; BarInc<NBars; BarInc++){
     SBSTimingHodoscopeBar *bar = fBars[BarInc];
     SBSTimingHodoscopePMT *pmtL = bar->GetLPMT();
     SBSTimingHodoscopePMT *pmtR = bar->GetRPMT();
-    if(pmtL->GetTdcFlag()==1 && pmtR->GetTdcFlag()==1){//hit in both pmts of bar
+    SBSElement *elL = pmtL->GetPMTElement();
+    SBSElement *elR = pmtR->GetPMTElement();
 
-      SBSElement *elL = pmtL->GetPMTElement();
-      Int_t elLID = elL->GetID();
-      Int_t elLCol = elL->GetCol();
-      SBSElement *elR = pmtR->GetPMTElement();
-      Int_t elRID = elR->GetID();
-      Int_t elRCol = elR->GetCol();
-      Int_t bar = BarInc; // don't need to add the offset to the tdc cycle since all readout simultaneously
-      fGoodBarIDsTDC.push_back(bar);
-
-      // left hit
-      const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
-      fGoodBarTDCLle.push_back(hitL.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
-      // call the time walk function here once implemented
-      fGoodBarTDCLleW.push_back(hitL.le.val);//will replace this with time walk corrected
-      fGoodBarTDCLte.push_back(hitL.te.val);
-      // call the time walk function here once implemented
-      fGoodBarTDCLteW.push_back(hitL.te.val);//will replace this with time walk corrected
-      fGoodBarTDCLtot.push_back(hitL.te.val-hitL.le.val);
-      fGoodBarTDCLtotW.push_back(hitL.te.val-hitL.le.val);//replace this with walk corrected times
-
-      // right hit
-      const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
-      fGoodBarTDCRle.push_back(hitR.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
-      // call the time walk function here once implemented
-      fGoodBarTDCRleW.push_back(hitR.le.val);//will replace this with time walk corrected
-      fGoodBarTDCRte.push_back(hitR.te.val);
-      // call the time walk function here once implemented
-      fGoodBarTDCRteW.push_back(hitR.te.val);//will replace this with time walk corrected
-      fGoodBarTDCRtot.push_back(hitR.te.val-hitR.le.val);
-      fGoodBarTDCRtotW.push_back(hitR.te.val-hitR.le.val);//replace this with walk corrected times
-
-      // bar properties
-      Float_t barmeantime = (hitL.le.val + hitR.le.val)/2.0;
-      fGoodBarTDCmean.push_back(barmeantime);
-      Float_t bartimediff = (hitL.le.val - hitR.le.val);
-      fGoodBarTDCdiff.push_back(bartimediff);
-      // convert to position? effective velocity times time? shoul we divide by 2? yes
-      Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
-      fGoodBarTDCpos.push_back(HorizPos);
-
-    }// tdc hit on both pmts
-
+    if(WithTDC()){
+      if(elL->TDC()->HasData() && elR->TDC()->HasData()){
+	
+	Int_t bar = BarInc; // don't need to add the offset to the tdc since all readout simultaneously
+	fGoodBarIDsTDC.push_back(bar);
+	
+	// left hit
+	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
+	fGoodBarTDCLle.push_back(hitL.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
+	// call the time walk function here once implemented
+	fGoodBarTDCLleW.push_back(hitL.le.val);//will replace this with time walk corrected
+	fGoodBarTDCLte.push_back(hitL.te.val);
+	// call the time walk function here once implemented
+	fGoodBarTDCLteW.push_back(hitL.te.val);//will replace this with time walk corrected
+	fGoodBarTDCLtot.push_back(hitL.te.val-hitL.le.val);
+	fGoodBarTDCLtotW.push_back(hitL.te.val-hitL.le.val);//replace this with walk corrected times
+	
+	// right hit
+	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
+	fGoodBarTDCRle.push_back(hitR.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
+	// call the time walk function here once implemented
+	fGoodBarTDCRleW.push_back(hitR.le.val);//will replace this with time walk corrected
+	fGoodBarTDCRte.push_back(hitR.te.val);
+	// call the time walk function here once implemented
+	fGoodBarTDCRteW.push_back(hitR.te.val);//will replace this with time walk corrected
+	fGoodBarTDCRtot.push_back(hitR.te.val-hitR.le.val);
+	fGoodBarTDCRtotW.push_back(hitR.te.val-hitR.le.val);//replace this with walk corrected times
+	
+	// bar properties
+	Float_t barmeantime = (hitL.le.val + hitR.le.val)/2.0;
+	fGoodBarTDCmean.push_back(barmeantime);
+	Float_t bartimediff = (hitL.le.val - hitR.le.val);
+	fGoodBarTDCdiff.push_back(bartimediff);
+	// convert to position? effective velocity times time? shoul we divide by 2? yes
+	Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
+	fGoodBarTDCpos.push_back(HorizPos);
+	
+      }// tdc hit on both pmts
+    }// with tdc
     // adc events
-    if(pmtL->GetAdcFlag()==1 && pmtR->GetAdcFlag()==1){//hit in both pmts of bar
-
-      SBSElement *elL = pmtL->GetPMTElement();
-      Int_t elLID = elL->GetID();
-      Int_t elLCol = elL->GetCol();
-      SBSElement *elR = pmtR->GetPMTElement();
-      Int_t elRID = elR->GetID();
-      Int_t elRCol = elR->GetCol();
-      Int_t bar = fADCBarOffset + BarInc;
-      if(bar>89){
-	Error( Here("CoarseProcess"),
-	       "hodoscope bar id after adding adc offset id from db file >89");
-	return kInitError;
-      }
-      fGoodBarIDsADC.push_back(bar);
-
-      // left hit
-      Float_t pedL=elL->ADC()->GetPed();
-      const SBSData::PulseADCData &hitL = elL->ADC()->GetGoodHit(); // this is assuming simple adc type should add a check
-      fGoodBarADCLa.push_back(hitL.integral.raw);
-      fGoodBarADCLap.push_back(hitL.integral.raw-pedL);
-      fGoodBarADCLac.push_back(hitL.integral.val);
-
-      // right hit
-      Float_t pedR=elR->ADC()->GetPed();
-      const SBSData::PulseADCData &hitR = elR->ADC()->GetGoodHit();
-      fGoodBarADCRa.push_back(hitR.integral.raw);
-      fGoodBarADCRap.push_back(hitR.integral.raw-pedR);
-      fGoodBarADCRac.push_back(hitR.integral.val);
-
-      // bar properties
-      Float_t barmeanadc = (hitL.integral.raw + hitR.integral.raw) / 2.0;
-      // at moment dont use ped corrected for debug
-      fGoodBarADCmean.push_back(barmeanadc);
-
-    }// adc hit on both pmts
-
+    else if(WithADC()){
+      if(elL->ADC()->HasData() && elR->ADC()->HasData()){
+	Int_t bar = fADCBarOffset + BarInc;
+	if(bar>89){
+	  Error( Here("CoarseProcess"),
+		 "hodoscope bar id after adding adc offset id from db file >89");
+	  return kInitError;
+	}
+	fGoodBarIDsADC.push_back(bar);
+	
+	// left hit
+	Float_t pedL=elL->ADC()->GetPed()*1.0;
+	const SBSData::PulseADCData &hitL = elL->ADC()->GetGoodHit(); // this is assuming simple adc type should add a check
+	fGoodBarADCLa.push_back(hitL.integral.raw);
+	fGoodBarADCLap.push_back(hitL.integral.raw-pedL);
+	fGoodBarADCLac.push_back(hitL.integral.val);
+	
+	// right hit
+	Float_t pedR=elR->ADC()->GetPed()*1.0;
+	const SBSData::PulseADCData &hitR = elR->ADC()->GetGoodHit();
+	fGoodBarADCRa.push_back(hitR.integral.raw);
+	fGoodBarADCRap.push_back(hitR.integral.raw-pedR);
+	fGoodBarADCRac.push_back(hitR.integral.val);
+	
+	// bar properties
+	Float_t barmeanadc = (hitL.integral.raw + hitR.integral.raw) / 2.0;
+	// at moment dont use ped corrected for debug
+	fGoodBarADCmean.push_back(barmeanadc);
+	
+      }// adc hit on both pmts
+    }// with adc
   }// bar loop
-
+  
   fCoarseProcessed = 1;
   return 0;
 }
@@ -354,7 +351,7 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
 }
 /*
  * ConstructHodoscope()
- * called in coarse process
+ * called in read database 
  */
 Int_t SBSTimingHodoscope::ConstructHodoscope()
 {
@@ -362,7 +359,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
   // std::cout << "n elements " << nElements << std::endl;
   if( nElements%2!=0 ) {
     Error( Here("CoarseProcess"),
-	   "N elements for hodoscope is not even, we need an even number for a 2 sided detector analysis.");
+	   "N elements for hodoscope is not even, need an even number for a 2 sided detector analysis.");
     return kInitError;
   }
   // make the pmt objects
@@ -374,18 +371,9 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
     return kInitError;
   }
   int p=0;
-  Bool_t flagTDCHitL;
-  Bool_t flagTDCHitR;
-  Bool_t flagADCHitL;
-  Bool_t flagADCHitR;
   for(int r = 0; r < fNrows; r++) {
     for(int c = 0; c < fNcols[r]; c++) {
       for(int l = 0; l < fNlayers; l++, p++) {
-	// reset the flags
-	flagTDCHitL = false;
-	flagTDCHitR = false;
-	flagADCHitL = false;
-	flagADCHitR = false;
 	// get the element
 	SBSElement *blk2 = fElementGrid[r][c][l];
 	Int_t column = blk2->GetCol();
@@ -394,52 +382,38 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 	// std::cout << "element column " << column << " and row " << row << std::endl;
 	if(row==0){//left// could also use r index
 	  if( WithTDC() ){
-	    if(blk2->TDC()->HasData()) flagTDCHitL = true;
 	    SBSTimingHodoscopePMT *pmtL = new SBSTimingHodoscopePMT(fElements.at(p),
 								    fTimeWalkPar0[r][c][l],
 								    fTimeWalkPar0[r][c][l],
-								    column, row, p,
-								    flagTDCHitL,
-								    flagADCHitL);
+								    column, row, p);
 	    // column = bar and row = side and p = ID in felements in case needed for debug
 	    fPMTMapL.push_back(pmtL);
 	  }// if tdc
 	  else if( WithADC() ){ // if we have adc we use adc db file and therefore need a temp val for timewalk
-	    if(blk2->ADC()->HasData()) flagADCHitL = true;
 	    SBSTimingHodoscopePMT *pmtL = new SBSTimingHodoscopePMT(fElements.at(p),
 								    -9999,
 								    -9999,
-								    column, row, p,
-								    flagTDCHitL,
-								    flagADCHitL);
+								    column, row, p);
 	    fPMTMapL.push_back(pmtL);
 	  }// if adc only
 	}//left
 	if(row==1){//right
 	  if( WithTDC() ){
-	    if(blk2->TDC()->HasData()) flagTDCHitR = true;
 	    SBSTimingHodoscopePMT *pmtR = new SBSTimingHodoscopePMT(fElements.at(p),
 								    fTimeWalkPar0[r][c][l],
 								    fTimeWalkPar0[r][c][l],
-								    column, row, p,
-								    flagTDCHitR,
-								    flagADCHitR);
+								    column, row, p);
 	    // column = bar and row = side and p = ID in felements in case needed
 	    fPMTMapR.push_back(pmtR);
 	  }// if tdc
 	  else if( WithADC() ){ // if we have adc we use adc db file and therefore need a temp val for timewalk
-	    if(blk2->ADC()->HasData()) flagADCHitR = true;
 	    SBSTimingHodoscopePMT *pmtR = new SBSTimingHodoscopePMT(fElements.at(p),
 								    -9999,
 								    -9999,
-								    column, row, p,
-								    flagTDCHitR,
-								    flagADCHitR);
+								    column, row, p);
 	    fPMTMapR.push_back(pmtR);
 	  }// if adc only
 	}//right
-	// std::cout << "flagTDCHitL " << flagTDCHitL << " flagTDCHitR " << flagTDCHitR
-	// 	  << " flagADCHitL " << flagADCHitL << " flagADCHitR " << flagADCHitR << std::endl;
       }//lay
     }//col
   }//row ie side of hodo
@@ -472,8 +446,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 
 }// construct hodo
 /*
- * ClearEvent()
- * called at the end of every event
+ * TimeWalk()
  */
  Float_t TimeWalk(Float_t time){
    return 0.0;
@@ -486,9 +459,6 @@ void SBSTimingHodoscope::ClearEvent()
 {
   // If we defined any new variables that we need to clear prior to the next event
   // clear them here:
-  // fPMTMapL.clear();
-  // fPMTMapR.clear();
-  // fBars.clear();
   fGoodBarIDsTDC.clear();
   fGoodBarTDCmean.clear();
   fGoodBarTDCdiff.clear();

@@ -11,7 +11,7 @@
 ClassImp(SBSTimingHodoscopePMT);
 
 //_____________________________________________________________________________
-SBSTimingHodoscopePMT::SBSTimingHodoscopePMT( SBSElement* element, Double_t walkpar0, Double_t walkpar1, Int_t barnum, Int_t side, Int_t id, bool tdcflag, bool adcflag) : fPMTElement(element), fTimeWalkPar0(walkpar0), fTimeWalkPar1(walkpar1), fBarNum(barnum), fSide(side), fId(id), fTdcFlag(tdcflag), fAdcFlag(adcflag){
+SBSTimingHodoscopePMT::SBSTimingHodoscopePMT( SBSElement* element, Double_t walkpar0, Double_t walkpar1, Int_t barnum, Int_t side, Int_t id) : fPMTElement(element), fTimeWalkPar0(walkpar0), fTimeWalkPar1(walkpar1), fBarNum(barnum), fSide(side), fId(id){
 }
 
 //_____________________________________________________________________________
@@ -27,7 +27,5 @@ void SBSTimingHodoscopePMT::ClearEvent() {
   fBarNum = 0;
   fSide = 0;
   fId = 0;
-  fTdcFlag = false;
-  fAdcFlag = false;
 }
 ///////////////////////////////////////////////////////////////////////////////

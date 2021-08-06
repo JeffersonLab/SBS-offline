@@ -18,7 +18,7 @@
 class SBSTimingHodoscopePMT{
 
 public:
-  SBSTimingHodoscopePMT( SBSElement* element, Double_t walkpar0, Double_t walkpar1,Int_t barnum, Int_t side, Int_t id, bool tdcflag, bool adcflag );
+  SBSTimingHodoscopePMT( SBSElement* element, Double_t walkpar0, Double_t walkpar1,Int_t barnum, Int_t side, Int_t id );
   virtual ~SBSTimingHodoscopePMT();
 
   // getter functions
@@ -27,8 +27,6 @@ public:
   Int_t                  GetBarNum()       const { return fBarNum;}
   Int_t                  GetSide()         const { return fSide;}
   Int_t                  GetId()           const { return fId;}
-  Bool_t                 GetTdcFlag()       { return fTdcFlag;}
-  Bool_t                 GetAdcFlag()       { return fAdcFlag;}
   SBSElement*            GetPMTElement()         { return fPMTElement;}
 
   // setter functions
@@ -37,8 +35,6 @@ public:
   void SetBarNum(Int_t barnum) {fBarNum=barnum;}
   void SetSide(Int_t side) {fSide=side;}
   void SetId(Int_t id) {fId=id;}
-  void SetTdcFlag(bool tdcflag) {fTdcFlag=tdcflag;}
-  void SetAdcFlag(bool adcflag) {fAdcFlag=adcflag;}
   void ClearEvent();
 
  /* private:  */
@@ -49,8 +45,6 @@ public:
   Int_t fBarNum;
   Int_t fSide;
   Int_t fId; // this is the global element id in fElements
-  Bool_t fTdcFlag;
-  Bool_t fAdcFlag;
 /* const Int_t nTDC */
 
  /* public: */
