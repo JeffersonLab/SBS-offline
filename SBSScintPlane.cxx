@@ -1605,13 +1605,13 @@ Int_t SBSScintPlane::Decode( const THaEvData& evdata )
     // and we need one line (=one module) per reference channel
     // otherwise only the first will be used
     Int_t i=0;
-    Int_t data;
-    while ((i < fDetMap->GetSize())&&(  i < GetNRefCh() )) {
+    UInt_t data;
+    while ((i < (Int_t)fDetMap->GetSize())&&(  i < GetNRefCh() )) {
         THaDetMap::Module * d = fDetMap->GetModule(i);
 
         // Get number of channels with hits
-        Int_t chan=d->lo;
-        Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+        UInt_t chan=d->lo;
+        UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
         //complaining about error reference channel
         if (nHits!=1) 
@@ -1647,7 +1647,7 @@ Int_t SBSScintPlane::Decode( const THaEvData& evdata )
                 Warning(Here(here),"%s",s.str().c_str());
             }
 #endif//#if DEBUG_LEVEL>=3
-            data = 2^31 ;//new error value to 
+            data = (1LL << 31);//new error value to
             return (0);//Jin Huang
         } else {
             if (nHits>1) {
@@ -1717,7 +1717,7 @@ Int_t SBSScintPlane::Decode( const THaEvData& evdata )
             if (chan < d->lo || chan > d->hi) 
                 continue; //Not part of this detector
 #else         /* Better for sparse cabling */
-        for (Int_t chan=d->lo; chan<=d->hi; chan++) {
+        for (UInt_t chan=d->lo; chan<=d->hi; chan++) {
 #endif
 
             DEBUG_MASSINFO(Here(here),
@@ -1726,7 +1726,7 @@ Int_t SBSScintPlane::Decode( const THaEvData& evdata )
             DEBUG_LINE_MASSINFO(evdata.PrintSlotData(d->crate, d->slot));
 
             // Get number of hits for this channel and loop through hits
-            Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+            UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
             if (nHits<=0) continue;
 #if DEBUG_THIS
@@ -1801,10 +1801,10 @@ Int_t SBSScintPlane::Decode( const THaEvData& evdata )
 #endif
 
             // loop through the hits
-            for (Int_t hit = 0; hit < nHits; hit++) {
+            for (UInt_t hit = 0; hit < nHits; hit++) {
                 // Loop through all hits for this channel, and store the
                 // TDC/ADC  data for this hit
-                Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
+                UInt_t data = evdata.GetData(d->crate, d->slot, chan, hit);
                 if (isAdc) {  // it is an ADC module
                     if (isLeft) {              
                         new( (*fLaHits)[nextLaHit++] )  SBSAdcHit( pmt, data );

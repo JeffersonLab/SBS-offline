@@ -17,8 +17,9 @@ ClassImp(SBSHCal);
 SBSHCal::SBSHCal( const char* name, const char* description,
     THaApparatus* apparatus ) : SBSCalorimeter(name,description,apparatus)
 {
-  SetWithADCSamples(true);
-  SetWithTDC(true);
+  SetModeADC(SBSModeADC::kWaveform);
+  SetModeTDC(SBSModeTDC::kTDCSimple);
+  SetDisableRefTDC(true);
   fWithLED = true;
 }
 
@@ -32,13 +33,16 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
   if(fWithLED) {
     FILE* file = OpenFile( date );
     if( !file ) return kFileError;
-  
+    Int_t err;
+
+  /*  
     // Read in required geometry variables, which include fOrigin and fSize
     Int_t err = ReadGeometry( file, date, true );
     if( err ) {
       fclose(file);
       return err;
     }
+    */
   
     std::vector<Int_t> ledmap;
     DBRequest led_request[] = {
@@ -67,37 +71,29 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
 {
   Int_t err = SBSCalorimeter::Decode(evdata);
   if(fWithLED) {
-    Int_t ihit = evdata.GetNumChan(fLEDCrate,fLEDSlot);
+    UInt_t ihit = evdata.GetNumChan(fLEDCrate,fLEDSlot);
     if(ihit!=2 ) {
       //std::cerr << "ihit=" << ihit << std::endl;
       return 0;
     }
-    //assert(ihit==2);
     fLEDBit = evdata.GetData(fLEDCrate,fLEDSlot,1,0);
     fLEDCount = evdata.GetData(fLEDCrate,fLEDSlot,2,0);
-    //std::cerr << "ihit LED: " << ihit << ", ledbit: " << fLEDBit << std::endl;
-    if(fLEDBit==0) {
-    SBSCalorimeterBlock *blk = 0;
-    for(Int_t r = 0; r < fNrows; r++) {
-      for(Int_t c = 0; c < fNcols; c++) { 
-      blk = fBlocksGrid[r][c][0];
-        if(blk->Samples()->GetDataSumRaw()>0&&false) {
-          std::cerr << "[ " << (r+1) << ", " << (c+1) << "], Sum: " << blk->Samples()->GetDataSumRaw() << ", ADC:";
-	  std::vector<Float_t> &s_r = blk->Samples()->GetDataRaw();
-          size_t nsamples = s_r.size();
-          for(size_t s = 0; s < nsamples; s++) {
-            std::cerr << " " << s_r[s];
-          }
-          std::cerr << std::endl;
-        }
-      }
-    }
-    }
   }
   return err;
 }
+//
+Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
+{
+  Int_t err = SBSCalorimeter::CoarseProcess(tracks);
+  if(err) {
+    return err;
+  }
+  Int_t BlockSize = SBSCalorimeter::MakeGoodBlocks();
 
+  Int_t ClusSize = SBSCalorimeter::FindClusters();
 
+  return ClusSize;
+}
 //_____________________________________________________________________________
 Int_t SBSHCal::DefineVariables( EMode mode )
 {

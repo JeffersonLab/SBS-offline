@@ -54,7 +54,6 @@ class SBSSimDecoder : public Podd::SimDecoder {
     uint crate;
     uint slot;
     uint chan;
-    //uint apvnum;
   detchaninfo(int cr = 0, int sl = 0, int ch = 0) ://, int apv = 0) : 
     crate(cr), slot(sl), chan(ch)//, apvnum(apv)
     {}
@@ -65,10 +64,14 @@ class SBSSimDecoder : public Podd::SimDecoder {
   struct gemstripinfo{
     uint crate;
     uint slot;
-    uint chan;
     uint apvnum;
-  gemstripinfo(int cr = 0, int sl = 0, int ch = 0, int apv = 0) : 
-    crate(cr), slot(sl), chan(ch), apvnum(apv)
+    //uint chan_lo;
+    //uint chan_hi;
+    //uint axis;
+  gemstripinfo(int cr = 0, int sl = 0, int apv = 0) :
+	       //, int ch_lo = 0, int ch_hi = 0, int ax) : 
+    crate(cr), slot(sl), apvnum(apv)
+      //, chan_lo(ch_lo), chan_hi(ch_hi), axis(ax)
     {}
     virtual ~gemstripinfo(){};
   };
@@ -89,10 +92,10 @@ protected:
 #endif
 
   //Utilities
-  typedef std::map<Int_t,Int_t> PMTMap_t;
+  //typedef std::map<Int_t,Int_t> PMTMap_t;
 
   // Event-by-event data
-  PMTMap_t      fPMTMap;   //! Map ROCKey -> index of corresponding PMT
+  //PMTMap_t      fPMTMap;   //! Map ROCKey -> index of corresponding PMT
   
   // retrive chanperslot, slotpercrate, etc...
   /*
@@ -142,6 +145,24 @@ protected:
 	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
+  Int_t fNBBtracks;
+  std::vector<Int_t> fBBtrack_Nhits;
+  std::vector<Int_t> fBBtrack_TID;
+  std::vector<Int_t> fBBtrack_PID;
+  std::vector<Int_t> fBBtrack_MID;
+  std::vector<Double_t> fBBtrack_P;
+  std::vector<Double_t> fBBtrack_X;
+  std::vector<Double_t> fBBtrack_Y;
+  std::vector<Double_t> fBBtrack_dX;
+  std::vector<Double_t> fBBtrack_dY;
+  Int_t fNBBGEMhits; 
+  std::vector<Int_t> fBBGEMhit_plane;
+  std::vector<Int_t> fBBGEMhit_TID;
+  std::vector<Int_t> fBBGEMhit_PID;
+  std::vector<Int_t> fBBGEMhit_MID;
+  std::vector<Double_t> fBBGEMhit_edep;
+  std::vector<Double_t> fBBGEMhit_x;
+  std::vector<Double_t> fBBGEMhit_y;
   
   //TH1D* h1_sizeHCal;
   //TH1D* h1_sizeGEMs;

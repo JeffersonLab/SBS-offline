@@ -42,10 +42,10 @@ namespace Decoder {
 
     /*
     using Module::GetData;
-    using Module::LoadSlot;
     */
+    using Module::LoadSlot;
 
-    virtual Int_t GetData(Int_t adc, Int_t sample, Int_t chan) const;
+    virtual UInt_t GetData( UInt_t adc, UInt_t sample, UInt_t chan) const;
     virtual void Init();
     virtual void Clear(const Option_t *opt);
     virtual Int_t Decode(const UInt_t *p); // { return 0; };
@@ -75,11 +75,15 @@ namespace Decoder {
     
 //#ifdef LIKEV792x
     // Loads slot data.  if you don't define this, the base class's method is used
-    virtual Int_t LoadSlot(THaSlotData *sldat,  const UInt_t *evbuffer, Int_t pos, Int_t len);
+    virtual UInt_t LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len);
 //#endif
 
+    //void CommonModeSubtraction();
+    
   private:
 
+    bool fOnlineZeroSuppression; //if true, assumes that raw-data are already zero-suppressed and baseline-subtracted
+    
     // configuration parameters
     Int_t fAcqMode; // normal, zero suppression, histogram, synch ...
     Int_t fSamplePeriod; // 25 ns, 75 ns ...
@@ -99,19 +103,24 @@ namespace Decoder {
 
     Int_t fNumHits;
 
+    //New members/methods to parse MPD4 VME format used by UVA GEM cosmic test stand, Jan. 2021:
+    UInt_t fBlockHeader; //Default = 0x0
+    UInt_t fAPVHeader;   //Default = 0x4
+    
+  
     std::vector<Int_t> fFrameHeader;  // Frame Header
     std::vector<Int_t> fFrameTrailer;  // Frame Trailer
 
     static TypeIter_t fgThisType;
 
     // linearization of the indeces 
-    inline Int_t as2i(Int_t adc, Int_t sample) const {
-      return adc*fNumSample + sample;
-    };
+    // inline Int_t as2i(Int_t adc, Int_t sample) const {
+    //   return adc*fNumSample + sample;
+    // };
 
-    inline Int_t asc2i(Int_t adc, Int_t sample, Int_t chan) const {
-      return adc*fNumSample*fNumChan + sample*fNumChan + chan;
-    };
+    // inline UInt_t asc2i(UInt_t adc, UInt_t sample, UInt_t chan) const {
+    //   return adc*fNumSample*fNumChan + sample*fNumChan + chan;
+    // };
     
     ClassDef(MPDModule,0)  //  INFN MPD Module 
 

@@ -42,7 +42,8 @@ using namespace std;
 
 //-----------------------------------------------------------------------------
 SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char* description) :
-  THaRunBase(description), fROOTFileName(filename), fExperiment(experiment), fROOTFile(0), fTree(0), 
+  THaRunBase(description), fROOTFileName(filename), //fExperiment(experiment), 
+  fROOTFile(0), fTree(0), 
   fEvent(0), fNEntries(0), fEntry(0), fVerbose(0)
 {
   // Constructor
@@ -71,10 +72,34 @@ SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char*
     }
   }
   */
-  fValidExperiments.insert("gmn");
-  fValidExperiments.insert("genrp");
-  fValidExperiments.insert("gep");
-  fValidExperiments.insert("sidis");
+  cout << "using experiment configuration: " << experiment << endl;
+  
+  if(strcmp(experiment,"gmn")==0 || strcmp(experiment,"gen")==0){
+    //(experiment=="gmn" || experiment=="gen")//{
+    fExperiment = kGMN;
+  }
+  if(strcmp(experiment,"genrp")==0){
+    //(experiment=="genrp")//{
+    fExperiment = kGEnRP;
+  }
+  if(strcmp(experiment,"gep")==0){
+    //(experiment=="gep")//{
+    fExperiment = kGEp;
+  }
+  if(strcmp(experiment,"sidis")==0){
+    //(experiment=="sidis")//{
+    fExperiment = kSIDIS;
+  }
+  
+  // fValidExperiments.insert("gmn");
+  // fValidExperiments.insert("genrp");
+  // fValidExperiments.insert("gep");
+  // fValidExperiments.insert("sidis");
+  
+  fValidExperiments.insert(kGMN);
+  fValidExperiments.insert(kGEnRP);
+  fValidExperiments.insert(kGEp);
+  fValidExperiments.insert(kSIDIS);
 
   if( fValidExperiments.find( fExperiment ) == fValidExperiments.end() ){ //This is not a valid experiment. Default to gmn and print a warning:
     TString fWarn;
@@ -82,7 +107,7 @@ SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char*
     
     Warning(Here(fWarn.Data()), "Invalid simulated experiment choice... defaulting to gmn");
 
-    fExperiment = "gmn";
+    fExperiment = kGMN;//"gmn";
   }
   
 }
@@ -261,7 +286,7 @@ Int_t SBSSimFile::ReadEvent()
   // Read input file
   //ret = fTree->GetEntry(fEntry++);
 
-  std::cout << "trying to load event " << fEntry << std::endl;
+  //std::cout << "trying to load event " << fEntry << std::endl;
   
   ret = fEvent->GetEntry(fEntry++);
   if( ret == 0 )
@@ -279,7 +304,8 @@ const  Int_t *SBSSimFile::GetEvBuffer() const
 #endif
 {
   if( !IsOpen() ) return 0;
-
+  // EPAF: this is the "reinterpret_cast" that is essential.
+  // It transforms the "tree" into a (stl?) vector of integers
 #if ANALYZER_VERSION_CODE >= ANALYZER_VERSION(1,6,0)
   return reinterpret_cast<UInt_t*>(fEvent);
 #else

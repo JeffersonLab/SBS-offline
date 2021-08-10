@@ -89,10 +89,10 @@ Int_t SBSECal::ReadDatabase( const TDatime& date )
     fNclublk = nclbl;
 
     // Clear out the old detector map before reading a new one
-    UShort_t mapsize = fDetMap->GetSize();
+    UInt_t mapsize = fDetMap->GetSize();
     delete [] fNChan;
     if( fChanMap ) {
-        for( UShort_t i = 0; i<mapsize; i++ )
+        for( UInt_t i = 0; i<mapsize; i++ )
             delete [] fChanMap[i];
     }
     delete [] fChanMap;
@@ -122,7 +122,7 @@ Int_t SBSECal::ReadDatabase( const TDatime& date )
 
     fNChan = new UShort_t[ mapsize ];
     fChanMap = new UShort_t*[ mapsize ];
-    for( UShort_t i=0; i < mapsize; i++ ) {
+    for( UInt_t i=0; i < mapsize; i++ ) {
         THaDetMap::Module* module = fDetMap->GetModule(i);
         fNChan[i] = module->hi - module->lo + 1;
         if( fNChan[i] > 0 )
@@ -130,7 +130,7 @@ Int_t SBSECal::ReadDatabase( const TDatime& date )
         else {
             Error( Here(here), "No channels defined for module %d.", i);
             delete [] fNChan; fNChan = NULL;
-            for( UShort_t j=0; j<i; j++ )
+            for( UInt_t j=0; j<i; j++ )
                 delete [] fChanMap[j];
             delete [] fChanMap; fChanMap = NULL;
             fclose(fi);
@@ -139,8 +139,8 @@ Int_t SBSECal::ReadDatabase( const TDatime& date )
     }
     // Read channel map
     fgets ( buf, LEN, fi );
-    for ( UShort_t i = 0; i < mapsize; i++ ) {
-        for ( UShort_t j = 0; j < fNChan[i]; j++ ) 
+    for ( UInt_t i = 0; i < mapsize; i++ ) {
+        for ( UInt_t j = 0; j < fNChan[i]; j++ )
             fscanf (fi, "%hu", *(fChanMap+i)+j ); 
         fgets ( buf, LEN, fi );
     }
@@ -403,17 +403,17 @@ Int_t SBSECal::Decode( const THaEvData& evdata )
     ClearEvent();
 
     // Loop over all modules defined for shower detector
-    for( UShort_t i = 0; i < fDetMap->GetSize(); i++ ) {
+    for( UInt_t i = 0; i < fDetMap->GetSize(); i++ ) {
         THaDetMap::Module* d = fDetMap->GetModule( i );
 
         // Loop over all channels that have a hit.
-        for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+        for( UInt_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
 
-            Int_t chan = evdata.GetNextChan( d->crate, d->slot, j );
+            UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
             if( chan > d->hi || chan < d->lo ) continue;    // Not one of my channels.
 
             // Get the data. shower blocks are assumed to have only single hit (hit=0)
-            Int_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
+            UInt_t data = evdata.GetData( d->crate, d->slot, chan, 0 );
 
             // Copy the data to the local variables.
             Int_t k = *(*(fChanMap+i)+(chan-d->lo)) - 1;

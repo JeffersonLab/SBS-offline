@@ -1,19 +1,18 @@
 ///////////////////////////////////////////////////////////////////////////////
 //                                                                           //
-// SBSBBShowerCluster                                                        //
+// SBSECalCluster                                                        //
 //                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#include "SBSBBShowerCluster.h"
+#include "SBSECalCluster.h"
 #include <iostream>
 
 using namespace std;
 
-const Float_t SBSBBShowerCluster::kBig =(Float_t)1e15;
 
 //_____________________________________________________________
-SBSBBShowerCluster::SBSBBShowerCluster(Int_t nmaxblk, SBSShowerBlock* block) 
+SBSECalCluster::SBSECalCluster(Int_t nmaxblk, SBSShowerBlock* block) 
 : fNMaxBlocks(nmaxblk)
 {
     fBlocks = new SBSShowerBlock*[fNMaxBlocks];
@@ -26,7 +25,7 @@ SBSBBShowerCluster::SBSBBShowerCluster(Int_t nmaxblk, SBSShowerBlock* block)
 
 
 //_____________________________________________________________
-SBSBBShowerCluster::SBSBBShowerCluster(Int_t nmaxblk) 
+SBSECalCluster::SBSECalCluster(Int_t nmaxblk) 
 : fNMaxBlocks(nmaxblk)
 {
     fBlocks = new SBSShowerBlock*[fNMaxBlocks];
@@ -38,7 +37,7 @@ SBSBBShowerCluster::SBSBBShowerCluster(Int_t nmaxblk)
 
 
 //_____________________________________________________________
-SBSBBShowerCluster::SBSBBShowerCluster() {
+SBSECalCluster::SBSECalCluster() {
     fX = kBig;
     fY = kBig;
     fE = kBig;
@@ -46,21 +45,20 @@ SBSBBShowerCluster::SBSBBShowerCluster() {
 }
 
 //_____________________________________________________________
-SBSBBShowerCluster::~SBSBBShowerCluster() {
+SBSECalCluster::~SBSECalCluster() {
 
     DeleteArrays();
 
 }
 
 //_____________________________________________________________
-void SBSBBShowerCluster::AddBlock(SBSShowerBlock* block) {
+void SBSECalCluster::AddBlock(SBSShowerBlock* block) {
 
     if (fMult<fNMaxBlocks) {
         fBlocks[fMult] = block;
-	//cout << fBlocks[fMult] << " " << fBlocks[fMult+1] << endl;
         block->SetStat(1);
         fMult++;
-        //    cout << fX << " " << fE << " " << fMult << " " 
+        //     cout << fX << " " << fE << " " << fMult << " " 
         // 	 << block->GetX() << " " << block->GetE() << endl;
         //     cout << fX*fE*(fMult-1) << " " << block->GetX()*block->GetE() << endl;
         fX = (fX*fE*(fMult-1) + block->GetX()*block->GetE()) / 
@@ -73,16 +71,16 @@ void SBSBBShowerCluster::AddBlock(SBSShowerBlock* block) {
 }
 
 //_____________________________________________________________
-void SBSBBShowerCluster::ClearEvent() {
+void SBSECalCluster::ClearEvent() {
     fMult=0;fX=fY=fE=0.;
     DeleteArrays();
     fBlocks = new SBSShowerBlock*[fNMaxBlocks];
 }
 
 //_____________________________________________________________
-void SBSBBShowerCluster::DeleteArrays() {
+void SBSECalCluster::DeleteArrays() {
     delete [] fBlocks; fBlocks = 0;
 }
 
-ClassImp(SBSBBShowerCluster)
+ClassImp(SBSECalCluster)
 

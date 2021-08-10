@@ -49,8 +49,6 @@ public:
 
 private:
 
-    static const Float_t kBig; // = 1e15;
-
     Float_t fX;       // x position of the center
     Float_t fY;       // y position of the center
 

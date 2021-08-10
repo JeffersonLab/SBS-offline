@@ -30,7 +30,6 @@ namespace Decoder {
   Module::TypeIter_t SBSSimADC::fgThisType =
     //DoRegister( ModuleType( "Decoder::SBSSimADC" , 50250 ));
     DoRegister( ModuleType( "Decoder::SBSSimADC" ,  -250 ));
-  
   Module::TypeIter_t SBSSimADC::fgType1 =
     DoRegister( ModuleType( "Decoder::SBSSimADC" , -1881 ));
   Module::TypeIter_t SBSSimADC::fgType2 =
@@ -38,7 +37,6 @@ namespace Decoder {
   Module::TypeIter_t SBSSimADC::fgType3 =
     DoRegister( ModuleType( "Decoder::SBSSimADC" , -3561 ));
   //Int_t modid[4] = {-250, -1881, -792, -3561};
-  
   
   SBSSimADC::SBSSimADC()
   {
@@ -87,29 +85,30 @@ namespace Decoder {
   }
 
   void SBSSimADC::CheckDecoderStatus() const {
+    std::cout << "SBSSimADC has been called" << std::endl;
   }
 
-  Int_t SBSSimADC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
+  UInt_t SBSSimADC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
       const UInt_t *pstop) {
     Clear();
     unsigned int nwords = 0;
     unsigned short chan = 0, type;
-    UInt_t raw_buff;
+    UInt_t raw_buff, strip;
     bool printed = false;
     bool is_first = true;
-    //std::cout << "load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
+    //std::cout << "SBSSimADC load crate/slot: " << sldat->getCrate() << "/" << sldat->getSlot() << std::endl;
     while(evbuffer < pstop) {
       // First, decode the header
       SBSSimDataDecoder::DecodeHeader(*evbuffer++,type,chan,nwords);
-      //cout << type << " " << chan << " " << nwords << endl;
+      //std::cout << type << " " << sldat->getCrate() << " " << sldat->getSlot() << " " << chan << " " << nwords << endl;
       SBSSimDataDecoder *enc = SBSSimDataDecoder::GetEncoder(type);
       if(!enc) {
         std::cerr << "Could not find ADC decoder of type: " << type
           << ", is_first: " << is_first << std::endl;
       } else {
-        if(!enc->IsADC()) {
+        if(!enc->IsADC() && !enc->IsMPD()) {
           std::cerr << "Encoder " << enc->GetName() << " of type " << type
-            << " is not an ADC!" << std::endl;
+            << " is not an ADC nor an MPD!" << std::endl;
         } else if ( nwords > 0 ) {
           //if(enc->IsFADC() || enc->IsMPD()) { // FADC with samples
 	  if(enc->IsSADC()) { // FADC with samples
@@ -118,14 +117,23 @@ namespace Decoder {
 	    enc->DecodeSADC(tmp_sadc_data,evbuffer,nwords);
 	    //std::cout << tmp_sadc_data.samples.size() << std::endl;
 	    //std::cout << chan << " " << sadc_data[chan].samples.size() << std::endl;
-            for(size_t i = 0; i < tmp_sadc_data.samples.size(); i++) {
+	    for(size_t i = 0; i < tmp_sadc_data.samples.size(); i++) {
               raw_buff = tmp_sadc_data.samples[i];
 	      //std::cout << i << " " << tmp_sadc_data.samples[i] << endl;
               sadc_data[chan].samples.push_back(tmp_sadc_data.samples[i]);
 	      //std::cout << i << " " << sadc_data[chan].samples.size() << " " << raw_buff << endl;
               sldat->loadData("adc",chan,raw_buff,raw_buff);
             }
-          } else if (enc->IsADC()) { // Integral of ADC
+          } else if(enc->IsMPD()){
+	    SimEncoder::mpd_data tmp_mpd_data;
+	    enc->DecodeMPD(tmp_mpd_data,evbuffer,nwords);
+	    for(size_t i = 0; i < tmp_mpd_data.samples.size(); i++) {
+	      raw_buff = tmp_mpd_data.samples[i];
+	      strip = tmp_mpd_data.strips[i];
+	      //std::cout << i << " " << chan << " " << tmp_mpd_data.strips[i] << " " << tmp_mpd_data.samples[i] << endl;
+	      sldat->loadData("adc",chan,raw_buff,strip);
+	    }
+	  } else if (enc->IsADC()) { // Integral of ADC
             SimEncoder::adc_data tmp_adc_data;
             enc->DecodeADC(tmp_adc_data,evbuffer,nwords);
             raw_buff = tmp_adc_data.integral;
@@ -143,8 +151,8 @@ namespace Decoder {
    return 0;
   }
 
-  Int_t SBSSimADC::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer,
-      Int_t pos, Int_t len) {
+  UInt_t SBSSimADC::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer,
+                              UInt_t pos, UInt_t len) {
     return LoadSlot(sldat,evbuffer+pos,evbuffer+pos+len);
     //return SBSSimADC::LoadSlot(sldat,evbuffer,len);
   }

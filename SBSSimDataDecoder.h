@@ -6,10 +6,10 @@
 
 #define SBS_MAX_ENCODER_WORDS 1024 // Max number of words the encoder can encode
 #define SBS_NWORDS_MASK       0x3FFF
-#define SBS_CHANNEL_MASK      0x7FF // 0x1FF // 
-#define SBS_TYPE_MASK         0x7F // 0x1FF // 
+#define SBS_CHANNEL_MASK      0x3FFF // 0x1FF // 
+#define SBS_TYPE_MASK         0xF // 0x1FF // 
 #define SBS_CHANNEL_FIRST_BIT 14
-#define SBS_TYPE_FIRST_BIT    25 // 23 // 
+#define SBS_TYPE_FIRST_BIT    28 // 23 // 
 #define SBS_APV25_NCH 128 // Number of channels per APV25
 #define SBS_MPD_NAPV25 15 // Number of AVP25's per MPD
 
@@ -34,8 +34,10 @@ namespace SimEncoder {
   struct fadc_data : adc_data {
     std::vector<unsigned int> samples;
   };
+  */
   
   struct mpd_data : data {
+    /*
     unsigned short nsamples; ///< Number of samples per channel
     unsigned short nstrips; ///< Number of strips in this block (128 for APV25)
     unsigned short mpd_id;
@@ -44,9 +46,10 @@ namespace SimEncoder {
     unsigned short i2c;
     unsigned short pos;
     unsigned short invert;
+    */
+    std::vector<unsigned int> strips;
     std::vector<unsigned int> samples;
   };
-  */
   
   struct tdc_data : data {
     std::vector<unsigned int> time;
@@ -74,11 +77,17 @@ public:
   */
   // Decoders
   virtual bool DecodeADC(SimEncoder::adc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; }
+			 const unsigned int *enc_data,
+			 unsigned short nwords) { return false; }
   virtual bool DecodeTDC(SimEncoder::tdc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; };
+			 const unsigned int *enc_data,
+			 unsigned short nwords) { return false; };
   virtual bool DecodeSADC(SimEncoder::sadc_data &data,
-      const unsigned int *enc_data,unsigned short nwords) { return false; }
+			  const unsigned int *enc_data,
+			  unsigned short nwords) { return false; }
+  virtual bool DecodeMPD(SimEncoder::mpd_data &data,
+			 const unsigned int *enc_data,
+			 unsigned short nwords) { return false; }
   /*
   virtual bool DecodeFADC(SimEncoder::sadc_data &data,
       const unsigned int *enc_data,unsigned short nwords) { return false; }
@@ -94,7 +103,7 @@ public:
   virtual bool IsTDC() { return false; }
   virtual bool IsSADC() { return false; }
   //virtual bool IsFADC() { return false; }
-  //virtual bool IsMPD() { return false; }
+  virtual bool IsMPD() { return false; }
 
   unsigned short GetId() { return fEncId; }
   std::string GetName() { return fName; }
@@ -188,7 +197,7 @@ public:
   //  bool *overflow, bool *valid);
 };
 */
-/*
+
 // MPD
 class SBSSimMPDEncoder : public SBSSimDataDecoder {
 public:
@@ -197,28 +206,27 @@ public:
 
   //virtual bool EncodeMPD(SimEncoder::mpd_data data, unsigned int *enc_data,
   //  unsigned short &nwords);
-  //virtual bool DecodeMPD(SimEncoder::mpd_data &data,
-  virtual bool DecodeMPD(SimEncoder::sadc_data &data,
+  virtual bool DecodeMPD(SimEncoder::mpd_data &data,
       const unsigned int *enc_data,unsigned short nwords);
   virtual bool IsMPD() { return true; }
 
   //void EncodeMPDHeader(SimEncoder::mpd_data data, unsigned int *enc_data,
   //  unsigned short &nwords);
   //void DecodeMPDHeader(const unsigned int *hdr, SimEncoder::mpd_data &data);
-
+  /*
 protected:
   unsigned int fChannelBitMask;
   unsigned int fDataBitMask;
   unsigned int fOverflowBitMask;
   unsigned int fSampleBitMask;
   unsigned int fValidBitMask;
-
+  */
   //protected:
   //unsigned int EncodeSingleSample(unsigned int dat);
   //void UnpackSamples(unsigned int enc_data,unsigned int *buff,
   //  bool *overflow, bool *valid);
 
 };
-*/
+/**/
 
 #endif // SBSSIMDATAENCODER_H

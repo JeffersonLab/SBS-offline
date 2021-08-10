@@ -1,204 +1,58 @@
 # Date/Time = Tue Aug  23 11:00:00 2005
-## (jc2) What are these reserved for?
-==== Crate 3 type fastbus
-# slot  model   clear   header  mask    nchan   ndata
-  3     1877    1       0x0     0x0     96      672
-  4     1877    1       0x0     0x0     96      672
-  5     1877    1       0x0     0x0     96      672
-  6     1877    1       0x0     0x0     96      672
-  7     1877    1       0x0     0x0     96      672
-  8     1877    1       0x0     0x0     96      672
-  9     1877    1       0x0     0x0     96      672
-  10    1877    1       0x0     0x0     96      672
-  11    1877    1       0x0     0x0     96      672
-  16    1877    1       0x0     0x0     96      672
-  17    1877    1       0x0     0x0     96      672
-  18    1877    1       0x0     0x0     96      672
-  19    1877    1       0x0     0x0     96      672
-  20    1877    1       0x0     0x0     96      672
-  21    1877    1       0x0     0x0     96      672
-  22    1877    1       0x0     0x0     96      672
-  23    1881    1       0x0     0x0     64      64
-  24    1881    1       0x0     0x0     64      64
-  25    1881    1       0x0     0x0     64      64
 
-==== Crate 4 type fastbus
+#==== Crate 4 type fastbus
 # ADCs (And optional TDCs) for BBPS, BBSH
 # slot  model   clear   header  mask    nchan   ndata
-   1    1881    1       0x0     0x0     64      672 # BB SH
-   2    1881    1       0x0     0x0     64      672 # BB SH
-   3    1881    1       0x0     0x0     64      672 # BB SH
-   4    1881    1       0x0     0x0     64      672 # BB PS (only 54 channels)
-   5    1877    1       0x0     0x0     96      672 # BB SH
-   6    1877    1       0x0     0x0     96      672 # BB SH
-   7    1877    1       0x0     0x0     96      672 # BB PS (only 54 channels)
-
-## (jc2) What are these two for?
-  18    1875    1       0x0     0x0     64      512
-  21    1881    1       0x0     0x0     64      64
+#   1    1881    1  # BB SH
+#   2    1881    1  # BB SH
+#   3    1881    1  # BB SH
+#   4    1881    1  # BB SH
+#   5    1881    1  # BB PS
 
 ==== Crate 5 type vme
 # slot model clear header mask       nchan ndata
 # TDCs for BBTH (+ADCs for )
-  1    1190  1 0x00000000 0x00000000 128 12800  ## 90 Channels for Hodoscope
-  2    1190  1 0x00000000 0x00000000 128 12800  ## 90 Channels for Hodoscope
-  3     792  1 0x00000000 0x00000000  32    32  ## Shared(??)
-  4     792  1 0x00000000 0x00000000  32    32  ## Shared(??)
-## Need QDC for GRINCH/Hodoscope ADC/TOT calibration
-## (jc2) Not sure what these were reserved for
-  5     3201    1       0x28000000      0xf8000000      32      1024
-  6     3201    1       0x30000000      0xf8000000      32      1024
-  8     3201    1       0x40000000      0xf8000000      32      1024
-  9     3201    1       0x48000000      0xf8000000      32      1024
- 11     3201    1       0x58000000      0xf8000000      32      1024
-# Slot 12 was removed from the datastream for transversity
-# 12     3201    1       0x60000000      0xf8000000      32      1024
- 16     792     1       0xda00adc0      0xffffffff      32      2048
- 17     792     1       0xda00adc1      0xffffffff      32      2048
- 18     792     1       0xda00adc2      0xffffffff      32      2048
- #19     792     1       0xda00adc3      0xffffffff      32      2048
+  1    1190  8
+  2    1190  8
+  3     792  4
+  4     792  4
+
+==== Crate 6 type vme Bank Decoding
+# slot  model   bank
+  3      250     3
+  4      250     3
+  5      250     3
+  6      250     3
+  7      250     3
+  8      250     3
+  9      250     3
+  10     250     3
+  13     250     3
+  14     250     3
+  15     250     3
+  16     250     3
+  17     250     3
+  18     250     3
+  19     250     3
+  20     250     3
+
+
 
 ==== Crate 7 type vme
-# TDCs for GRINCH (VETROC) - still stuck with something that is not VETROC
-# slot model clear header mask     nchan ndata
-  1    1190  1 0x00000000 0x00000000 128 12800
-  2    1190  1 0x00000000 0x00000000 128 12800
-  3    1190  1 0x00000000 0x00000000 128 12800
-  4    1190  1 0x00000000 0x00000000 128 12800
+## TDCs for GRINCH (VETROC) - still stuck with something that is not VETROC
+## slot model clear header mask     nchan ndata
+ 1    3201  5
+ 2    3201  5
+ 3    3201  5
+ 4    3201  5
 
-==== Crate 8 type fastbus
-# slot	model	clear	header	mask	nchan	ndata
-  1     1881    1	0x0	0x0	64	64
-  2     1881    1	0x0	0x0	64	64
-  3     1881    1	0x0	0x0	64	64	
-  4     1881    1	0x0	0x0	64	64	
-  5     1881    1	0x0	0x0	64	64	
-  6     1881    1	0x0	0x0	64	64	
-  7     1881    1	0x0	0x0	64	64	
-  8     1881    1	0x0	0x0	64	64	
-  9     1881    1	0x0	0x0	64	64	
-  16    1877	1	0x0	0x0	96	672
-  17    1877	1	0x0	0x0	96	672
-==== Crate 9 type fastbus
-# slot	model	clear	header	mask	nchan	ndata
-  1	1877	1	0x0	0x0	96	672
-  2	1877	1	0x0	0x0	96	672
-  3	1877	1	0x0	0x0	96	672
-  4	1877	1	0x0	0x0	96	672
-  5	1877	1	0x0	0x0	96	672
-  6	1877	1	0x0	0x0	96	672
-  7	1877	1	0x0	0x0	96	672
-  8	1877	1	0x0	0x0	96	672
-  9	1877	1	0x0	0x0	96	672
-  10	1877	1	0x0	0x0	96	672
-  14	1877	1	0x0	0x0	96	672
-  15	1877	1	0x0	0x0	96	672
-  16	1877	1	0x0	0x0	96	672
-  17	1877	1	0x0	0x0	96	672
-  18	1877	1	0x0	0x0	96	672
-  19	1877	1	0x0	0x0	96	672
-  20	1877	1	0x0	0x0	96	672
-  21	1877	1	0x0	0x0	96	672
-  22	1877	1	0x0	0x0	96	672
-  23	1877	1	0x0	0x0	96	672
-  24	1877	1	0x0	0x0	96	672
-  25	1877	1	0x0	0x0	96	672
-==== Crate 10 type fastbus
-  1	1877	1	0x0	0x0	96	672
-  2	1877	1	0x0	0x0	96	672
-  3	1877	1	0x0	0x0	96	672
-  4	1877	1	0x0	0x0	96	672
-  5	1877	1	0x0	0x0	96	672
-  6	1877	1	0x0	0x0	96	672
-  7	1877	1	0x0	0x0	96	672
-  8	1877	1	0x0	0x0	96	672
-  9	1877	1	0x0	0x0	96	672
-  10	1877	1	0x0	0x0	96	672
-  14	1877	1	0x0	0x0	96	672
-  15	1877	1	0x0	0x0	96	672
-  16	1877	1	0x0	0x0	96	672
-  17	1877	1	0x0	0x0	96	672
-  18	1877	1	0x0	0x0	96	672
-  19	1877	1	0x0	0x0	96	672
-  20	1877	1	0x0	0x0	96	672
-  21	1877	1	0x0	0x0	96	672
-  23	1877	1	0x0	0x0	96	672
-  24	1877	1	0x0	0x0	96	672
-  25	1877	1	0x0	0x0	96	672
-==== Crate 11 type scaler "evleft"
-# slot	model	clear	header	mask	nchan	ndata
-  0	3800	1	0xabc00000	0xffff0000	32	32
-  1	3800	1	0xabc10000	0xffff0000	32	32
-  2	3800	1	0xabc20000	0xffff0000	32	32
-  3	3800	1	0xabc30000	0xffff0000	32	32
-  4	3800	1	0xabc40000	0xffff0000	32	32
-  5	3800	1	0xabc50000	0xffff0000	32	32
-  6	3800	1	0xabc60000	0xffff0000	32	32
-  7	3800	1	0xabc70000	0xffff0000	32	32
-  8	3800	1	0xabc90000	0xffff0000	32	32
-==== Crate 12 type scaler "evbbite"
-# slot	model	clear	header	mask	nchan	ndata
-  0	3800	1	0xbbe00000	0xffff0000	32	32
-  1	3800	1	0xbbe10000	0xffff0000	32	32
-  2	3800	1	0xbbe20000	0xffff0000	32	32
-  3	3800	1	0xbbe30000	0xffff0000	32	32
-  4	3800	1	0xbbe40000	0xffff0000	32	32
-  5	3800	1	0xbbe50000	0xffff0000	32	32
-  6	3800	1	0xbbe60000	0xffff0000	32	32
-  7	3800	1	0xbbe70000	0xffff0000	32	32
-  8	3800	1	0xbbe80000	0xffff0000	32	32
-# Date/time = Wed Sep 17 11:00:00 2008
-# crate 14&15 are for RICH detector:
-==== Crate 14 type vme
-# slot  model   clear   header   mask   nchan   ndata
-  1     550    1        0xcd000000      0xffff0000      512     1024
-  2     550    1        0xcd010000      0xffff0000      512     1024
-  3     550    1        0xcd020000      0xffff0000      512     1024 
-  4     550    1        0xcd030000      0xffff0000      512     1024
-  5     550    1        0xcd040000      0xffff0000      512     1024
-  6     550    1        0xcd050000      0xffff0000      512     1024
-  7     550    1        0xcd060000      0xffff0000      512     1024
-  8     550    1        0xcd070000      0xffff0000      512     1024
-  9     550    1        0xcd080000      0xffff0000      512     1024
-  10    550    1        0xcd090000      0xffff0000      512     1024
-  11    550    1        0xcd0a0000      0xffff0000      512     1024
-  12    550    1        0xcd0b0000      0xffff0000      512     1024
-  13    550    1        0xcd0c0000      0xffff0000      512     1024
-  14    550    1        0xcd0d0000      0xffff0000      512     1024
-  15    550    1        0xcd0e0000      0xffff0000      512     1024 
-  16    550    1        0xcd0f0000      0xffff0000      512     1024
-  17    550    1        0xcd100000      0xffff0000      512     1024
-  18    550    1        0xcd110000      0xffff0000      512     1024
-  19    550    1        0xcd120000      0xffff0000      512     1024
-  20    550    1        0xcd130000      0xffff0000      512     1024
-==== Crate 15 type vme
-# slot  model   clear   header   mask   nchan   ndata
-  1     550     1       0xcd000000      0xffff0000      512     1024
-  2     550     1       0xcd010000      0xffff0000      512     1024
-  3     550     1       0xcd020000      0xffff0000      512     1024
-  4     550     1       0xcd030000      0xffff0000      512     1024
-  5     550     1       0xcd040000      0xffff0000      512     1024
-  6     550     1       0xcd050000      0xffff0000      512     1024
-  7     550     1       0xcd060000      0xffff0000      512     1024
-  8     550     1       0xcd070000      0xffff0000      512     1024
-  9     550     1       0xcd080000      0xffff0000      512     1024
-  10    550     1       0xcd090000      0xffff0000      512     1024
-  11    550     1       0xcd0a0000      0xffff0000      512     1024
-  12    550     1       0xcd0b0000      0xffff0000      512     1024
-  13	550	1	0xcd0c0000	0xffff0000	512	1024
-  14	550	1	0xcd0d0000	0xffff0000	512	1024
-  15	550	1	0xcd0e0000	0xffff0000	512	1024
-  16	550	1	0xcd0f0000	0xffff0000	512	1024
-  17	550	1	0xcd100000	0xffff0000	512	1024
-  18	550	1	0xcd110000	0xffff0000	512	1024
-  19	550	1	0xcd120000	0xffff0000	512	1024
-  20	550	1	0xcd130000	0xffff0000	512	1024
 
 
 ## Proposed crates (16-17) for SBS side (HCal + CDet + Hadron arm GEMs, etc...)
 # Date/Time = Fri Sep  14 09:33:00 2018
 ==== Crate 16 type vme
 # slot  model  bank
+   2    250     3  # HCal FADC
    3    250     3  # HCal FADC
    4    250     3  # HCal FADC
    5    250     3  # HCal FADC
@@ -215,6 +69,7 @@
   18    250     3  # HCal FADC
   19    250     3  # HCal FADC
   20    250     3  # HCal FADC
+  30    4450    6 ## HCal LED
 # Date/Time = Fri Sep  14 09:33:00 2018
 ==== Crate 17 type vme
 # slot  model  bank
@@ -222,36 +77,12 @@
    4    250     3  # HCal FADC
 ## If operated in "low resolution" (~120 ps) mode we get 64 channels on each
 ## F1 TDC --> Only 5 VME modules needed for HCal
-   5   3204    64  # HCal F1 TDC
-   6   3204    64  # HCal F1 TDC
-   7   3204    64  # HCal F1 TDC
-   8   3204    64  # HCal F1 TDC
-   9   3204    64  # HCal F1 TDC
+   5   6401     7  # HCal F1 TDC
+   6   6401     7  # HCal F1 TDC
+   7   6401     7  # HCal F1 TDC
+   8   6401     7  # HCal F1 TDC
+   9   6401     7  # HCal F1 TDC
 
-# Date/Time = Fri Sep  14 09:33:00 2018
-## 2352 channels needed for CDET, so that's 25 modules, so may fit in 1 crate
-==== Crate 18 type fastbus
-  1  1877  1  0x0  0x0  96  672
-  2  1877  1  0x0  0x0  96  672
-  3  1877  1  0x0  0x0  96  672
-  4  1877  1  0x0  0x0  96  672
-  5  1877  1  0x0  0x0  96  672
-  6  1877  1  0x0  0x0  96  672
-  7  1877  1  0x0  0x0  96  672
-  8  1877  1  0x0  0x0  96  672
-  9  1877  1  0x0  0x0  96  672
- 10  1877  1  0x0  0x0  96  672
- 14  1877  1  0x0  0x0  96  672
- 15  1877  1  0x0  0x0  96  672
- 16  1877  1  0x0  0x0  96  672
- 17  1877  1  0x0  0x0  96  672
- 18  1877  1  0x0  0x0  96  672
- 19  1877  1  0x0  0x0  96  672
- 20  1877  1  0x0  0x0  96  672
- 21  1877  1  0x0  0x0  96  672
- 23  1877  1  0x0  0x0  96  672
- 24  1877  1  0x0  0x0  96  672
- 25  1877  1  0x0  0x0  96  672
 
 ## Now for the GEMs (just choose arbritrary crate number so it doesn't
 ## interfere with the other ones
@@ -264,12 +95,12 @@
   4  3561  1  0x0  0x0  65535 65535
   5  3561  1  0x0  0x0  65535 65535
   6  3561  1  0x0  0x0  65535 65535
-  6  3561  1  0x0  0x0  65535 65535
+  7  3561  1  0x0  0x0  65535 65535
   8  3561  1  0x0  0x0  65535 65535
   9  3561  1  0x0  0x0  65535 65535
  10  3561  1  0x0  0x0  65535 65535
  11  3561  1  0x0  0x0  65535 65535
- 12  3561  1  0x0  0x0  65535 65530
+ 12  3561  1  0x0  0x0  65535 65535
  13  3561  1  0x0  0x0  65535 65535
  14  3561  1  0x0  0x0  65535 65535
  15  3561  1  0x0  0x0  65535 65535

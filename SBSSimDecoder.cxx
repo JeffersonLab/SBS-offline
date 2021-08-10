@@ -30,6 +30,7 @@
 #include "SBSBBShower.h"
 #include "SBSBBTotalShower.h"
 #include "THaCrateMap.h"
+#include "Textvars.h"
 
 //#include <SBSSimFadc250Module.h>// we need not to need this
 #include "TList.h"
@@ -43,7 +44,7 @@
 #include <stdexcept>
 
 using namespace std;
-//using namespace Podd;
+using namespace Podd;
 
 class THaAnalysisObject;
 
@@ -76,6 +77,9 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   // we shouldn't have to do that to initialize all encoders... shall we?
   fDecoderMPD = dynamic_cast<SBSSimSADCEncoder*>
     (SBSSimDataDecoder::GetEncoderByName("mpd"));
+  
+  
+  
 }
 
 //-----------------------------------------------------------------------------
@@ -104,6 +108,24 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   cout << "Read SBSSimDecoder variables " << endl;
   
   RVarDef vars[] = {
+    {"nbbtracks",   "number of BB MC tracks",   "fNBBtracks"},
+    {"bbtrack_nhits",   "BB MC track hit mult",   "fBBtrack_Nhits"},
+    {"bbtrack_tid",   "BB MC track TID",   "fBBtrack_TID"},
+    {"bbtrack_pid",   "BB MC track PID",   "fBBtrack_PID"},
+    {"bbtrack_mid",   "BB MC track MID",   "fBBtrack_MID"},
+    {"bbtrack_p",   "BB MC track momentum",   "fBBtrack_P"},
+    {"bbtrack_x",   "BB MC track transport X position",   "fBBtrack_X"},
+    {"bbtrack_y",   "BB MC track transport Y position",   "fBBtrack_Y"},
+    {"bbtrack_dx",   "BB MC track transport dX slope",   "fBBtrack_dX"},
+    {"bbtrack_dy",   "BB MC track transport dY slope",   "fBBtrack_dY"},
+    {"nbbgemhits",   "number of BBGEM MC hits",   "fNBBGEMhits"},
+    {"bbgemhit_plane",   "BBGEM MC hit plane",   "fBBGEMhit_plane"},
+    {"bbgemhit_tid",   "BBGEM MC hit TID",   "fBBGEMhit_TID"},
+    {"bbgemhit_pid",   "BBGEM MC hit PID",   "fBBGEMhit_PID"},
+    {"bbgemhit_mid",   "BBGEM MC hit MID",   "fBBGEMhit_MID"},
+    {"bbgemhit_edep",   "BBGEM MC hit edep",   "fBBGEMhit_edep"},
+    {"bbgemhit_x",   "BBGEM MC hit transport X",   "fBBGEMhit_x"},
+    {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_y"},
     { 0 }
   };
 
@@ -119,7 +141,7 @@ void SBSSimDecoder::Clear( Option_t* opt )
 
   SimDecoder::Clear(opt);   // clears fMCCherHits, fMCCherClus
   
-  fPMTMap.clear(); 
+  //fPMTMap.clear(); 
 }
 
 //-----------------------------------------------------------------------------
@@ -178,7 +200,25 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
   
-  
+  fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
+  fBBtrack_Nhits = *(simEvent->Tgmn->Earm_BBGEM_Track_NumHits);
+  fBBtrack_TID = *(simEvent->Tgmn->Earm_BBGEM_Track_TID);
+  fBBtrack_PID = *(simEvent->Tgmn->Earm_BBGEM_Track_PID);
+  fBBtrack_MID = *(simEvent->Tgmn->Earm_BBGEM_Track_MID);
+  fBBtrack_P = *(simEvent->Tgmn->Earm_BBGEM_Track_P);
+  fBBtrack_X = *(simEvent->Tgmn->Earm_BBGEM_Track_X);
+  fBBtrack_Y = *(simEvent->Tgmn->Earm_BBGEM_Track_Y);
+  fBBtrack_dX = *(simEvent->Tgmn->Earm_BBGEM_Track_Xp);
+  fBBtrack_dY = *(simEvent->Tgmn->Earm_BBGEM_Track_Yp);
+  fNBBGEMhits = simEvent->Tgmn->Earm_BBGEM_hit_nhits;
+  fBBGEMhit_plane = *(simEvent->Tgmn->Earm_BBGEM_hit_plane);
+  fBBGEMhit_TID = *(simEvent->Tgmn->Earm_BBGEM_hit_trid);
+  fBBGEMhit_PID = *(simEvent->Tgmn->Earm_BBGEM_hit_pid);
+  fBBGEMhit_MID = *(simEvent->Tgmn->Earm_BBGEM_hit_mid);
+  fBBGEMhit_edep = *(simEvent->Tgmn->Earm_BBGEM_hit_edep);
+  fBBGEMhit_x = *(simEvent->Tgmn->Earm_BBGEM_hit_tx);
+  fBBGEMhit_y = *(simEvent->Tgmn->Earm_BBGEM_hit_ty);
+ 
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
@@ -196,7 +236,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 
   if( fDoBench ) fBench->Begin("clearEvent");
   Clear();
-  for( int i=0; i<fNSlotClear; i++ )
+  for( int i=0; i<fSlotClear.size(); i++ )
     crateslot[fSlotClear[i]]->clearEvent();
   if( fDoBench ) fBench->Stop("clearEvent");
 
@@ -211,7 +251,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   recent_event = event_num;
 
   // Event weight
-  fWeight = simEvent->ev_sigma*simEvent->ev_solang;
+  fWeight = simEvent->Tgmn->ev_sigma*simEvent->Tgmn->ev_solang;
 
   //
   if( fDoBench ) fBench->Begin("physics_decode");
@@ -295,6 +335,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   int mod, apvnum;
   //SimEncoder::mpd_data tmp_mpd;
   //UInt_t* mpd_hdr = new UInt_t[2];
+  std::vector<UInt_t> strips;
+  std::vector<UInt_t> samps;
+  std::vector<UInt_t> times;
+
+  bool loadevt = false;
+  int cur_apv = -1;
   
   Decoder::THaSlotData *sldat = 0;
   //This should be *general* and work for *every* subsystem
@@ -306,191 +352,385 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   
   
   if(strcmp(detname.c_str(), "bb.ps")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBPSTF1.nhits << " " << simev->Earm_BBPS_Dig.nchan << endl;
-    for(int j = 0; j<simev->Earm_BBPS_Dig.nchan; j++){
-      //cout << j << " " << simev->Earm_BBPS_Dig.chan->at(j) << " " << simev->Earm_BBPS_Dig.adc->at(j) << endl;
-      lchan = simev->Earm_BBPS_Dig.chan->at(j);
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBPSTF1.nhits << " " << simev->Tgmn->Earm_BBPS_dighit_nchan << endl;
+    samps.clear();
+    for(int j = 0; j<simev->Tgmn->Earm_BBPS_dighit_nchan; j++){
+      loadevt = false;
+      lchan = simev->Tgmn->Earm_BBPS_dighit_chan->at(j);
+      if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)>=0){
+	samps.push_back(simev->Tgmn->Earm_BBPS_dighit_adc->at(j));
+      }
+      
+      if(j==simev->Tgmn->Earm_BBPS_dighit_nchan-1){
+	loadevt = true;
+      }else if(simev->Tgmn->Earm_BBPS_dighit_chan->at(j+1)!=lchan){
+	loadevt = true;
+      }
+      
+      if(loadevt){
+	//ADC
+	ChanToROC(detname, lchan, crate, slot, chan);
+	
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	if(samps.size()){
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	  for(int k = 0; k<samps.size(); k++){
+	    myev->push_back(samps[k]);
+	    //cout << " " << samps[k];
+	  }
+	}
+	//cout << endl;
+	
+	samps.clear();
+      }
+      
+      /*
+      //cout << j << " " << simev->Tgmn->Earm_BBPS_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBPS_dighit_adc->at(j) << endl;
+      lchan = simev->Tgmn->Earm_BBPS_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
       myev->push_back(SBSSimDataDecoder::EncodeHeader(6, chan, 1));
    
-      myev->push_back(simev->Earm_BBPS_Dig.adc->at(j));
+      myev->push_back(simev->Tgmn->Earm_BBPS_dighit_adc->at(j));
       
       if(fDebug>2){
 	std::cout << " j = " << j << " my ev = {";
 	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
 	std::cout << " } " << std::endl;
       }
+      */
     }
   }
   if(strcmp(detname.c_str(), "bb.sh")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBSHTF1.nhits << " " << simev->Earm_BBSH_Dig.nchan << endl;
-    for(int j = 0; j<simev->Earm_BBSH_Dig.nchan; j++){
-      //cout << j << " " << simev->Earm_BBSH_Dig.chan->at(j) << " " << simev->Earm_BBSH_Dig.adc->at(j) << endl;
-      lchan = simev->Earm_BBSH_Dig.chan->at(j);
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBSHTF1.nhits << " " << simev->Tgmn->Earm_BBSH_dighit_nchan << endl;
+    samps.clear();
+        
+    for(int j = 0; j<simev->Tgmn->Earm_BBSH_dighit_nchan; j++){
+      loadevt = false;
+      lchan = simev->Tgmn->Earm_BBSH_dighit_chan->at(j);
+      if(simev->Tgmn->Earm_BBSH_dighit_samp->at(j)>=0){
+	samps.push_back(simev->Tgmn->Earm_BBSH_dighit_adc->at(j));
+      }
+      
+      if(j==simev->Tgmn->Earm_BBSH_dighit_nchan-1){
+	loadevt = true;
+      }else if(simev->Tgmn->Earm_BBSH_dighit_chan->at(j+1)!=lchan){
+	loadevt = true;
+      }
+     
+      if(loadevt){
+	//ADC
+	ChanToROC(detname, lchan, crate, slot, chan);
+	
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	if(samps.size()){
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	  for(int k = 0; k<samps.size(); k++){
+	    myev->push_back(samps[k]);
+	    //cout << " " << samps[k];
+	  }
+	}
+	//cout << endl;
+	
+	samps.clear();
+      }
+      
+      /*
+      //cout << j << " " << simev->Tgmn->Earm_BBSH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBSH_dighit_adc->at(j) << endl;
+      lchan = simev->Tgmn->Earm_BBSH_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
       
       myev->push_back(SBSSimDataDecoder::EncodeHeader(6, chan, 1));
    
-      myev->push_back(simev->Earm_BBSH_Dig.adc->at(j));
+      myev->push_back(simev->Tgmn->Earm_BBSH_dighit_adc->at(j));
       
       if(fDebug>2){
 	std::cout << " j = " << j << " my ev = {";
 	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
 	std::cout << " } " << std::endl;
       }
+      */
     }
   }
   if(strcmp(detname.c_str(), "bb.hodo")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBHodoScint.nhits << " " << simev->Earm_BBHodo_Dig.nchan << endl;
-    for(int j = 0; j<simev->Earm_BBHodo_Dig.nchan; j++){
-      //cout << j << " " << simev->Earm_BBHodo_Dig.chan->at(j) << " " << simev->Earm_BBHodo_Dig.adc->at(j) << endl;
-      lchan = simev->Earm_BBHodo_Dig.chan->at(j)+1;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBHodoScint_hit_nhits << " " << simev->Tgmn->Earm_BBHodo_dighit_nchan << endl;
+    // cout << simev->Tgmn->Earm_BBHodo_dighit_chan->size() << " " 
+    // 	 << simev->Tgmn->Earm_BBHodo_dighit_adc->size() << " " 
+    // 	 << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->size() << " " 
+    // 	 << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->size() << endl; 
+    /*
+    ChanToROC(detname, 180, crate, slot, chan);
+    cout << crate << " " << slot << " " << chan << endl;
+    if( crate >= 0 || slot >=  0 ) {
+      sldat = crateslot[idx(crate,slot)].get();
+    }
+    std::vector<UInt_t> *myev = &(map[sldat]);
+    myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
+    myev->push_back(0);
+    */
+    int ntdc = 0;
+    
+    for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
+      ntdc = 0;
+      lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
-      
+      //cout << detname << " " << lchan << " " << crate << " " << slot << " " << chan << endl;
+      //cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
-      std::vector<UInt_t> *myev = &(map[sldat]);
+      if(simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j)>-1000000)ntdc++;
+      if(simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j)>-1000000)ntdc++;
       
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
-      
-      myev->push_back(simev->Earm_BBHodo_Dig.tdc_l->at(j));
-      myev->push_back(simev->Earm_BBHodo_Dig.tdc_t->at(j));
+      if(ntdc){
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, ntdc));
+	
+	if(simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j)>-1000000)myev->push_back(simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j));
+	if(simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j)>-1000000){
+	  uint tdc =  simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j)|(1<<31);
+	  //cout << tdc << endl;
+	  myev->push_back( tdc );
+	}
       /*
       ChanToROC(detname, lchan, crate, slot, chan);//+91 ??? that might be the trick
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       myev = &(map[sldat]);
       
       myev->push_back(SBSSimDataDecoder::EncodeHeader(8, chan, 1));
-      myev->push_back(simev->Earm_BBHodo_Dig.adc->at(j));
+      myev->push_back(simev->Tgmn->Earm_BBHodo_dighit_adc->at(j));
       */
-      if(fDebug>2){
-	std::cout << " j = " << j << " my ev = {";
-	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
-	std::cout << " } " << std::endl;
+	if(fDebug>2){
+	  std::cout << " j = " << j << " my ev = {";
+	  for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	  std::cout << " } " << std::endl;
+	}
       }
     }
   }
   if(strcmp(detname.c_str(), "bb.grinch")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Earm_GRINCH.nhits << " " << simev->Earm_GRINCH_Dig.nchan << endl;
-    for(int j = 0; j<simev->Earm_GRINCH_Dig.nchan; j++){
-      //cout << j << " " << simev->Earm_GRINCH_Dig.chan->at(j) << " " << simev->Earm_GRINCH_Dig.adc->at(j) << endl;
-      lchan = simev->Earm_GRINCH_Dig.chan->at(j);
+    int ntdc = 0;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
+    for(int j = 0; j<simev->Tgmn->Earm_GRINCH_dighit_nchan; j++){
+      ntdc = 0;
+      //cout << j << " " << simev->Tgmn->Earm_GRINCH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_adc->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j) << endl;
+      lchan = simev->Tgmn->Earm_GRINCH_dighit_chan->at(j);
       ChanToROC(detname, lchan, crate, slot, chan);
       
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
-      std::vector<UInt_t> *myev = &(map[sldat]);
-      
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
-      
-      myev->push_back(simev->Earm_GRINCH_Dig.tdc_l->at(j));
-      myev->push_back(simev->Earm_GRINCH_Dig.tdc_t->at(j));
+
+      if(simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j)>-1000000)ntdc++;
+      if(simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j)>-1000000)ntdc++;
+
+      if(ntdc){
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, ntdc));
+	
+	if(simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j)>-1000000)myev->push_back(simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j));
+	if(simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j)>-1000000){
+	  uint tdc =  simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j)|(1<<31);
+	  //cout << tdc << endl;
+	  myev->push_back( tdc );
+	}
       /*
       ChanToROC(detname, lchan, crate, slot, chan);//+288 ??? that might be the trick
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       myev = &(map[sldat]);
       
       myev->push_back(SBSSimDataDecoder::EncodeHeader(8, chan, 1));
-      myev->push_back(simev->Earm_GRINCH_Dig.adc->at(j));
+      myev->push_back(simev->Tgmn->Earm_GRINCH_dighit_adc->at(j));
       */
-      if(fDebug>2){
-	std::cout << " j = " << j << " my ev = {";
-	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
-	std::cout << " } " << std::endl;
+	if(fDebug>2){
+	  std::cout << " j = " << j << " my ev = {";
+	  for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	  std::cout << " } " << std::endl;
+	}
       }
     }
   }
   
   if(strcmp(detname.c_str(), "bb.gem")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Earm_BBGEM_Dig.nstrips << endl;
-    for(int j = 0; j<simev->Earm_BBGEM_Dig.nstrips; j++){
-      mod = simev->Earm_BBGEM_Dig.module->at(j);
-      lchan = simev->Earm_BBGEM_Dig.strip->at(j);
-      //???
-      //ChanToROC(detname, lchan, crate, slot, chan);
+    samps.clear();  
+    strips.clear();  
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBGEM_dighit_nstrips << endl;
+    for(int j = 0; j<simev->Tgmn->Earm_BBGEM_dighit_nstrips; j++){
+      loadevt = false;
+      mod = simev->Tgmn->Earm_BBGEM_dighit_module->at(j);
+      lchan = simev->Tgmn->Earm_BBGEM_dighit_strip->at(j);
       apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
-      if(fDebug>3)cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " chan " << chan << endl;
-      if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
-      }
-      std::vector<UInt_t> *myev = &(map[sldat]);
       
-      //tmp_mpd = lchan/128+simev->Earm_BBGEM_Dig.module->at(j)*12;
-      //fEncoderMPD->EncodeMPDHeader(tmp_mpd, mpd_hdr, chan);
-      //myev->push_back(SBSSimDataDecoder::EncodeHeader(9, chan, 6));
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, 6));
-      //if(fDebug>3)cout << SBSSimDataDecoder::EncodeHeader(9, chan, 6) << endl;
-      myev->push_back(simev->Earm_BBGEM_Dig.adc_0->at(j));
-      myev->push_back(simev->Earm_BBGEM_Dig.adc_1->at(j));
-      myev->push_back(simev->Earm_BBGEM_Dig.adc_2->at(j));
-      myev->push_back(simev->Earm_BBGEM_Dig.adc_3->at(j));
-      myev->push_back(simev->Earm_BBGEM_Dig.adc_4->at(j));
-      myev->push_back(simev->Earm_BBGEM_Dig.adc_5->at(j));
+      if(simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)>=0){
+	strips.push_back(chan);
+	samps.push_back(simev->Tgmn->Earm_BBGEM_dighit_adc->at(j));
+      }
+      
+      if(fDebug>3)
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)  << " adc " << simev->Tgmn->Earm_BBGEM_dighit_adc->at(j) << endl;
+      //if(mod>=26 && simev->Tgmn->Earm_BBGEM_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
+      
+      if(j==simev->Tgmn->Earm_BBGEM_dighit_nstrips-1){
+	loadevt = true;
+      }else if(mod!=simev->Tgmn->Earm_BBGEM_dighit_module->at(j+1) ||
+	       //fabs(lchan-simev->Tgmn->Earm_BBGEM_dighit_strip->at(j+1))>=128
+	       floor(simev->Tgmn->Earm_BBGEM_dighit_strip->at(j+1)/128)!=floor(lchan/128)
+	       ){
+	loadevt = true;
+      }
+	
+      if(loadevt){
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	if(samps.size()){
+	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  //I think I'm onto something here, but I also need to transmit strip num 
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
+	  for(int k = 0; k<samps.size(); k++){
+	    // cout << " " << samps[k];
+	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	  }
+	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
+	  //cout << endl;
+	}
+	//cout << endl;
+	
+	samps.clear();
+	strips.clear();
+      }
     }
   }
   
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Harm_HCalScint.nhits << " " << simev->Harm_HCal_Dig.nchan << endl;
-    for(int j = 0; j<simev->Harm_HCal_Dig.nchan; j++){
-      lchan = simev->Harm_HCal_Dig.chan->at(j);
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Harm_HCalScint.nhits << " " << simev->Tgmn->Harm_HCal_dighit_nchan << endl;
+    samps.clear();
+    times.clear();
+    
+    for(int j = 0; j<simev->Tgmn->Harm_HCal_dighit_nchan; j++){
+      loadevt = false;
+      lchan = simev->Tgmn->Harm_HCal_dighit_chan->at(j);
+      if(simev->Tgmn->Harm_HCal_dighit_samp->at(j)>=0){
+	samps.push_back(simev->Tgmn->Harm_HCal_dighit_adc->at(j));
+      }else{
+	times.push_back(simev->Tgmn->Harm_HCal_dighit_tdc->at(j));
+      }
+      
+      if(j==simev->Tgmn->Harm_HCal_dighit_nchan-1){
+	loadevt = true;
+      }else if(simev->Tgmn->Harm_HCal_dighit_chan->at(j+1)!=lchan){
+	loadevt = true;
+      }
+      
+      if(loadevt){
+	//ADC
+	ChanToROC(detname, lchan, crate, slot, chan);
+	
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	if(samps.size()){
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	  for(int k = 0; k<samps.size(); k++){
+	    myev->push_back(samps[k]);
+	    //cout << " " << samps[k];
+	  }
+	}
+	//cout << endl;
+
+	//TDC
+	ChanToROC(detname, lchan+288, crate, slot, chan);
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	myev = &(map[sldat]);
+	if(times.size()){
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, times.size()));
+	  for(int k = 0; k<times.size(); k++){
+	    myev->push_back(times[k]);
+	  }
+	}
+	
+	samps.clear();
+	times.clear();
+      }
+      
+      /*
       ChanToROC(detname, lchan, crate, slot, chan);
       //cout << lchan << " " << crate << " " << slot << " " << chan << endl;
-
+      
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       std::vector<UInt_t> *myev = &(map[sldat]);
+      
       //cout << SBSSimDataDecoder::EncodeHeader(5, chan, 20) << endl;
       //cout << SBSSimDataDecoder::EncodeHeader(5, chan, 1) << endl;
       myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, 20));
-      myev->push_back(simev->Harm_HCal_Dig.adc_0->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_1->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_2->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_3->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_4->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_5->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_6->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_7->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_8->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_9->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_10->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_11->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_12->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_13->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_14->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_15->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_16->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_17->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_18->at(j));
-      myev->push_back(simev->Harm_HCal_Dig.adc_19->at(j));
-
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_0->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_1->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_2->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_3->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_4->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_5->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_6->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_7->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_8->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_9->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_10->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_11->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_12->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_13->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_14->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_15->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_16->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_17->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_18->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_19->at(j));
       ChanToROC(detname, lchan+288, crate, slot, chan);//+288 ??? that might be the trick
 
       //cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
       if( crate >= 0 || slot >=  0 ) {
-	sldat = crateslot[idx(crate,slot)];
+	sldat = crateslot[idx(crate,slot)].get();
       }
       myev = &(map[sldat]);
       
       myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, 1));
-      myev->push_back(simev->Harm_HCal_Dig.tdc->at(j));
+      myev->push_back(simev->Tgmn->Harm_HCal_dighit_tdc->at(j));
+      */
     }
 
   }
@@ -531,7 +771,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 
     Decoder::THaSlotData *sldat = 0;
     if( crate >= 0 || slot >=  0 ) {
-      sldat = crateslot[idx(crate,slot)];
+      sldat = crateslot[idx(crate,slot)].get();
     }
     
     //save the header
@@ -654,7 +894,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   const string prefix = detname+".";
   // First, open the common db file and parse info there, later, the
   // digitization specific db can be used to override any values
-  FILE* file  = THaAnalysisObject::OpenFile(fileName.c_str(), date);
+  FILE* file  = Podd::OpenDBFile(fileName.c_str(), date);
   
   std::vector<int> detmap,chanmap;//, detmap_adc;
   uint nchan, nlogchan = 0, chanmapstart = 0;
@@ -662,7 +902,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   //int cps, spc, fs, fc;
   
   bool isgem = (detname.find("gem")!=std::string::npos);
-  int apv_num = -1, mod = 0;
+  int apv_num = -1, mpd = -1, mod = 0, pos = -1, axis = -1;
   
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
@@ -680,10 +920,14 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     { 0 }
   };
   Int_t err;
-  int nparam_mod = 4;
-  int crate,slot,ch_lo,ch_hi, ch_count = 0, ch_map = 0;
+  int nparam_mod = 5;
+  if(isgem){//gem detectors
+    nparam_mod = 4;
+  }
+  int crate,slot,ch_lo,ch_hi, ch_ref, ch_count = 0, ch_map = 0;
   
   if(isgem){//it's easier if gems are their own thing
+    /*
     std::string chambers;
     DBRequest req_chambers[] = {
       {"chambers", &chambers, kString, 0, false}, //
@@ -694,106 +938,146 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
     //cout << " prefix " << prefix.c_str() << " err " << err << " chambers " << chambers.c_str() << " size ? " << chambers.size() << endl;
     
     std::vector<std::string> chambers_names;
-    if(err==0)chambers_names = THaAnalysisObject::vsplit(chambers);
+    if(err==0)chambers_names = vsplit(chambers);
     
     if(!chambers_names.empty()){
       for (std::vector<std::string>::iterator it = chambers_names.begin() ; it != chambers_names.end(); ++it){
-	std::string modules;
-	std::string pref_cham = prefix+(*it)+".";
-	//cout << "prefix chamber "  << pref_cham.c_str() << endl;
-	DBRequest req_modules[] = {
-	  {"modules", &modules, kString, 0, false}, //
+    */
+    std::string modules;
+    //std::string pref_cham = prefix+(*it)+".";
+    //std::string pref_cham = prefix;//+".";
+    //cout << "prefix chamber "  << pref_cham.c_str() << endl;
+    DBRequest req_modules[] = {
+      {"modules", &modules, kString, 0, false}, //
+      { 0 }
+    };
+    err+= THaAnalysisObject::LoadDB(file, date, req_modules, prefix.c_str());
+    
+    
+    //cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
+    
+    std::vector<std::string> modules_names;
+    if(err==0)modules_names = vsplit(modules);
+    if(!modules_names.empty()){
+      for (std::vector<std::string>::iterator jt = modules_names.begin() ; jt != modules_names.end(); ++jt){
+	std::string pref_mod = prefix+(*jt)+".";
+	
+	DBRequest request_gem[] = {
+	  {"chanmap", &chanmap, kIntV, 0, false}, 
 	  { 0 }
 	};
-	err+= THaAnalysisObject::LoadDB(file, date, req_modules, pref_cham.c_str());
-	
-	//cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
-	
-	std::vector<std::string> modules_names;
-	if(err==0)modules_names = THaAnalysisObject::vsplit(modules);
-	if(!modules_names.empty()){
-	  for (std::vector<std::string>::iterator jt = modules_names.begin() ; jt != modules_names.end(); ++jt){
-	    std::string planeconfig;
-	    std::string pref_mod = pref_cham+(*jt)+".";
-	    //cout << "prefix module "  << pref_mod.c_str() << endl;
-	    DBRequest req_planeconfig[] = {
-	      {"planeconfig", &planeconfig, kString, 0, false}, //
-	      { 0 }
-	    };
-	    err+= THaAnalysisObject::LoadDB(file, date, req_planeconfig, pref_mod.c_str());
-	    //cout << " prefix " << pref_mod.c_str() << " err " << err << " planeconfig " << planeconfig.c_str() << " size ? " << planeconfig.size() << endl;
-	    std::vector<std::string> plane_readouts;
-	    if(err==0)plane_readouts = THaAnalysisObject::vsplit(planeconfig);
-	    if(!plane_readouts.empty()){
-	      for (std::vector<std::string>::iterator kt = plane_readouts.begin() ; kt != plane_readouts.end(); ++kt){
-		//mod++;
-		std::string pref_ro = pref_mod+(*kt)+".";
-		ch_count = 0;
-		fInvGEMDetMap[detname].resize(fInvGEMDetMap[detname].size()+1);
+	err+= THaAnalysisObject::LoadDB(file, date, request_gem, pref_mod.c_str());
 
-		if(fDebug>=2)cout << fInvGEMDetMap[detname].size() << " module number " << mod << endl;
-		
-		err+= THaAnalysisObject::LoadDB(file, date, request, pref_ro.c_str());
-		//if(nlogchan==0)
-		nlogchan = nchan;
-		if(fDebug>=2)cout << " prefix " << pref_ro.c_str() << " err " << err << endl;
-		
-		if(err==0)fInvGEMDetMap[detname][mod].resize(nchan);
-		
-		int nparam_mod = 4;
-		for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
-		  crate  = detmap[k];
-		  slot   = detmap[k+1];
-		  ch_lo  = detmap[k+2];
-		  ch_hi  = detmap[k+3];
-		  
-		  for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
-		    if(i%128==0){
-		      apv_num++;
-		      if(fDebug>=3)cout << crate << " " << slot << " " << i << " " << apv_num << endl;
-		    }
-		    if(ch_count>nlogchan){
-		      std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
-		      return THaAnalysisObject::kInitError;
-		    }
-		    (fInvGEMDetMap[detname])[mod][ch_count]=gemstripinfo(crate, slot, i, apv_num);
-		    /*
-		      if(detname.find("hodo")!=std::string::npos){
-		      cout << " crate " << crate << " slot " << slot 
-		      << " i " << i << " ch_count " << ch_count << endl;
-		      cout << &(fInvDetMap.at(detname)).at(ch_count) << endl;
-		      }
-		    */
-		  }
-
+	fInvGEMDetMap[detname].resize(fInvGEMDetMap[detname].size()+2);
+	for(int m = 0; m<2; m++)(fInvGEMDetMap[detname])[mod*2+m].resize(chanmap.size()/nparam_mod);
+	
+	int nparam_mod = 9;
+	int ax_prev = 0;
+	int n_ax = 0, n_ax_x = 0, n_ax_y = 0;
+	for(size_t k = 0; k < chanmap.size(); k+=nparam_mod) {
+	  //for(int m = 0; m<nparam_mod; m++)std::cout << chanmap[k+m] << " ";
+	  //std::cout << std::endl;
+	  crate  = chanmap[k];
+	  slot   = chanmap[k+1];
+	  mpd   = chanmap[k+2];
+	  apv_num = mpd << 8 | chanmap[k+4];//
+	  pos = chanmap[k+6];
+	  axis = chanmap[k+8];
+	  if(axis==0)n_ax_x++;
+	  if(axis==1)n_ax_y++;
+	  if(ax_prev!=axis){
+	    n_ax = 0;
+	    ax_prev = axis;
+	  }
+	  ch_lo = 128*n_ax;
+	  ch_hi = 128*(n_ax+1)-1;
+	  //mod*2+axis???
+	  //std::cout << mod << " " << mod*2+axis << " " << fInvGEMDetMap[detname].size() << " " << mpd << " " << chanmap[k+4] << " " << apv_num << " " << n_ax << endl;
+	  (fInvGEMDetMap[detname])[mod*2+axis][n_ax]=gemstripinfo(crate, slot, apv_num);
+	  n_ax++;
+	}
+	(fInvGEMDetMap[detname])[mod*2+0].resize(n_ax_x);
+	(fInvGEMDetMap[detname])[mod*2+1].resize(n_ax_y);
+	/*
+	std::string planeconfig;
+	//cout << "prefix module "  << pref_mod.c_str() << endl;
+	DBRequest req_planeconfig[] = {
+	  {"planeconfig", &planeconfig, kString, 0, false}, //
+	  { 0 }
+	};
+	err+= THaAnalysisObject::LoadDB(file, date, req_planeconfig, pref_mod.c_str());
+	//cout << " prefix " << pref_mod.c_str() << " err " << err << " planeconfig " << planeconfig.c_str() << " size ? " << planeconfig.size() << endl;
+	std::vector<std::string> plane_readouts;
+	if(err==0)plane_readouts = vsplit(planeconfig);
+	if(!plane_readouts.empty()){
+	  for (std::vector<std::string>::iterator kt = plane_readouts.begin() ; kt != plane_readouts.end(); ++kt){
+	    //mod++;
+	    std::string pref_ro = pref_mod+(*kt)+".";
+	    ch_count = 0;
+	    fInvGEMDetMap[detname].resize(fInvGEMDetMap[detname].size()+1);
+	    
+	    if(fDebug>=2)cout << fInvGEMDetMap[detname].size() << " module number " << mod << endl;
+	    
+	    err+= THaAnalysisObject::LoadDB(file, date, request, pref_ro.c_str());
+	    //if(nlogchan==0)
+	    nlogchan = nchan;
+	    if(fDebug>=2)cout << " prefix " << pref_ro.c_str() << " err " << err << endl;
+	    
+	    if(err==0)fInvGEMDetMap[detname][mod].resize(nchan);
+	    
+	    //int nparam_mod = 5;
+	    for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
+	      crate  = detmap[k];
+	      slot   = detmap[k+1];
+	      ch_lo  = detmap[k+2];
+	      ch_hi  = detmap[k+3];
+	      
+	      for(int i = ch_lo; i<=ch_hi; i++, ch_count++){
+		if(i%128==0){
+		  apv_num++;
+		  if(fDebug>=3)cout << crate << " " << slot << " " << i << " " << apv_num << endl;
 		}
-		mod++;
-	      }//end loop on kt
-	    }//end if !plane_readouts
-	  }//end loop on jt
-	}//end if !modules_names
-      }//end loop on it
-    }//end if !chambers_names
+		if(ch_count>nlogchan){
+		  std::cout << " <0> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+		  return THaAnalysisObject::kInitError;
+		}
+		(fInvGEMDetMap[detname])[mod][ch_count]=gemstripinfo(crate, slot, i, apv_num);
+	      }
+	      
+	    }
+	  }//end loop on kt
+	}//end if !plane_readouts
+	*/
+	mod++;
+      }//end loop on jt
+    }//end if !modules_names
+    //  }//end loop on it
+    //}//end if !chambers_names
     
   }else{
    err = THaAnalysisObject::LoadDB(file, date, request, prefix.c_str());
    //}
    // Could close the common file already
    fclose(file);
-  
    if(nlogchan==0)nlogchan = nchan;
-  
+   
+   
    if(err)return THaAnalysisObject::kInitError;
   
    //fNChanDet[detname] = nchan;
    //fChanMapStartDet[detname] = chanmapstart;
-   (fInvDetMap[detname]).resize(nlogchan);
-   if(detmap[4]==-1)nparam_mod = 5;
+   (fInvDetMap[detname]).resize(nlogchan+1);//for ref
+   //if(detmap[4]==-1)nparam_mod = 5;
    for(size_t k = 0; k < detmap.size(); k+=nparam_mod) {
      crate  = detmap[k];
      slot   = detmap[k+1];
      ch_lo  = detmap[k+2];
      ch_hi  = detmap[k+3];
+     ch_ref = detmap[k+4];
+     if(ch_ref==-1){
+       (fInvDetMap[detname])[nlogchan]=detchaninfo(crate, slot, ch_lo);
+       continue;
+     }
      /*
        if(detname.find("hodo")!=std::string::npos)
        cout << " crate " << crate << " slot " << slot 
@@ -808,10 +1092,12 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	 }
 	 */
 	 if(ch_count>nlogchan){
-	   std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	   std::cout << " <1> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
+	 
 	 (fInvDetMap[detname])[ch_count]=detchaninfo(crate, slot, i);
+	 //cout << "ch_count " << ch_count << " crate " << crate << " slot " << slot << " i " << i << " &(fInvDetMap[detname]).at(ch_count) " << &(fInvDetMap[detname]).at(ch_count) << endl ;
 	 /*
 	   if(detname.find("hodo")!=std::string::npos){
 	   cout << " crate " << crate << " slot " << slot 
@@ -821,20 +1107,22 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	 */
        }
      }else{
-      
+       int chan_offset = 1;
+       if(detname.find("sh")!=std::string::npos)chan_offset = 0;
+       if(detname.find("ps")!=std::string::npos)chan_offset = 0;
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	 if(ch_count>nlogchan){
-	   std::cout << " number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
+	   std::cout << " <2> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
-	 if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-1 << " (+" << nchan << ") " << std::endl;
+	 if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-chan_offset << " (+" << nchan << ") " << std::endl;
 	 if(chanmap[ch_map]>=0){
 	   if(ch_count<nchan){
-	     (fInvDetMap[detname])[chanmap[ch_map]-1]=detchaninfo(crate, slot, i);
-	     if(fDebug>=3)std::cout << chanmap[ch_map]-1 << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-1) << std::endl;
+	     (fInvDetMap[detname])[chanmap[ch_map]-chan_offset]=detchaninfo(crate, slot, i);
+	     if(fDebug>=3)std::cout << chanmap[ch_map]-chan_offset << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-chan_offset) << std::endl;
 	   }else{
-	     (fInvDetMap[detname])[chanmap[ch_map]+nchan-1]=detchaninfo(crate, slot, i);
-	     if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-1) << std::endl;
+	     (fInvDetMap[detname])[chanmap[ch_map]+nchan-chan_offset]=detchaninfo(crate, slot, i);
+	     if(fDebug>=3)std::cout <<&(fInvDetMap.at(detname)).at(chanmap[ch_map]+nchan-chan_offset) << std::endl;
 	   }
 	   ch_count++;
 	 }
@@ -848,6 +1136,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   fFirstSlotDetMap[detname] = fs;
   fFirstCrateDetMap[detname] = fc;
   */
+  
   return(THaAnalysisObject::kOK);
 }
 
@@ -879,9 +1168,9 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
-
+  
   if(fDebug>3){
-    std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << " " << std::endl;
+    std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
     std::cout << &(fInvDetMap.at(detname)).at(h_chan) << std::endl;
   }
   crate = ((fInvDetMap.at(detname)).at(h_chan)).crate;
@@ -893,10 +1182,16 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
 int SBSSimDecoder::APVnum(const std::string detname, Int_t mod, Int_t h_chan, 
 			  Int_t &crate, Int_t &slot, UShort_t &chan) const
 {
-  crate = ((fInvGEMDetMap.at(detname))[mod][h_chan]).crate;
-  slot = ((fInvGEMDetMap.at(detname))[mod][h_chan]).slot;
-  chan = ((fInvGEMDetMap.at(detname))[mod][h_chan]).chan;
-  return ((fInvGEMDetMap.at(detname))[mod][h_chan]).apvnum;
+  chan = h_chan%128;
+  int n = (h_chan-chan)/128;
+  //if((fInvGEMDetMap.at(detname))[mod][n].chan_lo<=h_chan &&
+  // hchan <= (fInvGEMDetMap.at(detname))[mod][n].chan_hi){
+  crate = ((fInvGEMDetMap.at(detname))[mod][n]).crate;
+  slot = ((fInvGEMDetMap.at(detname))[mod][n]).slot;
+  return ((fInvGEMDetMap.at(detname))[mod][n]).apvnum;
+  //}else{
+  //return -1;
+  //}
 }
 
 /*
