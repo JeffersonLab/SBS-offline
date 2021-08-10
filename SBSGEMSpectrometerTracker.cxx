@@ -18,7 +18,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
 
   fModules.clear();
   fIsMC = false;//by default!
-  //fCrateMap = 0;	
+  //fCrateMap = 0;
+  fPedestalMode = false;
 }
 
 SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
@@ -94,13 +95,18 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
+    { "pedestalmode", &fPedestalMode, kInt, 0, 1, 1},
     {0}
   };
 
   fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
-    
+
+  if( fPedestalMode ){ //then we will just dump raw data to the tree:
+    fZeroSuppress = false;
+  }
+  
   Int_t status = kInitError;
   LoadDB( file, date, request, fPrefix );
   fclose(file);
@@ -111,12 +117,14 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     Error("", "[SBSGEMSpectrometerTracker::ReadDatabase] No modules defined");
   }
 
-  //int modcounter = 0;
-  
+  int modcounter = 0;
+
   for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
     fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this) );
-    //fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
-    fModules[fModules.size()-1]->fIsMC = fIsMC;
+
+    modcounter = fModules.size()-1;
+    fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
+    fModules[modcounter]->fIsMC = fIsMC;
   }
 
   //Define the number of modules from the "modules" string:
@@ -148,6 +156,9 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
     (*it)->Begin(run);
   }
 
+  InitEfficiencyHistos(GetName()); //create efficiency histograms (see SBSGEMTrackerBase)
+  
+  
   return 0;
 }
 
@@ -161,7 +172,7 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
 
 Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
-  //std::cout << "[SBSGEMSpectrometerTracker::Decode]" << std::endl;
+  std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  std::endl;
 
   //Triggers decoding of each module:
   
@@ -178,7 +189,32 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     (*it)->End(run);
   }
 
+  CalcEfficiency();
+  
+  hdidhit_x_layer->Compress();
+  hdidhit_y_layer->Compress();
+  hdidhit_xy_layer->Compress();
 
+  hshouldhit_x_layer->Compress();
+  hshouldhit_y_layer->Compress();
+  hshouldhit_xy_layer->Compress();
+
+  hefficiency_x_layer->Compress();
+  hefficiency_y_layer->Compress();
+  hefficiency_xy_layer->Compress();
+
+  hdidhit_x_layer->Write();
+  hdidhit_y_layer->Write();
+  hdidhit_xy_layer->Write();
+
+  hshouldhit_x_layer->Write();
+  hshouldhit_y_layer->Write();
+  hshouldhit_xy_layer->Write();
+
+  hefficiency_x_layer->Write();
+  hefficiency_y_layer->Write();
+  hefficiency_xy_layer->Write();
+  
   return 0;
 }
 
@@ -254,6 +290,15 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
     { "hit.ccor_clust", "correlation coefficient between cluster-summed U and V samples", "fHitCorrCoeffClust" },
     { "hit.ccor_strip", "correlation coefficient between U and V samples on strips with max ADC", "fHitCorrCoeffMaxStrip" },
+    { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
+    { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
+    { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },
+    { "nlayershituv", "number of layers with at least one 2D hit", "fNlayers_hitUV" },
+    { "nstripsu_layer", "total number of U strips fired by layer", "fNstripsU_layer" },
+    { "nstripsv_layer", "total number of V strips fired by layer", "fNstripsV_layer" },
+    { "nclustu_layer", "total number of U clusters by layer", "fNclustU_layer" },
+    { "nclustv_layer", "total number of V clusters by layer", "fNclustV_layer" },
+    { "n2Dhit_layer", "total_number of 2D hits by layer", "fN2Dhit_layer" },
     { nullptr }
   };
   DefineVarsFromList( vars, mode );
@@ -265,7 +310,7 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 
   //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack" << std::endl;
-  if( !fUseConstraint ){
+  if( !fUseConstraint && !fPedestalMode ){
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
     find_tracks();
@@ -291,7 +336,7 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 
   //std::cout << "SBSGEMSpectrometerTracker::FineTrack" << std::endl;
-  if( fUseConstraint ){ //
+  if( fUseConstraint && !fPedestalMode ){ //
 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;

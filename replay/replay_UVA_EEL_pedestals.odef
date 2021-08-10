@@ -1,0 +1,57 @@
+#block sbs.uvagem.*
+
+th1f hNlayers_hit 'Number of layers with fired strips (u OR v)' sbs.uvagem.nlayershit 6 -0.5 5.5
+th1f hNlayers_hitu 'Number of layers with fired u strips' sbs.uvagem.nlayershitu 6 -0.5 5.5
+th1f hNlayers_hitv 'Number of layers with fired v strips' sbs.uvagem.nlayershitv 6 -0.5 5.5
+th1f hNlayers_hituv 'Number of layers with 2D hits' sbs.uvagem.nlayershituv 6 -0.5 5.5
+th1f hNtracks_found 'Number of tracks found' sbs.uvagem.track.ntrack 11 -0.5 10.5
+
+th2f hNstripsU_layer 'Number of U strips fired by layer' [I] sbs.uvagem.nstripsu_layer 5 -0.5 4.5 101 -0.5 100.5
+th2f hNstripsV_layer 'Number of V strips fired by layer' [I] sbs.uvagem.nstripsv_layer 5 -0.5 4.5 101 -0.5 100.5
+th2f hNclustU_layer 'Number of U clusters by layer' [I] sbs.uvagem.nclustu_layer 5 -0.5 4.5 51 -0.5 50.5
+th2f hNclustV_layer 'Number of V clusters by layer' [I] sbs.uvagem.nclustv_layer 5 -0.5 4.5 51 -0.5 50.5
+
+
+#th2f hPedU_m0 'U strip pedestal data, module 0' sbs.uvagem.m0.strip sbs.uvagem.m0.stripADCsamples
+
+th2f hPedU_m0 'U strip pedestal data, module 0' sbs.uvagem.m0.strip[I] sbs.uvagem.m0.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m0.stripIsU[I]
+th2f hPedV_m0 'V strip pedestal data, module 0' sbs.uvagem.m0.strip[I] sbs.uvagem.m0.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m0.stripIsV[I]
+th2f hPedU_m1 'U strip pedestal data, module 1' sbs.uvagem.m1.strip[I] sbs.uvagem.m1.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m1.stripIsU[I]
+th2f hPedV_m1 'V strip pedestal data, module 1' sbs.uvagem.m1.strip[I] sbs.uvagem.m1.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m1.stripIsV[I]
+th2f hPedU_m2 'U strip pedestal data, module 2' sbs.uvagem.m2.strip[I] sbs.uvagem.m2.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m2.stripIsU[I]
+th2f hPedV_m2 'V strip pedestal data, module 2' sbs.uvagem.m2.strip[I] sbs.uvagem.m2.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m2.stripIsV[I]
+th2f hPedU_m3 'U strip pedestal data, module 3' sbs.uvagem.m3.strip[I] sbs.uvagem.m3.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m3.stripIsU[I]
+th2f hPedV_m3 'V strip pedestal data, module 3' sbs.uvagem.m3.strip[I] sbs.uvagem.m3.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m3.stripIsV[I]
+th2f hPedU_m4 'U strip pedestal data, module 4' sbs.uvagem.m4.strip[I] sbs.uvagem.m4.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m4.stripIsU[I]
+th2f hPedV_m4 'V strip pedestal data, module 4' sbs.uvagem.m4.strip[I] sbs.uvagem.m4.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m4.stripIsV[I]
+th2f hPedU_m5 'U strip pedestal data, module 5' sbs.uvagem.m5.strip[I] sbs.uvagem.m5.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m5.stripIsU[I]
+th2f hPedV_m5 'V strip pedestal data, module 5' sbs.uvagem.m5.strip[I] sbs.uvagem.m5.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m5.stripIsV[I]
+th2f hPedU_m6 'U strip pedestal data, module 6' sbs.uvagem.m6.strip[I] sbs.uvagem.m6.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m6.stripIsU[I]
+th2f hPedV_m6 'V strip pedestal data, module 6' sbs.uvagem.m6.strip[I] sbs.uvagem.m6.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m6.stripIsV[I]
+th2f hPedU_m7 'U strip pedestal data, module 7' sbs.uvagem.m7.strip[I] sbs.uvagem.m7.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m7.stripIsU[I]
+th2f hPedV_m7 'V strip pedestal data, module 7' sbs.uvagem.m7.strip[I] sbs.uvagem.m7.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m7.stripIsV[I]
+th2f hPedU_m8 'U strip pedestal data, module 8' sbs.uvagem.m8.strip[I] sbs.uvagem.m8.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m8.stripIsU[I]
+th2f hPedV_m8 'V strip pedestal data, module 8' sbs.uvagem.m8.strip[I] sbs.uvagem.m8.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m8.stripIsV[I]
+th2f hPedU_m9 'U strip pedestal data, module 9' sbs.uvagem.m9.strip[I] sbs.uvagem.m9.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m9.stripIsU[I]
+th2f hPedV_m9 'V strip pedestal data, module 9' sbs.uvagem.m9.strip[I] sbs.uvagem.m9.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m9.stripIsV[I]
+th2f hPedU_m10 'U strip pedestal data, module 10' sbs.uvagem.m10.strip[I] sbs.uvagem.m10.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m10.stripIsU[I]
+th2f hPedV_m10 'V strip pedestal data, module 10' sbs.uvagem.m10.strip[I] sbs.uvagem.m10.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m10.stripIsV[I]
+th2f hPedU_m11 'U strip pedestal data, module 11' sbs.uvagem.m11.strip[I] sbs.uvagem.m11.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m11.stripIsU[I]
+th2f hPedV_m11 'V strip pedestal data, module 11' sbs.uvagem.m11.strip[I] sbs.uvagem.m11.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m11.stripIsV[I]
+th2f hPedU_m12 'U strip pedestal data, module 12' sbs.uvagem.m12.strip[I] sbs.uvagem.m12.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m12.stripIsU[I]
+th2f hPedV_m12 'V strip pedestal data, module 12' sbs.uvagem.m12.strip[I] sbs.uvagem.m12.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m12.stripIsV[I]
+th2f hPedU_m13 'U strip pedestal data, module 13' sbs.uvagem.m13.strip[I] sbs.uvagem.m13.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m13.stripIsU[I]
+th2f hPedV_m13 'V strip pedestal data, module 13' sbs.uvagem.m13.strip[I] sbs.uvagem.m13.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m13.stripIsV[I]
+th2f hPedU_m14 'U strip pedestal data, module 14' sbs.uvagem.m14.strip[I] sbs.uvagem.m14.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m14.stripIsU[I]
+th2f hPedV_m14 'V strip pedestal data, module 14' sbs.uvagem.m14.strip[I] sbs.uvagem.m14.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m14.stripIsV[I]
+th2f hPedU_m15 'U strip pedestal data, module 15' sbs.uvagem.m15.strip[I] sbs.uvagem.m15.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m15.stripIsU[I]
+th2f hPedV_m15 'V strip pedestal data, module 15' sbs.uvagem.m15.strip[I] sbs.uvagem.m15.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m15.stripIsV[I]
+th2f hPedU_m16 'U strip pedestal data, module 16' sbs.uvagem.m16.strip[I] sbs.uvagem.m16.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m16.stripIsU[I]
+th2f hPedV_m16 'V strip pedestal data, module 16' sbs.uvagem.m16.strip[I] sbs.uvagem.m16.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m16.stripIsV[I]
+th2f hPedU_m17 'U strip pedestal data, module 17' sbs.uvagem.m17.strip[I] sbs.uvagem.m17.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m17.stripIsU[I]
+th2f hPedV_m17 'V strip pedestal data, module 17' sbs.uvagem.m17.strip[I] sbs.uvagem.m17.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m17.stripIsV[I]
+th2f hPedU_m18 'U strip pedestal data, module 18' sbs.uvagem.m18.strip[I] sbs.uvagem.m18.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m18.stripIsU[I]
+th2f hPedV_m18 'V strip pedestal data, module 18' sbs.uvagem.m18.strip[I] sbs.uvagem.m18.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m18.stripIsV[I]
+th2f hPedU_m19 'U strip pedestal data, module 19' sbs.uvagem.m19.strip[I] sbs.uvagem.m19.stripADCavg[I] 1536 -0.5 1535.5 1500 -500 1000 sbs.uvagem.m19.stripIsU[I]
+th2f hPedV_m19 'V strip pedestal data, module 19' sbs.uvagem.m19.strip[I] sbs.uvagem.m19.stripADCavg[I] 1280 -0.5 1279.5 1500 -500 1000 sbs.uvagem.m19.stripIsV[I]
+

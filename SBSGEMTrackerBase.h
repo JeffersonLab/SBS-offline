@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
-#include "SBSGEMModule.h"
+//#include "SBSGEMModule.h"
 #include "TVector3.h"
 #include "TVector2.h"
 //#include <THaTrackingDetector.h>
@@ -13,6 +13,7 @@
 //class THaApparatus;
 //class THaEvData;
 class SBSGEMModule;
+class TClonesArray;
 //class THaCrateMap;
 
 //This class is not going to inherit from THaAnything or from TObject.
@@ -49,7 +50,9 @@ protected:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void InitLayerCombos();
   void InitGridBins(); //initialize 
-
+  void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
+  void CalcEfficiency(); //essentially, divide "did hit/should hit" histograms
+  
   void InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
   void InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
@@ -65,6 +68,8 @@ protected:
   //Utility method to iterate over combinations of hits in layers, used by find_tracks()
   bool GetNextCombo( const std::set<int> &layers, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo );
 
+  int GetNearestModule( int layer, TVector3 track_origin, TVector3 track_direction, TVector3 &intersect );
+  
   // Utility method to take a list of hits mapped by layer as input, and give track parameters and chi2 as output.
   // This relies on the "hit list" and "free hit list" information also being sensibly populated
   //FitTrack calculates chi2 and residuals as well as best fit parameters
@@ -87,6 +92,8 @@ protected:
   bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
   bool fZeroSuppress;
   double fZeroSuppressRMS;
+
+  bool fPedestalMode;
   
   bool fIsMC;
 
@@ -105,6 +112,7 @@ protected:
 
   std::set<int> fLayers;
   std::vector<int> fLayerByIndex; //idiot-proofing just in case the user defines something stupid:
+  std::map<int,int> fIndexByLayer;  //idiot-proofing in case the user defines something stupid.
   std::map<int,int> fNumModulesByLayer; //key = unique layer ID (logical tracking layer), mapped value = number of modules per layer
   std::map<int, std::set<int> > fModuleListByLayer;  //key = unique layer ID, mapped value = list of unique modules associated with this layer
 
@@ -246,6 +254,41 @@ protected:
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
   std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC. 
   //And I THINK that's all we need to get started!
+
+  //number of layers fired per event
+  int fNlayers_hit; //number of layers with ANY strip fired in this layer (U or V)
+  int fNlayers_hitU; //number of layers with any U strip fired
+  int fNlayers_hitV; //number of layers with any V strip fired
+  int fNlayers_hitUV; //number of layers with at least one U and V hit
+
+  std::vector<int> fNstripsU_layer;
+  std::vector<int> fNstripsV_layer;
+  std::vector<int> fNclustU_layer;
+  std::vector<int> fNclustV_layer;
+  std::vector<int> fN2Dhit_layer;
+
+  //"did hit" and "should hit" by module (numerators and denominators for efficiency determination)
+  std::vector<int> fDidHit_Module;
+  std::vector<int> fShouldHit_Module;
+  
+  //We'll define hit map/efficiency histograms here.
+  // NOTE: in order for these to actually show up in output, derived classes must initialize these histograms
+  // in SBSGEMSpectrometerTracker::Begin() or SBSGEMPolarimeterTracker::Begin() and
+  // write them to the output ROOT file in SBSGEMSpectrometerTracker::End() or SBSGEMPolarimeterTracker::End()
+  TClonesArray *hdidhit_x_layer;
+  TClonesArray *hdidhit_y_layer;
+  TClonesArray *hdidhit_xy_layer;
+
+  TClonesArray *hshouldhit_x_layer;
+  TClonesArray *hshouldhit_y_layer;
+  TClonesArray *hshouldhit_xy_layer;
+
+  TClonesArray *hefficiency_x_layer;
+  TClonesArray *hefficiency_y_layer;
+  TClonesArray *hefficiency_xy_layer;
+
+  bool fEfficiencyInitialized;
+  
   
 };
 

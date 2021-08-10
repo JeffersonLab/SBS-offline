@@ -108,7 +108,6 @@ namespace Decoder {
     
     //following the MPDRawParser in ROOT_GUI_multicrate, loop on all the data in the ROC bank (which corresponds to one "crate"), and populate the
     //temporary data structure above, ONLY if slot == this_slot
-    // Since all the data from one slot is (or should be) in a contiguous block, we should 
     while( iword < len ){
       thisword = datawords[iword++];
 
