@@ -101,7 +101,7 @@ sbs.hcal.xyz    =  0.92835  0.47305 0.0
 sbs.hcal.dxdydz  =  0.00254  0.00254 0.0
 
 ## Mininum energy  for a cluster center (not really used right now)
-sbs.hcal.emin  = 0.0
+sbs.hcal.emin  = 1.0
 
 sbs.hcal.adc.conv = 0.4882
 # Number of bins (bin=4ns) at the beginning of waveform used to determing average Pedestal
@@ -116,3 +116,9 @@ sbs.hcal.adc.NSA = 10
 sbs.hcal.adc.FixThresBin = 14
 #Convert adc integral in pC to GeV
 sbs.hcal.adc.gain = 1.0
+#
+sbs.hcal.tdc.offset = 0.0
+#
+sbs.hcal.tdc.cal = 0.1
+#
+sbs.hcal.tdc.GoodTimeCut = 80.0
