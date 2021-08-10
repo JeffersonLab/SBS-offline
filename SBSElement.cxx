@@ -21,12 +21,12 @@ SBSElement::SBSElement(Float_t x, Float_t y,
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Check if this block has any data
+// Check if this block has any ADC data
 Bool_t SBSElement::HasData()
 {
-  return ( ( fADC && fADC->HasData() ) || ( fTDC && fTDC->HasData() ) ||
-      ( fWaveform && fWaveform->HasData() ) );
+  return ( ( fADC && fADC->HasData() ) || ( fTDC && fTDC->HasData() ) || ( fWaveform && fWaveform->HasData() ) );
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Clear event from generic Element (with no data)
@@ -62,10 +62,10 @@ void SBSElement::SetTDC(Float_t offset, Float_t cal, Float_t GoodTimeCut)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create a multi-valued ADC data structure
-void SBSElement::SetWaveform(Float_t ped, Float_t gain, Float_t ChanToMv)
+void SBSElement::SetWaveform(Float_t ped, Float_t gain, Float_t ChanToMv, Float_t adc_timecut)
 {
   if(fWaveform)
     delete fWaveform;
-  fWaveform = new SBSData::Waveform(ped,gain,ChanToMv);
+  fWaveform = new SBSData::Waveform(ped,gain,ChanToMv,adc_timecut);
 }
 

@@ -62,7 +62,7 @@ private:
     Int_t fNMaxElements;// Max number of blocks
     SBSElement* fMaxElement;  // Element with maximum in the cluster
 
-    std::vector<SBSElement*> fElements; //[fNMaxElements] List of blocks in cluster
+    std::vector<SBSElement*> fElements; //
 
     ClassDef(SBSCalorimeterCluster,1)   // Generic shower cluster class
 };
@@ -75,5 +75,6 @@ struct SBSCalorimeterClusterCompare {
     return l->GetE() < r->GetE();
   }
 };
+
 
 #endif
