@@ -81,8 +81,19 @@ Int_t SBSHCal::Decode( const THaEvData& evdata )
   }
   return err;
 }
+//
+Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
+{
+  Int_t err = SBSCalorimeter::CoarseProcess(tracks);
+  if(err) {
+    return err;
+  }
+  Int_t BlockSize = SBSCalorimeter::MakeGoodBlocks();
 
+  Int_t ClusSize = SBSCalorimeter::FindClusters();
 
+  return ClusSize;
+}
 //_____________________________________________________________________________
 Int_t SBSHCal::DefineVariables( EMode mode )
 {

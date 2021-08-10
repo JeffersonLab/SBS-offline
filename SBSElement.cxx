@@ -15,18 +15,18 @@ ClassImp(SBSElement);
 SBSElement::SBSElement(Float_t x, Float_t y,
     Float_t z, Int_t row, Int_t col, Int_t layer, Int_t id) :
   fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0), fID(id),
-  fADC(0), fTDC(0), fWaveform(0), fCoarseProcessed(0)
+  fADC(0), fTDC(0), fWaveform(0)
 {
 }
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Check if this block has any data
+// Check if this block has any ADC data
 Bool_t SBSElement::HasData()
 {
-  return ( ( fADC && fADC->HasData() ) || ( fTDC && fTDC->HasData() ) ||
-      ( fWaveform && fWaveform->HasData() ) );
+  return ( ( fADC && fADC->HasData() ) || ( fTDC && fTDC->HasData() ) || ( fWaveform && fWaveform->HasData() ) );
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Clear event from generic Element (with no data)
@@ -40,7 +40,6 @@ void SBSElement::ClearEvent()
     fTDC->Clear();
   if(fWaveform)
     fWaveform->Clear();
-  fCoarseProcessed = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -63,40 +62,10 @@ void SBSElement::SetTDC(Float_t offset, Float_t cal, Float_t GoodTimeCut)
 
 ///////////////////////////////////////////////////////////////////////////////
 // Create a multi-valued ADC data structure
-void SBSElement::SetWaveform(Float_t ped, Float_t gain, Float_t ChanToMv)
+void SBSElement::SetWaveform(Float_t ped, Float_t gain, Float_t ChanToMv, Float_t adc_timecut)
 {
   if(fWaveform)
     delete fWaveform;
-  fWaveform = new SBSData::Waveform(ped,gain,ChanToMv);
+  fWaveform = new SBSData::Waveform(ped,gain,ChanToMv,adc_timecut);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// Coarse process this event
-void SBSElement::CoarseProcess()
-{
-
-  if(fCoarseProcessed)
-    return;
-
-  // Compute the energy
-  if(fWaveform) {
-    // TODO: Implement the same logic as the FADC firmware logic.
-    fE = fWaveform->GetIntegral().val;
-  } else if ( fADC && fADC->HasData()) {
-    // For ADCs with multiple hits, one should mark the "good" hit like so
-    // with fADC->SetGoodHit( idx );
-    // TODO: Find out how to determine the "good" hit. For now, take the first one.
-    fE = fADC->GetIntegral(0).val;
-  } else {
-    fE = 0;
-  }
-
-  if(fE < 0 ) { // Do not allowe negative energy!
-    fE = 0.0;
-  }
-
-  fCoarseProcessed = true;
-
-  // For the TDCs one should mark the "good" hit
-  // with fTDC->SetGoodHit( idx );
-}

@@ -21,8 +21,6 @@ public:
   virtual Int_t  CoarseProcess(TClonesArray& tracks);
   virtual Int_t  FineProcess(TClonesArray& tracks);
   virtual Int_t  ReadDatabase( const TDatime& date );
-  virtual Int_t  FindGoodHit(SBSElement *);
-  //virtual Int_t  Decode( const THaEvData& evdata );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
   virtual void ClearEvent();
 

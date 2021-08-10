@@ -41,9 +41,9 @@ bb.ps.ncols =  2
 bb.ps.nrows = 26
 
 ## Position of first module
-bb.ps.xyz    = -1.105  0.185  0.000
+bb.ps.xyz    =  1.0625  0.185  0.000
 ## Space between modules
-bb.ps.dxdydz =  0.085 -0.370  0.000
+bb.ps.dxdydz =  0.085   0.370  0.000
 
 ## Mininum energy  for a cluster center (not really used right now)
 bb.ps.emin  = 0.0
