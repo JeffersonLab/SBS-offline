@@ -939,7 +939,7 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
     THaDetMap::Module *d = fDetMap->GetModule( imod );
     for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
-      if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] != -1) continue;
+      if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] == -1) continue;
 	blk = fRefElements[ fRefChanMap[imod][chan-d->lo]];
 	fNRefhits++;
          if(d->IsADC()) {
