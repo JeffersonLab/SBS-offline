@@ -47,7 +47,7 @@ public:
   void SetID(Int_t var)     { fID = var; }
   void SetADC(Float_t ped, Float_t gain);
   void SetTDC(Float_t offset, Float_t cal, Float_t GoodTimeCut);
-  void SetWaveform(Float_t ped, Float_t gain,Float_t ChanToMv);
+  void SetWaveform(Float_t ped, Float_t gain,Float_t ChanToMv,Float_t adc_timecut);
 
   // Sub-classes may want a more comprehensive clear
   virtual void ClearEvent();

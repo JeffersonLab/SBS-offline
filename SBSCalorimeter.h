@@ -15,24 +15,54 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "SBSGenericDetector.h"
-//#include "THaShower.h"
 #include "SBSCalorimeterCluster.h"
 #include "TRotation.h"
 #include "TVector3.h"
 #include "THaDetMap.h"
 
+struct SBSBlockSet {
+  Float_t e;
+  Int_t row;
+  Int_t col;
+  Int_t id;
+  Float_t TDCTime;
+  Float_t ADCTime;
+};
+
+struct SBSCalBlocks {
+  std::vector<Float_t> e;   //< []
+  std::vector<Float_t> TDCTime;   //< [] 
+  std::vector<Float_t> ADCTime;   //< [] 
+  std::vector<Int_t> row; //< []
+  std::vector<Int_t> col; //< []
+  std::vector<Float_t> x; //< []
+  std::vector<Float_t> y; //< []
+  std::vector<Int_t>   id;      // []
+  void clear() {
+    e.clear();
+    x.clear();
+    y.clear();
+    id.clear();
+    row.clear();
+    col.clear();
+    TDCTime.clear();
+    ADCTime.clear();
+  }
+};
+
 struct SBSCalorimeterOutput {
-  std::vector<Float_t> e;   // Energy
-  std::vector<Float_t> e_c;   // Energy
-  std::vector<Float_t> x;   // X
-  std::vector<Float_t> y;   // Y
-  std::vector<Float_t> row; //
-  std::vector<Float_t> col; //
+  std::vector<Float_t> e;   //< []
+  std::vector<Float_t> e_c;   //< []
+  std::vector<Float_t> x;   //< []
+  std::vector<Float_t> y;   //< []
+  std::vector<Float_t> row; //< []
+  std::vector<Float_t> col; //< []
   std::vector<Int_t>   n;   // Number of elements
   std::vector<Float_t> blk_e;   // block energy of max energy block
   std::vector<Float_t> blk_e_c; // block corrected energy of max energy block
   std::vector<Int_t>   id;      // block id of max energy block
 };
+   typedef std::vector<SBSBlockSet> SBSBlockSetList;
 
 class SBSCalorimeter : public SBSGenericDetector {
 
@@ -43,6 +73,8 @@ public:
 
   virtual void ClearEvent();
   virtual void ClearOutputVariables();
+  virtual Int_t MakeGoodBlocks();
+  virtual Int_t FindClusters();
 
   // Get information from the main cluster
   Float_t GetE();             //< Main cluster energy
@@ -60,12 +92,12 @@ public:
   Int_t    GetNCols(Int_t r = 0);
 
   // Standard apparatus re-implemented functions
-  virtual Int_t      CoarseProcess(TClonesArray& tracks);
   virtual Int_t      FineProcess(TClonesArray& tracks);
 
   Int_t GetNclust() const { return fNclus; }
 
   void SetDataOutputLevel(int var) { fDataOutputLevel = var; }
+
 
 protected:
 
@@ -81,21 +113,21 @@ protected:
   Int_t  fNclubc;       ///< Max number of col-blocks composing a cluster
 
   // Mapping (see also fDetMap)
-  UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
-  std::vector<std::vector<UShort_t> > fChanMap; //< Maps modules in THaDetMap to calorimeter block number
 
+  SBSCalBlocks fGoodBlocks; // < Good block structure for tree output
+  SBSBlockSetList fBlockSet; // < Vector of structure of GoodBlock info to use in FindCluster 
+  typedef SBSBlockSetList::iterator fBlockSetIterator; // 
   // Output variables
   SBSCalorimeterOutput fMainclus;    //< Main cluster output
   SBSCalorimeterOutput fMainclusblk; //< Detailed info on blocks in main cluster
   SBSCalorimeterOutput fOutclus;     //< Output for all clusters
-  SBSCalorimeterOutput fOutblk;      //< Output for all blocks
 
-  // Blocks, where the grid is just for easy axis to the blocks by row,col,layer
   // Clusters for this event
-  std::vector<SBSCalorimeterCluster*> fClusters; //[] Cluster
-
-  // Other parameters
+  std::vector<SBSCalorimeterCluster*> fClusters; // Cluster
   Float_t    fEmin;         //< Minimum energy for a cluster center
+  Float_t    fXmax_dis;         //< maximum X distance from a cluster center
+  Float_t    fYmax_dis;         //< maximum Y distance from a cluster center
+  Float_t    fRmax_dis;         //< maximum radius from a cluster center
   Int_t fMaxNclus;          //< Maximum number of clusters to store
   Bool_t fCoarseProcessed;  //< Was CourseProcessed already called?
   Bool_t fFineProcessed;    //< Was fine processed already called

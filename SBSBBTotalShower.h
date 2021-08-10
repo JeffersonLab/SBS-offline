@@ -27,12 +27,12 @@
 
 #include    "DebugDef.h"
 #include "THaPidDetector.h"
-#include "THaShower.h"
+#include "SBSCalorimeter.h"
 
 class SBSBBShower;
 class SBSCalorimeter;
 
-class SBSBBTotalShower : public THaShower { //THaPidDetector {
+class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   
  public:
   SBSBBTotalShower( const char* name, const char* description = "",
@@ -45,17 +45,10 @@ class SBSBBTotalShower : public THaShower { //THaPidDetector {
   virtual Int_t      Decode( const THaEvData& );
   virtual Int_t      CoarseProcess( TClonesArray& tracks );
   virtual Int_t      FineProcess( TClonesArray& tracks );
-  /*
-  Float_t    GetE(Int_t i) const           { return fE[i]; }
-  Float_t    GetY(Int_t i) const           { return fY[i]; }
-  Float_t    GetX(Int_t i) const           { return fX[i]; }
-  Int_t      GetID(Int_t i) const          { return fID[i]; }
-  */
+
   SBSBBShower* GetShower() const      { return fShower; }
   SBSBBShower* GetPreShower() const   { return fPreShower; }
 
-  //SBSCalorimeter* GetShower() const      { return fShower; }
-  //SBSCalorimeter* GetPreShower() const   { return fPreShower; }
   
   virtual EStatus    Init( const TDatime& run_time );
   virtual void       SetApparatus( THaApparatus* );
@@ -69,14 +62,11 @@ class SBSBBTotalShower : public THaShower { //THaPidDetector {
   SBSBBShower* fShower;      // Shower subdetector
   SBSBBShower* fPreShower;   // Preshower subdetector
   
-  //SBSCalorimeter* fShower;
-  //SBSCalorimeter* fPreShower;
-  
-  /*
+
   // Parameters
   Float_t    fMaxDx;       // Maximum dx between shower and preshower centers
   Float_t    fMaxDy;       // Maximum dx between shower and preshower centers
-  
+  /*
   // Per event data
   Int_t       fNclust;      // Number of clusters
   Float_t*    fE;           //[fNClust] Total shower energy

@@ -50,12 +50,16 @@ namespace SBSModeTDC {
 struct SBSGenericOutputData {
   // Note [] means it can be variable sized data per event/module
   // Module info
-  std::vector<Int_t> row;         //< [] row
-  std::vector<Int_t> col;         //< [] col
-  std::vector<Int_t> ped;         //< [] pedestal
-  std::vector<Int_t> layer;       //< [] layer
-  std::vector<Int_t> elemID;      //< [] element ID
+  std::vector<Int_t> TDCrow;       //< [] row
+  std::vector<Int_t> TDCcol;         //< [] col
+  std::vector<Int_t> TDClayer;       //< [] layer
+  std::vector<Int_t> TDCelemID;      //< [] element ID
+  std::vector<Int_t> ADCrow;         //< [] row
+  std::vector<Int_t> ADCcol;         //< [] col
+  std::vector<Int_t> ADClayer;       //< [] layer
+  std::vector<Int_t> ADCelemID;      //< [] element ID
   // ADC variables
+  std::vector<Int_t> ped;         //< [] pedestal
   std::vector<Int_t> a_mult;         //< [] ADC # of hits per channel
   std::vector<Float_t> a;         //< [] ADC integral
   std::vector<Float_t> a_p;         //< [] ADC integral -pedestal
@@ -76,11 +80,15 @@ struct SBSGenericOutputData {
 
   // Quick clear class
   void clear() {
-    row.clear();
-    col.clear();
+    TDCrow.clear();
+    TDCcol.clear();
+    TDCelemID.clear();
+    TDClayer.clear();
+    ADCrow.clear();
+    ADCcol.clear();
+    ADCelemID.clear();
+    ADClayer.clear();
     ped.clear();
-    elemID.clear();
-    layer.clear();
     a_mult.clear();
     a.clear();
     a_p.clear();
@@ -189,7 +197,8 @@ protected:
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
   Int_t      fNRefhits;     ///< Number of reference hits in event
-  Int_t      fNGoodhits;     ///< Number of good hits in event
+  Int_t      fNGoodTDChits;     ///< Number of good TDC hits in event
+  Int_t      fNGoodADChits;     ///< Number of good ADC hits in event
 
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
@@ -228,7 +237,7 @@ private:
     }
   }
 
-  ClassDef(SBSGenericDetector,0)     //Generic shower detector class
+  ClassDef(SBSGenericDetector,1)     //Generic shower detector class
 };
 
 /*inline Int_t SBSGenericDetector::blkidx(Int_t row, Int_t col, Int_t layer)
