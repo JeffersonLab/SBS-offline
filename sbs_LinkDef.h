@@ -63,4 +63,6 @@
 //#pragma link C++ class GEMSimHit_t+;
 //#pragma link C++ class UHitData_t+;
 //#pragma link C++ defined_in "SBSSimFadc250Module.h";
+#pragma link C++ class SBSTimingHodoscopePMT+;
+#pragma link C++ class SBSTimingHodoscopeBar+;
 #endif

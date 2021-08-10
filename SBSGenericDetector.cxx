@@ -35,7 +35,7 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(true),fDisableRefTDC(true),
   fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
-  fStoreEmptyElements(true), fIsMC(true)
+  fStoreEmptyElements(true), fIsMC(false)
 {
   // Constructor.
   fCoarseProcessed = 0;
@@ -1190,8 +1190,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     blk = fElements[k];
     if(!blk)
       continue;
- 
-    // If the above did not define the good hit, the sub-class is expected
+   // If the above did not define the good hit, the sub-class is expected
     // to use re-implement the following function to find the good hit.
 
     // Skip blocks that have no new data (unless allowed by the user)
