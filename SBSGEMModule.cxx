@@ -624,7 +624,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //cout << adc_samp << " " << istrip << " " << rawADC << " ";// << endl;
 	  
 	  rawADCtemp.push_back( rawADC );
-	  
+
+	  //Question: if we are using online zero suppression, does it make sense to subtract the pedestal here? Unclear...
 	  double ADCvalue = (commonModeSubtractedADC[adc_samp][istrip] - pedtemp); //zero-suppress BEFORE we apply gain correction
 
 	  if( fPedestalMode ){ //If we are analyzing pedestal data, DON'T substract the pedestal
@@ -1035,11 +1036,11 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
 	clusttemp.stripADCsum.push_back( ADCstrip );
 
-	clusttemp.hitindex.push_back( hitindex[istrip] );
+	clusttemp.hitindex.push_back( hitindex[istrip] ); //do we use this anywhere? Yes, it is good to keep track of this if we want to access raw strip info later on 
 	
 	sumADC += ADCstrip;
 	
-	if( std::abs( istrip - stripmax ) <= std::max(UShort_t(1),std::min(fMaxNeighborsU_hitpos,fMaxNeighborsU_totalcharge)) ){ 
+	if( std::abs( istrip - stripmax ) <= std::max(UShort_t(1),std::min(maxsepcoord,maxsep)) ){ 
 	  sumx += hitpos * ADCstrip;
 	  sumx2 += pow(hitpos,2) * ADCstrip;
 	  sumwx += ADCstrip;
@@ -1187,7 +1188,7 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   return 0;
 }
 
-Int_t   SBSGEMModule::End( THaRunBase* r){ //Does nothing
+Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes hit maps and efficiency histograms to ROOT file:
 
   //Create the track-based efficiency histograms at the end of the run:
   TString histname;
