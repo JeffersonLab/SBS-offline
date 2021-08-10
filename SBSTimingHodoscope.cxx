@@ -239,11 +239,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   fGoodBarADCRap.clear();
   fGoodBarADCRac.clear();
 
-  Int_t NBars = fBars.size();
-  Bool_t flagTDCHitL;
-  Bool_t flagTDCHitR;
-  Bool_t flagADCHitL;
-  Bool_t flagADCHitR;
+  Int_t NBars = (Int_t)fBars.size();
   // std::cout << "fTDCBarOffset " << fTDCBarOffset << std::endl;
   // std::cout << "fADCBarOffset " << fADCBarOffset << std::endl;
   // std::cout << "NBars " << NBars << " fElements.size()/2 " << fElements.size()/2 << std::endl;
@@ -258,11 +254,12 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
     SBSTimingHodoscopePMT *pmtR = bar->GetRPMT();
     SBSElement *elL = pmtL->GetPMTElement();
     SBSElement *elR = pmtR->GetPMTElement();
-
+    
     if(WithTDC()){
       if(elL->TDC()->HasData() && elR->TDC()->HasData()){
 	
-	Int_t bar = BarInc; // don't need to add the offset to the tdc since all readout simultaneously
+	Int_t bar = BarInc;
+	// don't need to add offset to tdc since all readout simultaneously
 	fGoodBarIDsTDC.push_back(bar);
 	
 	// left hit
@@ -292,7 +289,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarTDCmean.push_back(barmeantime);
 	Float_t bartimediff = (hitL.le.val - hitR.le.val);
 	fGoodBarTDCdiff.push_back(bartimediff);
-	// convert to position? effective velocity times time? shoul we divide by 2? yes
+	// convert to position? effective velocity times time? should we divide by 2? yes
 	Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
 	fGoodBarTDCpos.push_back(HorizPos);
 	
@@ -304,11 +301,11 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	Int_t bar = fADCBarOffset + BarInc;
 	if(bar>89){
 	  Error( Here("CoarseProcess"),
-		 "hodoscope bar id after adding adc offset id from db file >89");
+		 "hodoscope bar id after adding adc offset id from db >89");
 	  return kInitError;
 	}
 	fGoodBarIDsADC.push_back(bar);
-	
+
 	// left hit
 	Float_t pedL=elL->ADC()->GetPed()*1.0;
 	const SBSData::PulseADCData &hitL = elL->ADC()->GetGoodHit(); // this is assuming simple adc type should add a check
@@ -327,11 +324,11 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	Float_t barmeanadc = (hitL.integral.raw + hitR.integral.raw) / 2.0;
 	// at moment dont use ped corrected for debug
 	fGoodBarADCmean.push_back(barmeanadc);
-	
       }// adc hit on both pmts
     }// with adc
   }// bar loop
-  
+
+
   fCoarseProcessed = 1;
   return 0;
 }
