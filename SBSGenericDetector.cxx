@@ -844,7 +844,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
 
   // TDC Reference Time variables 
   if(WithTDC() && !fDisableRefTDC) {
-    ve.push_back({ "Ref.tdcelemID", "Ref Time Calibrated TDC value", "fRefGood.tdcelemID" });
+    ve.push_back({ "Ref.tdcelemID", "Ref Time Calibrated TDC value", "fRefGood.TDCelemID" });
     ve.push_back({ "Ref.tdc", "Ref Time Calibrated TDC value", "fRefGood.t" });
     ve.push_back({ "Ref.tdc_mult", "Ref Time # hits in channel", "fRefGood.t_mult" });
     if(fModeTDC != SBSModeTDC::kTDCSimple) {
@@ -1044,7 +1044,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
-            std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
+      //      std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
        Float_t MinDiff = 10000.;
