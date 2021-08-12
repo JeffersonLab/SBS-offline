@@ -35,7 +35,7 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(true),fDisableRefTDC(true),
   fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
-  fStoreEmptyElements(true), fIsMC(true)
+  fStoreEmptyElements(true), fIsMC(false)
 {
   // Constructor.
   fCoarseProcessed = 0;
@@ -844,7 +844,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
 
   // TDC Reference Time variables 
   if(WithTDC() && !fDisableRefTDC) {
-    ve.push_back({ "Ref.tdcelemID", "Ref Time Calibrated TDC value", "fRefGood.tdcelemID" });
+    ve.push_back({ "Ref.tdcelemID", "Ref Time Calibrated TDC value", "fRefGood.TDCelemID" });
     ve.push_back({ "Ref.tdc", "Ref Time Calibrated TDC value", "fRefGood.t" });
     ve.push_back({ "Ref.tdc_mult", "Ref Time # hits in channel", "fRefGood.t_mult" });
     if(fModeTDC != SBSModeTDC::kTDCSimple) {
@@ -939,7 +939,7 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
     THaDetMap::Module *d = fDetMap->GetModule( imod );
     for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
-      if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] != -1) continue;
+      if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] == -1) continue;
 	blk = fRefElements[ fRefChanMap[imod][chan-d->lo]];
 	fNRefhits++;
          if(d->IsADC()) {
@@ -1044,7 +1044,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
-            std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
+      //      std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
        Float_t MinDiff = 10000.;
@@ -1190,8 +1190,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     blk = fElements[k];
     if(!blk)
       continue;
- 
-    // If the above did not define the good hit, the sub-class is expected
+   // If the above did not define the good hit, the sub-class is expected
     // to use re-implement the following function to find the good hit.
 
     // Skip blocks that have no new data (unless allowed by the user)
