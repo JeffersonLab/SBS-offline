@@ -288,6 +288,11 @@ protected:
   TClonesArray *hefficiency_xy_layer;
 
   bool fEfficiencyInitialized;
+  bool fMakeEfficiencyPlots; //default to TRUE
+
+  
+
+  
   
   
 };

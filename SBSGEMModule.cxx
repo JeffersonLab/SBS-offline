@@ -6,6 +6,7 @@
 #include "TRotation.h"
 #include "TH1F.h"
 #include "TH2F.h"
+#include "TClonesArray.h"
 #include <algorithm>
 
 using namespace std;
@@ -44,6 +45,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //     fadc[i] = NULL;
   // }
 
+  fMakeEfficiencyPlots = true;
+  
   return;
 }
 
@@ -127,10 +130,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
 
-  fPxU = cos( fUAngle * TMath::DegToRad() );
-  fPyU = sin( fUAngle * TMath::DegToRad() );
-  fPxV = cos( fVAngle * TMath::DegToRad() );
-  fPyV = sin( fVAngle * TMath::DegToRad() );
+  
   
   
   //std::cout << GetName() << " fThresholdStripSum " << fThresholdStripSum 
@@ -140,6 +140,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fclose(file);
     return status;
   }
+
+  fPxU = cos( fUAngle * TMath::DegToRad() );
+  fPyU = sin( fUAngle * TMath::DegToRad() );
+  fPxV = cos( fVAngle * TMath::DegToRad() );
+  fPyV = sin( fVAngle * TMath::DegToRad() );
   
   Int_t nentry = fChanMapData.size()/fMPDMAP_ROW_SIZE;
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
@@ -521,46 +526,63 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       //declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
       double commonMode[fN_MPD_TIME_SAMP];
 
-      //Regardless of whether we are doing common-mode subtraction, fill these temporary local arrays, so we don't need duplicate calls to evdata.GetRawData
-      // and evdata.GetData
-      vector<vector<int> > rawStrip(fN_MPD_TIME_SAMP);
-      vector<vector<int> > rawADCs(fN_MPD_TIME_SAMP); //by time sample and by ADC channel:
-      vector<vector<double> > commonModeSubtractedADC(fN_MPD_TIME_SAMP);
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	commonMode[isamp] = 0.0;
-	for( int istrip=0; istrip<nstrips; istrip++ ){
-	  int strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
-	  int ADC = evdata.GetData( it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip+isamp );//
-	  // std::cout << isamp << ", " << it->crate << " " << it->slot << " " << chan << " " 
-	  // 	    << strip << " " << ADC << endl;
-	  rawStrip[isamp].push_back( strip ); //APV25 channel number
-	  rawADCs[isamp].push_back( ADC );
-	  commonModeSubtractedADC[isamp].push_back( double(ADC) ); 
-	}
+      }
 
-	if( !fOnlineZeroSuppression && nstrips == fN_APV25_CHAN ){ //calculate common-mode: this implements the "sorting method" found in the ROOT_GUI_multiCrate program:
-	  vector<int> sortedADCs = rawADCs[isamp];
-	  std::sort(sortedADCs.begin(), sortedADCs.end());
+      vector<int> Strip( nsamp );
+      vector<int> rawStrip( nsamp );
+      vector<int> rawADC( nsamp );
+      vector<double> pedsubADC( nsamp ); //ped-subtracted, not necessarily common-mode subtracted
+      vector<double> commonModeSubtractedADC( nsamp );
 
-	  for( int k=28; k<100; k++ ){
-	    commonMode[isamp] += double(sortedADCs[k]);
-	  }
-	  commonMode[isamp] /= 72.0;
-	  for( int istrip=0; istrip<nstrips; istrip++ ){
-	    commonModeSubtractedADC[isamp][istrip] = double(rawADCs[isamp][istrip]) - commonMode[isamp];
+      //First loop over the hits: populate strip, raw strip, raw ADC, ped sub ADC and common-mode-subtracted aDC:
+      for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
+	int strip = evdata.GetRawData( it->crate, it->slot, chan, iraw );
+	int ADC = evdata.GetData( it->crate, it->slot, chan, iraw );
 
-	    // cout << "istrip, isample, common mode[isample], raw ADC, common-mode subtracted ADC = " << istrip << ", " << isamp << ", "
-	    // 	 << commonMode[isamp] << ", " << rawADCs[isamp][istrip] << ", " << commonModeSubtractedADC[isamp][istrip] << endl;
-	  }
-	}
+	rawStrip[iraw] = strip;
+	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
+	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+
+	//not sure if this is correct, ask Ben:
+	if( fOnlineZeroSuppression ) ped = 0.0;
 	
+	rawADC[iraw] = ADC;
+	pedsubADC[iraw] = double(ADC) - ped;
+	commonModeSubtractedADC[iraw] = double(ADC) - ped; 
 	
       }
+
+      //(OPTIONAL) second loop over the hits to calculate and apply common-mode correction (sorting method)
+      if( !fOnlineZeroSuppression && nstrips == fN_APV25_CHAN ){ //need to calculate common mode:
+	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	  vector<double> sortedADCs(fN_APV25_CHAN);
+	  
+	  for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+	    int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	    
+	    sortedADCs[ihit] = pedsubADC[ iraw ];
+	  }
+	  
+	  std::sort( sortedADCs.begin(), sortedADCs.end() );
+
+	  commonMode[isamp] = 0.0;
+	  
+	  for( int k=28; k<100; k++ ){
+	    commonMode[isamp] += sortedADCs[k];
+	  }
+	  commonMode[isamp] /= 72.0;
+	  
+	  for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+	    int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	
+	    commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[isamp];
+	  }
+	}
+      }
       
-      
-      
-      // Loop over all the strips and samples in the data
+      //std::cout << "finished common mode " << std::endl;
+      // Last loop over all the strips and samples in the data and populate/calculate global variables that are passed to track-finding:
       //Int_t ihit = 0;
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
 	//Temporary vector to hold ped-subtracted ADC samples for this strip:
@@ -576,33 +598,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	double Tsum = 0.0;
 	double T2sum = 0.0;
 
-	//At this point, "strip" equals APV channel number:
-	//Int_t strip = evdata.GetRawData(it->crate, it->slot, chan, fN_MPD_TIME_SAMP*istrip );
-
-	Int_t strip = rawStrip[0][istrip];
-
-	//std::cout << istrip << " " << strip << std::endl;
+	//grab decoded strip number directly:
+	int strip = Strip[fN_MPD_TIME_SAMP * istrip];
 	
-	assert(strip>=0&&strip<128);
-	// Madness....   copy pasted from stand alone decoder
-	// I bet there's a more elegant way to express this
-	//Int_t RstripNb= 32*(strip%4)+ 8*(int)(strip/4)- 31*(int)(strip/16);
-	//RstripNb=RstripNb+1+RstripNb%4-5*(((int)(RstripNb/4))%2);
-	// New: Use a pre-computed array from Danning to skip the above
-	// two steps.
-	if(!fIsMC){//if MC, apv chan num and strip num are equal...
-	  Int_t RstripNb = APVMAP[strip];
-	  RstripNb=RstripNb+(127-2*RstripNb)*it->invert;
-	  Int_t RstripPos = RstripNb + 128*it->pos;
-	  strip = RstripPos; //At this point, "strip" should correspond to increasing order of position along the U or V axis; i.e., what we think it should!
-	}else{
-	  strip+= 128*it->pos;
-	}
-	
-	//NOTE that we are replacing the value of "strip" with the line above!
-	// Grab appropriate pedestal based on axis: existing code seems to assume that pedestal is specific to an individual strip, but does not vary
-	// sample-to-sample
-	//std::cout << GetName() << " " << axis << " " << strip << std::endl;
+	//Pedestal has already been subtracted by the time we get herre, but let's grab anyway in case it's needed:
 	
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
@@ -614,23 +613,25 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//Now loop over the time samples:
 	for( Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++ ){
 
+	  int iraw = adc_samp + fN_MPD_TIME_SAMP * istrip;
+	  
 	  // Int_t ihit = adc_samp + fN_MPD_TIME_SAMP * istrip; //index in the "hit" array for this APV card:
 	  // assert(ihit<nsamp);
 	  
 	  
 	  //Int_t rawADC = evdata.GetData(it->crate, it->slot, chan, ihit);
-	  Int_t rawADC = rawADCs[adc_samp][istrip];
-	  
+	  Int_t RawADC = rawADC[iraw]; //this value has no corrections applied:
+         
 	  //cout << adc_samp << " " << istrip << " " << rawADC << " ";// << endl;
 	  
-	  rawADCtemp.push_back( rawADC );
+	  rawADCtemp.push_back( RawADC );
 
-	  //Question: if we are using online zero suppression, does it make sense to subtract the pedestal here? Unclear...
-	  double ADCvalue = (commonModeSubtractedADC[adc_samp][istrip] - pedtemp); //zero-suppress BEFORE we apply gain correction
+	  //The following value already has pedestal and common-mode subtracted:
+	  double ADCvalue = commonModeSubtractedADC[iraw]; //zero-suppress BEFORE we apply gain correction
 
-	  if( fPedestalMode ){ //If we are analyzing pedestal data, DON'T substract the pedestal
-	    ADCvalue = commonModeSubtractedADC[adc_samp][istrip];
-	  }
+	  // if( fPedestalMode ){ //If we are analyzing pedestal data, DON'T substract the pedestal
+	  //   ADCvalue = commonModeSubtractedADC[adc_samp][istrip];
+	  // }
 	  //pedestal-subtracted ADC values:
 	  ADCtemp.push_back( ADCvalue );
 	  // fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot,
@@ -673,11 +674,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //threshold on the average ADC
 	  
 	  //NOW apply gain correction:
-	  //Don't apply any gain correction if we are doing pedestal mode
+	  //Don't apply any gain correction if we are doing pedestal mode analysis:
 	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	    if( !fPedestalMode ) ADCtemp[isamp] /= gaintemp;
 	  }
-
+	  
 	  //  ADCsum_temp /= gaintemp;
 	
 	  
@@ -716,6 +717,47 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  
 	  if( axis == SBSGEM::kUaxis ) fUstripIndex[strip] = fNstrips_hit;
 	  if( axis == SBSGEM::kVaxis ) fVstripIndex[strip] = fNstrips_hit;
+
+	  //std::cout << "starting pedestal histograms..." << std::endl;
+	  
+	  if( fPedestalMode ){ //fill pedestal histograms:
+	    if( axis == SBSGEM::kUaxis ){
+	      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+		// std::cout << "U axis: isamp, strip, rawADC, ADC, ped, commonmode = " << isamp << ", " << strip << ", "
+		// 	  << rawADCtemp[isamp] << ", " << ADCtemp[isamp] << ", " << pedtemp << ", " << commonMode[isamp] << std::endl;
+		
+		hrawADCs_by_stripU->Fill( strip, rawADCtemp[isamp] );
+		hpedestal_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] );
+		hcommonmode_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] + pedtemp );
+		hpedestal_subtracted_rawADCs_by_stripU->Fill( strip, ADCtemp[isamp] + commonMode[isamp] );
+
+		hpedestal_subtracted_rawADCsU->Fill( ADCtemp[isamp] + commonMode[isamp] );
+		hpedestal_subtracted_ADCsU->Fill( ADCtemp[isamp] );
+		// ( (TH2F*) (*hrawADCs_by_strip_sampleU)[isamp] )->Fill( strip, rawADCtemp[isamp] );
+		// //for this one, we add back in the pedestal:
+		// ( (TH2F*) (*hcommonmode_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] + pedtemp );
+		// ( (TH2F*) (*hpedestal_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] );
+	      }
+	    } else {
+	      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+		// std::cout << "V axis: isamp, strip, rawADC, ADC, ped, commonmode = " << isamp << ", " << strip << ", "
+		// 	  << rawADCtemp[isamp] << ", " << ADCtemp[isamp] << ", " << pedtemp << ", " << commonMode[isamp] << std::endl;
+		hrawADCs_by_stripV->Fill( strip, rawADCtemp[isamp] );
+		hpedestal_subtracted_ADCs_by_stripV->Fill( strip, ADCtemp[isamp] );
+		hcommonmode_subtracted_ADCs_by_stripV->Fill( strip, ADCtemp[isamp] + pedtemp );
+		hpedestal_subtracted_rawADCs_by_stripV->Fill( strip, ADCtemp[isamp] + commonMode[isamp] );
+
+		hpedestal_subtracted_rawADCsV->Fill( ADCtemp[isamp] + commonMode[isamp] );
+		hpedestal_subtracted_ADCsV->Fill( ADCtemp[isamp] );
+		// ( (TH2F*) (*hrawADCs_by_strip_sampleV)[isamp] )->Fill( strip, rawADCtemp[isamp] );
+		// ( (TH2F*) (*hcommonmode_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] );
+		// ( (TH2F*) (*hpedestal_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] - pedtemp );
+	      }
+	    }
+
+	    // std::cout << "finished pedestal histograms..." << std::endl;
+	    
+	  }
 	  
 	  fNstrips_hit++;
 	}
@@ -1167,68 +1209,182 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   //Here we can create some histograms that will be written to the ROOT file:
   //This is a natural place to do the hit maps/efficiency maps:
 
-  TString histname;
+  //pulled these lines out of the if-block below to avoid code duplication:
+  TString histname,histtitle;
   TString detname = GetParent()->GetName();
   detname.ReplaceAll(".","_");
   detname += "_";
   detname += GetName();
   
-  fhdidhitx = new TH1F( histname.Format( "hdidhitx_%s", detname.Data() ), "local x coordinate of hits on good tracks (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
-  fhdidhity = new TH1F( histname.Format( "hdidhity_%s", detname.Data() ), "local y coordinate of hits on good tracks (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
-  fhdidhitxy = new TH2F( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks (m)",
-			100, -0.51*GetYSize(), 0.51*GetYSize(),
-			100, -0.51*GetXSize(), 0.51*GetXSize() );
-
-  fhshouldhitx = new TH1F( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
-  fhshouldhity = new TH1F( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
-  fhshouldhitxy = new TH2F( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m)",
-			   100, -0.51*GetYSize(), 0.51*GetYSize(),
-			   100, -0.51*GetXSize(), 0.51*GetXSize() );			
+  if( fMakeEfficiencyPlots ){
+    
   
+    fhdidhitx = new TH1F( histname.Format( "hdidhitx_%s", detname.Data() ), "local x coordinate of hits on good tracks (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhdidhity = new TH1F( histname.Format( "hdidhity_%s", detname.Data() ), "local y coordinate of hits on good tracks (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
+    fhdidhitxy = new TH2F( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks (m)",
+			   100, -0.51*GetYSize(), 0.51*GetYSize(),
+			   100, -0.51*GetXSize(), 0.51*GetXSize() );
+
+    fhshouldhitx = new TH1F( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhshouldhity = new TH1F( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
+    fhshouldhitxy = new TH2F( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m)",
+			      100, -0.51*GetYSize(), 0.51*GetYSize(),
+			      100, -0.51*GetXSize(), 0.51*GetXSize() );			
+  }
+
+  if( fPedestalMode ){ //make pedestal histograms:
+
+    //Procedure:
+    // 1. Analyze pedestal data with no pedestals supplied from the database.
+    // 2. Extract "coarse" strip offsets from raw ADC histograms (i.e., common-mode means)
+    // 3. Extract "fine" strip offsets from common-mode-subtracted histograms 
+    // 3. Add "coarse" strip offsets (common-mode means) back into "common-mode subtracted" ADC 
+    
+    hrawADCs_by_stripU = new TH2F( histname.Format( "hrawADCs_by_stripU_%s", detname.Data() ), "Raw ADCs by U strip number, no corrections",
+				   fNstripsU, -0.5, fNstripsU-0.5,
+				   2048, -0.5, 4095.5 );
+    hrawADCs_by_stripV = new TH2F( histname.Format( "hrawADCs_by_stripV_%s", detname.Data() ), "Raw ADCs by V strip number, no corrections",
+				   fNstripsV, -0.5, fNstripsV-0.5,
+				   2048, -0.5, 4095.5 );
+
+    hcommonmode_subtracted_ADCs_by_stripU = new TH2F( histname.Format( "hpedestalU_%s", detname.Data() ), "ADCs by U strip number, w/common mode correction, no ped. subtraction",
+						      fNstripsU, -0.5, fNstripsU-0.5,
+						      2500, -500.0, 4500.0 );
+    hcommonmode_subtracted_ADCs_by_stripV = new TH2F( histname.Format( "hpedestalV_%s", detname.Data() ), "ADCs by V strip number, w/common mode correction, no ped. subtraction",
+						      fNstripsV, -0.5, fNstripsV-0.5,
+						      2500, -500.0, 4500.0 );
+
+    hpedestal_subtracted_ADCs_by_stripU = new TH2F( histname.Format( "hADCpedsubU_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by U strip number",
+						    fNstripsU, -0.5, fNstripsU-0.5,
+						    1000,-500.,500. );
+    hpedestal_subtracted_ADCs_by_stripV = new TH2F( histname.Format( "hADCpedsubV_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by V strip number",
+						    fNstripsV, -0.5, fNstripsV-0.5,
+						    1000,-500.,500. );
+
+    hpedestal_subtracted_rawADCs_by_stripU = new TH2F( histname.Format( "hrawADCpedsubU_%s", detname.Data() ), "ADCs by U strip, ped-subtracted, no common-mode correction",
+						       fNstripsU, -0.5, fNstripsU-0.5,
+						       2500,-500.,4500. );
+    hpedestal_subtracted_rawADCs_by_stripV = new TH2F( histname.Format( "hrawADCpedsubV_%s", detname.Data() ), "ADCs by V strip, ped-subtracted, no common-mode correction",
+						       fNstripsV, -0.5, fNstripsV-0.5,
+						       2500,-500.,4500. );
+
+    hpedestal_subtracted_rawADCsU = new TH1F( histname.Format( "hrawADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/o common-mode correction",
+					      2500, -500.,4500. );
+    hpedestal_subtracted_rawADCsV = new TH1F( histname.Format( "hrawADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/o common-mode correction",
+					      2500, -500.,4500. );
+
+    hpedestal_subtracted_ADCsU = new TH1F( histname.Format( "hADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/common-mode correction",
+					      1000, -500.,500. );
+    hpedestal_subtracted_ADCsV = new TH1F( histname.Format( "hADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/common-mode correction",
+					      1000, -500.,500. );
+    
+    // Uncomment these later if you want them:
+    // hrawADCs_by_strip_sampleU = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
+    // hrawADCs_by_strip_sampleV = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
+
+    // hcommonmode_subtracted_ADCs_by_strip_sampleU = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
+    // hcommonmode_subtracted_ADCs_by_strip_sampleV = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
+
+    // hpedestal_subtracted_ADCs_by_strip_sampleU = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
+    // hpedestal_subtracted_ADCs_by_strip_sampleV = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
+    
+    // for( int isamp = 0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+    //   new( (*hrawADCs_by_strip_sampleU)[isamp] ) TH2F( histname.Format( "hrawADCU_%s_sample%d", detname.Data(), isamp ), "Raw U ADCs by strip and sample",
+    // 						       fNstripsU, -0.5, fNstripsU-0.5,
+    // 						       1024, -0.5, 4095.5 );
+    //   new( (*hrawADCs_by_strip_sampleV)[isamp] ) TH2F( histname.Format( "hrawADCV_%s_sample%d", detname.Data(), isamp ), "Raw V ADCs by strip and sample",
+    // 						       fNstripsV, -0.5, fNstripsV-0.5,
+    // 						       1024, -0.5, 4095.5 );
+
+    //   new( (*hcommonmode_subtracted_ADCs_by_strip_sampleU)[isamp] ) TH2F( histname.Format( "hpedestalU_%s_sample%d", detname.Data(), isamp ), "Pedestals by strip and sample",
+    // 									  fNstripsU, -0.5, fNstripsU-0.5,
+    // 									  1500, -500.0, 1000.0 );
+    //   new( (*hcommonmode_subtracted_ADCs_by_strip_sampleV)[isamp] ) TH2F( histname.Format( "hpedestalV_%s_sample%d", detname.Data(), isamp ), "Pedestals by strip and sample",
+    // 									  fNstripsV, -0.5, fNstripsV-0.5,
+    // 									  1500, -500.0, 1000.0 );
+
+    //   new( (*hpedestal_subtracted_ADCs_by_strip_sampleU)[isamp] ) TH2F( histname.Format( "hADCpedsubU_%s_sample%d", detname.Data(), isamp ), "Pedestal-subtracted ADCs by strip and sample",
+    // 									fNstripsU, -0.5, fNstripsU-0.5,
+    // 									1000, -500.0, 500.0 );
+    //   new( (*hpedestal_subtracted_ADCs_by_strip_sampleV)[isamp] ) TH2F( histname.Format( "hADCpedsubV_%s_sample%d", detname.Data(), isamp ), "Pedestal-subtracted ADCs by strip and sample",
+    // 									fNstripsV, -0.5, fNstripsV-0.5,
+    // 									1000, -500.0, 500.0 );
+      
+    // }
+    
+  }
+  
+    
   return 0;
 }
 
 Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes hit maps and efficiency histograms to ROOT file:
 
-  //Create the track-based efficiency histograms at the end of the run:
-  TString histname;
-  TString detname = GetParent()->GetName();
-  detname.ReplaceAll(".","_");
-  detname += "_";
-  detname += GetName();
+  if( fMakeEfficiencyPlots ){
+    //Create the track-based efficiency histograms at the end of the run:
+    TString histname;
+    TString detname = GetParent()->GetName();
+    detname.ReplaceAll(".","_");
+    detname += "_";
+    detname += GetName();
   
-  if( fhdidhitx != NULL && fhshouldhitx != NULL ){ //Create efficiency histograms and write to the ROOT file:
-    TH1F *hefficiency_vs_x = new TH1F(*fhdidhitx);
-    hefficiency_vs_x->SetName( histname.Format( "hefficiency_vs_x_%s", detname.Data() ) );
-    hefficiency_vs_x->SetTitle( histname.Format( "Track-based efficiency vs x, module %s", GetName() ) );
-    hefficiency_vs_x->Divide( fhshouldhitx );
-    hefficiency_vs_x->Write();
+    if( fhdidhitx != NULL && fhshouldhitx != NULL ){ //Create efficiency histograms and write to the ROOT file:
+      TH1F *hefficiency_vs_x = new TH1F(*fhdidhitx);
+      hefficiency_vs_x->SetName( histname.Format( "hefficiency_vs_x_%s", detname.Data() ) );
+      hefficiency_vs_x->SetTitle( histname.Format( "Track-based efficiency vs x, module %s", GetName() ) );
+      hefficiency_vs_x->Divide( fhshouldhitx );
+      hefficiency_vs_x->Write();
+    }
+
+    if( fhdidhity != NULL && fhshouldhity != NULL ){ //Create efficiency histograms and write to the ROOT file:
+      TH1F *hefficiency_vs_y = new TH1F(*fhdidhity);
+      hefficiency_vs_y->SetName( histname.Format( "hefficiency_vs_y_%s", detname.Data() ) );
+      hefficiency_vs_y->SetTitle( histname.Format( "Track-based efficiency vs y, module %s", GetName() ) );
+      hefficiency_vs_y->Divide( fhshouldhity );
+      hefficiency_vs_y->Write();
+    }
+
+    if( fhdidhitxy != NULL && fhshouldhitxy != NULL ){ //Create efficiency histograms and write to the ROOT file:
+      TH2F *hefficiency_vs_xy = new TH2F(*fhdidhitxy);
+      hefficiency_vs_xy->SetName( histname.Format( "hefficiency_vs_xy_%s", detname.Data() ) );
+      hefficiency_vs_xy->SetTitle( histname.Format( "Track-based efficiency vs x and y, module %s", GetName() ) );
+      hefficiency_vs_xy->Divide( fhshouldhitxy );
+      hefficiency_vs_xy->Write();
+    }
+  
+    if( fhdidhitx != NULL  ) fhdidhitx->Write();
+    if( fhdidhity != NULL  ) fhdidhity->Write();
+    if( fhdidhitxy != NULL  ) fhdidhitxy->Write();
+
+    if( fhshouldhitx != NULL  ) fhshouldhitx->Write();
+    if( fhshouldhity != NULL  ) fhshouldhity->Write();
+    if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write();
   }
 
-  if( fhdidhity != NULL && fhshouldhity != NULL ){ //Create efficiency histograms and write to the ROOT file:
-    TH1F *hefficiency_vs_y = new TH1F(*fhdidhity);
-    hefficiency_vs_y->SetName( histname.Format( "hefficiency_vs_y_%s", detname.Data() ) );
-    hefficiency_vs_y->SetTitle( histname.Format( "Track-based efficiency vs y, module %s", GetName() ) );
-    hefficiency_vs_y->Divide( fhshouldhity );
-    hefficiency_vs_y->Write();
-  }
+  if( fPedestalMode ){ //write out pedestal histograms:
+    hrawADCs_by_stripU->Write();
+    hrawADCs_by_stripV->Write();
+    hcommonmode_subtracted_ADCs_by_stripU->Write();
+    hcommonmode_subtracted_ADCs_by_stripV->Write();
+    hpedestal_subtracted_ADCs_by_stripU->Write();
+    hpedestal_subtracted_ADCs_by_stripV->Write();
+    hpedestal_subtracted_rawADCs_by_stripU->Write();
+    hpedestal_subtracted_rawADCs_by_stripV->Write();
 
-  if( fhdidhitxy != NULL && fhshouldhitxy != NULL ){ //Create efficiency histograms and write to the ROOT file:
-    TH2F *hefficiency_vs_xy = new TH2F(*fhdidhitxy);
-    hefficiency_vs_xy->SetName( histname.Format( "hefficiency_vs_xy_%s", detname.Data() ) );
-    hefficiency_vs_xy->SetTitle( histname.Format( "Track-based efficiency vs x and y, module %s", GetName() ) );
-    hefficiency_vs_xy->Divide( fhshouldhitxy );
-    hefficiency_vs_xy->Write();
+    hpedestal_subtracted_rawADCsU->Write();
+    hpedestal_subtracted_rawADCsV->Write();
+    hpedestal_subtracted_ADCsU->Write();
+    hpedestal_subtracted_ADCsV->Write();
+
+    // hrawADCs_by_strip_sampleU->Write();
+    // hrawADCs_by_strip_sampleV->Write();
+    // hcommonmode_subtracted_ADCs_by_strip_sampleU->Write();
+    // hcommonmode_subtracted_ADCs_by_strip_sampleV->Write();
+    // hpedestal_subtracted_ADCs_by_strip_sampleU->Write();
+    // hpedestal_subtracted_ADCs_by_strip_sampleV->Write();
   }
   
-  if( fhdidhitx != NULL  ) fhdidhitx->Write();
-  if( fhdidhity != NULL  ) fhdidhity->Write();
-  if( fhdidhitxy != NULL  ) fhdidhitxy->Write();
-
-  if( fhshouldhitx != NULL  ) fhshouldhitx->Write();
-  if( fhshouldhity != NULL  ) fhshouldhity->Write();
-  if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write();
-  
+    
   return 0;
 }
 
@@ -1280,4 +1436,16 @@ TVector2 SBSGEMModule::XYtoUV( TVector2 XY ){
   double Vtemp = Xtemp*fPxV + Ytemp*fPyV;
 
   return TVector2(Utemp,Vtemp);
+}
+
+Int_t SBSGEMModule::GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert ){
+  Int_t RstripNb = APVMAP[rawstrip];
+  RstripNb = RstripNb + (127-2*RstripNb)*invert;
+  Int_t RstripPos = RstripNb + 128*pos;
+
+  if( fIsMC ){
+    return rawstrip + 128*pos;
+  }
+  
+  return RstripPos;
 }

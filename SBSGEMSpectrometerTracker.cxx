@@ -79,7 +79,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //   Int_t            search;   // (opt) Search for key along name tree
   //   const char*      descript; // (opt) Key description (if 0, same as name)
   // };
-
+  int pedestalmode_flag = 0;
+  int doefficiency_flag = 1;
   int onlinezerosuppressflag = 0;
   int useconstraintflag = 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
   DBRequest request[] = {
@@ -95,22 +96,31 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
-    { "pedestalmode", &fPedestalMode, kInt, 0, 1, 1},
+    { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
+    { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     {0}
   };
 
+  Int_t status = kInitError;
+  LoadDB( file, date, request, fPrefix );
+  fclose(file);
+
+  fMakeEfficiencyPlots = (doefficiency_flag != 0 );
+  fPedestalMode = ( pedestalmode_flag != 0 );
+
+  // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
+  // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
+  // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
+  
   fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
 
   if( fPedestalMode ){ //then we will just dump raw data to the tree:
     fZeroSuppress = false;
+    fMakeEfficiencyPlots = false; //If in pedestal mode, we don't want efficiency plots
   }
   
-  Int_t status = kInitError;
-  LoadDB( file, date, request, fPrefix );
-  fclose(file);
-
   //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
   std::vector<std::string> modules = vsplit(modconfig);
   if( modules.empty()) {
@@ -124,7 +134,6 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
     modcounter = fModules.size()-1;
     fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
-    fModules[modcounter]->fIsMC = fIsMC;
   }
 
   //Define the number of modules from the "modules" string:
@@ -189,31 +198,33 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     (*it)->End(run);
   }
 
-  CalcEfficiency();
+  if( fMakeEfficiencyPlots ){
+    CalcEfficiency();
   
-  hdidhit_x_layer->Compress();
-  hdidhit_y_layer->Compress();
-  hdidhit_xy_layer->Compress();
+    hdidhit_x_layer->Compress();
+    hdidhit_y_layer->Compress();
+    hdidhit_xy_layer->Compress();
 
-  hshouldhit_x_layer->Compress();
-  hshouldhit_y_layer->Compress();
-  hshouldhit_xy_layer->Compress();
+    hshouldhit_x_layer->Compress();
+    hshouldhit_y_layer->Compress();
+    hshouldhit_xy_layer->Compress();
 
-  hefficiency_x_layer->Compress();
-  hefficiency_y_layer->Compress();
-  hefficiency_xy_layer->Compress();
+    hefficiency_x_layer->Compress();
+    hefficiency_y_layer->Compress();
+    hefficiency_xy_layer->Compress();
 
-  hdidhit_x_layer->Write();
-  hdidhit_y_layer->Write();
-  hdidhit_xy_layer->Write();
+    hdidhit_x_layer->Write();
+    hdidhit_y_layer->Write();
+    hdidhit_xy_layer->Write();
 
-  hshouldhit_x_layer->Write();
-  hshouldhit_y_layer->Write();
-  hshouldhit_xy_layer->Write();
+    hshouldhit_x_layer->Write();
+    hshouldhit_y_layer->Write();
+    hshouldhit_xy_layer->Write();
 
-  hefficiency_x_layer->Write();
-  hefficiency_y_layer->Write();
-  hefficiency_xy_layer->Write();
+    hefficiency_x_layer->Write();
+    hefficiency_y_layer->Write();
+    hefficiency_xy_layer->Write();
+  }
   
   return 0;
 }

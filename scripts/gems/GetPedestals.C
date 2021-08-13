@@ -45,22 +45,34 @@ void GetPedestals( const char *rootfilename, int nmodules=20, const char *prefix
 
   ofstream outfile(dbfilename.Data());
 
+  //TString detname = prefix;
+  
   for( int i=0; i<nmodules; i++ ){
     TString histname;
     TString header;
     
-    TH2F *hpedu, *hpedv;
-
-    fin->GetObject( histname.Format( "hPedU_m%d", i ), hpedu );
-    fin->GetObject( histname.Format( "hPedV_m%d", i ), hpedv );
-
+    TH2F *hpedu, *hpedv; //common-mode corrected only
+    TH2F *hcmmu, *hcmmv; //Let's treat the "common-mode mean" on an APV-card by APV-card basis, but this would of course require us to define more database parameters. The main question is whether to add the "common-mode mean" by APV card to the individual strip pedestals
+    TH2D *h
+    
+    fin->GetObject( histname.Format( "hpedestalU_%s%d", prefix, i ), hpedu );
+    fin->GetObject( histname.Format( "hpedestalV_%s%d", prefix, i ), hpedv );
+    fin->GetObject( histname.Format( "hrawADCpedsubU_%s%d", prefix, i ), hcmmu );
+    fin->GetObject( histname.Format( "hrawADCpedsubV_%s%d", prefix, i ), hcmmv );
+    
     //Do U strips first:
 
     int nstripsU = hpedu->GetNbinsX();
     int nstripsV = hpedv->GetNbinsX();
+
+    int nAPVsU = nstripsU/128;
+    int nAPVsV = nstripsV/128;
+
+    
+    
     
     TH1D *htemp;
-
+ 
     //analyze U strips:
     vector<double> pedmeanU(nstripsU), pedrmsU(nstripsU);
 

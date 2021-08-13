@@ -13,6 +13,7 @@ class THaEvData;
 class THaRunBase;
 class TH1F;
 class TH2F;
+class TClonesArray;
 
 namespace SBSGEM {
   enum GEMaxis_t { kUaxis=0, kVaxis };
@@ -150,6 +151,9 @@ class SBSGEMModule : public THaSubDetector {
   //Utility functions to compute "module local" X and Y coordinates from U and V (strip coordinates) to "transport" coordinates (x,y) and vice-versa:
   TVector2 UVtoXY( TVector2 UV );
   TVector2 XYtoUV( TVector2 XY );
+
+  //function to convert from APV channel number to strip number ordered by position:
+  Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
   
   bool fIsDecoded;
 
@@ -324,6 +328,38 @@ class SBSGEMModule : public THaSubDetector {
   TH1F *fhshouldhitx;
   TH1F *fhshouldhity;
   TH2F *fhshouldhitxy;
+
+  //we should let the user configure this: this is set at the "tracker level" which then propagates down to all the modules:
+  bool fMakeEfficiencyPlots;
+
+  //Pedestal plots: only generate if pedestal mode = true:
+  
+  TH2F *hrawADCs_by_stripU; //raw adcs by strip, no corrections, filled for each SAMPLE:
+  TH2F *hrawADCs_by_stripV; //raw adcs by strip, no corrections, filled for each SAMPLE:
+  TH2F *hcommonmode_subtracted_ADCs_by_stripU; //common-mode subtracted ADCS without ped subtraction
+  TH2F *hcommonmode_subtracted_ADCs_by_stripV; 
+  TH2F *hpedestal_subtracted_ADCs_by_stripU; //common-mode AND pedestal subtracted ADCs
+  TH2F *hpedestal_subtracted_ADCs_by_stripV;
+
+  TH2F *hpedestal_subtracted_rawADCs_by_stripU; //pedestal-subtracted ADCs w/o common-mode correction
+  TH2F *hpedestal_subtracted_rawADCs_by_stripV;
+
+  //Summed over all strips, pedestal-subtracted (but not common-mode subtracted) ADCs:
+  TH1F *hpedestal_subtracted_rawADCsU;
+  TH1F *hpedestal_subtracted_rawADCsV;
+
+  //Summed over all strips, pedestal-subtracted and  common-mode subtracted ADCs:
+  TH1F *hpedestal_subtracted_ADCsU;
+  TH1F *hpedestal_subtracted_ADCsV;
+  
+  //Comment out for now, uncomment later if we deem these interesting:
+  // TClonesArray *hrawADCs_by_strip_sampleU;
+  // TClonesArray *hrawADCs_by_strip_sampleV;
+  // TClonesArray *hcommonmode_subtracted_ADCs_by_strip_sampleU;
+  // TClonesArray *hcommonmode_subtracted_ADCs_by_strip_sampleV;
+
+  // TClonesArray *hpedestal_subtracted_ADCs_by_strip_sampleU;
+  // TClonesArray *hpedestal_subtracted_ADCs_by_strip_sampleV;
   
   ClassDef(SBSGEMModule,0);
 
