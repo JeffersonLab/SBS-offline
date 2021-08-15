@@ -3,6 +3,7 @@
 #include "SBSGEMModule.h"
 #include "TDatime.h"
 #include "THaEvData.h"
+#include "THaApparatus.h"
 #include "TRotation.h"
 #include "TH1F.h"
 #include "TH2F.h"
@@ -145,6 +146,13 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fPyU = sin( fUAngle * TMath::DegToRad() );
   fPxV = cos( fVAngle * TMath::DegToRad() );
   fPyV = sin( fVAngle * TMath::DegToRad() );
+
+  fAPVch_by_Ustrip.clear();
+  fAPVch_by_Vstrip.clear();
+  fMPDID_by_Ustrip.clear();
+  fMPDID_by_Vstrip.clear();
+  fADCch_by_Ustrip.clear();
+  fADCch_by_Vstrip.clear();
   
   Int_t nentry = fChanMapData.size()/fMPDMAP_ROW_SIZE;
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
@@ -158,6 +166,21 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     thisdata.pos    = fChanMapData[6+mapline*fMPDMAP_ROW_SIZE];
     thisdata.invert = fChanMapData[7+mapline*fMPDMAP_ROW_SIZE];
     thisdata.axis   = fChanMapData[8+mapline*fMPDMAP_ROW_SIZE];
+
+    //Populate relevant quantities mapped by strip index:
+    for( int ich=0; ich<fN_APV25_CHAN; ich++ ){
+      int strip = GetStripNumber( ich, thisdata.pos, thisdata.invert );
+      if( thisdata.axis == SBSGEM::kUaxis ){
+	fAPVch_by_Ustrip[strip] = ich;
+	fMPDID_by_Ustrip[strip] = thisdata.mpd_id;
+	fADCch_by_Ustrip[strip] = thisdata.adc_id;
+      } else {
+	fAPVch_by_Vstrip[strip] = ich;
+	fMPDID_by_Vstrip[strip] = thisdata.mpd_id;
+	fADCch_by_Vstrip[strip] = thisdata.adc_id;
+      }
+    }
+    
     fMPDmap.push_back(thisdata);
   }
 
@@ -552,11 +575,19 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	rawADC[iraw] = ADC;
 	pedsubADC[iraw] = double(ADC) - ped;
 	commonModeSubtractedADC[iraw] = double(ADC) - ped; 
-	
-      }
 
+	//the calculation of common mode in pedestal mode analysis differs from the
+	// offline or online zero suppression analysis; here we use a simple average of all 128 channels:
+	if( fPedestalMode && nstrips == fN_APV25_CHAN ){
+	  //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
+	  //values
+	  int isamp = iraw%fN_MPD_TIME_SAMP;
+	  commonMode[isamp] += (double(ADC)-ped)/double(nstrips);
+	}
+      }
+      
       //(OPTIONAL) second loop over the hits to calculate and apply common-mode correction (sorting method)
-      if( !fOnlineZeroSuppression && nstrips == fN_APV25_CHAN ){ //need to calculate common mode:
+      if( !fOnlineZeroSuppression && nstrips == fN_APV25_CHAN && !fPedestalMode ){ //need to calculate common mode:
 	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	  vector<double> sortedADCs(fN_APV25_CHAN);
 	  
@@ -573,11 +604,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    commonMode[isamp] += sortedADCs[k];
 	  }
 	  commonMode[isamp] /= 72.0;
+	  //moved this to the next loop for efficiency and code re-use:
+	  // for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+	  //   int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	
+	  //   commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[isamp];
+	  // }
 	  
-	  for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
-	    int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	
-	    commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[isamp];
-	  }
 	}
       }
       
@@ -614,6 +646,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	for( Int_t adc_samp = 0; adc_samp < fN_MPD_TIME_SAMP; adc_samp++ ){
 
 	  int iraw = adc_samp + fN_MPD_TIME_SAMP * istrip;
+
+	  //If applicable, subtract common-mode here:
+	  if( (fPedestalMode || !fOnlineZeroSuppression) && nstrips == fN_APV25_CHAN ){
+	    commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[adc_samp];
+	  }
 	  
 	  // Int_t ihit = adc_samp + fN_MPD_TIME_SAMP * istrip; //index in the "hit" array for this APV card:
 	  // assert(ihit<nsamp);
@@ -721,18 +758,22 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //std::cout << "starting pedestal histograms..." << std::endl;
 	  
 	  if( fPedestalMode ){ //fill pedestal histograms:
+	    int iAPV = strip/fN_APV25_CHAN;
+	    
 	    if( axis == SBSGEM::kUaxis ){
 	      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 		// std::cout << "U axis: isamp, strip, rawADC, ADC, ped, commonmode = " << isamp << ", " << strip << ", "
 		// 	  << rawADCtemp[isamp] << ", " << ADCtemp[isamp] << ", " << pedtemp << ", " << commonMode[isamp] << std::endl;
 		
 		hrawADCs_by_stripU->Fill( strip, rawADCtemp[isamp] );
-		hpedestal_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] );
-		hcommonmode_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] + pedtemp );
-		hpedestal_subtracted_rawADCs_by_stripU->Fill( strip, ADCtemp[isamp] + commonMode[isamp] );
+		hpedestal_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] ); //common-mode AND ped-subtracted
+		hcommonmode_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] + pedtemp ); //common-mode subtraction only, no ped:
+		hpedestal_subtracted_rawADCs_by_stripU->Fill( strip, ADCtemp[isamp] + commonMode[isamp] ); //pedestal subtraction only, no common-mode
 
-		hpedestal_subtracted_rawADCsU->Fill( ADCtemp[isamp] + commonMode[isamp] );
-		hpedestal_subtracted_ADCsU->Fill( ADCtemp[isamp] );
+		hpedestal_subtracted_rawADCsU->Fill( ADCtemp[isamp] + commonMode[isamp] ); //1D distribution of ped-subtracted ADCs w/o common-mode subtraction
+		hpedestal_subtracted_ADCsU->Fill( ADCtemp[isamp] ); //1D distribution of ped-and-common-mode subtracted ADCs
+
+		hcommonmode_mean_by_APV_U->Fill( iAPV, commonMode[isamp] );
 		// ( (TH2F*) (*hrawADCs_by_strip_sampleU)[isamp] )->Fill( strip, rawADCtemp[isamp] );
 		// //for this one, we add back in the pedestal:
 		// ( (TH2F*) (*hcommonmode_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] + pedtemp );
@@ -749,6 +790,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 		hpedestal_subtracted_rawADCsV->Fill( ADCtemp[isamp] + commonMode[isamp] );
 		hpedestal_subtracted_ADCsV->Fill( ADCtemp[isamp] );
+
+		
+		hcommonmode_mean_by_APV_V->Fill( iAPV, commonMode[isamp] );
+		
 		// ( (TH2F*) (*hrawADCs_by_strip_sampleV)[isamp] )->Fill( strip, rawADCtemp[isamp] );
 		// ( (TH2F*) (*hcommonmode_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] );
 		// ( (TH2F*) (*hpedestal_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] - pedtemp );
@@ -1277,6 +1322,15 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
 					      1000, -500.,500. );
     hpedestal_subtracted_ADCsV = new TH1F( histname.Format( "hADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/common-mode correction",
 					      1000, -500.,500. );
+
+    int nAPVs_U = fNstripsU/fN_APV25_CHAN;
+    hcommonmode_mean_by_APV_U = new TH2F( histname.Format( "hCommonModeMean_by_APV_U_%s", detname.Data() ), "distribution of common-mode means for U strip pedestal data",
+					  nAPVs_U, -0.5, nAPVs_U-0.5,  
+					  2048, -0.5, 4095.5 );
+    int nAPVs_V = fNstripsV/fN_APV25_CHAN;
+    hcommonmode_mean_by_APV_V = new TH2F( histname.Format( "hCommonModeMean_by_APV_V_%s", detname.Data() ), "distribution of common-mode means for V strip pedestal data",
+					  nAPVs_V, -0.5, nAPVs_V-0.5,
+					  2048, -0.5, 4095.5 );
     
     // Uncomment these later if you want them:
     // hrawADCs_by_strip_sampleU = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
@@ -1318,7 +1372,123 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   return 0;
 }
 
-Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes hit maps and efficiency histograms to ROOT file:
+void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile ){
+  //The first argument is a file in the format expected by the database,
+  //The second argument is a file in the format expected by the DAQ:
+
+  //Step 1: we need to extract pedestal mean and rms by channel, and also grab
+  // "common-mode min" and "common-mode max" values:
+  // we can simply use the existing arrays to store the values:
+
+  std::cout << "[SBSGEMModule::PrintPedestals]: module " << GetName() << std::endl;
+  
+  //start with pedestals;
+  for( int iu = 0; iu<fNstripsU; iu++ ){
+    TH1D *htemp = hcommonmode_subtracted_ADCs_by_stripU->ProjectionY( "htemp", iu+1,iu+1 );
+    
+    fPedestalU[iu] = htemp->GetMean();
+
+    //htemp here represents the individual sample noise width, but the threshold is applied on the average of the six (or other number) time samples:
+    // sigma(average) = sigma(1 sample)/sqrt(number of samples):
+    fPedRMSU[iu] = htemp->GetRMS() / sqrt( double( fN_MPD_TIME_SAMP ) ); 
+
+    htemp->Delete();
+  }
+
+  for( int iv = 0; iv<fNstripsV; iv++ ){
+    TH1D *htemp = hcommonmode_subtracted_ADCs_by_stripV->ProjectionY( "htemp", iv+1, iv+1 );
+    fPedestalV[iv] = htemp->GetMean();
+    fPedRMSV[iv] = htemp->GetRMS() / sqrt( double( fN_MPD_TIME_SAMP ) );
+
+    htemp->Delete();
+  }
+
+  TString appname = static_cast<THaDetector *>(GetParent())->GetApparatus()->GetName();
+  TString detname = GetParent()->GetName();
+  TString modname = GetName();
+  
+  TString header;
+  header.Form( "%s.%s.%s.pedu = ", appname.Data(), detname.Data(), modname.Data() );
+  dbfile << std::endl << header << std::endl;
+  for( int iu=0; iu<fNstripsU; iu++ ){
+    TString sentry;
+    sentry.Form( "  %15.5g ", fPedestalU[iu] );
+    dbfile << sentry;
+    if( (iu+1)%16 == 0 ) dbfile << std::endl;
+  }
+
+  dbfile << std::endl;
+  
+  header.Form( "%s.%s.%s.rmsu = ", appname.Data(), detname.Data(), modname.Data() );
+  dbfile << std::endl << header << std::endl;
+
+  for( int iu=0; iu<fNstripsU; iu++ ){
+    TString sentry;
+    sentry.Form( "  %15.5g ", fPedRMSU[iu] );
+    dbfile << sentry;
+    if( (iu+1)%16 == 0 ) dbfile << std::endl;
+  }
+
+  dbfile << std::endl;
+
+  header.Form( "%s.%s.%s.pedv = ", appname.Data(), detname.Data(), modname.Data() );
+  dbfile << std::endl << header << std::endl;
+  for( int iv=0; iv<fNstripsV; iv++ ){
+    TString sentry;
+    sentry.Form( "  %15.5g ", fPedestalV[iv] );
+    dbfile << sentry;
+    if( (iv+1)%16 == 0 ) dbfile << std::endl;
+  }
+
+  dbfile << std::endl;
+  
+  header.Form( "%s.%s.%s.rmsv = ", appname.Data(), detname.Data(), modname.Data() );
+  dbfile << std::endl << header << std::endl;
+
+  for( int iv=0; iv<fNstripsV; iv++ ){
+    TString sentry;
+    sentry.Form( "  %15.5g ", fPedRMSV[iv] );
+    dbfile << sentry;
+    if( (iv+1)%16 == 0 ) dbfile << std::endl;
+  }
+
+  dbfile << std::endl;
+
+  //That takes care of the database file. For the "DAQ" file, we need to organize things by APV card. For this we can loop over the MPDmap:
+  
+  for( auto iapv = fMPDmap.begin(); iapv != fMPDmap.end(); iapv++ ){
+    int crate = iapv->crate;
+    int mpd = iapv->mpd_id;
+    int adc_ch = iapv->adc_id;
+    int pos = iapv->pos;
+    int invert = iapv->invert;
+    int axis = iapv->axis;
+
+    daqfile << "APV "
+	    << std::setw(16) << crate
+	    << std::setw(16) << mpd
+	    << std::setw(16) << adc_ch
+	    << std::endl;
+    
+    //Then loop over the strips:
+    for( int ich=0; ich<fN_APV25_CHAN; ich++ ){
+      int strip = GetStripNumber( ich, pos, invert );
+      double pedmean = (axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
+      double pedrms = (axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
+
+      daqfile << std::setw(16) << ich
+	      << std::setw(16) << std::setprecision(4) << pedmean
+	      << std::setw(16) << std::setprecision(4) << pedrms
+	      << std::endl;
+    }
+    
+  }
+
+  //TO DO: common-mode mean, min, and max by APV card:
+  
+}
+
+Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes hit maps and efficiency histograms and/or pedestal info to ROOT file:
 
   if( fMakeEfficiencyPlots ){
     //Create the track-based efficiency histograms at the end of the run:
@@ -1361,7 +1531,12 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write();
   }
 
-  if( fPedestalMode ){ //write out pedestal histograms:
+  if( fPedestalMode ){ //write out pedestal histograms, print out pedestals in the format needed for both database and DAQ:
+
+    //The channel map and pedestal information are specific to a GEM module.
+    //But we want ONE database file and ONE DAQ file for the entire tracker.
+    //So probably the best way to proceed is to have the  
+    
     hrawADCs_by_stripU->Write();
     hrawADCs_by_stripV->Write();
     hcommonmode_subtracted_ADCs_by_stripU->Write();
@@ -1375,6 +1550,9 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     hpedestal_subtracted_rawADCsV->Write();
     hpedestal_subtracted_ADCsU->Write();
     hpedestal_subtracted_ADCsV->Write();
+
+    hcommonmode_mean_by_APV_U->Write();
+    hcommonmode_mean_by_APV_V->Write();
 
     // hrawADCs_by_strip_sampleU->Write();
     // hrawADCs_by_strip_sampleV->Write();

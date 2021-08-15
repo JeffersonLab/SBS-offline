@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <fstream>
 //#include "SBSGEMModule.h"
 #include "TVector3.h"
 #include "TVector2.h"
@@ -290,11 +291,9 @@ protected:
   bool fEfficiencyInitialized;
   bool fMakeEfficiencyPlots; //default to TRUE
 
-  
-
-  
-  
-  
+  // output files for pedestal info when running in pedestal mode:
+  std::ofstream fpedfile_dbase, fpedfile_daq;
+ 
 };
 
 #endif

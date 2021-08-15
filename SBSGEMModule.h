@@ -154,6 +154,8 @@ class SBSGEMModule : public THaSubDetector {
 
   //function to convert from APV channel number to strip number ordered by position:
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
+
+  void PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile );
   
   bool fIsDecoded;
 
@@ -171,6 +173,14 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
+  //some convenience maps: 
+  std::map<Int_t, Int_t> fAPVch_by_Ustrip;
+  std::map<Int_t, Int_t> fAPVch_by_Vstrip;
+  std::map<Int_t, Int_t> fMPDID_by_Ustrip;
+  std::map<Int_t, Int_t> fMPDID_by_Vstrip;
+  std::map<Int_t, Int_t> fADCch_by_Ustrip;
+  std::map<Int_t, Int_t> fADCch_by_Vstrip;
+  
   Bool_t fPedestalMode;
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
@@ -351,6 +361,10 @@ class SBSGEMModule : public THaSubDetector {
   //Summed over all strips, pedestal-subtracted and  common-mode subtracted ADCs:
   TH1F *hpedestal_subtracted_ADCsU;
   TH1F *hpedestal_subtracted_ADCsV;
+
+  //in pedestal-mode analysis, we 
+  TH2F *hcommonmode_mean_by_APV_U;
+  TH2F *hcommonmode_mean_by_APV_V;
   
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;
