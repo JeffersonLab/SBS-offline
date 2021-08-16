@@ -198,37 +198,46 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
   //To automate the printing out of pedestals for database and DAQ, 
   if( fPedestalMode ){
-    TString fname_dbase, fname_daq;
-
+    TString fname_dbase, fname_daq, fname_cmr;
+    
     UInt_t runnum = run->GetNumber(); 
     TString specname = GetApparatus()->GetName();
     TString detname = GetName();
     fname_dbase.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daq.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-
+    fname_cmr.Form( "CommonModeRange_%s_%s_run%d.txt", specname.Data(), detname.Data(), runnum );
+    
     fpedfile_dbase.open( fname_dbase.Data() );
     fpedfile_daq.open( fname_daq.Data() );
-
+    fpedfile_cmr.open( fname_cmr.Data() );
+    
     TString sdate = run->GetDate().AsString();
+    sdate.Prepend( "#" );
     
     TString message;
-
+    
     message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
     
     fpedfile_dbase << sdate << std::endl;
     fpedfile_dbase << message << std::endl;
     fpedfile_dbase << "#format = detname.ped(u,v) and detname.rms(u,v) = pedestal mean and rms by (u,v) strip number in order of position" << std::endl;
-
+    
     message.Form("# copy the contents of this file into (location TBD) to update CODA thresholds for detector %s.%s", specname.Data(), detname.Data() );
-      
+    
     fpedfile_daq << sdate << std::endl;
     fpedfile_daq <<  message << std::endl;
     fpedfile_daq << "# format = APV        crate       mpd_id       adc_ch followed by " << std::endl
 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
+
+    message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
+    
+    fpedfile_cmr << sdate << std::endl;
+    fpedfile_cmr << message << std::endl;
+    fpedfile_cmr << "# format = crate     mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
   }
   
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    if( fPedestalMode ) { (*it)->PrintPedestals( fpedfile_dbase, fpedfile_daq ); }
+    if( fPedestalMode ) { (*it)->PrintPedestals( fpedfile_dbase, fpedfile_daq, fpedfile_cmr ); }
     (*it)->End(run);
   }
 

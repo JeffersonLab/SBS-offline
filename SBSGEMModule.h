@@ -155,7 +155,7 @@ class SBSGEMModule : public THaSubDetector {
   //function to convert from APV channel number to strip number ordered by position:
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
 
-  void PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile );
+  void PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
   
   bool fIsDecoded;
 

@@ -125,8 +125,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "maxnv_charge", &fMaxNeighborsV_totalcharge, kUShort, 0, 1, 1}, //(optional): cluster size restriction along V for total charge calculation
     { "maxnu_pos", &fMaxNeighborsU_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
     { "maxnv_pos", &fMaxNeighborsV_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
-    { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1}, //(optional): width parameter for cluster-splitting algorithm
-    { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1}, //(optional): 
+    { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1, 1}, //(optional): width parameter for cluster-splitting algorithm
+    { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1, 1}, //(optional): 
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -1372,7 +1372,7 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   return 0;
 }
 
-void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile ){
+void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile, std::ofstream &daqfile_cmr ){
   //The first argument is a file in the format expected by the database,
   //The second argument is a file in the format expected by the DAQ:
 
@@ -1403,6 +1403,8 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile
     htemp->Delete();
   }
 
+  
+  
   TString appname = static_cast<THaDetector *>(GetParent())->GetApparatus()->GetName();
   TString detname = GetParent()->GetName();
   TString modname = GetName();
@@ -1453,7 +1455,27 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile
   }
 
   dbfile << std::endl;
+  
+  //TO DO: common-mode mean, min, and max by APV card:
+  int nAPVsU = fNstripsU/fN_APV25_CHAN;
+  int nAPVsV = fNstripsV/fN_APV25_CHAN;
+  std::vector<double> commonmode_meanU(nAPVsU), commonmode_rmsU(nAPVsU);
+  std::vector<double> commonmode_meanV(nAPVsV), commonmode_rmsV(nAPVsV);
 
+  for( int iAPV = 0; iAPV<nAPVsU; iAPV++ ){
+    TH1D *htemp = hcommonmode_mean_by_APV_U->ProjectionY("htemp", iAPV+1, iAPV+1 );
+
+    commonmode_meanU[iAPV] = htemp->GetMean();
+    commonmode_rmsU[iAPV] = htemp->GetRMS();
+  }
+
+  for( int iAPV = 0; iAPV<nAPVsV; iAPV++ ){
+    TH1D *htemp = hcommonmode_mean_by_APV_V->ProjectionY("htemp", iAPV+1, iAPV+1 );
+
+    commonmode_meanV[iAPV] = htemp->GetMean();
+    commonmode_rmsV[iAPV] = htemp->GetRMS();
+  }
+  
   //That takes care of the database file. For the "DAQ" file, we need to organize things by APV card. For this we can loop over the MPDmap:
   
   for( auto iapv = fMPDmap.begin(); iapv != fMPDmap.end(); iapv++ ){
@@ -1481,10 +1503,26 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile
 	      << std::setw(16) << std::setprecision(4) << pedrms
 	      << std::endl;
     }
+
+    double cm_mean = (axis == SBSGEM::kUaxis ) ? commonmode_meanU[ pos ] : commonmode_meanV[ pos ];
+    double cm_rms = (axis == SBSGEM::kUaxis ) ? commonmode_rmsU[ pos ] : commonmode_rmsV[ pos ];
+    
+    double cm_min = cm_mean - fZeroSuppressRMS * cm_rms;
+    double cm_max = cm_mean + fZeroSuppressRMS * cm_rms;
+    
+    daqfile_cmr << std::setw(12) << crate
+		<< std::setw(12) << mpd
+		<< std::setw(12) << adc_ch
+		<< std::setw(12) << int( cm_min )
+		<< std::setw(12) << int( cm_max )
+		<< std::endl;
+		
     
   }
 
-  //TO DO: common-mode mean, min, and max by APV card:
+  
+
+  
   
 }
 

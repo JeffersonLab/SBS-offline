@@ -30,7 +30,7 @@ public:
   void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; }
   void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
   void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
-  void SetBackConstraintPoint( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
+  void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -292,7 +292,7 @@ protected:
   bool fMakeEfficiencyPlots; //default to TRUE
 
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fpedfile_daq;
+  std::ofstream fpedfile_dbase, fpedfile_daq, fpedfile_cmr; 
  
 };
 
