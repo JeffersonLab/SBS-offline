@@ -65,6 +65,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSSimDecoder.cxx SBSSimADC.cxx SBSSimTDC.cxx
   SBSHCalLEDModule.cxx SBSManager.cxx
   SBSSimFile.cxx SBSSimEvent.cxx
+  SBSTimingHodoscopePMT.cxx SBSTimingHodoscopeBar.cxx
   gmn_tree_digitized.cxx
   )
 #gmn_tree_digitized.C
@@ -180,6 +181,9 @@ endforeach()
 configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.csh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.csh @ONLY)
 configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.sh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.sh)
 
+configure_file( ${PROJECT_SOURCE_DIR}/SBSoffline.rootrc ${CMAKE_CURRENT_BINARY_DIR}/.rootrc )
+configure_file( ${PROJECT_SOURCE_DIR}/rootlogon_install.C ${PROJECT_BINARY_DIR}/scripts/rootlogon.C )
+
 ## Time to disable this warning. The cmake build works...
 #message(AUTHOR_WARNING ${DEV_WARNING})
 
@@ -197,6 +201,9 @@ INSTALL(FILES ${headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 # install the ROOT dictionary files: eventually we should learn how to do this in a smarter way. Put the .cxx file under "include"
 # and put the _rdict.pcm and .rootmap files under "lib". This seems to work. Don't ask me why
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_DICTIONARY}.cxx DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/scripts/rootlogon.C DESTINATION ${CMAKE_INSTALL_PREFIX}/scripts )
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/.rootrc DESTINATION ${CMAKE_INSTALL_PREFIX}/replay)
 
 #option(SET_MCFLAG "Set the global MCDATA flag" OFF)
 #if(SET_MCFLAG)

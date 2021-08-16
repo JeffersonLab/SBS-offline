@@ -4,7 +4,8 @@
 #include <vector>
 #include <map>
 #include <set>
-#include "SBSGEMModule.h"
+#include <fstream>
+//#include "SBSGEMModule.h"
 #include "TVector3.h"
 #include "TVector2.h"
 //#include <THaTrackingDetector.h>
@@ -13,6 +14,7 @@
 //class THaApparatus;
 //class THaEvData;
 class SBSGEMModule;
+class TClonesArray;
 //class THaCrateMap;
 
 //This class is not going to inherit from THaAnything or from TObject.
@@ -28,7 +30,7 @@ public:
   void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; }
   void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
   void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
-  void SetBackConstraintPoint( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
+  void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -49,7 +51,9 @@ protected:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void InitLayerCombos();
   void InitGridBins(); //initialize 
-
+  void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
+  void CalcEfficiency(); //essentially, divide "did hit/should hit" histograms
+  
   void InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
   void InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
@@ -65,6 +69,8 @@ protected:
   //Utility method to iterate over combinations of hits in layers, used by find_tracks()
   bool GetNextCombo( const std::set<int> &layers, std::map<int,int> &hitcounter, std::map<int,int> &hitcombo, bool &firstcombo );
 
+  int GetNearestModule( int layer, TVector3 track_origin, TVector3 track_direction, TVector3 &intersect );
+  
   // Utility method to take a list of hits mapped by layer as input, and give track parameters and chi2 as output.
   // This relies on the "hit list" and "free hit list" information also being sensibly populated
   //FitTrack calculates chi2 and residuals as well as best fit parameters
@@ -87,6 +93,8 @@ protected:
   bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
   bool fZeroSuppress;
   double fZeroSuppressRMS;
+
+  bool fPedestalMode;
   
   bool fIsMC;
 
@@ -263,11 +271,29 @@ protected:
   //"did hit" and "should hit" by module (numerators and denominators for efficiency determination)
   std::vector<int> fDidHit_Module;
   std::vector<int> fShouldHit_Module;
+  
+  //We'll define hit map/efficiency histograms here.
+  // NOTE: in order for these to actually show up in output, derived classes must initialize these histograms
+  // in SBSGEMSpectrometerTracker::Begin() or SBSGEMPolarimeterTracker::Begin() and
+  // write them to the output ROOT file in SBSGEMSpectrometerTracker::End() or SBSGEMPolarimeterTracker::End()
+  TClonesArray *hdidhit_x_layer;
+  TClonesArray *hdidhit_y_layer;
+  TClonesArray *hdidhit_xy_layer;
 
-  
+  TClonesArray *hshouldhit_x_layer;
+  TClonesArray *hshouldhit_y_layer;
+  TClonesArray *hshouldhit_xy_layer;
 
-  
-  
+  TClonesArray *hefficiency_x_layer;
+  TClonesArray *hefficiency_y_layer;
+  TClonesArray *hefficiency_xy_layer;
+
+  bool fEfficiencyInitialized;
+  bool fMakeEfficiencyPlots; //default to TRUE
+
+  // output files for pedestal info when running in pedestal mode:
+  std::ofstream fpedfile_dbase, fpedfile_daq, fpedfile_cmr; 
+ 
 };
 
 #endif

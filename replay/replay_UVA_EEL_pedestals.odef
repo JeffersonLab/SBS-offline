@@ -1,0 +1,12 @@
+#block sbs.uvagem.*
+
+th1f hNlayers_hit 'Number of layers with fired strips (u OR v)' sbs.uvagem.nlayershit 6 -0.5 5.5
+th1f hNlayers_hitu 'Number of layers with fired u strips' sbs.uvagem.nlayershitu 6 -0.5 5.5
+th1f hNlayers_hitv 'Number of layers with fired v strips' sbs.uvagem.nlayershitv 6 -0.5 5.5
+th1f hNlayers_hituv 'Number of layers with 2D hits' sbs.uvagem.nlayershituv 6 -0.5 5.5
+th1f hNtracks_found 'Number of tracks found' sbs.uvagem.track.ntrack 11 -0.5 10.5
+
+th2f hNstripsU_layer 'Number of U strips fired by layer' [I] sbs.uvagem.nstripsu_layer 5 -0.5 4.5 101 -0.5 100.5
+th2f hNstripsV_layer 'Number of V strips fired by layer' [I] sbs.uvagem.nstripsv_layer 5 -0.5 4.5 101 -0.5 100.5
+th2f hNclustU_layer 'Number of U clusters by layer' [I] sbs.uvagem.nclustu_layer 5 -0.5 4.5 51 -0.5 50.5
+th2f hNclustV_layer 'Number of V clusters by layer' [I] sbs.uvagem.nclustv_layer 5 -0.5 4.5 51 -0.5 50.5

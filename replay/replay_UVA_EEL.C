@@ -4,13 +4,14 @@
 #include "THaEvent.h"
 #include "THaAnalyzer.h"
 #include "THaApparatus.h"
+#include "TString.h"
 
 #include "SBSGEMSpectrometerTracker.h"
 #include "SBSBigBite.h"
 //#include "SBSGEMStand.h"
 //#include "SBSBigBite.h"
 
-void replay(){
+void replay( int runnum=2811, int segment=31, const char *outfilename="temp.root", long nevents=-1 ){
 
     gSystem->Load("libsbs.so");
 
@@ -49,22 +50,32 @@ void replay(){
   // Creating your own descendant of THaEvent is one way of
   // defining and controlling the output.
   THaEvent* event = new THaEvent;
+
+  TString prefix = gSystem->Getenv("DATA_DIR");
+  TString codafilename;
+  codafilename.Form( "%s/gem_cleanroom_%d.evio.%d", prefix.Data(), runnum, segment );
+  
   
   // Define the run(s) that we want to analyze.
   // We just set up one, but this could be many.
 //  THaRun* run = new THaRun( "prod12_4100V_TrigRate25_4.dat" );
   //THaRun* run = new THaRun( "5GEM_sample.dat" );
-  THaRun* run = new THaRun( "/Users/puckett/WORK/GEM_ALIGNMENT/RAWDATA/gem_cleanroom_2811.evio.31" );
-  run->SetLastEvent(1000);
+  //THaRun* run = new THaRun( "/Users/puckett/WORK/GEM_ALIGNMENT/RAWDATA/gem_cleanroom_2811.evio.31" );
+  THaRun* run = new THaRun( codafilename.Data() );
+  //THaRun* run = new THaRun( "/Users/puckett/WORK/GEM_ALIGNMENT/RAWDATA/gem_cleanroom_2805.evio.0" );
+
+  if( nevents > 0 ) run->SetLastEvent(nevents);
 
   run->SetDataRequired(0);
   run->SetDate(TDatime());
 
   analyzer->SetVerbosity(0);
+
+  analyzer->EnableBenchmarks();
   
   // Define the analysis parameters
   analyzer->SetEvent( event );
-  analyzer->SetOutFile( "temp.root" );
+  analyzer->SetOutFile( outfilename );
   // File to record cuts accounting information
   analyzer->SetSummaryFile("summary_example.log"); // optional
 

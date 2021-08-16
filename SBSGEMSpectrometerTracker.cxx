@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 
+#include "THaApparatus.h"
 #include "THaTrackingDetector.h"
 #include "THaRunBase.h"
 #include "THaCrateMap.h"
@@ -18,7 +19,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
 
   fModules.clear();
   fIsMC = false;//by default!
-  //fCrateMap = 0;	
+  //fCrateMap = 0;
+  fPedestalMode = false;
 }
 
 SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
@@ -78,7 +80,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //   Int_t            search;   // (opt) Search for key along name tree
   //   const char*      descript; // (opt) Key description (if 0, same as name)
   // };
-
+  int pedestalmode_flag = 0;
+  int doefficiency_flag = 1;
   int onlinezerosuppressflag = 0;
   int useconstraintflag = 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
   DBRequest request[] = {
@@ -94,17 +97,31 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
+    { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
+    { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     {0}
   };
 
-  fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
-  fUseConstraint = (useconstraintflag != 0);
-  fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
-    
   Int_t status = kInitError;
   LoadDB( file, date, request, fPrefix );
   fclose(file);
 
+  fMakeEfficiencyPlots = (doefficiency_flag != 0 );
+  fPedestalMode = ( pedestalmode_flag != 0 );
+
+  // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
+  // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
+  // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
+  
+  fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
+  fUseConstraint = (useconstraintflag != 0);
+  fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
+
+  if( fPedestalMode ){ //then we will just dump raw data to the tree:
+    fZeroSuppress = false;
+    fMakeEfficiencyPlots = false; //If in pedestal mode, we don't want efficiency plots
+  }
+  
   //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
   std::vector<std::string> modules = vsplit(modconfig);
   if( modules.empty()) {
@@ -115,8 +132,9 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
     fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this) );
+
+    modcounter = fModules.size()-1;
     fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
-    fModules[fModules.size()-1]->fIsMC = fIsMC;
   }
 
   //Define the number of modules from the "modules" string:
@@ -148,6 +166,9 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
     (*it)->Begin(run);
   }
 
+  InitEfficiencyHistos(GetName()); //create efficiency histograms (see SBSGEMTrackerBase)
+  
+  
   return 0;
 }
 
@@ -161,7 +182,7 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
 
 Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
-  //std::cout << "[SBSGEMSpectrometerTracker::Decode]" << std::endl;
+  std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  std::endl;
 
   //Triggers decoding of each module:
   
@@ -174,11 +195,80 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
 
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
+
+  //To automate the printing out of pedestals for database and DAQ, 
+  if( fPedestalMode ){
+    TString fname_dbase, fname_daq, fname_cmr;
+    
+    UInt_t runnum = run->GetNumber(); 
+    TString specname = GetApparatus()->GetName();
+    TString detname = GetName();
+    fname_dbase.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+    fname_daq.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+    fname_cmr.Form( "CommonModeRange_%s_%s_run%d.txt", specname.Data(), detname.Data(), runnum );
+    
+    fpedfile_dbase.open( fname_dbase.Data() );
+    fpedfile_daq.open( fname_daq.Data() );
+    fpedfile_cmr.open( fname_cmr.Data() );
+    
+    TString sdate = run->GetDate().AsString();
+    sdate.Prepend( "#" );
+    
+    TString message;
+    
+    message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
+    
+    fpedfile_dbase << sdate << std::endl;
+    fpedfile_dbase << message << std::endl;
+    fpedfile_dbase << "#format = detname.ped(u,v) and detname.rms(u,v) = pedestal mean and rms by (u,v) strip number in order of position" << std::endl;
+    
+    message.Form("# copy the contents of this file into (location TBD) to update CODA thresholds for detector %s.%s", specname.Data(), detname.Data() );
+    
+    fpedfile_daq << sdate << std::endl;
+    fpedfile_daq <<  message << std::endl;
+    fpedfile_daq << "# format = APV        crate       mpd_id       adc_ch followed by " << std::endl
+		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
+
+    message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
+    
+    fpedfile_cmr << sdate << std::endl;
+    fpedfile_cmr << message << std::endl;
+    fpedfile_cmr << "# format = crate     mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
+  }
+  
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+    if( fPedestalMode ) { (*it)->PrintPedestals( fpedfile_dbase, fpedfile_daq, fpedfile_cmr ); }
     (*it)->End(run);
   }
 
+  if( fMakeEfficiencyPlots ){
+    CalcEfficiency();
+  
+    hdidhit_x_layer->Compress();
+    hdidhit_y_layer->Compress();
+    hdidhit_xy_layer->Compress();
 
+    hshouldhit_x_layer->Compress();
+    hshouldhit_y_layer->Compress();
+    hshouldhit_xy_layer->Compress();
+
+    hefficiency_x_layer->Compress();
+    hefficiency_y_layer->Compress();
+    hefficiency_xy_layer->Compress();
+
+    hdidhit_x_layer->Write();
+    hdidhit_y_layer->Write();
+    hdidhit_xy_layer->Write();
+
+    hshouldhit_x_layer->Write();
+    hshouldhit_y_layer->Write();
+    hshouldhit_xy_layer->Write();
+
+    hefficiency_x_layer->Write();
+    hefficiency_y_layer->Write();
+    hefficiency_xy_layer->Write();
+  }
+  
   return 0;
 }
 
@@ -274,7 +364,7 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 
   //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack" << std::endl;
-  if( !fUseConstraint ){
+  if( !fUseConstraint && !fPedestalMode ){
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
     find_tracks();
@@ -300,7 +390,7 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 
   //std::cout << "SBSGEMSpectrometerTracker::FineTrack" << std::endl;
-  if( fUseConstraint ){ //
+  if( fUseConstraint && !fPedestalMode ){ //
 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;

@@ -8,13 +8,12 @@ namespace SBSData {
 
   /////////////////////////////////////////////////////////////////////////////
   // ADC data functions
-  ADC::ADC(Float_t ped, Float_t gain, Float_t tcal, Float_t acal ) :
+  ADC::ADC(Float_t ped, Float_t gain, Float_t tcal) :
       fHasData(false), fMode(SBS_ADC_MODE_SINGLE)
   {
     SetPed(ped);
     SetGain(gain);
     SetTimeCal(tcal);
-    SetAmpCal(acal);
   }
 
   void ADC::Process(Float_t val)
@@ -28,11 +27,19 @@ namespace SBSData {
 
   void ADC::Process(Float_t integral, Float_t time, Float_t amp, Float_t ped) {
     //fADC.push_back({ped,fGlobalCal,val,val-ped,(val-ped)*fGlobalCal});
-    SingleData t_integral = { integral, integral   };
-    SingleData t_time     = { time, time*fADC.tcal };
-    SingleData t_amp     = { amp, amp*fADC.acal };
+    // convert to pC, assume tcal is in ns, and 50ohm resistance
+    Float_t pC_Conv = fADC.tcal/50.;
+    Float_t PedVal = ped/GetNPedBin()*GetChanTomV();
+    Float_t TimeVal= time*fADC.tcal/64.;
+    Float_t IntRaw=  integral*GetChanTomV()*pC_Conv;
+    Float_t IntVal=  (IntRaw-PedVal*(GetNSA()+GetNSB()+1)*pC_Conv)*GetGain();
+    Float_t AmpRaw=  amp*GetChanTomV();
+    Float_t AmpVal=  (AmpRaw-PedVal)*GetGain();
+    SingleData t_integral = { IntRaw, IntVal   };
+    SingleData t_time     = { time, TimeVal };
+    SingleData t_amp     = { AmpRaw, AmpVal };
     fADC.hits.push_back({t_integral,t_time,t_amp } );
-    SetPed(ped);
+    SetPed(PedVal);
     fHasData = true;
     fMode = SBS_ADC_MODE_MULTI; //< Mode gets set to multi if this function is called
   }
@@ -52,6 +59,20 @@ namespace SBSData {
     SetOffset(offset);
     SetCal(cal);
     SetGoodTimeCut(GoodTimeCut);
+  }
+
+  void TDC::ProcessSimple(Int_t elemID, Float_t val, Int_t nhit)
+  {
+    fTDC.hits.push_back(TDCHit());
+    TDCHit *hit = &fTDC.hits[nhit];
+    hit->elemID = elemID;
+      hit->le.raw = val;
+      hit->le.val = (val-fTDC.offset)*fTDC.cal;
+      hit->te.raw = 0;
+      hit->te.val = 0;
+      hit->ToT.raw=0;
+      hit->ToT.val=0;
+      fHasData = true;
   }
 
   void TDC::Process(Int_t elemID, Float_t val, Float_t fedge)
@@ -95,14 +116,14 @@ namespace SBSData {
 
   /////////////////////////////////////////////////////////////////////////////
   // Waveform data functions
-  Waveform::Waveform(Float_t ped, Float_t gain, Float_t ChanTomV, Float_t tcal, Float_t acal) :
+  Waveform::Waveform(Float_t ped, Float_t gain, Float_t ChanTomV,Float_t GoodTimeCut, Float_t tcal) :
     fHasData(false)
   {
     SetPed(ped);
     SetGain(gain);
     SetChanTomV(ChanTomV);
     SetTimeCal(tcal);
-    SetAmpCal(acal);
+    SetGoodTimeCut(GoodTimeCut);
   }
 
   void Waveform::Process(std::vector<Float_t> &vals)
@@ -164,7 +185,7 @@ namespace SBSData {
     for(size_t i =IntMinBin ; i <IntMaxBin ; i++ ) {
          sped+=fSamples.ped*pC_Conv;
          sum+=fSamples.samples_raw[i]*pC_Conv;
-         if ( i > ThresCrossBin && !PeakFound) {
+         if ( i >= ThresCrossBin && !PeakFound) {
 	   if (fSamples.samples_raw[i] > max) {
 	     max = fSamples.samples_raw[i];
 	   } else {
