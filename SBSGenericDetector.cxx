@@ -939,11 +939,7 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
     THaDetMap::Module *d = fDetMap->GetModule( imod );
     for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
-<<<<<<< HEAD
-      if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] != -1) continue;
-=======
       if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] == -1) continue;
->>>>>>> master
 	blk = fRefElements[ fRefChanMap[imod][chan-d->lo]];
 	fNRefhits++;
          if(d->IsADC()) {
@@ -1048,11 +1044,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
-<<<<<<< HEAD
-            std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
-=======
       //      std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
->>>>>>> master
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
        Float_t MinDiff = 10000.;
@@ -1198,12 +1190,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     blk = fElements[k];
     if(!blk)
       continue;
-<<<<<<< HEAD
- 
-    // If the above did not define the good hit, the sub-class is expected
-=======
    // If the above did not define the good hit, the sub-class is expected
->>>>>>> master
     // to use re-implement the following function to find the good hit.
 
     // Skip blocks that have no new data (unless allowed by the user)
