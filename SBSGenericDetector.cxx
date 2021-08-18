@@ -1044,7 +1044,9 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
+
       //      std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
+      
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
        Float_t MinDiff = 10000.;
@@ -1190,7 +1192,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     blk = fElements[k];
     if(!blk)
       continue;
-   // If the above did not define the good hit, the sub-class is expected
+
+    // If the above did not define the good hit, the sub-class is expected
+    
     // to use re-implement the following function to find the good hit.
 
     // Skip blocks that have no new data (unless allowed by the user)

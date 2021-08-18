@@ -372,7 +372,7 @@ sbs.uvagem.m19.ugain = 1.00279  1.09937  1.08615  1  1.02314  1.06173  1.03447  
 # As far as I can tell, slot and mpd are redundant. So maybe we could drop the number of entries in struct mpdmap_t back to 8
 # "gem" is also in principle unnecessary, but we can use this to store the unique "prodID" to keep track of each GEM
 # adc, i2c, pos, invert, and axis are all necessary for decoding:
-
+# the chan map ordering here is: crate slot mpd_id GEMID adc_ch i2c pos invert axis
 sbs.uvagem.m0.chanmap = 
       4       2       2      33       0      15       0       1       0 
       4       2       2      33       1      14       1       1       0 

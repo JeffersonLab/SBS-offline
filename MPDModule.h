@@ -103,9 +103,17 @@ namespace Decoder {
 
     Int_t fNumHits;
 
-    //New members/methods to parse MPD4 VME format used by UVA GEM cosmic test stand, Jan. 2021:
-    UInt_t fBlockHeader; //Default = 0x0
-    UInt_t fAPVHeader;   //Default = 0x4
+    //
+    UInt_t fBlockHeader; //Default = 0
+    UInt_t fBlockTrailer; //Default = 1
+    UInt_t fEventHeader; //Default = 2
+    UInt_t fTriggerTime; //Default = 3
+    UInt_t fMPDFrameHeader; //Default = 5
+    UInt_t fMPDDebugHeader; //Default = 13 (unclear if we will need to care about this
+    UInt_t fDataNotValid; //Default = 14
+    UInt_t fFillerWord; //Default = 15;
+    //UInt_t fAPVHeader;   //Default = 0x4
+
     
   
     std::vector<Int_t> fFrameHeader;  // Frame Header
