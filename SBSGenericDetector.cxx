@@ -1304,6 +1304,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
              fGood.ADCcol.push_back(blk->GetCol());
              fGood.ADClayer.push_back(blk->GetLayer());
              fGood.ADCelemID.push_back(blk->GetID());
+
+	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
+	 
         fGood.ped.push_back(wave->GetPed());
         fGood.a.push_back(wave->GetIntegral().raw);
         fGood.a_p.push_back(wave->GetIntegral().val);

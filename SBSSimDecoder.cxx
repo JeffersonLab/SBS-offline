@@ -349,14 +349,17 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   //FIXME: we don't want that, I just set it up this way for the sake of going forward
   //Simple fix (might not be ideal): do "if(detname=="xyz")"
   //cout << detname.c_str() << endl;
-  
+  int row, col;
   
   if(strcmp(detname.c_str(), "bb.ps")==0){
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBPSTF1.nhits << " " << simev->Tgmn->Earm_BBPS_dighit_nchan << endl;
     samps.clear();
     for(int j = 0; j<simev->Tgmn->Earm_BBPS_dighit_nchan; j++){
       loadevt = false;
+      //if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)==0)cout << "SBSSimDecoder, BBPS " << simev->Tgmn->Earm_BBPS_dighit_chan->at(j);// << endl;
       lchan = simev->Tgmn->Earm_BBPS_dighit_chan->at(j);
+      //if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)==0)
+      
       if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)>=0){
 	samps.push_back(simev->Tgmn->Earm_BBPS_dighit_adc->at(j));
       }
@@ -368,6 +371,18 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       
       if(loadevt){
+	/*
+      for(int k = 0; k<simev->Tgmn->Earm_BBPSTF1_hit_nhits;k++){
+	if(simev->Tgmn->Earm_BBPSTF1_hit_cell->at(k)==simev->Tgmn->Earm_BBPS_dighit_chan->at(j)){
+	  cout << "/" << simev->Tgmn->Earm_BBPSTF1_hit_cell->at(k) << " " << simev->Tgmn->Earm_BBPSTF1_hit_row->at(k) << " " << simev->Tgmn->Earm_BBPSTF1_hit_col->at(k) << " " << simev->Tgmn->Earm_BBPSTF1_hit_xcell->at(k) << " " << simev->Tgmn->Earm_BBPSTF1_hit_ycell->at(k);// << endl;
+	  break;
+	}
+      }
+	*/
+      row = lchan%26;
+      col = (lchan-row)/26;
+      lchan = row*2+col;
+      //cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
 	//ADC
 	ChanToROC(detname, lchan, crate, slot, chan);
 	
@@ -415,9 +430,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   if(strcmp(detname.c_str(), "bb.sh")==0){
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBSHTF1.nhits << " " << simev->Tgmn->Earm_BBSH_dighit_nchan << endl;
     samps.clear();
-        
+    
     for(int j = 0; j<simev->Tgmn->Earm_BBSH_dighit_nchan; j++){
       loadevt = false;
+      //if(simev->Tgmn->Earm_BBSH_dighit_samp->at(j)==0)cout << "SBSSimDecoder, BBSH " << simev->Tgmn->Earm_BBSH_dighit_chan->at(j);// << endl;
       lchan = simev->Tgmn->Earm_BBSH_dighit_chan->at(j);
       if(simev->Tgmn->Earm_BBSH_dighit_samp->at(j)>=0){
 	samps.push_back(simev->Tgmn->Earm_BBSH_dighit_adc->at(j));
@@ -430,6 +446,18 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
      
       if(loadevt){
+	/*
+      for(int k = 0; k<simev->Tgmn->Earm_BBSHTF1_hit_nhits;k++){
+	if(simev->Tgmn->Earm_BBSHTF1_hit_cell->at(k)==simev->Tgmn->Earm_BBSH_dighit_chan->at(j)){
+	  cout << " " << simev->Tgmn->Earm_BBSHTF1_hit_cell->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_row->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_col->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_xcell->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_ycell->at(k);// << endl;
+	  break;
+	}
+      }
+	*/
+      row = lchan%27;
+      col = (lchan-row)/27;
+      lchan = row*7+col;
+      //cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
 	//ADC
 	ChanToROC(detname, lchan, crate, slot, chan);
 	
