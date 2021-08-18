@@ -34,16 +34,16 @@ bb.ps.chanmap = 0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30
 bb.ps.position = 0 0 2.5319 ## Need to re-check this number
 
 ## Size
-bb.ps.size   =  0.740  2.295  0.085 # in meters
+bb.ps.size   =  0.740  2.34  0.09 # in meters
 
 ## Number of rows and columns
 bb.ps.ncols =  2
 bb.ps.nrows = 26
 
 ## Position of first module
-bb.ps.xyz    =  1.0625  0.185  0.000
+bb.ps.xyz    =  1.125  0.185  0.000
 ## Space between modules
-bb.ps.dxdydz =  0.085   0.370  0.000
+bb.ps.dxdydz =  0.09   0.370  0.000
 
 ## Mininum energy  for a cluster center (not really used right now)
 bb.ps.emin  = 0.0
