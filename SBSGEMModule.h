@@ -93,6 +93,7 @@ struct sbsgemcluster_t {  //1D clusters;
   Double_t t_sigma; //unclear what we might use this for
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
   std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
+  bool keep;
 };
 
 
@@ -141,6 +142,9 @@ class SBSGEMModule : public THaSubDetector {
 
   // fill the 2D hit arrays from the 1D cluster arrays:
   void fill_2D_hit_arrays(); 
+
+  //Filter 1D hits by criteria possibly to include ADC threshold, cluster size
+  void filter_1Dhits(SBSGEM::GEMaxis_t axis);
   
   //Filter 2D hits by criteria possibly to include ADC X/Y asymmetry, cluster size, time correlation, (lack of) overlap, possibly others:
   void filter_2Dhits(); 

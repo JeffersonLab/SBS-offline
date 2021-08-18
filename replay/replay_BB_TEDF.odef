@@ -1,0 +1,76 @@
+block bb.gem.track.*
+block bb.gem.hit.*
+
+variable bb.gem.nlayershit
+variable bb.gem.nlayershitu
+variable bb.gem.nlayershitv
+variable bb.gem.nlayershituv
+variable bb.gem.nstripsu_layer
+variable bb.gem.nstripsv_layer
+variable bb.gem.nclustu_layer
+variable bb.gem.nclustv_layer
+variable bb.gem.n2Dhit_layer
+
+#cut onbesttrack bb.gem.hit.trackindex==0
+cut singletrack bb.gem.track.ntrack==1
+
+th1f hNlayers_hit 'Number of layers with fired strips (u OR v)' bb.gem.nlayershit 6 -0.5 5.5
+th1f hNlayers_hitu 'Number of layers with fired u strips' bb.gem.nlayershitu 6 -0.5 5.5
+th1f hNlayers_hitv 'Number of layers with fired v strips' bb.gem.nlayershitv 6 -0.5 5.5
+th1f hNlayers_hituv 'Number of layers with 2D hits' bb.gem.nlayershituv 6 -0.5 5.5
+th1f hNtracks_found 'Number of tracks found' bb.gem.track.ntrack 11 -0.5 10.5
+
+th2f hNstripsU_layer 'Number of U strips fired by layer' [I] bb.gem.nstripsu_layer 5 -0.5 4.5 101 -0.5 100.5 
+th2f hNstripsV_layer 'Number of V strips fired by layer' [I] bb.gem.nstripsv_layer 5 -0.5 4.5 101 -0.5 100.5
+th2f hNclustU_layer 'Number of U clusters by layer' [I] bb.gem.nclustu_layer 5 -0.5 4.5 51 -0.5 50.5
+th2f hNclustV_layer 'Number of V clusters by layer' [I] bb.gem.nclustv_layer 5 -0.5 4.5 51 -0.5 50.5
+th2f hNclust2D_layer 'Number of 2D hit candidates by layer' [I] bb.gem.n2Dhit_layer 5 -0.5 4.5 51 -0.5 50.5
+
+# "page 2" histograms:
+th1f hclustwidthU 'Width of clusters in U strips (clusters on good tracks)' bb.gem.hit.nstripu 10 0.5 10.5 singletrack
+th1f hclustwidthV 'Width of clusters in V strips (clusters on good tracks)' bb.gem.hit.nstripv 10 0.5 10.5 singletrack
+th2f hclustwidthVvsU 'Cluster size in strips, V vs. U' bb.gem.hit.nstripu bb.gem.hit.nstripv 10 0.5 10.5 10 0.5 10.5 singletrack
+
+# "page 3" histograms:
+th1f hclust_Utime 'Mean time of U clusters on good tracks' bb.gem.hit.Utime 150 0 150 singletrack
+th1f hclust_Vtime 'Mean time of V clusters on good tracks' bb.gem.hit.Vtime 150 0 150 singletrack
+th1f hclust_deltat 'Difference between U and V times of clusters on good tracks' bb.gem.hit.deltat 200 -50 50 singletrack
+th2f hclust_UVtime 'Cluster time, V versus U, clusters on good tracks' bb.gem.hit.Utime bb.gem.hit.Vtime 150 0 150 150 0 150 singletrack
+
+th1f hccor_clust 'U/V correlation coefficient, cluster-summed ADC samples, cluster in good track' bb.gem.hit.ccor_clust 202 -1.01 1.01 singletrack
+th1f hccor_maxstrip 'U/V correlation coefficient, max strip in cluster on good track' bb.gem.hit.ccor_strip 202 -1.01 1.01 singletrack
+
+th1f hADCasym 'ADC asymmetry (ADCU-ADCV)/(ADCU+ADCV), hits on good tracks' bb.gem.hit.ADCasym 202 -1.01 1.01 singletrack
+
+
+th1f hADCU 'Cluster ADC sum, U strips' bb.gem.hit.ADCU 1500 0.0 30000.0 singletrack
+th1f hADCV 'Cluster ADC sum, V strips' bb.gem.hit.ADCV 1500 0.0 30000.0 singletrack
+th2f hADCUV 'Cluster ADC sum, V strips vs U strips' bb.gem.hit.ADCU bb.gem.hit.ADCV 200 0 30000.0 200 0 30000.0 singletrack
+
+th2f hADCU_vs_module 'Cluster ADC sum vs module, U strips' bb.gem.hit.module bb.gem.hit.ADCU 20 -0.5 19.5 200 0 30000.0 singletrack
+th2f hADCV_vs_module 'Cluster ADC sum vs module, V strips' bb.gem.hit.module bb.gem.hit.ADCV 20 -0.5 19.5 200 0 30000.0 singletrack
+
+th1f hTrackNhits 'Number of hits on first track' bb.gem.track.nhits 6 -0.5 5.5 singletrack
+th1f hTrackX 'Track x(z=0), m' bb.gem.track.x 200 -0.35 0.35 singletrack
+th1f hTrackY 'Track y(z=0), m' bb.gem.track.y 200 -1.2 1.2 singletrack
+th1f hTrackXp 'Track dx/dz' bb.gem.track.xp 200 -0.5 0.5 singletrack
+th1f hTrackYp 'Track dy/dz' bb.gem.track.yp 200 -1.2 1.2 singletrack
+th2f hTrackXY 'Track y(z=0) vs x(z=0), m' bb.gem.track.x bb.gem.track.y 200 -0.35 0.35 200 -1.2 1.2 singletrack
+
+th1f hTrackChi2NDF 'Track chi2/ndf' bb.gem.track.chi2ndf 200 0.0 200.0 singletrack
+
+th1f hresidu_allhits 'Track u residuals, all hits in all layers' bb.gem.hit.residu 200 -0.004 0.004 singletrack
+th1f hresidv_allhits 'Track v residuals, all hits in all layers' bb.gem.hit.residv 200 -0.004 0.004 singletrack
+th2f hresidu_vs_module 'Track u residuals vs module' bb.gem.hit.module bb.gem.hit.residu 20 -0.5 19.5 200 -.005 .005 singletrack
+th2f hresidv_vs_module 'Track v residuals vs module' bb.gem.hit.module bb.gem.hit.residv 20 -0.5 19.5 200 -.005 .005 singletrack
+th2f hresidu_vs_layer 'Track u residuals vs layer' bb.gem.hit.layer bb.gem.hit.residu 5 -0.5 4.5 200 -.005 .005 singletrack
+th2f hresidv_vs_layer 'Track v residuals vs layer' bb.gem.hit.layer bb.gem.hit.residv 5 -0.5 4.5 200 -.005 .005 singletrack
+
+th1f heresidu_allhits 'Track u exclusive residuals, all hits in all layers' bb.gem.hit.eresidu 200 -0.004 0.004 singletrack
+th1f heresidv_allhits 'Track v exclusive residuals, all hits in all layers' bb.gem.hit.eresidv 200 -0.004 0.004 singletrack
+th2f heresidu_vs_module 'Track u exclusive residuals vs module' bb.gem.hit.module bb.gem.hit.eresidu 20 -0.5 19.5 200 -.005 .005 singletrack
+th2f heresidv_vs_module 'Track v exclusive residuals vs module' bb.gem.hit.module bb.gem.hit.eresidv 20 -0.5 19.5 200 -.005 .005 singletrack
+th2f heresidu_vs_layer 'Track u exclusive residuals vs layer' bb.gem.hit.layer bb.gem.hit.eresidu 5 -0.5 4.5 200 -.005 .005 singletrack
+th2f heresidv_vs_layer 'Track v exclusive residuals vs layer' bb.gem.hit.layer bb.gem.hit.eresidv 5 -0.5 4.5 200 -.005 .005 singletrack
+
+

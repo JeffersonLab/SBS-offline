@@ -1143,6 +1143,9 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       clusttemp.t_mean = sumt / sumwx;
       clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
 
+      //initialize "keep" flag for all 1D clusters to true:
+      clusttemp.keep = true;
+      
       // In the standalone we don't apply an independent threshold on the cluster sum in the context of 1D cluster-finding:
       // if( sumADC >= fThresholdClusterSum ){
       if( axis == SBSGEM::kVaxis ){
@@ -1160,6 +1163,9 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       //}
     } //Check if peak is inside track search region constraint
   } //end loop on local maxima
+
+  filter_1Dhits(SBSGEM::kUaxis);
+  filter_1Dhits(SBSGEM::kVaxis);
 }
 
 void SBSGEMModule::fill_2D_hit_arrays(){
@@ -1170,79 +1176,82 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   //been called, if that is NOT the case, then this routine will just do nothing:
   for( int iu=0; iu<fUclusters.size(); iu++ ){
     for( int iv=0; iv<fVclusters.size(); iv++ ){
-      //Initialize sums for computing cluster and strip correlation coefficients:
-      sbsgemhit_t hittemp; // declare a temporary "hit" object:
 
-      //copying overhead, might be inefficient:
-      //sbsgemcluster_t uclusttemp = fUclusters[iu];
-      //sbsgemcluster_t vclusttemp = fVclusters[iv];
+      if( fUclusters[iu].keep && fVclusters[iv].keep ){
+	//Initialize sums for computing cluster and strip correlation coefficients:
+	sbsgemhit_t hittemp; // declare a temporary "hit" object:
+
+	//copying overhead, might be inefficient:
+	//sbsgemcluster_t uclusttemp = fUclusters[iu];
+	//sbsgemcluster_t vclusttemp = fVclusters[iv];
       
-      //Initialize "keep" to true:
-      hittemp.keep = true;
-      hittemp.ontrack = false;
-      hittemp.trackidx = -1;
-      hittemp.iuclust = iu;
-      hittemp.ivclust = iv;
+	//Initialize "keep" to true:
+	hittemp.keep = true;
+	hittemp.ontrack = false;
+	hittemp.trackidx = -1;
+	hittemp.iuclust = iu;
+	hittemp.ivclust = iv;
       
-      hittemp.uhit = fUclusters[iu].hitpos_mean;
-      hittemp.vhit = fVclusters[iv].hitpos_mean;
+	hittemp.uhit = fUclusters[iu].hitpos_mean;
+	hittemp.vhit = fVclusters[iv].hitpos_mean;
 
-      double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch;
-      double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch;
+	double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch;
+	double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch;
 
-      //"Cluster moments" defined as differences between reconstructed hit position and center of strip with max. signal in the cluster:
-      hittemp.umom = (hittemp.uhit - pos_maxstripu)/fUStripPitch;
-      hittemp.vmom = (hittemp.vhit - pos_maxstripv)/fVStripPitch;
+	//"Cluster moments" defined as differences between reconstructed hit position and center of strip with max. signal in the cluster:
+	hittemp.umom = (hittemp.uhit - pos_maxstripu)/fUStripPitch;
+	hittemp.vmom = (hittemp.vhit - pos_maxstripv)/fVStripPitch;
       
-      TVector2 UVtemp(hittemp.uhit,hittemp.vhit);
-      TVector2 XYtemp = UVtoXY( UVtemp );
+	TVector2 UVtemp(hittemp.uhit,hittemp.vhit);
+	TVector2 XYtemp = UVtoXY( UVtemp );
 
-      hittemp.xhit = XYtemp.X();
-      hittemp.yhit = XYtemp.Y();
+	hittemp.xhit = XYtemp.X();
+	hittemp.yhit = XYtemp.Y();
 
-      //Check if candidate 2D hit is inside the constraint region before doing anything else:
-      if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
-	  fycmin <= hittemp.yhit && hittemp.yhit <= fycmax ){
+	//Check if candidate 2D hit is inside the constraint region before doing anything else:
+	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
+	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax ){
     
-	hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
-	hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
+	  hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
+	  hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
 	
-	hittemp.thitcorr = hittemp.thit; //don't apply any corrections on thit yet
+	  hittemp.thitcorr = hittemp.thit; //don't apply any corrections on thit yet
 	
-	//Next up is to calculate "global" hit coordinates (actually coordinates in "tracker-local" system)
-	//DetToTrackCoord is a utility function defined in THaDetectorBase
-	TVector3 hitpos_global = DetToTrackCoord( hittemp.xhit, hittemp.yhit );
+	  //Next up is to calculate "global" hit coordinates (actually coordinates in "tracker-local" system)
+	  //DetToTrackCoord is a utility function defined in THaDetectorBase
+	  TVector3 hitpos_global = DetToTrackCoord( hittemp.xhit, hittemp.yhit );
 	
-	// Unclear whether it is actually necessary to store these variables, but we also probably want to avoid 
-	// repeated calls to THaDetectorBase::DetToTrackCoord, so let's keep these for now:
-	hittemp.xghit = hitpos_global.X();
-	hittemp.yghit = hitpos_global.Y();
-	hittemp.zghit = hitpos_global.Z();
+	  // Unclear whether it is actually necessary to store these variables, but we also probably want to avoid 
+	  // repeated calls to THaDetectorBase::DetToTrackCoord, so let's keep these for now:
+	  hittemp.xghit = hitpos_global.X();
+	  hittemp.yghit = hitpos_global.Y();
+	  hittemp.zghit = hitpos_global.Z();
 	
-	hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
-	hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean;
+	  hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
+	  hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean;
 	
-	//Calculate correlation coefficients:
-	hittemp.corrcoeff_clust = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples );
+	  //Calculate correlation coefficients:
+	  hittemp.corrcoeff_clust = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples );
 	
-	//compute index of strip with max ADC sum within cluster strip array:
-	int ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
-	int vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; // 
+	  //compute index of strip with max ADC sum within cluster strip array:
+	  int ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
+	  int vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; // 
 	
-	//compute index of strip with max ADC sum within decoded hit array:
-	int uhitidx = fUclusters[iu].hitindex[ustripidx]; 
-	int vhitidx = fVclusters[iv].hitindex[vstripidx];
+	  //compute index of strip with max ADC sum within decoded hit array:
+	  int uhitidx = fUclusters[iu].hitindex[ustripidx]; 
+	  int vhitidx = fVclusters[iv].hitindex[vstripidx];
 	
-	hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
+	  hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
 	
-	//Okay, that should be everything. Now add it to the 2D hit array:
-	fHits.push_back( hittemp );
-	fN2Dhits++;
-      } //end check that 2D point is inside track search region
+	  //Okay, that should be everything. Now add it to the 2D hit array:
+	  fHits.push_back( hittemp );
+	  fN2Dhits++;
+	} //end check that 2D point is inside track search region
+      } //end check that both U and V clusters passed filtering criteria:
     } //end loop over "V" clusters
   } //end loop over "U" clusters
 
-  
+  filter_2Dhits();
   
 }
 
@@ -1664,4 +1673,94 @@ Int_t SBSGEMModule::GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert )
   }
   
   return RstripPos;
+}
+
+void SBSGEMModule::filter_1Dhits(SBSGEM::GEMaxis_t axis){
+
+  //First filter on cluster ADC sum:
+  int ngood = 0;
+  int nclust = (axis == SBSGEM::kUaxis) ? fNclustU : fNclustV; 
+
+  std::vector<sbsgemcluster_t> &clusters =  (axis == SBSGEM::kUaxis) ? fUclusters : fVclusters;
+
+  bool passed[nclust];
+  
+  for( int ipass=0; ipass<2; ipass++ ){
+    if( ipass == 0 ) ngood = 0;
+    for( int icl=0; icl<nclust; icl++ ){
+
+      //On the first pass, determine which clusters passed the criterion and count the number of good clusters:
+      if( ipass == 0 ){
+	passed[icl] = clusters[icl].keep && clusters[icl].clusterADCsum >= fThresholdClusterSum;
+	if( passed[icl] ) ngood++;
+      }
+
+      //on the second pass, if at least one good cluster was found passing the criterion, we set "keep" for all others to false:
+      if( ipass == 1 && !passed[icl] && ngood > 0  ){
+	clusters[icl].keep = false;
+      }
+    }
+  }
+
+  //Second, filter on cluster size (we may not actually want to filter on cluster size at this stage):
+  ngood = 0;
+
+  for( int ipass=0; ipass<2; ipass++ ){
+    if( ipass == 0 ) ngood = 0;
+
+    for( int icl=0; icl<nclust; icl++ ){
+      if( ipass == 0 ){
+	passed[icl] = clusters[icl].keep && clusters[icl].nstrips >= 2;
+	if( passed[icl] ) ngood++;
+      }
+
+      if( ipass == 1 && !passed[icl] && ngood > 0 ){
+	clusters[icl].keep = false;
+      }
+    }
+  }
+    
+  
+  
+  
+}
+
+void SBSGEMModule::filter_2Dhits(){
+  //Here we will initially filter only based on time U/V time difference, ADC asymmetry, and perhaps correlation coefficient:
+
+  //First U/V time difference:
+  bool passed[fN2Dhits];
+  int ngood = 0;
+  for( int ipass=0; ipass<2; ipass++ ){
+    if( ipass == 0 ) ngood = 0;
+    for( int ihit=0; ihit<fN2Dhits; ihit++ ){
+      if( ipass == 0 ){
+	passed[ihit] = fHits[ihit].keep && fabs( fHits[ihit].tdiff ) <= fTimeCutUVdiff;
+	if( passed[ihit] ) ngood++;
+      }
+
+      if( ipass == 1 && !passed[ihit] && ngood > 0 ){
+	fHits[ihit].keep = false;
+      }
+    }
+  }
+
+  //Second: ADC asymmetry:
+  ngood = 0;
+  for( int ipass=0; ipass<2; ipass++ ){
+    if( ipass == 0 ) ngood = 0;
+    for( int ihit=0; ihit<fN2Dhits; ihit++ ){
+      if( ipass == 0 ){
+	passed[ihit] = fHits[ihit].keep && fabs( fHits[ihit].ADCasym ) <= fADCasymCut;
+	if( passed[ihit] ) ngood++;
+      }
+
+      if( ipass == 1 && !passed[ihit] && ngood > 0 ){
+	fHits[ihit].keep = false;
+      }
+    }
+  }
+
+  //other criteria could include correlation coefficient, time sample peaking, etc. 
+  
 }

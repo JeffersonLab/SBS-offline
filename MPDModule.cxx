@@ -38,6 +38,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <iostream>
 
 using namespace std;
 
@@ -49,18 +50,7 @@ namespace Decoder {
   MPDModule::MPDModule(Int_t crate, Int_t slot) : VmeModule(crate, slot) {
     fDebugFile=0;
     Init(); //Should this be called here? not clear...
-    fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
-    fBlockHeader = 0x0;  //0000 = 0
-    fBlockTrailer = 0x1; //0001 = 1
-    fEventHeader = 0x2;  //0010 = 2
-    fTriggerTime = 0x3;  //0011 = 3
-    fMPDFrameHeader = 0x5; //0101 = 5
-    fMPDDebugHeader = 0xD; //1101 = 13
-    fDataNotValid = 0xE;  //1110 = 14
-    fFillerWord = 0xF; //1111 = 15
-    //    fAPVHeader   = 0x4;
-
-    fNumSample = 6;
+    
   }
   
   MPDModule::~MPDModule() {
@@ -74,11 +64,27 @@ namespace Decoder {
     Clear("");
     //    fName = "MPD Module (INFN MPD for GEM and more), use Config to dynamic config";
     fName = "MPD Module";
+
+    fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
+    fBlockHeader = 0;  //0000 = 0
+    fBlockTrailer = 1; //0001 = 1
+    fEventHeader = 2;  //0010 = 2
+    fTriggerTime = 3;  //0011 = 3
+    fMPDFrameHeader = 5; //0101 = 5
+    fMPDDebugHeader = 13; //1101 = 13
+    fDataNotValid = 14;  //1110 = 14
+    fFillerWord = 15; //1111 = 15
+    //    fAPVHeader   = 0x4;
+
+    fNumSample = 6;
+    
   }
 
   //This version ASSUMES that there is no online zero suppression, so all 128 APV channels are present in every event!
   
   UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
+
+    //std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << std::endl;
     //AJRP: LoadSlot method for MPD SSP data format to be used in Hall A during the GMN run:
     const UInt_t *datawords = &(evbuffer[pos]);
 
@@ -129,15 +135,18 @@ namespace Decoder {
       
       
       if( word_type == 1 ){ //data-type defining: extract data type from bits 30-27:
-	type_tag = (thisword & 0x78000000)>>26;
+	type_tag = (thisword & 0x78000000)>>27;
+	//std::cout << "Data-type defining word, type tag, fBlockHeader = " << type_tag << ", " << fBlockHeader << std::endl;
 	if( type_tag == fBlockHeader ){
 
 	  found_MPD_header = false; 
 	  
 	  prev_slot = slot;
 	  //extract "SLOTID" from bits 26-22 and compare to this_slot
-	  slot = (thisword & 0x07C00000)>>21; //7C = 0111 1100
+	  slot = (thisword & 0x07C00000)>>22; //7C = 0111 1100
 	  if( slot == this_slot ) found_this_slot = true;
+
+	  //std::cout << "Found block header, SLOTID = " << slot << std::endl;
 	}
 
 	//Question: ask Ben: how would/could we use the trigger time words to correct for APV trigger jitter?
@@ -149,12 +158,15 @@ namespace Decoder {
 	  BUILD_ALL_SAMPLES = TESTBIT(thisword, 25 );
 
 	  //FIBER number is in bits 20-16:
-	  fiber = (thisword & 0x001F0000)>>15;
+	  fiber = (thisword & 0x001F0000)>>16;
 
 	  //MPD ID is in bits 0-4, but we basically ignore it:
 	  mpd_id = (thisword & 0x0000001F);
 
 	  found_MPD_header = true;
+
+	  // std::cout << "found MPD frame header, fiber, mpd_id, ENABLE_CM, BUILD_ALL_SAMPLES = " << fiber << ", " << mpd_id << ", "
+	  // 	    << ENABLE_CM << ", " << BUILD_ALL_SAMPLES << std::endl;
 	  
 	  //reset "word" and "strip" counters:
 	  mpd_word_count = 0; 
@@ -175,19 +187,19 @@ namespace Decoder {
 	      
 	      // In words: take the bitwise OR of the first 12 bits of hitwords[iw] with 0xFFFFE000 or 0x0
 	      // depending on the value of bit 13 of hitwords[iw].
-	      // This is essentially implementing the two's complement representation of a 13-bit signed integer. 
+	      // This is essentially implementing the two's complement representation of a 13-bit signed integer 
 	      ADCsamples[2*iw] = ( hitwords[iw] & 0xFFF ) | ( ( hitwords[iw] & 0x1000 ) ? 0xFFFFE000 : 0x0 );
 	      ADCsamples[2*iw+1] = ( (hitwords[iw]>>13) & 0xFFF ) | ( ( (hitwords[iw]>>13) & 0x1000 ) ? 0xFFFFE000 : 0x0 );
 	    }
 
 	    //APV_ID is in bits 26-30 of hitword[2]:
 	    // 0x 0111 1100 .... = 0x7C000000
-	    apv_id = (hitwords[2] & 0x7C000000)>>25;
+	    apv_id = (hitwords[2] & 0x7C000000)>>26;
 
 	    //APV channel num (bits 4:0) is in bits 26:30 of hitword[0];
 	    //APV channel num (bits 6:5) is in bits 26:30 of hitword[1] (but we actually only want bits 26 and 27 AFAIK:
-	    UInt_t apv_chan40 = (hitwords[0] & 0x7C000000) >> 25;
-	    UInt_t apv_chan65 = (hitwords[1] & 0x0C000000) >> 25;
+	    UInt_t apv_chan40 = (hitwords[0] & 0x7C000000) >> 26;
+	    UInt_t apv_chan65 = (hitwords[1] & 0x0C000000) >> 26;
 	    apv_chan = (apv_chan65 << 5) | apv_chan40;
 
 	    effChan = (fiber << 4) | apv_id;  
@@ -195,6 +207,10 @@ namespace Decoder {
 	    for( int is=0; is<6; is++ ){
 	      // This loads each of the six ADC samples as a new "hit" into sldat, with "effChan" as the unique "channel" number,
 	      // the ADC samples as the "data", and the APV channel number as the "rawData"
+	      // std::cout << "decoded one strip hit: (crate, slot, fiber, apv_id, apv_chan, effChan, isample, ADCsamples[isample]) = ("
+	      // 	<< sldat->getCrate() << ", " << slot << ", " << fiber << ", " << apv_id << ", " << apv_chan << ", " << effChan << ", "
+	      // 	<< is <<  ", " << int(ADCsamples[is]) << ")" << std::endl;
+	      
 	      status = sldat->loadData( "adc", effChan, ADCsamples[is], apv_chan );
 	      if( status != SD_OK ) return -1;
 	    }
@@ -209,7 +225,9 @@ namespace Decoder {
       
       fWordsSeen++;
     }
-        
+
+    std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
+    
     return fWordsSeen;
   
   }
