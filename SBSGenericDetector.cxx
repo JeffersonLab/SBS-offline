@@ -900,7 +900,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
       ve.push_back({"tdc_tot","Time Over Threshold","fGood.t_ToT"});
     }
     if(fStoreRawHits) {
-      ve.push_back({ "hits.elemID",   "All TDC Element ID",  "fRaw.elemID" });
+      ve.push_back({ "hits.TDCelemID",   "All TDC Element ID",  "fRaw.TDCelemID" });
       ve.push_back({ "hits.t",   "All TDC leading edge times",  "fRaw.t" });
       if(fModeTDC != SBSModeTDC::kTDCSimple) {
         ve.push_back({ "hits.t_te",   "All TDC trailing edge times",  "fRaw.t_te" });
@@ -1044,7 +1044,9 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
+
       //      std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
+      
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
        Float_t MinDiff = 10000.;
@@ -1190,7 +1192,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     blk = fElements[k];
     if(!blk)
       continue;
-   // If the above did not define the good hit, the sub-class is expected
+
+    // If the above did not define the good hit, the sub-class is expected
+    
     // to use re-implement the following function to find the good hit.
 
     // Skip blocks that have no new data (unless allowed by the user)
@@ -1314,11 +1318,15 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
         fGood.a_amp.push_back(wave->GetAmplitude().raw);
         fGood.a_amp_p.push_back(wave->GetAmplitude().val);
         fGood.a_time.push_back(wave->GetTime().val);
-        } else if (fStoreEmptyElements) {
-          fGood.a.push_back(0.0);
-          fGood.a_mult.push_back(0);
-          fGood.a_p.push_back(0.0);
-          fGood.a_c.push_back(0.0);
+	  } else if (fStoreEmptyElements) {
+             fGood.ADCrow.push_back(blk->GetRow());
+             fGood.ADCcol.push_back(blk->GetCol());
+             fGood.ADClayer.push_back(blk->GetLayer());
+             fGood.ADCelemID.push_back(blk->GetID());
+        fGood.ped.push_back(wave->GetPed());
+        fGood.a.push_back(wave->GetIntegral().raw);
+        fGood.a_p.push_back(wave->GetIntegral().val);
+        fGood.a_c.push_back(wave->GetIntegral().val);
             fGood.a_amp.push_back(0.0);
             fGood.a_amp_p.push_back(0.0);
             fGood.a_time.push_back(0.0);

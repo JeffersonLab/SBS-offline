@@ -38,6 +38,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <iostream>
 
 using namespace std;
 
@@ -49,11 +50,7 @@ namespace Decoder {
   MPDModule::MPDModule(Int_t crate, Int_t slot) : VmeModule(crate, slot) {
     fDebugFile=0;
     Init(); //Should this be called here? not clear...
-    fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
-    fBlockHeader = 0x0;
-    fAPVHeader   = 0x4;
-
-    fNumSample = 6;
+    
   }
   
   MPDModule::~MPDModule() {
@@ -67,12 +64,28 @@ namespace Decoder {
     Clear("");
     //    fName = "MPD Module (INFN MPD for GEM and more), use Config to dynamic config";
     fName = "MPD Module";
+
+    fOnlineZeroSuppression = false; //If this is false, then we want to calculate and subtract the common-mode from each ADC sample:
+    fBlockHeader = 0;  //0000 = 0
+    fBlockTrailer = 1; //0001 = 1
+    fEventHeader = 2;  //0010 = 2
+    fTriggerTime = 3;  //0011 = 3
+    fMPDFrameHeader = 5; //0101 = 5
+    fMPDDebugHeader = 13; //1101 = 13
+    fDataNotValid = 14;  //1110 = 14
+    fFillerWord = 15; //1111 = 15
+    //    fAPVHeader   = 0x4;
+
+    fNumSample = 6;
+    
   }
 
   //This version ASSUMES that there is no online zero suppression, so all 128 APV channels are present in every event!
   
   UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
-    //AJRP: LoadSlot method for the VME MPD4 data format used by the UVA GEM cosmic test stand ca. Jan. 2021
+
+    //std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << std::endl;
+    //AJRP: LoadSlot method for MPD SSP data format to be used in Hall A during the GMN run:
     const UInt_t *datawords = &(evbuffer[pos]);
 
     fWordsSeen = 0;
@@ -85,93 +98,136 @@ namespace Decoder {
 
     //Get the slot number for this call to LoadSlot:
     UInt_t this_slot = sldat->getSlot();
-    
-    bool foundslot = false;
-
-    UInt_t thisheader;
 
     //UInt_t mask, shift;
-    UInt_t slot=0, adc_chan=0;
+    UInt_t slot=MAXSLOT+1, mpd_id=0, apv_id=0, apv_chan=0, fiber=0;
+    //UInt_t apv_chan_40, apv_chan65;
+    
     UInt_t prev_slot=0;
 
-    bool found_adc = false;
+    UInt_t effChan=0;
+
+    bool ENABLE_CM=false;
+    bool BUILD_ALL_SAMPLES=false;
+    
     bool found_this_slot = false;
+    bool found_MPD_header = false;
     
-    std::map<UInt_t, std::vector<UInt_t> > RawDataByADC_Channel; //represents the raw data in ONE slot:
-    
+    UInt_t mpd_strip_count = 0;
+    UInt_t mpd_word_count = 0;
+
+    UInt_t type_tag=16; //intialize to something that is NOT one of the recognized data types
     //following the MPDRawParser in ROOT_GUI_multicrate, loop on all the data in the ROC bank (which corresponds to one "crate"), and populate the
     //temporary data structure above, ONLY if slot == this_slot
     // Since all the data from one slot is (or should be) in a contiguous block, we should 
+
+    //temporary storage for information needed to store "strip hits"
+    //UInt_t 
+    UInt_t ADCsamples[fNumSample]; //temporary storage for ADC time samples. will this compile? Hope so... 
+
+    UInt_t hitwords[3]; //temporary storage for the three words needed to extract the information for one "hit"
+    
     while( iword < len ){
       thisword = datawords[iword++];
 
-      //Extract word header from bits 22-24 of data word:
-      thisheader = (thisword & 0x00E00000)>>21;
-
-      //Check if new slot:
-      if(thisheader == fBlockHeader){ //extract "MPDID" (slot) info from bits 17-21 of data word:
-
-	prev_slot = slot;
-	
-	slot = (thisword & 0x001F0000)>>16;
-
-	if( slot == this_slot ) found_this_slot = true; //first time we find the desired slot, set found_this_slot to true
-	//new_slot = true; //Every time we encounter a block header word, we set new_slot to true.
-      }
-
-      if( prev_slot == this_slot ) break; //we finished loading the data from the slot we actually want!
-    
-      if( slot == this_slot && thisheader == fAPVHeader ){ //APV data:
-	found_adc = false;
-
-	UInt_t thistype = (thisword & 0x00180000)>>19; //Data type is found in bits 20-21 of data word
-	if( thistype == 0 ){ //apv header: this word contains the ADC channel info: 
-	  adc_chan = (thisword &0xf); //first four bits of data word
-	  found_adc = true;
-	}
-
-	if( thistype == 1 && found_adc ){ //ADC sample data:
-	  RawDataByADC_Channel[adc_chan].push_back( thisword & 0x00000fff ); //Raw ADC samples are contained in bits 1-12 of data word
-	}
-	//We ignore APV trailer and "trailer" (types "2" and "3"). We hope they aren't important
-      }
-    }
+      //check whether this is a data-type defining or data-type continuation word:
+      UInt_t word_type = (thisword & 0x80000000)>>31;
       
+      
+      if( word_type == 1 ){ //data-type defining: extract data type from bits 30-27:
+	type_tag = (thisword & 0x78000000)>>27;
+	//std::cout << "Data-type defining word, type tag, fBlockHeader = " << type_tag << ", " << fBlockHeader << std::endl;
+	if( type_tag == fBlockHeader ){
 
-    if( found_this_slot ){ //then the current slot has data, extract it and decode it. 
-      for( auto iadc = RawDataByADC_Channel.begin(); iadc != RawDataByADC_Channel.end(); ++iadc ){
-	//iadc is a pointer to pair<UInt_t, std::vector<UInt_t> > (I think)
-	adc_chan = iadc->first; //one APV card
-	std::vector<UInt_t> ADCsamples = iadc->second; //vector of all the ADC samples:
-
-	//Since we ignore the APV trailer word, the size of the raw data per APV card should always equal exactly 128 * number of samples:
-	if( ADCsamples.size() != fNumSample*128 ) return 0;
-
-	//In the MPD4 VME format that this method is decoding, without online zero suppression, the ADC samples are assumed to be ordered as:
-	// index = ichan + 128*isamp
-
-	//With this data version, mpdID and slot are always treated as the same thing:
-	UInt_t effChan = (this_slot << 8 | adc_chan );
-
-	for( UInt_t iAPVchan=0; iAPVchan<128; iAPVchan++ ){
-	  for( UInt_t iSample=0; iSample<fNumSample; iSample++ ){
-
-	    //SBSGEMModule::Decode() expects the raw data (whether or not it's zero-suppressed) to be ordered such that:
-	    // index in raw hit array = isamp + 6*ichan (opposite of the ordering in the event buffer)
-	    // The APV channel number is stored in "rawdata", while the raw ADC values are stored in "data",
-	    // as the SBSGEMModule::Decode method expects!
-	    sldat->loadData( "adc", effChan, ADCsamples[iAPVchan+128*iSample], iAPVchan );
-	    fWordsSeen++;
-	  }
-	}
+	  found_MPD_header = false; 
 	  
-	//We'll handle common-mode subtraction in the SBSGEMModule::Decode method
-     
-      }
-	    
+	  prev_slot = slot;
+	  //extract "SLOTID" from bits 26-22 and compare to this_slot
+	  slot = (thisword & 0x07C00000)>>22; //7C = 0111 1100
+	  if( slot == this_slot ) found_this_slot = true;
+
+	  //std::cout << "Found block header, SLOTID = " << slot << std::endl;
+	}
+
+	//Question: ask Ben: how would/could we use the trigger time words to correct for APV trigger jitter?
 	
+	if( type_tag == fMPDFrameHeader ){ //extract "flags", FIBER, and MPD_ID
+	  //TO-DO: figure out how to store this information in the slot data
+	  //(maybe define some arbitrary "dummy" channel to hold this info, as well as trigger time words)
+	  ENABLE_CM = TESTBIT( thisword, 26 );        
+	  BUILD_ALL_SAMPLES = TESTBIT(thisword, 25 );
+
+	  //FIBER number is in bits 20-16:
+	  fiber = (thisword & 0x001F0000)>>16;
+
+	  //MPD ID is in bits 0-4, but we basically ignore it:
+	  mpd_id = (thisword & 0x0000001F);
+
+	  found_MPD_header = true;
+
+	  // std::cout << "found MPD frame header, fiber, mpd_id, ENABLE_CM, BUILD_ALL_SAMPLES = " << fiber << ", " << mpd_id << ", "
+	  // 	    << ENABLE_CM << ", " << BUILD_ALL_SAMPLES << std::endl;
+	  
+	  //reset "word" and "strip" counters:
+	  mpd_word_count = 0; 
+	  mpd_strip_count = 0;
+	}
+	
+      } else if( found_this_slot ){
+	//data-type continuation: behavior depends on type_tag. If the most recently found "slot" 
+	//doesn't match the one that we want, then do nothing. 
+	//For NOW, let's focus mainly on the MPD Frame decoding and worry about anything and everything else later:
+
+	if( type_tag == fMPDFrameHeader ){ //the data continuation words should come in bundles of three * N, where N is the total number of "hits" (i.e., fired strips) in the MPD:
+	  mpd_strip_count = mpd_word_count/3;
+	  if( mpd_word_count%3 == 0 && mpd_strip_count > 0 ){ //extract information from the three "hit words" and "load" the data into the "slot":
+
+	    // load up the ADC samples:
+	    for( int iw=0; iw<3; iw++ ){
+	      
+	      // In words: take the bitwise OR of the first 12 bits of hitwords[iw] with 0xFFFFF000 or 0x0
+	      // depending on the value of bit 12 (13th bit) of hitwords[iw].
+	      // This is essentially implementing the two's complement representation of a 13-bit signed integer 
+	      ADCsamples[2*iw] = ( hitwords[iw] & 0xFFF ) | ( ( hitwords[iw] & 0x1000 ) ? 0xFFFFF000 : 0x0 );
+	      ADCsamples[2*iw+1] = ( (hitwords[iw]>>13) & 0xFFF ) | ( ( (hitwords[iw]>>13) & 0x1000 ) ? 0xFFFFF000 : 0x0 );
+	    }
+
+	    //APV_ID is in bits 26-30 of hitword[2]:
+	    // 0x 0111 1100 .... = 0x7C000000
+	    apv_id = (hitwords[2] & 0x7C000000)>>26;
+
+	    //APV channel num (bits 4:0) is in bits 26:30 of hitword[0];
+	    //APV channel num (bits 6:5) is in bits 26:30 of hitword[1] (but we actually only want bits 26 and 27 AFAIK:
+	    UInt_t apv_chan40 = (hitwords[0] & 0x7C000000) >> 26;
+	    UInt_t apv_chan65 = (hitwords[1] & 0x0C000000) >> 26;
+	    apv_chan = (apv_chan65 << 5) | apv_chan40;
+
+	    effChan = (fiber << 4) | apv_id;  
+
+	    for( int is=0; is<6; is++ ){
+	      // This loads each of the six ADC samples as a new "hit" into sldat, with "effChan" as the unique "channel" number,
+	      // the ADC samples as the "data", and the APV channel number as the "rawData"
+	      // std::cout << "decoded one strip hit: (crate, slot, fiber, apv_id, apv_chan, effChan, isample, ADCsamples[isample]) = ("
+	      // 	<< sldat->getCrate() << ", " << slot << ", " << fiber << ", " << apv_id << ", " << apv_chan << ", " << effChan << ", "
+	      // 	<< is <<  ", " << int(ADCsamples[is]) << ")" << std::endl;
+	      
+	      status = sldat->loadData( "adc", effChan, ADCsamples[is], apv_chan );
+	      if( status != SD_OK ) return -1;
+	    }
+	  }
+	  
+	  hitwords[mpd_word_count%3] = thisword;
+	  
+	  mpd_word_count++; 
+	}
+	
+      }
+      
+      fWordsSeen++;
     }
-  
+
+    std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
+    
     return fWordsSeen;
   
   }
@@ -600,6 +656,7 @@ namespace Decoder {
     // UInt_t idx = asc2i(adc, sample, chan);
     // if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
     // return fData[idx];
+    return 0;
   }
   
   void MPDModule::Clear(const Option_t *opt) {
