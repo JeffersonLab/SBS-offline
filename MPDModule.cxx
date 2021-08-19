@@ -185,11 +185,11 @@ namespace Decoder {
 	    // load up the ADC samples:
 	    for( int iw=0; iw<3; iw++ ){
 	      
-	      // In words: take the bitwise OR of the first 12 bits of hitwords[iw] with 0xFFFFE000 or 0x0
-	      // depending on the value of bit 13 of hitwords[iw].
+	      // In words: take the bitwise OR of the first 12 bits of hitwords[iw] with 0xFFFFF000 or 0x0
+	      // depending on the value of bit 12 (13th bit) of hitwords[iw].
 	      // This is essentially implementing the two's complement representation of a 13-bit signed integer 
-	      ADCsamples[2*iw] = ( hitwords[iw] & 0xFFF ) | ( ( hitwords[iw] & 0x1000 ) ? 0xFFFFE000 : 0x0 );
-	      ADCsamples[2*iw+1] = ( (hitwords[iw]>>13) & 0xFFF ) | ( ( (hitwords[iw]>>13) & 0x1000 ) ? 0xFFFFE000 : 0x0 );
+	      ADCsamples[2*iw] = ( hitwords[iw] & 0xFFF ) | ( ( hitwords[iw] & 0x1000 ) ? 0xFFFFF000 : 0x0 );
+	      ADCsamples[2*iw+1] = ( (hitwords[iw]>>13) & 0xFFF ) | ( ( (hitwords[iw]>>13) & 0x1000 ) ? 0xFFFFF000 : 0x0 );
 	    }
 
 	    //APV_ID is in bits 26-30 of hitword[2]:
