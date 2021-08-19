@@ -9,6 +9,7 @@
 #include "THaTrack.h"
 #include "TList.h"
 #include "SBSBBShower.h"
+#include "SBSBBTotalShower.h"
 #include "SBSGEMTrackerBase.h"
 #include "THaTrackingDetector.h"
 
@@ -40,9 +41,12 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 {
   // Hack from THaVDC::ReadDatabase()
   const char* const here = "ReadDatabase";
-
+  
   FILE* file = OpenFile( date );
-  if( !file ) return kFileError;
+  if( !file ){
+    std::cerr << "SBSBigBite::" << here << "(): database not found!"<< std::endl;
+    return kFileError;
+  }
     
   // Read TRANSPORT matrices
   fXptarMatrixElems.clear();
@@ -345,17 +349,35 @@ Int_t SBSBigBite::CoarseReconstruct()
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {
-    if(theNonTrackDetector->InheritsFrom("SBSBBShower")){
-      SBSBBShower* BBShower = reinterpret_cast<SBSBBShower*>(theNonTrackDetector);
+    //if(theNonTrackDetector->InheritsFrom("SBSBBShower")){
+    if(theNonTrackDetector->InheritsFrom("SBSCalorimeter")){
+      SBSBBTotalShower* BBTotalShower = reinterpret_cast<SBSBBTotalShower*>(theNonTrackDetector);
       //BBShower->EresMax();
-      // gather here the info useful for 
-      x_fcp+= BBShower->XresMax();
-      y_fcp+= BBShower->YresMax();
-      z_fcp+= BBShower->GetOrigin().Z();
-      npts++;
-      //having element size here would be useful, instead of hardcoding it...
-      wx_fcp+=BBShower->SizeRow()/sqrt(12);
-      wy_fcp+=BBShower->SizeCol()/sqrt(12);
+      // gather here the info useful for
+      if(BBTotalShower->GetShower()->GetNclust()){
+	cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << endl;
+	
+	x_fcp+= BBTotalShower->GetShower()->GetX();
+	y_fcp+= BBTotalShower->GetShower()->GetY();
+	z_fcp+= BBTotalShower->GetShower()->GetOrigin().Z();
+	npts++;
+	
+	wx_fcp+=BBTotalShower->GetShower()->SizeRow()/sqrt(12);
+	wy_fcp+=BBTotalShower->GetShower()->SizeCol()/sqrt(12);
+      }
+      
+      if(BBTotalShower->GetShower()->GetNclust()){
+	cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
+	
+	x_fcp+= BBTotalShower->GetPreShower()->GetX();
+	y_fcp+= BBTotalShower->GetPreShower()->GetY();
+	z_fcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
+	npts++;
+	
+	wx_fcp+=BBTotalShower->GetPreShower()->SizeRow()/sqrt(12);
+	wy_fcp+=BBTotalShower->GetPreShower()->SizeCol()/sqrt(12);
+      }
+      
     }
     
   }
@@ -363,6 +385,17 @@ Int_t SBSBigBite::CoarseReconstruct()
     x_fcp/=npts;
     y_fcp/=npts;
     z_fcp/=npts;
+    
+    wx_fcp/=npts;
+    wy_fcp/=npts;
+    
+    std::cout << "Front constraint point x, y, z: " 
+	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
+	      << "; width x, y: " << wx_fcp << ", " << wy_fcp << endl;
+    
+    //apply first order optics???
+    //otherwise, how to evaluate backplane???
+    /*
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
@@ -374,6 +407,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	BBGEM->SetBackConstraintWidth(TVector2(wx_bcp, wy_bcp));
       }
     }
+    */
   }
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
   //THaSpectrometer::CoarseReconstruct();

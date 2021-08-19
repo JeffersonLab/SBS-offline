@@ -282,10 +282,20 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 
   fShower->MakeGoodBlocks();
   fPreShower->MakeGoodBlocks();
-
-  //
+  
   fShower->FindClusters();
-
+  //cout << "number of clusters in shower: " << fShower->GetNclust() << " " << fShower->GetE() << " " << fShower->GetX() << " " << fShower->GetY() << endl;
+  if(fShower->GetNclust()){
+    int rowmin = fPSSHmatchmapX.at(fShower->GetRow()).first;
+    int rowmax = fPSSHmatchmapX.at(fShower->GetRow()).second;
+    int colmin = fPSSHmatchmapY.at(fShower->GetCol()).first;
+    int colmax = fPSSHmatchmapY.at(fShower->GetCol()).second;
+    
+    fPreShower->SetSearchRegion(rowmin, rowmax, colmin, colmax);
+    fPreShower->FindClusters();
+    
+    //cout << "number of clusters in preshower: " << fPreShower->GetNclust() << " " << fPreShower->GetE() << " " << fPreShower->GetX() << " " << fPreShower->GetY() << endl;
+  }
   return 0;
 }
 //_____________________________________________________________________________

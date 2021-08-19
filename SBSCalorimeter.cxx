@@ -334,19 +334,8 @@ Int_t SBSCalorimeter::FindClusters()
                NSize--;
 	    }
 	}
-    }
+	}
   //
-  fNclus = fClusters.size();
-  return fNclus;
-}
-//_____________________________________________________________________________
-Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
-{
-  Int_t err = SBSGenericDetector::FineProcess(array);
-  if(err)
-    return err;
-  // Get information on the cluster with highest energy (useful even if
-  // fMaxNclus is zero, i.e., storing no vector of clusters)
   if(fClusters.size()>0) {
     SBSCalorimeterCluster *clus = fClusters[0];
     fMainclus.e.push_back(clus->GetE());
@@ -363,7 +352,38 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     }
     fMainclus.row.push_back(clus->GetRow());
     fMainclus.col.push_back(clus->GetCol());
- 
+  }
+
+  fNclus = fClusters.size();
+  return fNclus;
+}
+//_____________________________________________________________________________
+Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
+{
+  Int_t err = SBSGenericDetector::FineProcess(array);
+  if(err)
+    return err;
+  // Get information on the cluster with highest energy (useful even if
+  // fMaxNclus is zero, i.e., storing no vector of clusters)
+  if(fClusters.size()>0) {
+    SBSCalorimeterCluster *clus = fClusters[0];
+    /*
+    //moved to FindClusters()
+    fMainclus.e.push_back(clus->GetE());
+    fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    fMainclus.x.push_back(clus->GetX());
+    fMainclus.y.push_back(clus->GetY());
+    fMainclus.n.push_back(clus->GetMult());
+    fMainclus.blk_e.push_back(clus->GetEblk());
+    fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
+    if(clus->GetMaxElement()){
+      fMainclus.id.push_back(clus->GetMaxElement()->GetID());
+    }else{
+      fMainclus.id.push_back(-1);
+    }
+    fMainclus.row.push_back(clus->GetRow());
+    fMainclus.col.push_back(clus->GetCol());
+    */
     if(fDataOutputLevel > 0 ) {
       for(UInt_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
