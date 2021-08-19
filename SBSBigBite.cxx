@@ -39,12 +39,75 @@ SBSBigBite::~SBSBigBite()
 Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 {
   // Hack from THaVDC::ReadDatabase()
-  /*
   const char* const here = "ReadDatabase";
 
   FILE* file = OpenFile( date );
   if( !file ) return kFileError;
+    
+  // Read TRANSPORT matrices
+  fXptarMatrixElems.clear();
+  fYptarMatrixElems.clear();
+  fYtarMatrixElems.clear();
+  fPinvMatrixElems.clear();
+  fXtarMatrixElems.clear();
 
+
+  /*
+    // Maybe we want to do that instead???? 
+    // Don't know, I guess we need to have an example of 
+    // optics use in the analyzer to see what is the most convenient
+  cout << "reading optics" << endl;
+  
+  int order = 2;
+  ifstream opticsfile("BBoptics.txt");
+  if(!opticsfile.is_open()){
+    cout << "No optics file, exit..." << endl;
+    exit(-1);
+  }
+  int nparams = 0;
+  opticsfile >> nparams;
+  int o_i, o_j, o_k, o_l, o_m;
+  TVectorD b_xptar(nparams), b_yptar(nparams), b_ytar(nparams), b_pinv(nparams);// xtar "fixed"
+  for(int i=0; i<nparams; i++){
+    opticsfile >> b_xptar(i);
+    opticsfile >> b_yptar(i);
+    opticsfile >> b_ytar(i);
+    opticsfile >> b_pinv(i);
+    opticsfile >> o_m >> o_l >> o_k >> o_j >> o_i;
+    if(opticsfile.eof() && i<nparams-1){
+      cout << "Optics file shorter than expected (probably not corresponding order), exit..." << endl;
+      exit(-1);
+    }
+  }
+  
+  ///////////THEN in the code 
+  	  // int ipar = 0;
+	  // for(int i=0; i<=order; i++){
+	  //   for(int j=0; j<=order-i; j++){
+	  //     for(int k=0; k<=order-i-j; k++){
+	  // 	for(int l=0; l<=order-i-j-k; l++){
+	  // 	  for(int m=0; m<=order-i-j-k-l; m++){
+	  // 	    double term = pow(xfp_fit,m)*pow(yfp_fit,l)*pow(xpfp_fit,k)*pow(ypfp_fit,j)*pow(xtar,i);
+	  // 	    xptar_fit += b_xptar(ipar)*term;
+	  // 	    yptar_fit += b_yptar(ipar)*term;
+	  // 	    ytar_fit += b_ytar(ipar)*term;
+	  // 	    pthetabend_fit += b_pinv(ipar)*term;
+	  // 	    //pinv_fit += b_pinv(ipar)*term;
+	  // 	    // cout << ipar << " " << term << " " 
+	  // 	    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " " 
+	  // 	    //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
+		      
+	  // 	    ipar++;
+	  // 	  }
+	  // 	}
+	  //     }
+	  //   }
+	  // }
+  ////////////
+  
+  */
+  
+  /*
   // Read fOrigin and fSize (currently unused)
   Int_t err = ReadGeometry( file, date );
   if( err ) {
@@ -52,7 +115,6 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     return err;
   }
 
-  // Read TRANSPORT matrices
   //FIXME: move to HRS
   fTMatrixElems.clear();
   fDMatrixElems.clear();
@@ -291,6 +353,9 @@ Int_t SBSBigBite::CoarseReconstruct()
       y_fcp+= BBShower->YresMax();
       z_fcp+= BBShower->GetOrigin().Z();
       npts++;
+      //having element size here would be useful, instead of hardcoding it...
+      wx_fcp+=BBShower->SizeRow()/sqrt(12);
+      wy_fcp+=BBShower->SizeCol()/sqrt(12);
     }
     
   }

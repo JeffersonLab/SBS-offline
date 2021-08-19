@@ -136,6 +136,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fDisableRefADC = true;
     fDisableRefTDC = true;
   }
+  fSizeRow = dxyz[0];// in transport coordinates, row # varies with x axis
+  fSizeCol = dxyz[1];// in transport coordinates, col # varies with y axis
   
   // Sanity checks (make sure there were no inconsistent values entered.
   if( !err && (nrows <= 0 || ncols.size() <= 0 || int(ncols.size()) > nrows 
