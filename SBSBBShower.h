@@ -27,7 +27,15 @@ public:
   Int_t GetRowMax() {return GetRow();}
   Int_t GetColMax() {return GetCol();}
 
-
+  
+  Float_t EresMax() {return fEres;}
+  Float_t XresMax() {return fXres;}
+  Float_t YresMax() {return fYres;}
+  
+  Float_t Eres(int i) {return fE_cl_res[i];}
+  Float_t Xres(int i) {return fX_cl_res[i];}
+  Float_t Yres(int i) {return fY_cl_res[i];}
+    
   //two methods to set search region.
   void SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax);
 

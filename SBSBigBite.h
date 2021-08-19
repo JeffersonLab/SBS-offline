@@ -3,6 +3,9 @@
 
 #include "THaSpectrometer.h"
 
+class TList;
+class THaTrack;
+
 class SBSBigBite : public THaSpectrometer {
 
     public:
@@ -18,6 +21,8 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t TrackCalc();
     
     protected:
+    virtual Int_t ReadDatabase( const TDatime& date );
+    
     ClassDef(SBSBigBite,0) // BigBite spectrometer
 };
 
