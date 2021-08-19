@@ -902,7 +902,6 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     if(fStoreRawHits) {
       // ve.push_back({ "hits.elemID",   "All TDC Element ID",  "fRaw.elemID" });
       ve.push_back({ "hits.elemID",   "All TDC Element ID",  "fRaw.TDCelemID" });
-      ve.push_back({ "hits.elemID",   "All TDC Element ID",  "fRaw.elemID" });
       ve.push_back({ "hits.t",   "All TDC leading edge times",  "fRaw.t" });
       if(fModeTDC != SBSModeTDC::kTDCSimple) {
         ve.push_back({ "hits.t_te",   "All TDC trailing edge times",  "fRaw.t_te" });
