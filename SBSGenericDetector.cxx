@@ -900,6 +900,8 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
       ve.push_back({"tdc_tot","Time Over Threshold","fGood.t_ToT"});
     }
     if(fStoreRawHits) {
+      // ve.push_back({ "hits.elemID",   "All TDC Element ID",  "fRaw.elemID" });
+      ve.push_back({ "hits.elemID",   "All TDC Element ID",  "fRaw.TDCelemID" });
       ve.push_back({ "hits.elemID",   "All TDC Element ID",  "fRaw.elemID" });
       ve.push_back({ "hits.t",   "All TDC leading edge times",  "fRaw.t" });
       if(fModeTDC != SBSModeTDC::kTDCSimple) {

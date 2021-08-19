@@ -19,7 +19,7 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
 {
   SetModeTDC(SBSModeTDC::kTDC); //  A TDC with leading & trailing edge info
   SetModeADC(SBSModeADC::kNone); // Default is No ADC, but can be re-enabled later
-  // SBSGenericDetector::SetStoreRawHits(true); //raw doesn't atm include all tdc hits - should request this
+  // SBSGenericDetector::SetStoreRawHits(true);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
