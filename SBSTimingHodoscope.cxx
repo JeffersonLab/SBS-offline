@@ -313,11 +313,6 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
     else if(WithADC()){
       if(elL->ADC()->HasData() && elR->ADC()->HasData()){
 	Int_t bar = fADCBarOffset + BarInc;
-	if(bar>89){
-	  Error( Here("CoarseProcess"),
-		 "hodoscope bar id after adding adc offset id from db >89");
-	  return kInitError;
-	}
 	fGoodBarIDsADC.push_back(bar);
 
 	// left hit
