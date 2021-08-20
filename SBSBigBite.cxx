@@ -356,7 +356,7 @@ Int_t SBSBigBite::CoarseReconstruct()
       //BBShower->EresMax();
       // gather here the info useful for
       if(BBTotalShower->GetShower()->GetNclust()){
-	cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << endl;
+	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << endl;
 	
 	Etot+= BBTotalShower->GetShower()->GetE();
 	x_fcp+= BBTotalShower->GetShower()->GetX();
@@ -369,7 +369,7 @@ Int_t SBSBigBite::CoarseReconstruct()
       }
       
       if(BBTotalShower->GetShower()->GetNclust()){
-	cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
+	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
 	
 	Etot+= BBTotalShower->GetPreShower()->GetE();
 	x_fcp+= BBTotalShower->GetPreShower()->GetX();
@@ -392,9 +392,9 @@ Int_t SBSBigBite::CoarseReconstruct()
     wx_fcp/=npts;
     wy_fcp/=npts;
     
-    std::cout << "Front constraint point x, y, z: " 
-	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
-	      << "; width x, y: " << wx_fcp << ", " << wy_fcp << endl;
+    // std::cout << "Front constraint point x, y, z: " 
+    // 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
+    // 	      << "; width x, y: " << wx_fcp << ", " << wy_fcp << endl;
     
     // apply first order optics???
     // Yes, with the electron energy
@@ -409,6 +409,7 @@ Int_t SBSBigBite::CoarseReconstruct()
     wx_bcp = wx_fcp;
     wy_bcp = wy_fcp;
     
+    /*
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
@@ -420,6 +421,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	BBGEM->SetBackConstraintWidth(TVector2(wx_bcp, wy_bcp));
       }
     }
+    */
   }
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
   //THaSpectrometer::CoarseReconstruct();
