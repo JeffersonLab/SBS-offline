@@ -359,69 +359,77 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << endl;
 	
 	Etot+= BBTotalShower->GetShower()->GetE();
-	x_fcp+= BBTotalShower->GetShower()->GetX();
-	y_fcp+= BBTotalShower->GetShower()->GetY();
-	z_fcp+= BBTotalShower->GetShower()->GetOrigin().Z();
+	x_bcp+= BBTotalShower->GetShower()->GetX();
+	y_bcp+= BBTotalShower->GetShower()->GetY();
+	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
 	npts++;
 	
-	wx_fcp+=BBTotalShower->GetShower()->SizeRow()/sqrt(12);
-	wy_fcp+=BBTotalShower->GetShower()->SizeCol()/sqrt(12);
+	wx_bcp+=BBTotalShower->GetShower()->SizeRow()/sqrt(12);
+	wy_bcp+=BBTotalShower->GetShower()->SizeCol()/sqrt(12);
       }
       
       if(BBTotalShower->GetShower()->GetNclust()){
 	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
 	
 	Etot+= BBTotalShower->GetPreShower()->GetE();
-	x_fcp+= BBTotalShower->GetPreShower()->GetX();
-	y_fcp+= BBTotalShower->GetPreShower()->GetY();
-	z_fcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
+	x_bcp+= BBTotalShower->GetPreShower()->GetX();
+	y_bcp+= BBTotalShower->GetPreShower()->GetY();
+	z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
 	npts++;
 	
-	wx_fcp+=BBTotalShower->GetPreShower()->SizeRow()/sqrt(12);
-	wy_fcp+=BBTotalShower->GetPreShower()->SizeCol()/sqrt(12);
+	wx_bcp+=BBTotalShower->GetPreShower()->SizeRow()/sqrt(12);
+	wy_bcp+=BBTotalShower->GetPreShower()->SizeCol()/sqrt(12);
       }
       
     }
     
   }
   if(npts){
-    x_fcp/=npts;
-    y_fcp/=npts;
-    z_fcp/=npts;
+    x_bcp/=npts;
+    y_bcp/=npts;
+    z_bcp/=npts;
     
-    wx_fcp/=npts;
-    wy_fcp/=npts;
+    wx_bcp/=npts;
+    wy_bcp/=npts;
     
-    // std::cout << "Front constraint point x, y, z: " 
-    // 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
-    // 	      << "; width x, y: " << wx_fcp << ", " << wy_fcp << endl;
+    std::cout << "Back constraint point x, y, z: " 
+     	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
+     	      << "; width x, y: " << wx_bcp << ", " << wy_bcp << endl;
     
     // apply first order optics???
     // Yes, with the electron energy
     //TODO: replace hard-coded coefficients with optics coefficients
-    double dx = (x_fcp*(0.522*Etot-0.121)+0.1729*Etot-0.278)/(Etot*2.224-0.249);
-    double dy = y_fcp*0.251;
+    double dx = (x_bcp*(0.522*Etot-0.121)+0.1729*Etot-0.278)/(Etot*2.224-0.249);
+    double dy = y_bcp*0.251;
     
-    z_bcp = 0;
-    x_fcp = x_fcp+dx*(z_fcp-z_bcp);
-    y_bcp = y_fcp+dy*(z_fcp-z_bcp);
+    z_fcp = 0;
+    x_fcp = x_bcp+dx*(z_fcp-z_bcp);
+    y_fcp = y_bcp+dy*(z_fcp-z_bcp);
     
     wx_bcp = wx_fcp;
     wy_bcp = wy_fcp;
     
-    /*
+    std::cout << "Back constraint point x, y, z: " 
+     	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
+     	      << "; width x, y: " << wx_fcp << ", " << wy_fcp << endl;
+    
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
       if(theTrackDetector->InheritsFrom("SBSGEMTrackerBase")){
 	SBSGEMTrackerBase* BBGEM = reinterpret_cast<SBSGEMTrackerBase*>(theTrackDetector);
+	BBGEM->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
+	BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
+	BBGEM->SetFrontConstraintWidth(wx_fcp, wy_fcp);
+	BBGEM->SetBackConstraintWidth(wx_bcp, wy_bcp);
+	/*
 	BBGEM->SetFrontConstraintPoint(TVector3(x_fcp, y_fcp, z_fcp));
 	BBGEM->SetBackConstraintPoint(TVector3(x_bcp, y_bcp, z_bcp));
 	BBGEM->SetFrontConstraintWidth(TVector2(wx_fcp, wy_fcp));
 	BBGEM->SetBackConstraintWidth(TVector2(wx_bcp, wy_bcp));
+	*/
       }
     }
-    */
   }
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
   //THaSpectrometer::CoarseReconstruct();
