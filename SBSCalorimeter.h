@@ -22,6 +22,8 @@
 
 struct SBSBlockSet {
   Float_t e;
+  Float_t x;
+  Float_t y;
   Int_t row;
   Int_t col;
   Int_t id;

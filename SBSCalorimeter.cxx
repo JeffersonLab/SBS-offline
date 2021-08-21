@@ -119,6 +119,34 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     fNclublk = fNclubr*fNclubc;
   }
 
+  //
+  std::vector<Float_t> xpos,ypos;
+  std::vector<DBRequest> vr;
+    vr.push_back({ "xpos", &xpos,    kFloatV, 0, 1 });
+    vr.push_back({ "ypos", &ypos,    kFloatV, 0, 1 });
+  vr.push_back({0});
+  err = LoadDB( file, date, vr.data(), fPrefix );
+  if (xpos.size()>0) {
+    if (xpos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+	SBSElement* blk= fElements[ne];
+	fElements[ne]->SetX(xpos[ne]);
+      }
+    } else {
+      std::cout << " xpos vector too small " << xpos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
+  if (ypos.size()>0) {
+    if (ypos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+	SBSElement* blk= fElements[ne];
+	fElements[ne]->SetY(ypos[ne]);
+      }
+    } else {
+      std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
+  //
   // At this point, if an error has been encountered, don't bother continuing,
   // complain and return the error now.
   if(err)
@@ -272,7 +300,7 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
   //  fBlockSet.reserve(fGoodBlocks.e.size());
   fBlockSet.clear();
   for (UInt_t nb=0;nb< fGoodBlocks.e.size();nb++) {
-    SBSBlockSet c1 = {fGoodBlocks.e[nb],fGoodBlocks.row[nb],fGoodBlocks.col[nb],fGoodBlocks.id[nb],fGoodBlocks.TDCTime[nb],fGoodBlocks.ADCTime[nb],kFALSE};
+    SBSBlockSet c1 = {fGoodBlocks.e[nb],fGoodBlocks.x[nb],fGoodBlocks.y[nb],fGoodBlocks.row[nb],fGoodBlocks.col[nb],fGoodBlocks.id[nb],fGoodBlocks.TDCTime[nb],fGoodBlocks.ADCTime[nb],kFALSE};
     if (fGoodBlocks.e[nb] > fEmin) fBlockSet.push_back(c1);
   }
   std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) {
