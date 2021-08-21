@@ -328,7 +328,7 @@ Int_t SBSBBTotalShower::FineProcess( TClonesArray& tracks )
     if( !IsOK() )
         return -1;
 
-    // fPreShower->FineProcess( tracks );
+    fPreShower->FineProcess( tracks );
     fShower->FineProcess( tracks );
     
     return 0;
