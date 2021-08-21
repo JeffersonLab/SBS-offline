@@ -114,7 +114,7 @@ namespace Decoder {
     UInt_t fFillerWord; //Default = 15;
     //UInt_t fAPVHeader;   //Default = 0x4
 
-    
+    UInt_t fSLOTID_VTP; //default = 11
   
     std::vector<Int_t> fFrameHeader;  // Frame Header
     std::vector<Int_t> fFrameTrailer;  // Frame Trailer

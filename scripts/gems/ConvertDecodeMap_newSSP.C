@@ -40,7 +40,8 @@ void ConvertDecodeMap_newSSP( const char *oldfilename="gem_map_backup_July2021.t
       TString sCrateID( currentline(istart,len) );
 
       sCrateID.ReplaceAll(" ","");
-      lastcrate = sCrateID.Atoi();
+      //temporary hack to get things working; add 1 to lastcrate:
+      lastcrate = sCrateID.Atoi() + 1;
       std::cout << "found new crate ID line, Crate ID = " << lastcrate << endl;
     }
     

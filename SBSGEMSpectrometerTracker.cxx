@@ -80,12 +80,15 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //   Int_t            search;   // (opt) Search for key along name tree
   //   const char*      descript; // (opt) Key description (if 0, same as name)
   // };
+  //std::string pedfilename = ""; //Optional: load pedestals from separate file
+  
   int pedestalmode_flag = 0;
   int doefficiency_flag = 1;
   int onlinezerosuppressflag = 0;
   int useconstraintflag = 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
+    { "pedfile",  &fpedfilename, kString, 0, 1 },
     { "is_mc",        &fIsMC,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "onlinezerosuppression", &onlinezerosuppressflag, kInt, 0, 1},
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
@@ -102,6 +105,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     {0}
   };
 
+  
+  
   Int_t status = kInitError;
   LoadDB( file, date, request, fPrefix );
   fclose(file);
@@ -109,6 +114,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
   fPedestalMode = ( pedestalmode_flag != 0 );
 
+  std::cout << "pedestal file name = " << fpedfilename << std::endl;
+  
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
@@ -226,14 +233,14 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     
     fpedfile_daq << sdate << std::endl;
     fpedfile_daq <<  message << std::endl;
-    fpedfile_daq << "# format = APV        crate       mpd_id       adc_ch followed by " << std::endl
+    fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
 
     message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
     
     fpedfile_cmr << sdate << std::endl;
     fpedfile_cmr << message << std::endl;
-    fpedfile_cmr << "# format = crate     mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
+    fpedfile_cmr << "# format = crate     slot      mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
   }
   
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
