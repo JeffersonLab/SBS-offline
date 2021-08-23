@@ -142,6 +142,7 @@ Int_t SBSBigBite::CoarseReconstruct()
   // FOR NOW: fetch the highest clusters from SBSBBShower detectors
   double x_fcp = 0, y_fcp = 0, z_fcp = 0; //, wx_fcp = 0, wy_fcp = 0;
   double x_bcp = 0, y_bcp = 0, z_bcp = 0; //, wx_bcp = 0, wy_bcp = 0;
+  double sumweights_x = 0, sumweights_y = 0;
   double Etot = 0;
   int npts = 0;
   TIter next( fNonTrackingDetectors );
@@ -156,11 +157,12 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << endl;
 	
 	Etot+= BBTotalShower->GetShower()->GetE();
-	x_bcp+= BBTotalShower->GetShower()->GetX();
-	y_bcp+= BBTotalShower->GetShower()->GetY();
+	x_bcp+= BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
 	npts++;
-	
+	sumweights_x+=1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	sumweights_y+=1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	//wx_bcp+=BBTotalShower->GetShower()->SizeRow()/sqrt(12);
 	//wy_bcp+=BBTotalShower->GetShower()->SizeCol()/sqrt(12);
       }
@@ -169,11 +171,12 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
 	
 	Etot+= BBTotalShower->GetPreShower()->GetE();
-	x_bcp+= BBTotalShower->GetPreShower()->GetX();
-	y_bcp+= BBTotalShower->GetPreShower()->GetY();//weighted, or just shower 
+	x_bcp+= BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
 	npts++;
-	
+	sumweights_x+=1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12));
+	sumweights_y+=1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12));
 	//wx_bcp+=BBTotalShower->GetPreShower()->SizeRow()/sqrt(12);
 	//wy_bcp+=BBTotalShower->GetPreShower()->SizeCol()/sqrt(12);
       }
@@ -192,7 +195,7 @@ Int_t SBSBigBite::CoarseReconstruct()
     std::cout << "Back constraint point x, y, z: " 
     	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
       //<< "; width x, y: " << wx_bcp << ", " << wy_bcp 
-	      << endl;
+    	      << endl;
     
     // apply first order optics???
     // Yes, with the electron energy
@@ -210,13 +213,14 @@ Int_t SBSBigBite::CoarseReconstruct()
     std::cout << "Front constraint point x, y, z: " 
     	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
       //<< "; width x, y: " << wx_fcp << ", " << wy_fcp 
-	      << endl;
+    	      << endl;
     
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
       if(theTrackDetector->InheritsFrom("SBSGEMTrackerBase")){
 	SBSGEMTrackerBase* BBGEM = reinterpret_cast<SBSGEMTrackerBase*>(theTrackDetector);
+	std::cout << "setting constraints for tracks" << std::endl;
 	BBGEM->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
 	BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
 	BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
@@ -228,8 +232,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	/*
 	BBGEM->SetFrontConstraintPoint(TVector3(x_fcp, y_fcp, z_fcp));
 	BBGEM->SetBackConstraintPoint(TVector3(x_bcp, y_bcp, z_bcp));
-	BBGEM->SetFrontConstraintWidth(TVector2(wx_fcp, wy_fcp));
-	BBGEM->SetBackConstraintWidth(TVector2(wx_bcp, wy_bcp));
+	BBGEM->SetFrontConstraintWidth(TVector2(fFrontConstraintWidthX, fFrontConstraintWidthY));
+	BBGEM->SetBackConstraintWidth(TVector2(fBackConstraintWidthX, fBackConstraintWidthY));
 	*/
       }
     }
