@@ -48,12 +48,6 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     return kFileError;
   }
     
-  // Read TRANSPORT matrices
-  fXptarMatrixElems.clear();
-  fYptarMatrixElems.clear();
-  fYtarMatrixElems.clear();
-  fPinvMatrixElems.clear();
-  fXtarMatrixElems.clear();
 
 
   /*
@@ -61,6 +55,12 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     // Don't know, I guess we need to have an example of 
     // optics use in the analyzer to see what is the most convenient
   cout << "reading optics" << endl;
+  // Read TRANSPORT matrices
+  fXptarMatrixElems.clear();
+  fYptarMatrixElems.clear();
+  fYtarMatrixElems.clear();
+  fPinvMatrixElems.clear();
+  fXtarMatrixElems.clear();
   
   int order = 2;
   ifstream opticsfile("BBoptics.txt");
@@ -368,12 +368,12 @@ Int_t SBSBigBite::CoarseReconstruct()
 	wy_bcp+=BBTotalShower->GetShower()->SizeCol()/sqrt(12);
       }
       
-      if(BBTotalShower->GetShower()->GetNclust()){
+      if(BBTotalShower->GetPreShower()->GetNclust()){
 	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
 	
 	Etot+= BBTotalShower->GetPreShower()->GetE();
 	x_bcp+= BBTotalShower->GetPreShower()->GetX();
-	y_bcp+= BBTotalShower->GetPreShower()->GetY();
+	y_bcp+= BBTotalShower->GetPreShower()->GetY();//weighted, or just shower 
 	z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
 	npts++;
 	
@@ -392,9 +392,9 @@ Int_t SBSBigBite::CoarseReconstruct()
     wx_bcp/=npts;
     wy_bcp/=npts;
     
-    std::cout << "Back constraint point x, y, z: " 
-     	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
-     	      << "; width x, y: " << wx_bcp << ", " << wy_bcp << endl;
+    //std::cout << "Back constraint point x, y, z: " 
+    //	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
+    //	      << "; width x, y: " << wx_bcp << ", " << wy_bcp << endl;
     
     // apply first order optics???
     // Yes, with the electron energy
@@ -406,13 +406,13 @@ Int_t SBSBigBite::CoarseReconstruct()
     x_fcp = x_bcp+dx*(z_fcp-z_bcp);
     y_fcp = y_bcp+dy*(z_fcp-z_bcp);
     
-    wx_bcp = wx_fcp;
-    wy_bcp = wy_fcp;
+    wx_fcp = wx_bcp;
+    wy_fcp = wy_bcp;
     
-    std::cout << "Back constraint point x, y, z: " 
-     	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
-     	      << "; width x, y: " << wx_fcp << ", " << wy_fcp << endl;
-    
+    //std::cout << "Back constraint point x, y, z: " 
+    //	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
+    //	      << "; width x, y: " << wx_fcp << ", " << wy_fcp << endl;
+    /*    	*/
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
@@ -430,6 +430,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	*/
       }
     }
+
   }
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
   //THaSpectrometer::CoarseReconstruct();
