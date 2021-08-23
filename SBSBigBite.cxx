@@ -10,7 +10,7 @@
 #include "TList.h"
 #include "SBSBBShower.h"
 #include "SBSBBTotalShower.h"
-#include "SBSGEMTrackerBase.h"
+#include "SBSGEMSpectrometerTracker.h"
 #include "THaTrackingDetector.h"
 
 using namespace std;
@@ -192,10 +192,10 @@ Int_t SBSBigBite::CoarseReconstruct()
     //wx_bcp/=npts;
     //wy_bcp/=npts;
     
-    std::cout << "Back constraint point x, y, z: " 
-    	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
-      //<< "; width x, y: " << wx_bcp << ", " << wy_bcp 
-    	      << endl;
+    // std::cout << "Back constraint point x, y, z: " 
+    // 	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
+    //   //<< "; width x, y: " << wx_bcp << ", " << wy_bcp 
+    // 	      << endl;
     
     // apply first order optics???
     // Yes, with the electron energy
@@ -210,17 +210,17 @@ Int_t SBSBigBite::CoarseReconstruct()
     //wx_fcp = wx_bcp;
     //wy_fcp = wy_bcp;
     
-    std::cout << "Front constraint point x, y, z: " 
-    	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
-      //<< "; width x, y: " << wx_fcp << ", " << wy_fcp 
-    	      << endl;
+    // std::cout << "Front constraint point x, y, z: " 
+    // 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
+    //   //<< "; width x, y: " << wx_fcp << ", " << wy_fcp 
+    // 	      << endl;
     
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
-      if(theTrackDetector->InheritsFrom("SBSGEMTrackerBase")){
-	SBSGEMTrackerBase* BBGEM = reinterpret_cast<SBSGEMTrackerBase*>(theTrackDetector);
-	std::cout << "setting constraints for tracks" << std::endl;
+      if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
+	SBSGEMSpectrometerTracker* BBGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+	//std::cout << "setting constraints for tracks" << std::endl;
 	BBGEM->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
 	BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
 	BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
