@@ -19,6 +19,7 @@ class SBSBigBite : public THaSpectrometer {
     
     virtual Int_t FindVertices( TClonesArray& tracks );
     virtual Int_t TrackCalc();
+    
     /*
     // Class for storing matrix element data
     class THaMatrixElement {
@@ -38,16 +39,26 @@ class SBSBigBite : public THaSpectrometer {
       std::vector<double> poly;// the associated polynomial
     };
     enum { kPORDER = 4 };
-    */
-    protected:
-    virtual Int_t ReadDatabase( const TDatime& date );
-    /*
+
     std::vector<THaMatrixElement> fXptarMatrixElems;
     std::vector<THaMatrixElement> fYptarMatrixElems;
     std::vector<THaMatrixElement> fYtarMatrixElems;
     std::vector<THaMatrixElement> fPinvMatrixElems;
     std::vector<THaMatrixElement> fXtarMatrixElems;
     */
+
+    protected:
+    virtual Int_t ReadDatabase( const TDatime& date );
+    int fOpticsOrder;
+    std::vector<double> fb_xptar;
+    std::vector<double> fb_yptar;
+    std::vector<double> fb_ytar;
+    std::vector<double> fb_pinv;
+
+    Double_t fFrontConstraintWidthX;
+    Double_t fFrontConstraintWidthY;
+    Double_t fBackConstraintWidthX;
+    Double_t fBackConstraintWidthY;
     
     ClassDef(SBSBigBite,0) // BigBite spectrometer
 };
