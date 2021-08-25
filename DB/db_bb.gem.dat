@@ -30,6 +30,7 @@ bb.gem.pedestalmode = 0
 
 bb.gem.m0.position = 0 0 0
 
+# in the INFN X/Y layers, "GEMPOS" runs from bottom to top
 bb.gem.m1.position = 0.535 0 0.1288
 bb.gem.m2.position =      0 0 0.1288
 bb.gem.m3.position = -0.535  0 0.1288
@@ -40,11 +41,11 @@ bb.gem.m5.position =  0.535 0 0.4112
 bb.gem.m6.position =      0 0 0.4112
 bb.gem.m7.position = -0.535 0 0.4112
 
-
-bb.gem.m8.position = 0.768 0 1.534
-bb.gem.m9.position = 0.256 0 1.570
-bb.gem.m10.position = -0.256 0 1.534
-bb.gem.m11.position = -0.768 0 1.570
+# in the UVA X/Y layer, "GEMPOS" runs from top to bottom
+bb.gem.m8.position = -0.768 0 1.570
+bb.gem.m9.position = -0.256 0 1.534
+bb.gem.m10.position = 0.256 0 1.570
+bb.gem.m11.position = 0.768 0 1.534
 
 bb.gem.m0.angle = 0 0 0
 
