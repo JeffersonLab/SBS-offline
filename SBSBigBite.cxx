@@ -156,7 +156,7 @@ Int_t SBSBigBite::CoarseReconstruct()
       if(BBTotalShower->GetShower()->GetNclust()){
 	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << endl;
 	
-	Etot+= BBTotalShower->GetShower()->GetE();
+	Etot+= BBTotalShower->GetShower()->GetECorrected();
 	x_bcp+= BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
@@ -170,7 +170,7 @@ Int_t SBSBigBite::CoarseReconstruct()
       if(BBTotalShower->GetPreShower()->GetNclust()){
 	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
 	
-	Etot+= BBTotalShower->GetPreShower()->GetE();
+	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
 	x_bcp+= BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
@@ -185,8 +185,8 @@ Int_t SBSBigBite::CoarseReconstruct()
     
   }
   if(npts){
-    x_bcp/=npts;
-    y_bcp/=npts;
+    x_bcp/=sumweights_x;
+    y_bcp/=sumweights_y;
     z_bcp/=npts;
     
     //wx_bcp/=npts;
