@@ -181,8 +181,9 @@ namespace Decoder {
 
 	  found_MPD_header = true;
 
-	  // std::cout << "found MPD frame header, fiber, mpd_id, ENABLE_CM, BUILD_ALL_SAMPLES = " << fiber << ", " << mpd_id << ", "
-	  // 	    << ENABLE_CM << ", " << BUILD_ALL_SAMPLES << std::endl;
+	  // std::cout << "found MPD frame header, fiber, mpd_id, ENABLE_CM, BUILD_ALL_SAMPLES, is_SSP, SLOT, THIS_SLOT = " << fiber << ", " << mpd_id << ", "
+	  // 	    << ENABLE_CM << ", " << BUILD_ALL_SAMPLES << ", "
+	  // 	    << is_SSP << ", " << slot << ", " << this_slot << std::endl;
 	  
 	  //reset "word" and "strip" counters:
 	  mpd_word_count = 0; 
