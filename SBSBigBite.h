@@ -5,6 +5,7 @@
 
 class TList;
 class THaTrack;
+class TH2D;
 
 class SBSBigBite : public THaSpectrometer {
 
@@ -46,19 +47,37 @@ class SBSBigBite : public THaSpectrometer {
     std::vector<THaMatrixElement> fPinvMatrixElems;
     std::vector<THaMatrixElement> fXtarMatrixElems;
     */
+    //virtual Int_t   Begin( THaRunBase* r=0 );
+    //virtual Int_t   End( THaRunBase* r=0 );
 
     protected:
     virtual Int_t ReadDatabase( const TDatime& date );
+    virtual Int_t DefineVariables( EMode mode = kDefine );
+    
     int fOpticsOrder;
     std::vector<double> fb_xptar;
     std::vector<double> fb_yptar;
     std::vector<double> fb_ytar;
     std::vector<double> fb_pinv;
-
+    
     Double_t fFrontConstraintWidthX;
     Double_t fFrontConstraintWidthY;
     Double_t fBackConstraintWidthX;
     Double_t fBackConstraintWidthY;
+
+    //for output only
+    Double_t fFrontConstraintX;
+    Double_t fFrontConstraintY;
+    Double_t fBackConstraintX;
+    Double_t fBackConstraintY;
+    
+    /*
+    TH2D* h1_yVx_bcp;
+    TH2D* h1_x_fcpVbcp;
+    TH2D* h1_yVx_fcp;
+    TH2D* h1_y_fcpVbcp;
+    TH2D* h1_dyVdx;
+    */
     
     ClassDef(SBSBigBite,0) // BigBite spectrometer
 };

@@ -12,6 +12,7 @@
 #include "SBSBBTotalShower.h"
 #include "SBSGEMSpectrometerTracker.h"
 #include "THaTrackingDetector.h"
+#include "TH2D.h"
 
 using namespace std;
 
@@ -27,7 +28,13 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   // Timing hodoscope (inherit from THaNonTrackingDetector)
   // GRINCH (inherit from THaPidDetector)
   // GEMs (five-layer) (inherit from THaTrackingDetector)
-
+  /*
+  h1_yVx_bcp = new TH2D("h1_yVx_bcp", ";x_{bcp} (m);y_{bcp} (m)", 300, -1.5, 1.5, 100, -0.5, 0.5);
+  h1_x_fcpVbcp = new TH2D("h1_x_fcpVbcp", ";x_{bcp} (m);x_{fcp} (m)", 300, -1.5, 1.5, 300, -1.5, 1.5);
+  h1_yVx_fcp = new TH2D("h1_yVx_fcp", ";x_{fcp} (m);y_{fcp} (m)", 300, -1.5, 1.5, 100, -0.5, 0.5);
+  h1_y_fcpVbcp = new TH2D("h1_y_fcpVbcp", ";y_{bcp} (m);y_{fcp} (m)", 100, -0.5, 0.5, 100, -0.5, 0.5);
+  h1_dyVdx = new TH2D("h1_dyVdx",";dx/dz;dy/dz", 100, -0.5, 0.5, 50, -0.25, 0.25);
+  */
 }
 
 //_____________________________________________________________________________
@@ -108,7 +115,6 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 	  // 	    // cout << ipar << " " << term << " " 
 	  // 	    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " " 
 	  // 	    //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
-		      
 	  // 	    ipar++;
 	  // 	  }
 	  // 	}
@@ -121,6 +127,30 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   return kOK;
 }
 
+Int_t SBSBigBite::DefineVariables( EMode mode ){
+  if( mode == kDefine and fIsSetup ) return kOK;
+  fIsSetup = ( mode == kDefine );
+  RVarDef vars[] = {
+    { "x_fcp", "front track constraint x", "fFrontConstraintX" },
+    { "y_fcp", "front track constraint y", "fFrontConstraintY" },
+    { "x_bcp", "back track constraint x", "fBackConstraintX" },
+    { "y_bcp", "back track constraint y", "fBackConstraintY" },
+    { nullptr }
+  };
+  DefineVarsFromList( vars, mode );
+
+  return 0;
+}
+
+//_____________________________________________________________________________
+// Int_t SBSBigBite::End( THaRunBase* run )
+// {
+//   h1_yVx_bcp->Write();
+//   h1_x_fcpVbcp->Write();
+//   h1_yVx_fcp->Write();
+//   h1_y_fcpVbcp->Write();
+//   h1_dyVdx->Write();
+// } 
 
 //_____________________________________________________________________________
 Int_t SBSBigBite::CoarseTrack()
@@ -154,11 +184,13 @@ Int_t SBSBigBite::CoarseReconstruct()
       //BBShower->EresMax();
       // gather here the info useful for
       if(BBTotalShower->GetShower()->GetNclust()){
-	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << endl;
+	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12)) << endl;
 	
 	Etot+= BBTotalShower->GetShower()->GetECorrected();
-	x_bcp+= BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
-	y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
+	//x_bcp+= -BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	//y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
+	x_bcp = -BBTotalShower->GetShower()->GetX();//test for now, check convention after
+	y_bcp = BBTotalShower->GetShower()->GetY();
 	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
 	npts++;
 	sumweights_x+=1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
@@ -166,12 +198,12 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//wx_bcp+=BBTotalShower->GetShower()->SizeRow()/sqrt(12);
 	//wy_bcp+=BBTotalShower->GetShower()->SizeCol()/sqrt(12);
       }
-      
+      /*
       if(BBTotalShower->GetPreShower()->GetNclust()){
-	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << endl;
+	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12)) << endl;
 	
 	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
-	x_bcp+= BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	x_bcp+= -BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
 	npts++;
@@ -180,22 +212,22 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//wx_bcp+=BBTotalShower->GetPreShower()->SizeRow()/sqrt(12);
 	//wy_bcp+=BBTotalShower->GetPreShower()->SizeCol()/sqrt(12);
       }
-      
+      */
     }
     
   }
   if(npts){
-    x_bcp/=sumweights_x;
-    y_bcp/=sumweights_y;
-    z_bcp/=npts;
+    //x_bcp/=sumweights_x;
+    //y_bcp/=sumweights_y;
+    //z_bcp/=npts;
     
     //wx_bcp/=npts;
     //wy_bcp/=npts;
     
     // std::cout << "Back constraint point x, y, z: " 
-    // 	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
+    //  	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
     //   //<< "; width x, y: " << wx_bcp << ", " << wy_bcp 
-    // 	      << endl;
+    //  	      << endl;
     
     // apply first order optics???
     // Yes, with the electron energy
@@ -207,6 +239,19 @@ Int_t SBSBigBite::CoarseReconstruct()
     x_fcp = x_bcp+dx*(z_fcp-z_bcp);
     y_fcp = y_bcp+dy*(z_fcp-z_bcp);
     
+    /*
+    h1_yVx_bcp->Fill(x_bcp, y_bcp);
+    h1_x_fcpVbcp->Fill(x_bcp, x_fcp);
+    h1_yVx_fcp->Fill(x_fcp, y_fcp);
+    h1_y_fcpVbcp->Fill(y_bcp, y_fcp);
+    h1_dyVdx->Fill(dx, dy);
+    */
+    
+    fFrontConstraintX = x_fcp;
+    fFrontConstraintY = y_fcp;
+    fBackConstraintX = x_bcp;
+    fBackConstraintY = y_bcp;
+
     //wx_fcp = wx_bcp;
     //wy_fcp = wy_bcp;
     

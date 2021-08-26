@@ -31,7 +31,8 @@ bb.ps.chanmap = 0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30
 
 
 ## Positions in [m] where +z is roated by bb.theta
-bb.ps.position = 0 0 2.5319 ## Need to re-check this number
+## BB PS front: 1.71745 m + most probable preshower depth 0.033 cm 
+bb.ps.position = 0 0 1.75045 ## Need to re-check this number
 
 ## Size
 bb.ps.size   =  0.740  2.34  0.09 # in meters
