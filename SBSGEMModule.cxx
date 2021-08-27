@@ -101,10 +101,10 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
-    { "pedu",           &rawpedu,        kDoubleV, 0, 0, 0}, // optional raw pedestal info (u strips)
-    { "pedv",           &rawpedv,        kDoubleV, 0, 0, 0}, // optional raw pedestal info (v strips)
-    { "rmsu",           &rawrmsu,        kDoubleV, 0, 0, 0}, // optional pedestal rms info (u strips)
-    { "rmsv",           &rawrmsv,        kDoubleV, 0, 0, 0}, // optional pedestal rms info (v strips)
+    { "pedu",           &rawpedu,        kDoubleV, 0, 1, 0}, // optional raw pedestal info (u strips)
+    { "pedv",           &rawpedv,        kDoubleV, 0, 1, 0}, // optional raw pedestal info (v strips)
+    { "rmsu",           &rawrmsu,        kDoubleV, 0, 1, 0}, // optional pedestal rms info (u strips)
+    { "rmsv",           &rawrmsv,        kDoubleV, 0, 1, 0}, // optional pedestal rms info (v strips)
     { "layer",          &fLayer,         kUShort, 0, 0, 0}, // mandatory: logical tracking layer must be specified for every module:
     { "nstripsu",       &fNstripsU,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along U axis
     { "nstripsv",       &fNstripsV,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along V axis
@@ -532,19 +532,20 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
     //printf("nchan = %d\n", nchan );
 
+    //std::cout << "crate, slot, nchan = " << it->crate << ", " << it->slot << ", " << nchan << std::endl;
+    
     for( Int_t ichan = 0; ichan < nchan; ++ichan ) { //this is looping over all the "channels" (APV cards) in the crate and slot containing this decode map entry/APV card:
       Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan ); //"chan" here refers to one APV card 
       //std::cout << it->crate << " " << it->slot << " mpd_id ??? " << it->mpd_id << " " << chan << " " << effChan << std::endl;
       
       if( chan != effChan ) continue; // 
 
-
       Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
       assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
 
-      //std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
-      //	<< it->adc_id << ", " << nstrips << std::endl;
+      // std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
+      // 		<< it->adc_id << ", " << nstrips << std::endl;
       
       //declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
       double commonMode[fN_MPD_TIME_SAMP];
@@ -563,7 +564,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
 	int strip = evdata.GetRawData( it->crate, it->slot, chan, iraw );
 	int ADC = evdata.GetData( it->crate, it->slot, chan, iraw );
-
+	
 	rawStrip[iraw] = strip;
 	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
@@ -1489,14 +1490,17 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile
   
   for( auto iapv = fMPDmap.begin(); iapv != fMPDmap.end(); iapv++ ){
     int crate = iapv->crate;
+    int slot = iapv->slot;
     int mpd = iapv->mpd_id;
     int adc_ch = iapv->adc_id;
     int pos = iapv->pos;
     int invert = iapv->invert;
     int axis = iapv->axis;
 
+    
     daqfile << "APV "
-	    << std::setw(16) << crate
+	    << std::setw(16) << crate 
+	    << std::setw(16) << slot 
 	    << std::setw(16) << mpd
 	    << std::setw(16) << adc_ch
 	    << std::endl;
@@ -1518,8 +1522,10 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile
     
     double cm_min = cm_mean - fZeroSuppressRMS * cm_rms;
     double cm_max = cm_mean + fZeroSuppressRMS * cm_rms;
+
     
-    daqfile_cmr << std::setw(12) << crate
+    daqfile_cmr << std::setw(12) << crate 
+		<< std::setw(12) << slot
 		<< std::setw(12) << mpd
 		<< std::setw(12) << adc_ch
 		<< std::setw(12) << int( cm_min )
