@@ -98,31 +98,6 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     fb_pinv[i] = optics_param[n_elem*i+3];
   }
   
-  
-  ///////////THEN in the code (but where)
-  	  // int ipar = 0;
-	  // for(int i=0; i<=order; i++){
-	  //   for(int j=0; j<=order-i; j++){
-	  //     for(int k=0; k<=order-i-j; k++){
-	  // 	for(int l=0; l<=order-i-j-k; l++){
-	  // 	  for(int m=0; m<=order-i-j-k-l; m++){
-	  // 	    double term = pow(xfp_fit,m)*pow(yfp_fit,l)*pow(xpfp_fit,k)*pow(ypfp_fit,j)*pow(xtar,i);
-	  // 	    xptar_fit += b_xptar(ipar)*term;
-	  // 	    yptar_fit += b_yptar(ipar)*term;
-	  // 	    ytar_fit += b_ytar(ipar)*term;
-	  // 	    pthetabend_fit += b_pinv(ipar)*term;
-	  // 	    //pinv_fit += b_pinv(ipar)*term;
-	  // 	    // cout << ipar << " " << term << " " 
-	  // 	    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " " 
-	  // 	    //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
-	  // 	    ipar++;
-	  // 	  }
-	  // 	}
-	  //     }
-	  //   }
-	  // }
-  ////////////
-  
   fIsInit = true;
   return kOK;
 }
@@ -187,38 +162,35 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12)) << endl;
 	
 	Etot+= BBTotalShower->GetShower()->GetECorrected();
-	//x_bcp+= -BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	x_bcp+= -BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	//y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
-	x_bcp = -BBTotalShower->GetShower()->GetX();//test for now, check convention after
 	y_bcp = BBTotalShower->GetShower()->GetY();
 	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
 	npts++;
 	sumweights_x+=1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
-	sumweights_y+=1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
+	sumweights_y+=1.;//1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	//wx_bcp+=BBTotalShower->GetShower()->SizeRow()/sqrt(12);
 	//wy_bcp+=BBTotalShower->GetShower()->SizeCol()/sqrt(12);
       }
-      /*
       if(BBTotalShower->GetPreShower()->GetNclust()){
 	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12)) << endl;
 	
 	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
-	x_bcp+= -BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
-	y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
-	z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
-	npts++;
-	sumweights_x+=1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12));
-	sumweights_y+=1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12));
+	//x_bcp+= -BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	//y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
+	//z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
+	//npts++;
+	//sumweights_x+=1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12));
+	//sumweights_y+=1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12));
 	//wx_bcp+=BBTotalShower->GetPreShower()->SizeRow()/sqrt(12);
 	//wy_bcp+=BBTotalShower->GetPreShower()->SizeCol()/sqrt(12);
       }
-      */
     }
     
   }
   if(npts){
-    //x_bcp/=sumweights_x;
-    //y_bcp/=sumweights_y;
+    x_bcp/=sumweights_x;
+    y_bcp/=sumweights_y;
     //z_bcp/=npts;
     
     //wx_bcp/=npts;
@@ -312,13 +284,107 @@ Int_t SBSBigBite::Reconstruct()
 }
 
 //_____________________________________________________________________________
-  Int_t SBSBigBite::FindVertices( TClonesArray& /* tracks */ )
+  Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
 {
+  
   // Reconstruct target coordinates for all tracks found.
+  Int_t n_trk = tracks.GetLast()+1;
+  for( Int_t t = 0; t < n_trk; t++ ) {
+    auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
+    CalcTargetCoords(theTrack);
+  }  
 
-  // TODO
-
+  
   return 0;
+}
+
+void SBSBigBite::CalcTargetCoords( THaTrack* track )
+{
+  const double tracker_pitch_angle = 10.0*TMath::DegToRad();
+  const double th_bb = 33.0*TMath::DegToRad();//temporary
+ 
+  TVector3 BB_zaxis( sin(th_bb), 0, cos(th_bb) );
+  TVector3 BB_xaxis(0,-1,0);
+  TVector3 BB_yaxis = (BB_zaxis.Cross(BB_xaxis)).Unit();
+
+  TVector3 spec_xaxis_fp,spec_yaxis_fp, spec_zaxis_fp;
+  TVector3 spec_xaxis_tgt,spec_yaxis_tgt, spec_zaxis_tgt;
+  
+  spec_xaxis_tgt = BB_xaxis;
+  spec_yaxis_tgt = BB_yaxis;
+  spec_zaxis_tgt = BB_zaxis;
+  
+  spec_zaxis_fp = BB_zaxis;
+  spec_yaxis_fp = BB_yaxis;
+  spec_zaxis_fp.Rotate(-tracker_pitch_angle, spec_yaxis_fp);
+  spec_xaxis_fp = spec_yaxis_fp.Cross(spec_zaxis_fp).Unit();
+ 
+  Double_t x_fp, y_fp, xp_fp, yp_fp;
+  //if( fCoordType == kTransport ) {
+  x_fp = track->GetX();
+  y_fp = track->GetY();
+  xp_fp = track->GetTheta();
+  yp_fp = track->GetPhi();
+  //}
+
+  double vx, vy, vz, px, py, pz;
+  double p_fit, xptar_fit, yptar_fit, ytar_fit, xtar;
+  xtar = 0.0;
+  double thetabend_fit;
+  double pthetabend_fit;
+  double vz_fit;
+
+  xptar_fit = 0.0;
+  yptar_fit = 0.0;
+  ytar_fit = 0.0;
+  pthetabend_fit = 0.0;
+  
+  int ipar = 0;
+  for(int i=0; i<=fOpticsOrder; i++){
+    for(int j=0; j<=fOpticsOrder-i; j++){
+      for(int k=0; k<=fOpticsOrder-i-j; k++){
+	for(int l=0; l<=fOpticsOrder-i-j-k; l++){
+	  for(int m=0; m<=fOpticsOrder-i-j-k-l; m++){
+	    double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
+	    xptar_fit += fb_xptar[ipar]*term;
+	    yptar_fit += fb_yptar[ipar]*term;
+	    ytar_fit += fb_ytar[ipar]*term;
+	    pthetabend_fit += fb_pinv[ipar]*term;
+	    //pinv_fit += b_pinv(ipar)*term;
+	    // cout << ipar << " " << term << " " 
+	    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " " 
+	    //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
+	    ipar++;
+	  }
+	}
+      }
+    }
+  }
+
+  TVector3 phat_tgt_fit(xptar_fit, yptar_fit, 1.0 );
+  phat_tgt_fit = phat_tgt_fit.Unit();
+  
+  TVector3 phat_tgt_fit_global = phat_tgt_fit.X() * spec_xaxis_tgt +
+    phat_tgt_fit.Y() * spec_yaxis_tgt +
+    phat_tgt_fit.Z() * spec_zaxis_tgt;
+  
+  TVector3 phat_fp_fit(xp_fp, yp_fp, 1.0 );
+  phat_fp_fit = phat_fp_fit.Unit();
+  
+  TVector3 phat_fp_fit_global = phat_fp_fit.X() * spec_xaxis_fp +
+    phat_fp_fit.Y() * spec_yaxis_fp +
+    phat_fp_fit.Z() * spec_zaxis_fp;
+  
+  thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
+  
+  p_fit = pthetabend_fit/thetabend_fit;
+  vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
+  
+  pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1) );
+  px = xptar_fit * pz;
+  py = yptar_fit * pz;
+  
+  
 }
 
 //_____________________________________________________________________________

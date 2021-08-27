@@ -54,8 +54,8 @@ bb.sh.chanmap =
 6 13 20 27 34 41 48 55 62 69 76 83 90 97 104 111 118 125 132 139 146 153 160 167 174 181 188
 
 ## Positions in [m] where +z is roated by bb.theta
-## BB SH front: 1.89215 m + most probable shower depth 0.055 cm 
-bb.sh.position = 0 0 1.94715 
+## BB SH front: 1.89215 m + most probable shower depth 0.065 cm 
+bb.sh.position = 0 0 1.95715 
 
 ## Size
 bb.sh.size   =  0.595 2.295 0.37 # in meters

@@ -54,6 +54,8 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t ReadDatabase( const TDatime& date );
     virtual Int_t DefineVariables( EMode mode = kDefine );
     
+    void CalcTargetCoords( THaTrack* the_track );
+    
     int fOpticsOrder;
     std::vector<double> fb_xptar;
     std::vector<double> fb_yptar;
