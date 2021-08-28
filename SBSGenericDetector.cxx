@@ -864,6 +864,26 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     }
   }
 //
+//
+  if(WithADC() && !fDisableRefADC) {
+    ve.push_back({ "Ref.adcelemID", "Element ID for Ref ADC",  "fRefGood.ADCelemID" }),
+    ve.push_back({ "Ref.ped", "Pedestal for Ref ADC in data vectors",  "fRefGood.ped" }),
+     ve.push_back( {"Ref.a","Ref ADC integral", "fRefGood.a"} );
+     ve.push_back( {"Ref.a_mult","Ref ADC # hits in channel", "fRefGood.a_mult"} );
+    ve.push_back( {"Ref.a_p","Ref ADC integral - ped", "fRefGood.a_p"} );
+    ve.push_back( {"Ref.a_c","Ref (ADC integral - ped)*gain", "fRefGood.a_c"} );
+    if(fModeADC != SBSModeADC::kADCSimple) {
+      ve.push_back( {"Ref.a_amp","Ref ADC pulse amplitude", "fRefGood.a_amp"} );
+      ve.push_back( {"Ref.a_amp_p","Ref ADC pulse amplitude -ped", "fRefGood.a_amp_p"} );
+      ve.push_back( {"Ref.a_time","REf ADC pulse time", "fRefGood.a_time"} );
+    }
+    if(fStoreRawHits) {
+      ve.push_back({ "Ref.hits.ADCelemID",   "All hits Ref ADC index",  "fRefRaw.ADCelemID" });
+      ve.push_back({ "Ref.hits.a",   "All Ref ADC integrals",  "fRefRaw.a" });
+      ve.push_back({ "Ref.hits.a_amp",   "All Ref ADC amplitudes",  "fRefRaw.a_amp" });
+      ve.push_back({ "Ref.hits.a_time",   "All Ref ADC pulse times",  "fRefRaw.a_time" });
+    }
+  }
   // Do we have an ADC? Then define ADC variables
   if(WithADC()) {
     // Register variables in global list
@@ -919,6 +939,14 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
         "fGood.nsamps"});
     ve.push_back({ "samps", "Calibrated ADC samples",  "fGood.samps" });
     ve.push_back({ "samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
+    if (!fDisableRefADC) {
+    ve.push_back({ "Ref.samps_idx", "Index in samples vector for given row-col module",
+        "fRefGood.sidx" });
+    ve.push_back({ "Ref.nsamps" , "Number of samples for given row-col",
+        "fRefGood.nsamps"});
+    ve.push_back({ "Ref.samps", "Calibrated ADC samples",  "fGood.samps" });
+    ve.push_back({ "Ref.samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
+    }
   }
 
   ve.push_back({0}); // Needed to specify the end of list
@@ -989,15 +1017,28 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   if(nhit <= 0  || !WithADC() || !blk)    return 0;
   // If not a reference element then determine the reference time to use
-  Int_t reftime=0; 
+  Float_t reftime=0; 
   if (!IsRef && !fDisableRefADC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
-     if(fModeADC == SBSModeADC::kWaveform && refblk->ADC()->HasData()) {
+     if(fModeADC == SBSModeADC::kWaveform ) {
         SBSData::Waveform *wave = refblk->Waveform();
-	//Now only one pulse found per sample 
+	//Now only one pulse found per sample 	
        reftime = wave->GetTime().val;
-      refblk->ADC()->SetGoodHit(0);
-    }
+       wave->SetGoodHit(0);
+    } else if (fModeADC == SBSModeADC::kADC && refblk->ADC()->HasData()) {
+       Int_t nhits = refblk->ADC()->GetNHits(); 
+       Float_t MinDiff = 10000.;
+       UInt_t HitIndex = 0;
+       Float_t RefCent = refblk->ADC()->GetGoodTimeCut();
+       for (UInt_t ih=0;ih<nhits;ih++) {
+	 if (abs(refblk->ADC()->GetTime(ih).val-RefCent) < MinDiff) {
+           HitIndex = ih;
+	   MinDiff = abs(refblk->ADC()->GetTime(ih).val-RefCent);
+	 }
+       }      
+      reftime = refblk->ADC()->GetTime(HitIndex).val ;
+      refblk->ADC()->SetGoodHit(HitIndex);       
+     }
   }
   if(fModeADC != SBSModeADC::kWaveform) {
     // Process all hits in this channel
@@ -1021,14 +1062,9 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     for(Int_t i = 0; i < nhit; i++) {
       samples[i] = evdata.GetData(d->crate, d->slot, chan, i);
     }
-    //std::cout << std::endl;
-    //std::cout << blk << std::endl;
-    //std::cout << blk->Waveform() << std::endl;
     blk->Waveform()->Process(samples);
-    //std::cout << "ouh" << std::endl;
     samples.clear();
     SBSData::Waveform *wave = blk->Waveform();
-    
     wave->SetValTime(wave->GetTime().val- reftime);
   }
   return nhit;
@@ -1186,6 +1222,101 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
               }
 	}
     }
+    //
+    if(WithADC()) {
+      if(fModeADC != SBSModeADC::kWaveform) {
+          if(blk->ADC()->HasData() && blk->ADC()->GetGoodHitIndex() >=0){
+             fRefGood.ADCrow.push_back(blk->GetRow());
+             fRefGood.ADCcol.push_back(blk->GetCol());
+             fRefGood.ADClayer.push_back(blk->GetLayer());
+             fRefGood.ADCelemID.push_back(blk->GetID());
+           Float_t ped=blk->ADC()->GetPed();
+          fRefGood.ped.push_back(ped);
+          const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
+          fRefGood.a.push_back(hit.integral.raw);
+          fRefGood.a_mult.push_back(blk->ADC()->GetNHits());
+          fRefGood.a_p.push_back(hit.integral.raw-ped);
+          fRefGood.a_c.push_back(hit.integral.val);
+          if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
+            fRefGood.a_amp.push_back(hit.amplitude.raw);
+            fRefGood.a_amp_p.push_back(hit.amplitude.val);
+            fRefGood.a_time.push_back(hit.time.val);
+          }
+	  } else if ( fStoreEmptyElements ) {
+             fRefGood.ADCrow.push_back(blk->GetRow());
+             fRefGood.ADCcol.push_back(blk->GetCol());
+             fRefGood.ADClayer.push_back(blk->GetLayer());
+             fRefGood.ADCelemID.push_back(blk->GetID());
+             fRefGood.ped.push_back(0.);
+	     fRefGood.a.push_back(0.);
+          fRefGood.a_mult.push_back(0);
+          fRefGood.a_p.push_back(0.);
+          fRefGood.a_c.push_back(0.);
+          if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
+            fRefGood.a_amp.push_back(0.);
+            fRefGood.a_amp_p.push_back(0.);
+            fRefGood.a_time.push_back(0.);
+          }
+ 	    
+	  }
+          // Now store all the hits if specified the by user
+          if(fStoreRawHits) {
+            const std::vector<SBSData::PulseADCData> &hits = blk->ADC()->GetAllHits();
+            for( const auto &hit : hits) {
+              fRefRaw.ADCelemID.push_back(blk->GetID());
+              fRefRaw.a.push_back(hit.integral.val);
+              fRefRaw.a_amp.push_back(hit.amplitude.val);
+              fRefRaw.a_time.push_back(hit.time.val);
+             }
+          }
+      } else { // Waveform mode
+        SBSData::Waveform *wave = blk->Waveform();
+	if(wave->HasData()) {		
+          if(fStoreRawHits) {
+           std::vector<Float_t> &s_r =wave->GetDataRaw();
+           std::vector<Float_t> &s_c = wave->GetData();
+           nsamples = s_r.size();
+           idx = fRefGood.samps.size();
+           fRefGood.sidx.push_back(idx);
+           fRefGood.samps_elemID.push_back(k);
+           fRefGood.nsamps.push_back(nsamples);
+           fRefGood.samps.resize(idx+nsamples);
+           for(size_t s = 0; s < nsamples; s++) {
+             fRefGood.samps[idx+s]   = s_c[s];
+            }
+	  }
+	  if (wave->GetGoodHitIndex() >=0) {
+             fRefGood.ADCrow.push_back(blk->GetRow());
+             fRefGood.ADCcol.push_back(blk->GetCol());
+             fRefGood.ADClayer.push_back(blk->GetLayer());
+             fRefGood.ADCelemID.push_back(blk->GetID());
+
+	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
+	 
+        fRefGood.ped.push_back(wave->GetPed());
+        fRefGood.a.push_back(wave->GetIntegral().raw);
+        fRefGood.a_p.push_back(wave->GetIntegral().val);
+        fRefGood.a_c.push_back(wave->GetIntegral().val);
+        fRefGood.a_amp.push_back(wave->GetAmplitude().raw);
+        fRefGood.a_amp_p.push_back(wave->GetAmplitude().val);
+        fRefGood.a_time.push_back(wave->GetTime().val);
+	  } else if (fStoreEmptyElements) {
+             fRefGood.ADCrow.push_back(blk->GetRow());
+             fRefGood.ADCcol.push_back(blk->GetCol());
+             fRefGood.ADClayer.push_back(blk->GetLayer());
+             fRefGood.ADCelemID.push_back(blk->GetID());
+        fRefGood.ped.push_back(wave->GetPed());
+        fRefGood.a.push_back(wave->GetIntegral().raw);
+        fRefGood.a_p.push_back(wave->GetIntegral().val);
+        fRefGood.a_c.push_back(wave->GetIntegral().val);
+            fRefGood.a_amp.push_back(0.0);
+            fRefGood.a_amp_p.push_back(0.0);
+            fRefGood.a_time.push_back(0.0);
+	}
+	}
+      }
+    }
+
   }
 
   
