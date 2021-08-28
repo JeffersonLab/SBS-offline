@@ -65,6 +65,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSSimDecoder.cxx SBSSimADC.cxx SBSSimTDC.cxx
   SBSHCalLEDModule.cxx SBSManager.cxx
   SBSSimFile.cxx SBSSimEvent.cxx
+  SBSRPBeamSideHodo.cxx SBSRPFarSideHodo.cxx SBSCHAnalyzer.cxx
   SBSTimingHodoscopePMT.cxx SBSTimingHodoscopeBar.cxx
   gmn_tree_digitized.cxx
   )

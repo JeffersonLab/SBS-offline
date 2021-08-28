@@ -121,7 +121,7 @@ namespace Decoder {
       // 		<< fNumSample << std::endl;
       
       //Check if new slot:
-      if(thisheader == fBlockHeader){ //extract "MPDID" (slot) info from bits 17-21 of data word:
+      if(thisheader == fBlockHeader){ //extract "MPDID" (slot) info from bits 17-21 of data word (NOTE that in this raw data format, "slot" and "MPD_ID" are the same thing
 
 	prev_slot = slot;
 	
@@ -170,7 +170,7 @@ namespace Decoder {
 	// index = ichan + 128*isamp
 
 	//With this data version, mpdID and slot are always treated as the same thing:
-	UInt_t effChan = (this_slot << 8 | adc_chan );
+	UInt_t effChan = (this_slot << 4 | adc_chan );
 
 	for( UInt_t iAPVchan=0; iAPVchan<128; iAPVchan++ ){
 	  for( UInt_t iSample=0; iSample<fNumSample; iSample++ ){
@@ -179,7 +179,10 @@ namespace Decoder {
 	    // index in raw hit array = isamp + 6*ichan (opposite of the ordering in the event buffer)
 	    // The APV channel number is stored in "rawdata", while the raw ADC values are stored in "data",
 	    // as the SBSGEMModule::Decode method expects!
-	    sldat->loadData( "adc", effChan, ADCsamples[iAPVchan+128*iSample], iAPVchan );
+	    status = sldat->loadData( "adc", effChan, ADCsamples[iAPVchan+128*iSample], iAPVchan );
+
+	    if( status != SD_OK ) return -1;
+	    
 	    fWordsSeen++;
 	  }
 	}
@@ -617,6 +620,7 @@ namespace Decoder {
     // UInt_t idx = asc2i(adc, sample, chan);
     // if (idx >= fNumChan*fNumSample*fNumADC) { return 0; }
     // return fData[idx];
+    return 0;
   }
   
   void MPDModuleVMEv4::Clear(const Option_t *opt) {

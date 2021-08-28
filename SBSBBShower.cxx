@@ -161,6 +161,54 @@ void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
  
  
 
+void SBSBBShower::MakeCluster(Int_t nblk_size, SBSElement* blk) 
+{
+	     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(nblk_size,blk);
+	     fClusters.push_back(cluster);
+	     return;
+}
+
+void SBSBBShower::MakeCluster(Int_t nblk_size) 
+{
+	     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(nblk_size);
+	     fClusters.push_back(cluster);
+	     return;
+}
+
+void SBSBBShower::AddToCluster(Int_t nc,SBSElement* blk) 
+{
+  if (fClusters.size()>0) fClusters[nc]->AddElement(blk);
+  return;
+}
+
+void SBSBBShower::MakeMainCluster() 
+{
+  if(fClusters.size()>0) {
+    SBSCalorimeterCluster *clus = fClusters[0];
+    fMainclus.e.push_back(clus->GetE());
+    fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    fMainclus.x.push_back(clus->GetX());
+    fMainclus.y.push_back(clus->GetY());
+    fMainclus.n.push_back(clus->GetMult());
+    fMainclus.blk_e.push_back(clus->GetEblk());
+    fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
+    if(clus->GetMaxElement()){
+      fMainclus.id.push_back(clus->GetMaxElement()->GetID());
+    }else{
+       fMainclus.id.push_back(-1);
+    }
+    fMainclus.row.push_back(clus->GetRow());
+    fMainclus.col.push_back(clus->GetCol());
+  }
+  //
+  fNclus=0;
+    for (Int_t nc=0;nc<fClusters.size();nc++) {
+      if (fClusters[nc]->GetMult()>0) fNclus++;
+    }
+  //
+  return;
+}
+
 void SBSBBShower::SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax)
 {
   fSearchRowmin = rowmin;
@@ -182,3 +230,12 @@ void SBSBBShower::ClearEvent()
   fY_cl_res.clear();
 }
 
+
+
+//_____________________________________________________________
+SBSElement* SBSBBShower::GetElement(UInt_t i)
+{
+  SBSElement* blk=0;
+  if(i < fElements.size()) blk = fElements[i];
+  return blk;
+}

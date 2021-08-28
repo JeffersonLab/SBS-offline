@@ -145,7 +145,10 @@ public:
   // in SBSElement::CoarseProcess()
   virtual SBSElement* MakeElement(Float_t x, Float_t y, Float_t z, Int_t row,
       Int_t col, Int_t layer, Int_t id = 0);
-
+  
+  Double_t SizeRow(){ return fSizeRow; };
+  Double_t SizeCol(){ return fSizeCol; };
+  
 protected:
 
   virtual Int_t  ReadDatabase( const TDatime& date );
@@ -156,6 +159,8 @@ protected:
   Int_t  fNRefElem;        ///< Number of Ref Time elements
   Int_t  fNrows;        ///< Number of rows
   std::vector<Int_t>  fNcols; ///< Number of columns per row
+  Double_t fSizeRow;
+  Double_t fSizeCol;
   Int_t fNcolsMax;      ///< Max number of columns out of all rows
   Int_t  fNlayers;      ///< Number of layers (in z-direction)
   SBSModeADC::Mode fModeADC;      //< ADC Mode
@@ -237,8 +242,9 @@ private:
     }
   }
 
+
   ClassDef(SBSGenericDetector,0)     //Generic shower detector class
-    };
+};
 /*inline Int_t SBSGenericDetector::blkidx(Int_t row, Int_t col, Int_t layer)
 {
   return fNlayers*(fNcols[row]*row + col) + layer;

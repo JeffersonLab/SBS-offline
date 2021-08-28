@@ -184,6 +184,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
 Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *blk)
 {
   Int_t GoodHit=0;  
+
   // if (blk->TDC()&& blk->HasData()) {
   //   blk->TDC()->SetGoodHit(0);
   //   GoodHit=1;

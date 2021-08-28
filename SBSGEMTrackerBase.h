@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <fstream>
 //#include "SBSGEMModule.h"
 #include "TVector3.h"
 #include "TVector2.h"
@@ -29,7 +30,7 @@ public:
   void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; }
   void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
   void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
-  void SetBackConstraintPoint( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
+  void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -288,8 +289,11 @@ protected:
   TClonesArray *hefficiency_xy_layer;
 
   bool fEfficiencyInitialized;
-  
-  
+  bool fMakeEfficiencyPlots; //default to TRUE
+
+  // output files for pedestal info when running in pedestal mode:
+  std::ofstream fpedfile_dbase, fpedfile_daq, fpedfile_cmr; 
+ 
 };
 
 #endif

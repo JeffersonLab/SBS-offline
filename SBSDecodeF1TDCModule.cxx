@@ -76,9 +76,10 @@ void SBSDecodeF1TDCModule::CommonInit() {
 
 Bool_t SBSDecodeF1TDCModule::IsSlot(UInt_t rdata)
 {
+  fHeaderMask = 0x07ffffff;
   if (fDebugFile)
     *fDebugFile << "is SBSDecodeF1TDC slot ? "<<hex<<fHeader
-		<<"  "<<fHeaderMask<<"  "<<rdata<<dec<<endl;
+		<<"  "<<fHeaderMask<< " " << (rdata & fHeaderMask) <<"  "<<rdata<<dec<<endl;
   return ((rdata != 0xffffffff) & ((rdata & fHeaderMask)==fHeader));
 }
 
@@ -164,14 +165,31 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
    Int_t idxSlot = -1;
    Int_t trigTime = 0;
    Int_t raw_cor = 0;
-   while ( loc <= pstop && *loc != 0xda0000ff  && IsSlot(*loc) ) {
-      if ( !( (*loc) & DATA_MARKER ) ) {
-	// header/trailer word, to be ignored (except for trigTime)
+   // Expect the F1 first word to be an event counter
+   //  The second word should be 0xf1daffff
+   // Then there should be header, trailer and data words
+   //  header/trailer words have 0 in bit 23
+   //  data words have 1 in bit 23
+    if(fDebug > 1 && fDebugFile!=0) *fDebugFile<< " loc = " <<  loc << " pstop " << pstop << " logic " << (loc <= pstop)<< " *loc " << *loc << endl; 
+   while ( loc <= pstop && *loc != 0xda0000ff ) {
+   Int_t checkf1slot = ((*loc)&0xf8000000)>>27;
+  if(fDebug > 1 && fDebugFile!=0) *fDebugFile << " check slot = " << checkf1slot << endl;
+     if(fDebug > 1 && fDebugFile!=0) *fDebugFile<< " data = " << hex << *loc << " " << ( (*loc) & DATA_MARKER )<< endl;
+        if ( !( (*loc) & DATA_MARKER ) && checkf1slot>0 ) {
+	 // header/trailer word, to be ignored (except for trigTime)
 	 trigTime = ((*loc)>>7)&0x1FF;
+	 Int_t chn = (*loc)&0x7;
+	 Int_t chip = ((*loc>>3))&0x7;
+	 Int_t ixor = ((*loc>>6))&0x1;
+	 Int_t ievnum = ((*loc>>16))&0x3F;
+	 Int_t itrigFIFOoverflow = ((*loc>>2))&0x1;
 	 if(fDebug > 1 && fDebugFile!=0)
 	    *fDebugFile<< "[" << (loc-evbuffer) << "] header/trailer  0x"
-		       <<hex<<*loc<<dec<<endl;
-	} else if((*loc)!=0xf1daffff) {
+		       <<hex<<*loc<<dec<< " chn = " << chn << " chip = " << chip << " ixor = " << ixor << " Trig FIFO overflow = " << itrigFIFOoverflow <<endl;
+	       if (itrigFIFOoverflow==1) {
+		 if(fDebug > 1 && fDebugFile!=0) *fDebugFile << "\tTrigger Overflow error chip = " << dec << chip << " chan = " << chn << hex<< endl;
+	       }
+	} else if((*loc)!=0xf1daffff && checkf1slot>0 ) {
 	    if (fDebug > 1 && fDebugFile!=0)
 	       *fDebugFile<< "[" << (loc-evbuffer) << "] data            0x"
 			  <<hex<<*loc<<dec<<endl;
@@ -248,7 +266,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 //cout << "chSlot=" << chSlot << " - lastSlot=" << lastSlot << " - nF1=" << nF1 << " -- ch=" << chan << " - word=0x" << hex << (*loc) << dec << " - raw=" << raw << endl;
 		  }
 	      fWordsSeen++;
-	  }
+	} 
        loc++;
    }
 

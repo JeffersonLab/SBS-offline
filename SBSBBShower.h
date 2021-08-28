@@ -22,12 +22,26 @@ public:
   virtual Int_t  FineProcess(TClonesArray& tracks);
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
+  virtual void   MakeCluster(Int_t nblk_size,SBSElement* blk);
+  virtual void   MakeCluster(Int_t nblk_size);
+  virtual void   AddToCluster(Int_t nc,SBSElement* blk);
+  virtual void MakeMainCluster();
   virtual void ClearEvent();
 
   Int_t GetRowMax() {return GetRow();}
   Int_t GetColMax() {return GetCol();}
 
+  
+  Float_t EresMax() {return fEres;}
+  Float_t XresMax() {return fXres;}
+  Float_t YresMax() {return fYres;}
+  
+  Float_t Eres(int i) {return fE_cl_res[i];}
+  Float_t Xres(int i) {return fX_cl_res[i];}
+  Float_t Yres(int i) {return fY_cl_res[i];}
 
+    SBSElement* GetElement(UInt_t i);
+    
   //two methods to set search region.
   void SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax);
 

@@ -34,9 +34,9 @@ R__LOAD_LIBRARY(libsbs.so)
 void replay_gmn_test(const char* filebase, uint nev = -1, TString experiment="gmn")
 {
   SBSBigBite* bigbite = new SBSBigBite("bb", "BigBite spectrometer" );
-  bigbite->AddDetector( new SBSBBShower("ps", "BigBite preshower") );
-  bigbite->AddDetector( new SBSBBShower("sh", "BigBite shower") );
-  //bigbite->AddDetector( new SBSBBTotalShower("ts", "sh", "ps", "BigBite shower") );
+  //bigbite->AddDetector( new SBSBBShower("ps", "BigBite preshower") );
+  //bigbite->AddDetector( new SBSBBShower("sh", "BigBite shower") );
+  bigbite->AddDetector( new SBSBBTotalShower("ts", "sh", "ps", "BigBite shower") );
   bigbite->AddDetector( new SBSGRINCH("grinch", "GRINCH PID") );
   bigbite->AddDetector( new SBSTimingHodoscope("hodo", "timing hodo") );
   bigbite->AddDetector( new SBSGEMSpectrometerTracker("gem", "GEM tracker") );
