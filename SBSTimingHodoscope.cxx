@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////
 //
 // SBSTimingHodoscope class implementation
-// rmontgom@jlab.org july 2021 drafting
+//
 //////////////////////////////////////////////////////////////////////////
 
 #include "SBSTimingHodoscope.h"
@@ -132,7 +132,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
 
   if(WithTDC()){
     RVarDef vars[] = {
-      { "tdcbaroff",    "Starting bar for TDC readout",       "fTDCBarOffset" },
+      // { "tdcbaroff",    "Starting bar for TDC readout",       "fTDCBarOffset" },
       { "tdcbarid",     "TDC Hit Bar ID",                     "fGoodBarIDsTDC"},
       { "barmeantime",  "Bar Mean Time [ns]",                 "fGoodBarTDCmean"},
       { "bartimediff",  "Bar Time Diff [ns]",                 "fGoodBarTDCdiff"},
@@ -157,7 +157,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   }// if we're in a tdc event
   if(WithADC()){
     RVarDef vars[] = {
-      { "adcbaroff",    "Starting bar for ADC readout",       "fADCBarOffset" },
+      // { "adcbaroff",    "Starting bar for ADC readout",       "fADCBarOffset" },
       { "adcbarid",     "ADC Hit Bar ID",                     "fGoodBarIDsADC"},
       { "adcmean",      "ADC Hit Bar Mean [bins]",            "fGoodBarADCmean"},
       { "L.a",          "Left ADC [bins]",                    "fGoodBarADCLa"},
@@ -267,34 +267,34 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	
 	// left hit
 	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
-	// fGoodBarTDCLle.push_back(hitL.le.val);
-	fGoodBarTDCLle.push_back(hitL.le.raw);
+	fGoodBarTDCLle.push_back(hitL.le.val);
+	// fGoodBarTDCLle.push_back(hitL.le.raw);
 	//.raw is tdc bin, val is corrected using offset and ns/bin
-	Float_t LleW = SBSTimingHodoscope::TimeWalk(hitL.le.raw,
-				(hitL.te.raw-hitL.le.raw),
+	Float_t LleW = SBSTimingHodoscope::TimeWalk(hitL.le.val,
+				(hitL.te.val-hitL.le.val),
 				Ltwalk0, Ltwalk1);
 	fGoodBarTDCLleW.push_back(LleW);
-	fGoodBarTDCLte.push_back(hitL.te.raw);
-	Float_t LteW = SBSTimingHodoscope::TimeWalk(hitL.te.raw,
-				(hitL.te.raw-hitL.le.raw),
+	fGoodBarTDCLte.push_back(hitL.te.val);
+	Float_t LteW = SBSTimingHodoscope::TimeWalk(hitL.te.val,
+				(hitL.te.val-hitL.le.val),
 				Ltwalk0, Ltwalk1);
 	fGoodBarTDCLteW.push_back(LteW);
-	fGoodBarTDCLtot.push_back(hitL.te.raw-hitL.le.raw);
+	fGoodBarTDCLtot.push_back(hitL.te.val-hitL.le.val);
 	fGoodBarTDCLtotW.push_back(LteW-LleW);
 	
 	// right hit
 	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
-	fGoodBarTDCRle.push_back(hitR.le.raw);//.raw is tdc bin, val is corrected using offset and ns/bin
-	Float_t RleW = SBSTimingHodoscope::TimeWalk(hitR.le.raw,
-				(hitR.te.raw-hitR.le.raw),
+	fGoodBarTDCRle.push_back(hitR.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
+	Float_t RleW = SBSTimingHodoscope::TimeWalk(hitR.le.val,
+				(hitR.te.val-hitR.le.val),
 				Rtwalk0, Rtwalk1);
 	fGoodBarTDCRleW.push_back(RleW);
-	fGoodBarTDCRte.push_back(hitR.te.raw);
-	Float_t RteW = SBSTimingHodoscope::TimeWalk(hitR.te.raw,
-				(hitR.te.raw-hitR.le.raw),
+	fGoodBarTDCRte.push_back(hitR.te.val);
+	Float_t RteW = SBSTimingHodoscope::TimeWalk(hitR.te.val,
+				(hitR.te.val-hitR.le.val),
 				Rtwalk0, Rtwalk1);
 	fGoodBarTDCRteW.push_back(RteW);
-	fGoodBarTDCRtot.push_back(hitR.te.raw-hitR.le.raw);
+	fGoodBarTDCRtot.push_back(hitR.te.val-hitR.le.val);
 	fGoodBarTDCRtotW.push_back(RteW-RleW);
 	
 	// bar properties

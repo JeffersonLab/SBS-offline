@@ -9,7 +9,7 @@
 // SBSTimingHodoscopePMT                                                     //
 //                                                                           //
 // Class to represent a PMT on the timing hodoscope                          //
-// rmontgom@jlab.org drafting jul 2021                                       //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 /* #include "TObject.h" */
