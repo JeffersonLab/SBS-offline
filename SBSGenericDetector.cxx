@@ -348,8 +348,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 		NRefTDCElem++;
               }
      	      fRefChanMap[i][chan]=kr;
-  	      if ( krmod==0) fRefChanLo[i]=chan;
-  	      if ( krmod>=0) fRefChanHi[i]=chan;
+  	      if ( krmod==0) fRefChanLo[i]=chan+d->lo;
+  	      if ( krmod>=0) fRefChanHi[i]=chan+d->lo;
               kr++;
 	      krmod++;
 	    } else {
@@ -445,7 +445,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // What does this do again?!?!
   DefineAxes( angle*TMath::DegToRad() );
-
+  std::cout << " Nreftdc = " << NRefTDCElem<< " Nrefadc = " << NRefADCElem << std::endl;
   // Check that there were either only 1 calibratoin value specified per key
   // or fNelements
     if (!fDisableRefTDC) {
@@ -1521,7 +1521,7 @@ Int_t SBSGenericDetector::FindGoodHit(SBSElement *blk)
          wave->SetGoodHit(-1);
 	 if (wave->HasData())  {
          Int_t HitIndex = -1;
-	 if (wave->GetTimeData() > 0 ) HitIndex = 0;
+	 if (wave->GetTime().raw > 0 ) HitIndex = 0;
          wave->SetGoodHit(HitIndex);
          GoodHit=1;
 	 }
