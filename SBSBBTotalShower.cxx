@@ -31,7 +31,7 @@ ClassImp(SBSBBTotalShower)
 SBSBBTotalShower::SBSBBTotalShower( const char* name, const char* description,
                                    THaApparatus* apparatus ) :
 SBSCalorimeter(name,description,apparatus), 
-  fShower(NULL), fPreShower(NULL)//, //fMaxDx(0.0), fMaxDy(0.0), 
+  fShower(NULL), fPreShower(NULL), fMaxDx(0.4), fMaxDy(0.4)
 //fE(0.0), fX(0.0), fY(0.0)//, fID(NULL)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -52,7 +52,7 @@ SBSBBTotalShower::SBSBBTotalShower( const char* name,
                                    const char* description,
                                    THaApparatus* apparatus ) :
   SBSCalorimeter(name,description,apparatus),
-  fShower(NULL), fPreShower(NULL)//, //fMaxDx(0.0), fMaxDy(0.0), fE(NULL)
+  fShower(NULL), fPreShower(NULL),fMaxDx(0.4), fMaxDy(0.4)
   //fE(0.0), fX(0.0), fY(0.0)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -282,20 +282,40 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 
   fShower->MakeGoodBlocks();
   fPreShower->MakeGoodBlocks();
-  
+
+  //
   fShower->FindClusters();
-  //cout << "number of clusters in shower: " << fShower->GetNclust() << " " << fShower->GetE() << " " << fShower->GetX() << " " << fShower->GetY() << endl;
-  if(fShower->GetNclust()){
-    int rowmin = fPSSHmatchmapX.at(fShower->GetRow()).first;
-    int rowmax = fPSSHmatchmapX.at(fShower->GetRow()).second;
-    int colmin = fPSSHmatchmapY.at(fShower->GetCol()).first;
-    int colmax = fPSSHmatchmapY.at(fShower->GetCol()).second;
-    
-    fPreShower->SetSearchRegion(rowmin, rowmax, colmin, colmax);
-    fPreShower->FindClusters();
-    
-    //cout << "number of clusters in preshower: " << fPreShower->GetNclust() << " " << fPreShower->GetE() << " " << fPreShower->GetX() << " " << fPreShower->GetY() << endl;
+  // match blocks hit in Preshower to clusters in the  Shower
+  std::vector<SBSCalorimeterCluster*> ShowerClusters = fShower->GetClusters();
+  std::vector<SBSBlockSet> PreShowerBlockSet = fPreShower->GetBlockSet();
+  Int_t PreShower_Nclus= 0;
+  for (Int_t nc=0;nc<ShowerClusters.size();nc++) {
+    Float_t xsh = ShowerClusters[nc]->GetX();
+    Float_t ysh = ShowerClusters[nc]->GetY();
+    Bool_t AddToPreShowerCluster = kFALSE;
+    for (Int_t nps=0;nps<PreShowerBlockSet.size();nps++) {
+      if (!PreShowerBlockSet[nps].InCluster) {
+	SBSElement* psblk = fPreShower->GetElement(PreShowerBlockSet[nps].id);
+	     Float_t xps =  PreShowerBlockSet[nps].x;
+	     Float_t yps =  PreShowerBlockSet[nps].y;
+      Bool_t MatchCriterion = abs(xsh-xps) < fMaxDx;
+      if (MatchCriterion) {
+	PreShowerBlockSet[nps].InCluster = kTRUE;
+	if (!AddToPreShowerCluster) {
+	  fPreShower->MakeCluster(PreShowerBlockSet.size(),psblk);
+	  AddToPreShowerCluster = kTRUE;
+	  PreShower_Nclus++;
+	} else {
+	  fPreShower->AddToCluster(PreShower_Nclus-1,psblk);
+	}
+      }
+      }
+    }
+    if (!AddToPreShowerCluster && PreShowerBlockSet.size()>0) fPreShower->MakeCluster(PreShowerBlockSet.size()); // If preshower not matched to shower, make preshower cluster with mult = 0
   }
+    //
+    fPreShower->MakeMainCluster();
+  //
   return 0;
 }
 //_____________________________________________________________________________
@@ -308,7 +328,7 @@ Int_t SBSBBTotalShower::FineProcess( TClonesArray& tracks )
     if( !IsOK() )
         return -1;
 
-    // fPreShower->FineProcess( tracks );
+    fPreShower->FineProcess( tracks );
     fShower->FineProcess( tracks );
     
     return 0;

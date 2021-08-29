@@ -22,11 +22,14 @@
 
 struct SBSBlockSet {
   Float_t e;
+  Float_t x;
+  Float_t y;
   Int_t row;
   Int_t col;
   Int_t id;
   Float_t TDCTime;
   Float_t ADCTime;
+  Bool_t InCluster;
 };
 
 struct SBSCalBlocks {
@@ -62,7 +65,8 @@ struct SBSCalorimeterOutput {
   std::vector<Float_t> blk_e_c; // block corrected energy of max energy block
   std::vector<Int_t>   id;      // block id of max energy block
 };
-   typedef std::vector<SBSBlockSet> SBSBlockSetList;
+   
+typedef std::vector<SBSBlockSet> SBSBlockSetList;
 
 class SBSCalorimeter : public SBSGenericDetector {
 
@@ -93,6 +97,8 @@ public:
 
   // Standard apparatus re-implemented functions
   virtual Int_t      FineProcess(TClonesArray& tracks);
+  std::vector<SBSBlockSet>& GetBlockSet() {return fBlockSet;}
+  std::vector<SBSCalorimeterCluster*>& GetClusters() {return fClusters;}
 
   Int_t GetNclust() const { return fNclus; }
 

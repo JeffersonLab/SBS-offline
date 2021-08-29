@@ -31,7 +31,8 @@ bb.ps.chanmap = 0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30
 
 
 ## Positions in [m] where +z is roated by bb.theta
-bb.ps.position = 0 0 2.5319 ## Need to re-check this number
+## BB PS front: 1.71745 m + most probable preshower depth 0.033 cm 
+bb.ps.position = 0 0 1.75045 ## Need to re-check this number
 
 ## Size
 bb.ps.size   =  0.740  2.34  0.09 # in meters
@@ -60,4 +61,58 @@ bb.ps.adc.NSA = 10
 # Number of bin for fixed Threshold if no Threshold Crossing is found
 bb.ps.adc.FixThresBin = 14
 #Convert adc integral in pC to GeV
-bb.ps.adc.gain = 1.0
+#bb.ps.adc.gain = 1.0
+bb.ps.adc.gain =  
+    0.1902
+    0.04719
+    0.06439
+    0.08037
+    0.05708
+    0.09472
+    0.02671
+    0.06187
+    0.02302
+    0.01264
+    0.03036
+    0.02647
+    0.02918
+    0.03123
+    0.03008
+    0.03054
+    0.02773
+    0.03095
+    0.02752
+    0.03002
+     0.0273
+    0.02828
+    0.02607
+    0.02931
+    0.02701
+    0.03038
+    0.02653
+     0.0272
+    0.02621
+    0.02388
+    0.02366
+    0.02557
+    0.02389
+    0.02554
+    0.02492
+     0.0266
+    0.02526
+    0.02473
+    0.02382
+    0.02308
+    0.02363
+    0.02347
+    0.02393
+    0.02369
+    0.02557
+    0.02275
+    0.02442
+     0.0256
+    0.02618
+    0.02482
+    0.06261
+    0.06577
+
