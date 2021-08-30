@@ -7,7 +7,7 @@ bb.gem.modules = ft0_m0 ft0_m1 ft0_m2
 	         ft2_m0 ft2_m1 ft2_m2
 	         ft3_m0 ft3_m1 ft3_m2
 		 bt0_m0 bt0_m1 bt0_m2 bt0_m3
-
+bb.gem.useconstraint = 1
 
 ## Channel maps
 bb.gem.ft0_m0.chanmap =

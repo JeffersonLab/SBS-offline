@@ -384,6 +384,10 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   px = xptar_fit * pz;
   py = yptar_fit * pz;
   
+  track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
+  track->SetMomentum(p_fit);
+  track->SetPvect(TVector3(px, py, pz));
+  track->SetVertex(TVector3(0, 0, vz_fit));
   
 }
 
