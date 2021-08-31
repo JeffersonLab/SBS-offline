@@ -296,10 +296,10 @@ protected:
 
   bool fEfficiencyInitialized;
   bool fMakeEfficiencyPlots; //default to TRUE
-
+  bool fDumpGeometryInfo; //default to FALSE
+  
   // output files for pedestal info when running in pedestal mode:
   std::ofstream fpedfile_dbase, fpedfile_daq, fpedfile_cmr; 
-
   // input files for (optional) loading of pedestals from database:
 
   std::string fpedfilename;

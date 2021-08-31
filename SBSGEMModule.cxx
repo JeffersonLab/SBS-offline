@@ -468,17 +468,15 @@ Int_t SBSGEMModule::ReadGeometry( FILE *file, const TDatime &date, Bool_t requir
       //                    |  0   sin(alpha)  cos(alpha)  |    |  p.Z()  |
       // 
       // This definition ***appears**** to be consistent with the "sense" of the rotation as applied by the standalone code.
-      // The detector axes are defined as the ROWS of the rotation matrix. We will have to test that it is working correctly, however:
-
+      // The detector axes are defined as the columns of the rotation matrix. We will have to test that it is working correctly, however:
       
+      RotTemp.RotateX( angles[0] * TMath::DegToRad() );
+      RotTemp.RotateY( angles[1] * TMath::DegToRad() );
+      RotTemp.RotateZ( angles[2] * TMath::DegToRad() );
       
-      RotTemp.RotateX( -angles[0] * TMath::DegToRad() );
-      RotTemp.RotateY( -angles[1] * TMath::DegToRad() );
-      RotTemp.RotateZ( -angles[2] * TMath::DegToRad() );
-      
-      fXax.SetXYZ( RotTemp.XX(), RotTemp.XY(), RotTemp.XZ() );
-      fYax.SetXYZ( RotTemp.YX(), RotTemp.YY(), RotTemp.YZ() );
-      fZax.SetXYZ( RotTemp.ZX(), RotTemp.ZY(), RotTemp.ZZ() );
+      fXax.SetXYZ( RotTemp.XX(), RotTemp.YX(), RotTemp.ZX() );
+      fYax.SetXYZ( RotTemp.XY(), RotTemp.YY(), RotTemp.ZY() );
+      fZax.SetXYZ( RotTemp.XZ(), RotTemp.YZ(), RotTemp.ZZ() );
     }
   } else
     DefineAxes(0);

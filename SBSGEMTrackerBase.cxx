@@ -45,6 +45,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fMakeEfficiencyPlots = true;
 
   fpedfilename = "";
+
+  fDumpGeometryInfo = false;
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
