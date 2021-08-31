@@ -76,6 +76,8 @@ namespace Decoder {
     fFillerWord = 15; //1111 = 15
     //    fAPVHeader   = 0x4;
 
+    fSLOTID_VTP = 11;
+    
     fNumSample = 6;
     
   }
@@ -98,7 +100,8 @@ namespace Decoder {
 
     //Get the slot number for this call to LoadSlot:
     UInt_t this_slot = sldat->getSlot();
-
+    UInt_t this_crate = sldat->getCrate();
+    
     //UInt_t mask, shift;
     UInt_t slot=MAXSLOT+1, mpd_id=0, apv_id=0, apv_chan=0, fiber=0;
     //UInt_t apv_chan_40, apv_chan65;
@@ -109,6 +112,8 @@ namespace Decoder {
 
     bool ENABLE_CM=false;
     bool BUILD_ALL_SAMPLES=false;
+
+    bool is_SSP = false; //assume VTP by default which only has the MPD data, no block header/trailer.
     
     bool found_this_slot = false;
     bool found_MPD_header = false;
@@ -116,6 +121,7 @@ namespace Decoder {
     UInt_t mpd_strip_count = 0;
     UInt_t mpd_word_count = 0;
 
+    UInt_t old_type_tag=16;
     UInt_t type_tag=16; //intialize to something that is NOT one of the recognized data types
     //following the MPDRawParser in ROOT_GUI_multicrate, loop on all the data in the ROC bank (which corresponds to one "crate"), and populate the
     //temporary data structure above, ONLY if slot == this_slot
@@ -135,10 +141,14 @@ namespace Decoder {
       
       
       if( word_type == 1 ){ //data-type defining: extract data type from bits 30-27:
+	old_type_tag = type_tag;
+	
 	type_tag = (thisword & 0x78000000)>>27;
 	//std::cout << "Data-type defining word, type tag, fBlockHeader = " << type_tag << ", " << fBlockHeader << std::endl;
-	if( type_tag == fBlockHeader ){
+	if( type_tag == fBlockHeader ){ //if we see a block header, this is SSP data:
 
+	  is_SSP = true;
+	  
 	  found_MPD_header = false; 
 	  
 	  prev_slot = slot;
@@ -149,6 +159,12 @@ namespace Decoder {
 	  //std::cout << "Found block header, SLOTID = " << slot << std::endl;
 	}
 
+	if( type_tag == fBlockTrailer ){ //end of a block of SSP data. set the is_SSP flag to false unless and until we see another block header word
+	  is_SSP = false; //
+	  found_MPD_header = false;
+	}
+	
+	
 	//Question: ask Ben: how would/could we use the trigger time words to correct for APV trigger jitter?
 	
 	if( type_tag == fMPDFrameHeader ){ //extract "flags", FIBER, and MPD_ID
@@ -165,12 +181,18 @@ namespace Decoder {
 
 	  found_MPD_header = true;
 
-	  // std::cout << "found MPD frame header, fiber, mpd_id, ENABLE_CM, BUILD_ALL_SAMPLES = " << fiber << ", " << mpd_id << ", "
-	  // 	    << ENABLE_CM << ", " << BUILD_ALL_SAMPLES << std::endl;
+	  // std::cout << "found MPD frame header, fiber, mpd_id, ENABLE_CM, BUILD_ALL_SAMPLES, is_SSP, SLOT, THIS_SLOT = " << fiber << ", " << mpd_id << ", "
+	  // 	    << ENABLE_CM << ", " << BUILD_ALL_SAMPLES << ", "
+	  // 	    << is_SSP << ", " << slot << ", " << this_slot << std::endl;
 	  
 	  //reset "word" and "strip" counters:
 	  mpd_word_count = 0; 
 	  mpd_strip_count = 0;
+
+	  if( !is_SSP ) {
+	    slot = fSLOTID_VTP; //always 11 
+	    found_this_slot = ( slot == this_slot );
+	  }
 	}
 	
       } else if( found_this_slot ){
@@ -178,8 +200,15 @@ namespace Decoder {
 	//doesn't match the one that we want, then do nothing. 
 	//For NOW, let's focus mainly on the MPD Frame decoding and worry about anything and everything else later:
 
-	if( type_tag == fMPDFrameHeader ){ //the data continuation words should come in bundles of three * N, where N is the total number of "hits" (i.e., fired strips) in the MPD:
-	  mpd_strip_count = mpd_word_count/3;
+	if( type_tag == fMPDFrameHeader && found_MPD_header ){ //the data continuation words should come in bundles of three * N, where N is the total number of "hits" (i.e., fired strips) in the MPD:
+	  
+	  hitwords[mpd_word_count%3] = thisword; //Set hitwords before incrementing word count
+	  
+	  mpd_word_count++; //increment word count;
+
+	  mpd_strip_count = mpd_word_count/3; 
+
+	  //this should take care of the issue of missing the last "hit":
 	  if( mpd_word_count%3 == 0 && mpd_strip_count > 0 ){ //extract information from the three "hit words" and "load" the data into the "slot":
 
 	    // load up the ADC samples:
@@ -208,17 +237,14 @@ namespace Decoder {
 	      // This loads each of the six ADC samples as a new "hit" into sldat, with "effChan" as the unique "channel" number,
 	      // the ADC samples as the "data", and the APV channel number as the "rawData"
 	      // std::cout << "decoded one strip hit: (crate, slot, fiber, apv_id, apv_chan, effChan, isample, ADCsamples[isample]) = ("
-	      // 	<< sldat->getCrate() << ", " << slot << ", " << fiber << ", " << apv_id << ", " << apv_chan << ", " << effChan << ", "
-	      // 	<< is <<  ", " << int(ADCsamples[is]) << ")" << std::endl;
+	      // 		<< sldat->getCrate() << ", " << slot << ", " << fiber << ", " << apv_id << ", " << apv_chan << ", " << effChan << ", "
+	      // 		<< is <<  ", " << int(ADCsamples[is]) << ")" << std::endl;
 	      
 	      status = sldat->loadData( "adc", effChan, ADCsamples[is], apv_chan );
 	      if( status != SD_OK ) return -1;
 	    }
 	  }
 	  
-	  hitwords[mpd_word_count%3] = thisword;
-	  
-	  mpd_word_count++; 
 	}
 	
       }
@@ -226,7 +252,7 @@ namespace Decoder {
       fWordsSeen++;
     }
 
-    std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
+    //std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
     
     return fWordsSeen;
   

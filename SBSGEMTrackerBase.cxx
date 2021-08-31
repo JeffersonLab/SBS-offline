@@ -43,6 +43,10 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fEfficiencyInitialized = false;
   fMakeEfficiencyPlots = true;
+
+  fpedfilename = "";
+
+  fDumpGeometryInfo = false;
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -163,6 +167,98 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   
   InitLayerCombos();
   InitGridBins();
+
+  if( fpedfilename != "" ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
+    //NOTE: if we load the pedestals from a file formatted in the way the DAQ wants, then we have to assume that SLOT, MPD_ID, and ADC_CH are sufficient to uniquely identify
+
+    LoadPedestals( fpedfilename.c_str() );
+    
+  }
+  
+}
+
+void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
+
+  std::cout << "[SBSGEMTrackerBase::LoadPedestals]: fname = " << fname << std::endl;
+  
+  std::ifstream pedfile( fname );
+
+  //temporary storage for pedestals loaded from file:
+  //vector<int> Slot, MPD, ADC_ch, APV_ch;
+  //vector<double> pedmean, pedrms;
+
+  //let's define a unique index as
+  // index = apvchan + 128*adc_ch + 16*128*MPD +
+  //map by slot, MPD, and adc_ch
+  //std::map<int, std::map<int,std::vector<int> > > Slot;
+  std::map<int, std::map<int, std::map<int,std::vector<double> > > > PedMean;
+  std::map<int, std::map<int, std::map<int,std::vector<double> > > > PedRMS;
+  std::map<int, std::map<int, std::map<int,std::vector<int> > > > APVChan;
+  // std::map<int, std::map<int,std::vector<int> > > APVChan;
+  
+  
+  while( pedfile.good() ){
+    //TString currentline;
+    
+    int crate=-1, slot = -1, mpd = -1, adc_ch = -1;
+    string keyword = "APV";
+    string dummy="";
+    
+    while( pedfile >> dummy && dummy != keyword ){ ;}
+    
+    if ( dummy == keyword ){
+      pedfile >> crate >> slot >> mpd >> adc_ch; 
+    }
+
+    int index = adc_ch + 16*mpd;
+    
+    int apvchan;
+    double mean, rms;
+    for( int i=0; i<128; i++ ){
+      pedfile >> apvchan >> mean >> rms;
+      PedMean[crate][slot][index].push_back( mean );
+      PedRMS[crate][slot][index].push_back( rms );
+      APVChan[crate][slot][index].push_back( apvchan );
+    }
+      
+  }
+
+  //Now loop over the modules
+  for( int module=0; module<fNmodules; module++ ){
+    for ( auto it = fModules[module]->fMPDmap.begin(); it != fModules[module]->fMPDmap.end(); ++it ){
+
+      int this_crate = it->crate;
+      int this_index = it->adc_id + 16 * it->mpd_id;
+      int this_slot = it->slot;
+
+      if( PedMean.find( this_crate ) != PedMean.end() ){
+	if( PedMean[this_crate].find( this_slot ) != PedMean[this_crate].end() ){
+	  if( PedMean[this_crate][this_slot].find( this_index ) != PedMean[this_crate][this_slot].end() ){
+
+	    for( int i=0; i<128; i++ ){
+	      int this_apvchan = APVChan[this_crate][this_slot][this_index][i];
+	      double this_mean = PedMean[this_crate][this_slot][this_index][i];
+	      double this_rms = PedRMS[this_crate][this_slot][this_index][i];
+	      
+	      int this_strip = fModules[module]->GetStripNumber( this_apvchan, it->pos, it->invert );
+	      if ( it->axis == SBSGEM::kUaxis ){
+		fModules[module]->fPedestalU[this_strip] = this_mean;
+		fModules[module]->fPedRMSU[this_strip] = this_rms; 
+	      } else {
+		fModules[module]->fPedestalV[this_strip] = this_mean;
+		fModules[module]->fPedRMSV[this_strip] = this_rms; 
+	      }
+	      
+	    }
+	    
+	  }
+	}
+      }
+    }
+  }
+
+  
+  
 }
 
 void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
@@ -387,7 +483,7 @@ void SBSGEMTrackerBase::InitHitList(){
   for( int imodule=0; imodule<fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
     int layer = fIndexByLayer[fModules[imodule]->fLayer];
 
-    int n2Dhits_mod = fModules[imodule]->fHits.size(); 
+    int n2Dhits_mod = fModules[imodule]->fN2Dhits; 
     
     for( int ihit=0; ihit<n2Dhits_mod; ihit++ ){
       sbsgemhit_t hittemp = fModules[imodule]->fHits[ihit];
@@ -831,7 +927,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
 		if( binxdifflo < fGridEdgeToleranceX && binxlo > 0 ) binxlo--;
 		if( binydifflo < fGridEdgeToleranceY && binylo > 0 ) binylo--;
-		  //I x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
+		  //If x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
 		if( fGridBinWidthX - binxdiffhi < fGridEdgeToleranceX && binxhi + 1 < fGridNbinsX_layer[layer] ) binxhi++;
 		if( fGridBinWidthY - binydiffhi < fGridEdgeToleranceY && binyhi + 1 < fGridNbinsY_layer[layer] ) binyhi++;
 

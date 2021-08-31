@@ -1008,7 +1008,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  crate  = chanmap[k];
 	  slot   = chanmap[k+1];
 	  mpd   = chanmap[k+2];
-	  apv_num = mpd << 8 | chanmap[k+4];//
+	  apv_num = mpd << 4 | chanmap[k+4];//
 	  pos = chanmap[k+6];
 	  axis = chanmap[k+8];
 	  if(axis==0)n_ax_x++;

@@ -1,9 +1,11 @@
+#### dummy file for now:
+
 ## optics parameters:
-bb.optics_order = 2
+sbs.optics_order = 2
 
-bb.optics_nelem = 21
+sbs.optics_nelem = 21
 
-bb.optics_parameters = 
+sbs.optics_parameters = 
   -0.0023399735    0.015109238   -0.027331411      0.2941023  0 0 0 0 0
      0.52645922     0.14988183     -0.2723771     0.07478357  1 0 0 0 0
    0.0065104967      0.3709808    -0.67658112    -0.60286403  2 0 0 0 0
@@ -27,7 +29,7 @@ bb.optics_parameters =
     -0.15391043      1.2878076     -4.5094245      5.3426858  0 0 0 0 2
 
 ## track constraint widths:
-bb.frontconstraintwidth_x = 0.075 # m
-bb.frontconstraintwidth_y = 0.05 # m
-bb.backconstraintwidth_x = 0.05 # m
-bb.backconstraintwidth_y = 0.05 # m
+sbs.frontconstraintwidth_x = 0.075 # m
+sbs.frontconstraintwidth_y = 0.05 # m
+sbs.backconstraintwidth_x = 0.05 # m
+sbs.backconstraintwidth_y = 0.05 # m

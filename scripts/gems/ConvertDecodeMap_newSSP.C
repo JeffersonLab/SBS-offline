@@ -40,7 +40,10 @@ void ConvertDecodeMap_newSSP( const char *oldfilename="gem_map_backup_July2021.t
       TString sCrateID( currentline(istart,len) );
 
       sCrateID.ReplaceAll(" ","");
-      lastcrate = sCrateID.Atoi();
+      //temporary hack to get things working; add 1 to lastcrate:
+      lastcrate = sCrateID.Atoi() + 1;
+
+      lastcrate = 20;
       std::cout << "found new crate ID line, Crate ID = " << lastcrate << endl;
     }
     
@@ -83,7 +86,8 @@ void ConvertDecodeMap_newSSP( const char *oldfilename="gem_map_backup_July2021.t
 	if( lastcrate >= 0 ){
 	
 	  crate[layer][gempos].push_back( lastcrate );
-	  slot[layer][gempos].push_back( sslot.Atoi() );
+	  //slot[layer][gempos].push_back( sslot.Atoi() );
+	  slot[layer][gempos].push_back( 11 );
 	  fiber[layer][gempos].push_back( sfiber.Atoi() );
 	  prodID[layer][gempos].push_back( sprodID.Atoi() );
 	  axis[layer][gempos].push_back( saxis.Atoi() );

@@ -31,6 +31,11 @@ public:
   void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
   void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
   void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
+
+  void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); }
+  void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); }
+  void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); }
+  void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -49,6 +54,7 @@ protected:
   
   //Utility methods: initialization:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
+  void LoadPedestals(const char *fname);
   void InitLayerCombos();
   void InitGridBins(); //initialize 
   void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
@@ -290,10 +296,14 @@ protected:
 
   bool fEfficiencyInitialized;
   bool fMakeEfficiencyPlots; //default to TRUE
-
+  bool fDumpGeometryInfo; //default to FALSE
+  
   // output files for pedestal info when running in pedestal mode:
   std::ofstream fpedfile_dbase, fpedfile_daq, fpedfile_cmr; 
- 
+  // input files for (optional) loading of pedestals from database:
+
+  std::string fpedfilename;
+  
 };
 
 #endif
