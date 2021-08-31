@@ -103,6 +103,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 }
 
 Int_t SBSBigBite::DefineVariables( EMode mode ){
+  THaSpectrometer::DefineVariables(mode);
+  
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
   RVarDef vars[] = {
