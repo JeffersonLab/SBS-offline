@@ -177,7 +177,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
-  //some convenience maps: 
+  //some convenience maps: are these actually used yet? 
   std::map<Int_t, Int_t> fAPVch_by_Ustrip;
   std::map<Int_t, Int_t> fAPVch_by_Vstrip;
   std::map<Int_t, Int_t> fMPDID_by_Ustrip;
@@ -191,6 +191,8 @@ class SBSGEMModule : public THaSubDetector {
   //Moved to the MPD module class:
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
 
+  Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method
+  
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   //Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
@@ -222,8 +224,8 @@ class SBSGEMModule : public THaSubDetector {
   
   //Map strip indices in this array:
   //key = U or V  strip number, mapped value is position of that strip's information in the "decoded strip" arrays below:
-  std::map<UInt_t, UInt_t> fUstripIndex; 
-  std::map<UInt_t, UInt_t> fVstripIndex; 
+  /* std::map<UInt_t, UInt_t> fUstripIndex;  */
+  /* std::map<UInt_t, UInt_t> fVstripIndex;  */
   
   std::vector<UInt_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
   std::vector<SBSGEM::GEMaxis_t>  fAxis;  //We just made our enumerated type that has two possible values, makes the code more readable (maybe)
@@ -283,7 +285,13 @@ class SBSGEMModule : public THaSubDetector {
   // Should we define the parameters controlling cluster-finding in the Module class? Why not:
   std::vector<Double_t> fUgain; // "gain match" coefficients for U strips by APV card;
   std::vector<Double_t> fVgain; // "gain match" coefficients for V strips by APV card;
-    
+
+  //Optional database parameters for monitoring common-mode fluctuations in pedestal runs and/or full readout events:
+  std::vector<Double_t> fCommonModeMeanU; 
+  std::vector<Double_t> fCommonModeMeanV;
+  std::vector<Double_t> fCommonModeRMSU;
+  std::vector<Double_t> fCommonModeRMSV;
+  
   ///////////////////////////////////////////////////////////////////////////////////////////////////
   //     CLUSTERING PARAMETERS (to be read from database and/or given sensible default values)        //
   ///////////////////////////////////////////////////////////////////////////////////////////////////

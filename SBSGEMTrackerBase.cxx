@@ -45,6 +45,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fMakeEfficiencyPlots = true;
 
   fpedfilename = "";
+
+  fDumpGeometryInfo = false;
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -481,7 +483,7 @@ void SBSGEMTrackerBase::InitHitList(){
   for( int imodule=0; imodule<fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
     int layer = fIndexByLayer[fModules[imodule]->fLayer];
 
-    int n2Dhits_mod = fModules[imodule]->fHits.size(); 
+    int n2Dhits_mod = fModules[imodule]->fN2Dhits; 
     
     for( int ihit=0; ihit<n2Dhits_mod; ihit++ ){
       sbsgemhit_t hittemp = fModules[imodule]->fHits[ihit];
@@ -925,7 +927,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
 		if( binxdifflo < fGridEdgeToleranceX && binxlo > 0 ) binxlo--;
 		if( binydifflo < fGridEdgeToleranceY && binylo > 0 ) binylo--;
-		  //I x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
+		  //If x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
 		if( fGridBinWidthX - binxdiffhi < fGridEdgeToleranceX && binxhi + 1 < fGridNbinsX_layer[layer] ) binxhi++;
 		if( fGridBinWidthY - binydiffhi < fGridEdgeToleranceY && binyhi + 1 < fGridNbinsY_layer[layer] ) binyhi++;
 

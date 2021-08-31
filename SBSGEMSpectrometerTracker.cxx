@@ -102,6 +102,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
+    { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
     {0}
   };
 
@@ -203,11 +204,13 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
+  UInt_t runnum = run->GetNumber(); 
+  
   //To automate the printing out of pedestals for database and DAQ, 
   if( fPedestalMode ){
     TString fname_dbase, fname_daq, fname_cmr;
     
-    UInt_t runnum = run->GetNumber(); 
+    
     TString specname = GetApparatus()->GetName();
     TString detname = GetName();
     fname_dbase.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
@@ -275,6 +278,80 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     hefficiency_y_layer->Write();
     hefficiency_xy_layer->Write();
   }
+
+  if( fDumpGeometryInfo ){ //Print out geometry info for alignment:
+    TString fnametemp;
+    fnametemp.Form( "GEM_alignment_info_%s_%s_run%d.txt",
+		    GetApparatus()->GetName(),
+		    GetName(), runnum );
+
+    std::ofstream outfile( fnametemp );
+
+    std::vector<double> mod_x0(fNmodules), mod_y0(fNmodules), mod_z0(fNmodules);
+    std::vector<double> mod_ax(fNmodules), mod_ay(fNmodules), mod_az(fNmodules);
+    for( int imodule=0; imodule<fNmodules; imodule++ ){
+      TVector3 pos   = fModules[imodule]->GetOrigin();
+      TVector3 xaxis = fModules[imodule]->GetXax();
+      TVector3 yaxis = fModules[imodule]->GetYax();
+      TVector3 zaxis = fModules[imodule]->GetZax();
+
+      mod_x0[imodule] = pos.X();
+      mod_y0[imodule] = pos.Y();
+      mod_z0[imodule] = pos.Z();
+      
+      //Get (rough) x,y,z rotation angles:
+      // TVector3 xax0(1,0,0);
+      // TVector3 yax0(0,1,0);
+      // TVector3 zax0(0,0,1);
+
+      //How to reverse-engineer the rotation angles from the detector axes:
+      //Rx = | 1        0        0        |
+      //     | 0        cos(ax) -sin(ax)  |
+      //     | 0        sin(ax)  cos(ax)  |
+      //Ry = | cos(ay)  0        sin(ay)  |
+      //     | 0        1        0        |
+      //     | -sin(ay) 0        cos(ay)  |
+      //Rz = | cos(az)  -sin(az) 0        |
+      //     | sin(az)   cos(az) 0        |
+      //     | 0         0       1        |
+
+      //These are approximate, first-order expressions that should be
+      //fairly accurate in the case that the angles represent small misalignments from some
+      //"ideal" orientation
+      mod_ax[imodule] = asin( yaxis.Z() );
+      mod_ay[imodule] = asin( zaxis.X() );
+      mod_az[imodule] = asin( xaxis.Y() );
+    }
+
+    outfile << "mod_x0 ";
+    for( int imodule=0; imodule<fNmodules; imodule++ ){
+      outfile << std::setw(15) << std::setprecision(6) << mod_x0[imodule];
+    }
+    outfile << "mod_y0 ";
+    for( int imodule=0; imodule<fNmodules; imodule++ ){
+      outfile << std::setw(15) << std::setprecision(6) << mod_y0[imodule];
+    }
+    outfile << "mod_z0 ";
+    for( int imodule=0; imodule<fNmodules; imodule++ ){
+      outfile << std::setw(15) << std::setprecision(6) << mod_z0[imodule];
+    }
+
+
+    outfile << "mod_ax ";
+    for( int imodule=0; imodule<fNmodules; imodule++ ){
+      outfile << std::setw(15) << std::setprecision(6) << mod_ax[imodule];
+    }
+    outfile << "mod_ay ";
+    for( int imodule=0; imodule<fNmodules; imodule++ ){
+      outfile << std::setw(15) << std::setprecision(6) << mod_ay[imodule];
+    }
+    outfile << "mod_az ";
+    for( int imodule=0; imodule<fNmodules; imodule++ ){
+      outfile << std::setw(15) << std::setprecision(6) << mod_az[imodule];
+    }
+
+    outfile.close();
+  }
   
   return 0;
 }
@@ -307,6 +384,7 @@ void SBSGEMSpectrometerTracker::SetDebug( Int_t level ){
 Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
+  
   RVarDef vars[] = {
     { "track.ntrack", "number of tracks found", "fNtracks_found" },
     { "track.nhits", "number of hits on track", "fNhitsOnTrack" },
