@@ -1,9 +1,4 @@
-## optics parameters:
-bb.optics_order = 2
-
-bb.optics_nelem = 21
-
-bb.optics_parameters = 
+21
   -0.0014629237  0.00037941994 -0.00095754244      0.2769191  0 0 0 0 0
      0.52289143 -0.00072568509   0.0014194667     0.12177326  1 0 0 0 0
      -0.0429585  -0.0060262058    0.013197044   -0.016461798  2 0 0 0 0
@@ -25,9 +20,3 @@ bb.optics_parameters =
  -2.7689762e-15  3.9845049e-16 -2.3538082e-15 -3.1248326e-14  0 0 1 0 1
  -2.3741486e-15  8.5392922e-16 -2.3580607e-15  2.3118034e-15  0 0 0 1 1
    4.344296e-15 -1.2879984e-15  3.9146744e-15  1.2162675e-15  0 0 0 0 2
-
-## track constraint widths:
-bb.frontconstraintwidth_x = 0.075 # m
-bb.frontconstraintwidth_y = 0.05 # m
-bb.backconstraintwidth_x = 0.05 # m
-bb.backconstraintwidth_y = 0.05 # m
