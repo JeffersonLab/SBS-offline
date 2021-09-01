@@ -67,7 +67,7 @@ class SBSBigBite : public THaSpectrometer {
     Double_t fBackConstraintWidthX;
     Double_t fBackConstraintWidthY;
 
-    //for output only
+    //for output only... Vectors instead?
     Double_t fFrontConstraintX;
     Double_t fFrontConstraintY;
     Double_t fBackConstraintX;
