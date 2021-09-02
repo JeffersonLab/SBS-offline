@@ -177,7 +177,8 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
      if(fDebug > 1 && fDebugFile!=0) *fDebugFile<< " data = " << hex << *loc << " " << ( (*loc) & DATA_MARKER )<< endl;
         if ( !( (*loc) & DATA_MARKER ) && checkf1slot>0 ) {
 	 // header/trailer word, to be ignored (except for trigTime)
-	 trigTime = ((*loc)>>7)&0x1FF;
+	  // trigTime = ((*loc)>>7)&0x1FF;
+	  trigTime = ((*loc)&0xFF80);
 	 Int_t chn = (*loc)&0x7;
 	 Int_t chip = ((*loc>>3))&0x7;
 	 Int_t ixor = ((*loc>>6))&0x1;
@@ -253,7 +254,8 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
               if(fSlot == f1slot) {
                 raw_cor =  raw-trigTime;
                 if(raw<trigTime) // That means the roll-over already happened
-                  raw_cor += 512;
+                  raw_cor += (pow(2,16)-1);
+		// if(raw<trigTime) std::cout << " chan = " << chan << " raw " << raw << " raw_cor  " << raw_cor << " trig time =  " << trigTime << std::endl; 
 	      /*Int_t status = */sldat->loadData("tdc",chan,raw_cor,raw);
               }
 
