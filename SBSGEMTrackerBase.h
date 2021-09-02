@@ -59,6 +59,8 @@ protected:
   void InitGridBins(); //initialize 
   void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
   void CalcEfficiency(); //essentially, divide "did hit/should hit" histograms
+
+  void PrintGeometry( const char *fname );
   
   void InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
   void InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
@@ -95,12 +97,15 @@ protected:
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
+  bool fModulesInitialized;
 
+  
   bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
   bool fZeroSuppress;
   double fZeroSuppressRMS;
 
   bool fPedestalMode;
+  // bool fPedestalsInitialized;
   
   bool fIsMC;
 

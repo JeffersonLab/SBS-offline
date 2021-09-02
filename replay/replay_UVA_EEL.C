@@ -11,7 +11,7 @@
 //#include "SBSGEMStand.h"
 //#include "SBSBigBite.h"
 
-void replay( int runnum=2811, int segment=31, const char *outfilename="temp.root", long nevents=-1 ){
+void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, long firstevent=0, long nevents=-1 ){
 
     gSystem->Load("libsbs.so");
 
@@ -46,28 +46,56 @@ void replay( int runnum=2811, int segment=31, const char *outfilename="temp.root
   
   gHaApps->Add(sbs);
 
-  // A simple event class to be output to the resulting tree.
-  // Creating your own descendant of THaEvent is one way of
-  // defining and controlling the output.
   THaEvent* event = new THaEvent;
-
+  
   TString prefix = gSystem->Getenv("DATA_DIR");
-  TString codafilename;
-  codafilename.Form( "%s/gem_cleanroom_%d.evio.%d", prefix.Data(), runnum, segment );
   
+  bool segmentexists = true;
+  int segment=firstsegment; 
+
+  TClonesArray *filelist = new TClonesArray("THaRun",10);
+
   
+  int segcounter=0;
+  //This loop adds all file segments found to the list of THaRuns to process:
+  while( segcounter < maxsegments && segment - firstsegment < maxsegments ){
+
+    TString codafilename;
+    codafilename.Form( "%s/gem_cleanroom_%d.evio.%d", prefix.Data(), runnum, segment );
+
+    segmentexists = true;
+    
+    if( gSystem->AccessPathName( codafilename.Data() ) ){
+      segmentexists = false;
+    } else if( segcounter == 0 ){
+      new( (*filelist)[segcounter] ) THaRun( codafilename.Data() );
+      cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
+    } else {
+      THaRun *rtemp = ( (THaRun*) (*filelist)[segcounter-1] ); //make otherwise identical copy of previous run in all respects except coda file name:
+      new( (*filelist)[segcounter] ) THaRun( *rtemp );
+      ( (THaRun*) (*filelist)[segcounter] )->SetFilename( codafilename.Data() );
+      cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
+    }
+    if( segmentexists ) segcounter++;
+    segment++;
+  }
+
+  cout << "n segments to analyze = " << segcounter << endl;
+  
+  prefix = gSystem->Getenv("OUT_DIR");
+
+  TString outfilename;
+  outfilename.Form( "%s/sbs_uvagem_replayed_%d.root", prefix.Data(), runnum );
+
   // Define the run(s) that we want to analyze.
   // We just set up one, but this could be many.
-//  THaRun* run = new THaRun( "prod12_4100V_TrigRate25_4.dat" );
+  //  THaRun* run = new THaRun( "prod12_4100V_TrigRate25_4.dat" );
   //THaRun* run = new THaRun( "5GEM_sample.dat" );
   //THaRun* run = new THaRun( "/Users/puckett/WORK/GEM_ALIGNMENT/RAWDATA/gem_cleanroom_2811.evio.31" );
-  THaRun* run = new THaRun( codafilename.Data() );
+  //THaRun* run = new THaRun( codafilename.Data() );
   //THaRun* run = new THaRun( "/Users/puckett/WORK/GEM_ALIGNMENT/RAWDATA/gem_cleanroom_2805.evio.0" );
 
-  if( nevents > 0 ) run->SetLastEvent(nevents);
-
-  run->SetDataRequired(0);
-  run->SetDate(TDatime());
+  
 
   analyzer->SetVerbosity(0);
 
@@ -75,12 +103,25 @@ void replay( int runnum=2811, int segment=31, const char *outfilename="temp.root
   
   // Define the analysis parameters
   analyzer->SetEvent( event );
-  analyzer->SetOutFile( outfilename );
+  analyzer->SetOutFile( outfilename.Data() );
   // File to record cuts accounting information
   analyzer->SetSummaryFile("summary_example.log"); // optional
 
   analyzer->SetOdefFile( "replay_UVA_EEL.odef" );
   
   //analyzer->SetCompressionLevel(0); // turn off compression
-  analyzer->Process(run);     // start the actual analysis
+
+  filelist->Compress();
+
+  for( int iseg=0; iseg<filelist->GetEntries(); iseg++ ){
+    THaRun *run = ( (THaRun*) (*filelist)[iseg] );
+    if( nevents > 0 ) run->SetLastEvent(nevents); //not sure if this will work as we want it to for multiple file segments chained together
+
+    run->SetFirstEvent( firstevent );
+    
+    run->SetDataRequired(0);
+    run->SetDate(TDatime());
+
+    analyzer->Process(run);     // start the actual analysis
+  }
 }

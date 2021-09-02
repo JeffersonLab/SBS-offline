@@ -10,6 +10,8 @@ using namespace std;
 SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parameters: 
   Clear();
 
+  fPedestalMode = false;
+  
   fIsMC = false;
   fNmodules = 0;
   fNlayers = 0;
@@ -44,6 +46,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fEfficiencyInitialized = false;
   fMakeEfficiencyPlots = true;
 
+  fModulesInitialized = false;
+
   fpedfilename = "";
 
   fDumpGeometryInfo = false;
@@ -55,6 +59,10 @@ SBSGEMTrackerBase::~SBSGEMTrackerBase(){
 }
 
 void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
+  //Also, when we construct the tracker, we want to clear out the modules:
+  //fModules.clear(); we actually DON'T want to clear out the modules here, this gets called event-by-event
+  
+  
   fNtracks_found = 0;
   fNhitsOnTrack.clear();
   fModListTrack.clear();
@@ -263,7 +271,7 @@ void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
 
 void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
 
-  if( fMakeEfficiencyPlots ){
+  if( fMakeEfficiencyPlots && !fEfficiencyInitialized ){
     //Here is the place to book efficiency histograms by layer:
     hdidhit_x_layer = new TClonesArray( "TH1F", fNlayers );
     hdidhit_y_layer = new TClonesArray( "TH1F", fNlayers );
@@ -295,11 +303,12 @@ void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
 						  100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
 
       //Don't create these until the end of the run:
-      // new( (*hefficiency_x_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      // new( (*hefficiency_y_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      // new( (*hefficiency_xy_layer)[ilayer] ) TH2F( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y", 
-      // 					     100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
-      // 					     100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+      new( (*hefficiency_x_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_y_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_xy_layer)[ilayer] ) TH2F( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y", 
+						   100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+						   100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+      
     }
     
     fEfficiencyInitialized = true;
@@ -307,35 +316,15 @@ void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
 }
 
 void SBSGEMTrackerBase::CalcEfficiency(){
-  if( !fEfficiencyInitialized || !fMakeEfficiencyPlots ) return;
+  if( !fMakeEfficiencyPlots ) return;
 
   TString histname;
   
   for( int i=0; i<fNlayers; i++ ){
-    new( (*hefficiency_x_layer)[i] ) TH1F( *( (TH1F*) (*hdidhit_x_layer)[i] ) );
-    new( (*hefficiency_y_layer)[i] ) TH1F( *( (TH1F*) (*hdidhit_y_layer)[i] ) );
-    new( (*hefficiency_xy_layer)[i] ) TH2F( *( (TH2F*) (*hdidhit_xy_layer)[i] ) );
-
-    histname = ( (TH1F*) (*hefficiency_x_layer)[i] )->GetName();
-    histname.ReplaceAll( "didhit", "efficiency" );
     
-    ( (TH1F*) (*hefficiency_x_layer)[i] )->SetName( histname );
-    ( (TH1F*) (*hefficiency_x_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs x, layer %d", i ) );
-    ( (TH1F*) (*hefficiency_x_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_x_layer)[i] ) );
-
-    histname = ( (TH1F*) (*hefficiency_y_layer)[i] )->GetName();
-    histname.ReplaceAll( "didhit", "efficiency" );
-    
-    ( (TH1F*) (*hefficiency_y_layer)[i] )->SetName( histname );
-    ( (TH1F*) (*hefficiency_y_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs y, layer %d", i ) );
-    ( (TH1F*) (*hefficiency_y_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_y_layer)[i] ) );
-
-    histname = ( (TH1F*) (*hefficiency_xy_layer)[i] )->GetName();
-    histname.ReplaceAll( "didhit", "efficiency" );
-    
-    ( (TH2F*) (*hefficiency_xy_layer)[i] )->SetName( histname );
-    ( (TH2F*) (*hefficiency_xy_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs (x,y), layer %d", i ) );
-    ( (TH2F*) (*hefficiency_xy_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_xy_layer)[i] ) );
+    ( (TH1F*) (*hefficiency_x_layer)[i] )->Divide(  ( (TH1F*) (*hdidhit_x_layer)[i] ), ( (TH1F*) (*hshouldhit_x_layer)[i] ) );
+    ( (TH1F*) (*hefficiency_y_layer)[i] )->Divide(  ( (TH1F*) (*hdidhit_y_layer)[i] ), ( (TH1F*) (*hshouldhit_y_layer)[i] ) );
+    ( (TH2F*) (*hefficiency_xy_layer)[i] )->Divide(  ( (TH2F*) (*hdidhit_xy_layer)[i] ), ( (TH2F*) (*hshouldhit_xy_layer)[i] ) );
   }
 }
 
@@ -1502,3 +1491,79 @@ int SBSGEMTrackerBase::GetNearestModule( int layer, TVector3 track_origin, TVect
   return nearestmod;
 }
 
+void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
+  std::ofstream outfile( fname );
+  
+  std::vector<double> mod_x0(fNmodules), mod_y0(fNmodules), mod_z0(fNmodules);
+  std::vector<double> mod_ax(fNmodules), mod_ay(fNmodules), mod_az(fNmodules);
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    TVector3 pos   = fModules[imodule]->GetOrigin();
+    TVector3 xaxis = fModules[imodule]->GetXax();
+    TVector3 yaxis = fModules[imodule]->GetYax();
+    TVector3 zaxis = fModules[imodule]->GetZax();
+    
+    mod_x0[imodule] = pos.X();
+    mod_y0[imodule] = pos.Y();
+    mod_z0[imodule] = pos.Z();
+    
+    //Get (rough) x,y,z rotation angles:
+    // TVector3 xax0(1,0,0);
+    // TVector3 yax0(0,1,0);
+    // TVector3 zax0(0,0,1);
+    
+    //How to reverse-engineer the rotation angles from the detector axes:
+    //Rx = | 1        0        0        |
+    //     | 0        cos(ax) -sin(ax)  |
+    //     | 0        sin(ax)  cos(ax)  |
+    //Ry = | cos(ay)  0        sin(ay)  |
+    //     | 0        1        0        |
+    //     | -sin(ay) 0        cos(ay)  |
+    //Rz = | cos(az)  -sin(az) 0        |
+    //     | sin(az)   cos(az) 0        |
+    //     | 0         0       1        |
+    
+    //These are approximate, first-order expressions that should be
+    //fairly accurate in the case that the angles represent small misalignments from some
+    //"ideal" orientation
+    mod_ax[imodule] = asin( yaxis.Z() );
+    mod_ay[imodule] = asin( zaxis.X() );
+    mod_az[imodule] = asin( xaxis.Y() );
+  }
+  
+  outfile << "mod_x0 ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_x0[imodule];
+  }
+  outfile << std::endl;
+  
+  outfile << "mod_y0 ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_y0[imodule];
+  }
+  outfile << std::endl;
+  
+  outfile << "mod_z0 ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_z0[imodule];
+  }
+  outfile << std::endl;
+  
+  
+  outfile << "mod_ax ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_ax[imodule];
+  }
+  outfile << std::endl;
+  outfile << "mod_ay ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_ay[imodule];
+  }
+  outfile << std::endl;
+  outfile << "mod_az ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_az[imodule];
+  }
+  outfile << std::endl;
+  
+  outfile.close();
+}

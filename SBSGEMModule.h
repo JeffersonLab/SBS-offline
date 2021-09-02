@@ -186,6 +186,8 @@ class SBSGEMModule : public THaSubDetector {
   std::map<Int_t, Int_t> fADCch_by_Vstrip;
   
   Bool_t fPedestalMode;
+  //Bool_t fPedestalsInitialized;
+  
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
   //Moved to the MPD module class:
@@ -353,8 +355,10 @@ class SBSGEMModule : public THaSubDetector {
 
   //we should let the user configure this: this is set at the "tracker level" which then propagates down to all the modules:
   bool fMakeEfficiencyPlots;
+  bool fEfficiencyInitialized;
 
   //Pedestal plots: only generate if pedestal mode = true:
+  bool fPedHistosInitialized;
   
   TH2F *hrawADCs_by_stripU; //raw adcs by strip, no corrections, filled for each SAMPLE:
   TH2F *hrawADCs_by_stripV; //raw adcs by strip, no corrections, filled for each SAMPLE:
