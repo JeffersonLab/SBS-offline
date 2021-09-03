@@ -48,6 +48,10 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //     fadc[i] = NULL;
   // }
 
+  // default these offsets to zero: 
+  fUStripOffset = 0.0;
+  fVStripOffset = 0.0;
+  
   fMakeEfficiencyPlots = true;
   fEfficiencyInitialized = false;
   
@@ -102,6 +106,10 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   //   Int_t            search;   // (opt) Search for key along name tree
   //   const char*      descript; // (opt) Key description (if 0, same as name)
   // };
+
+  // default these offsets to zero: 
+  fUStripOffset = 0.0;
+  fVStripOffset = 0.0;
   
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
@@ -114,6 +122,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "nstripsv",       &fNstripsV,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along V axis
     { "uangle",         &fUAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "U" strips wrt X axis
     { "vangle",         &fVAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "V" strips wrt X axis
+    { "uoffset",        &fUStripOffset, kDouble, 0, 1, 1}, //optional: position of first U strip
+    { "voffset",        $fVStripOffset, kDouble, 0, 1, 1}, //optional: position of first V strip
     { "upitch",         &fUStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of U strips
     { "vpitch",         &fVStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of V strips
     { "ugain",          &fUgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of U strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
@@ -1074,7 +1084,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   UShort_t maxsepcoord; 
   UInt_t Nstrips;
   Double_t pitch;
-
+  Double_t offset = (axis == SBSGEM::kUaxis) ? fUStripOffset : fVStripOffset;
+  
   //hopefully this compiles and works correctly:
   std::vector<sbsgemcluster_t> &clusters = (axis == SBSGEM::kUaxis ) ? fUclusters : fVclusters;
 
@@ -1255,7 +1266,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     map<int,double> splitfraction;
     vector<double> stripADCsum(nstrips);
 
-    double maxpos = (stripmax + 0.5 - 0.5*Nstrips) * pitch;
+    double maxpos = (stripmax + 0.5 - 0.5*Nstrips) * pitch + offset;
 
     //If peak position falls inside the "track search region" constraint, add a new cluster: 
     if( fabs( maxpos - constraint_center ) <= constraint_width ){
@@ -1286,7 +1297,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
    
 	splitfraction[istrip] = maxweight/sumweight;
 
-	double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch; //local hit position along direction measured by these strips
+	double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips
 	double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
 	double tstrip = fTmean[hitindex[istrip]];
 
@@ -1378,8 +1389,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	hittemp.uhit = fUclusters[iu].hitpos_mean;
 	hittemp.vhit = fVclusters[iv].hitpos_mean;
 
-	double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch;
-	double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch;
+	double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch + fUStripOffset;
+	double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch + fVStripOffset;
 
 	//"Cluster moments" defined as differences between reconstructed hit position and center of strip with max. signal in the cluster:
 	hittemp.umom = (hittemp.uhit - pos_maxstripu)/fUStripPitch;

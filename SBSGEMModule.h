@@ -321,6 +321,8 @@ class SBSGEMModule : public THaSubDetector {
   //GEOMETRICAL PARAMETERS:
   Double_t fUStripPitch;    //strip pitch along U, will virtually always be 0.4 mm
   Double_t fVStripPitch;    //strip pitch along V, will virtually always be 0.4 mm
+  Double_t fUStripOffset;   //position of first U strip along the direction it measures:
+  Double_t fVStripOffset;   //position of first V sttrip alogn the direction it measures:
   Double_t fUAngle;         //Angle between U strips and "X" axis of TRANSPORT coordinates;
   Double_t fVAngle;         //Angle between V strips and "X" axis of TRANSPORT coordinates;
   Double_t fPxU;            //U Strip X projection = cos( UAngle );
