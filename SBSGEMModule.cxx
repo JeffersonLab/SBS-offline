@@ -123,7 +123,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "uangle",         &fUAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "U" strips wrt X axis
     { "vangle",         &fVAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "V" strips wrt X axis
     { "uoffset",        &fUStripOffset, kDouble, 0, 1, 1}, //optional: position of first U strip
-    { "voffset",        $fVStripOffset, kDouble, 0, 1, 1}, //optional: position of first V strip
+    { "voffset",        &fVStripOffset, kDouble, 0, 1, 1}, //optional: position of first V strip
     { "upitch",         &fUStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of U strips
     { "vpitch",         &fVStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of V strips
     { "ugain",          &fUgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of U strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
