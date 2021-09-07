@@ -89,40 +89,79 @@ bb.gem.m11.size = 0.512 0.6144 0.001
 
 # in Sean's schematic, the pink strips are "V" and the blue strips are "U":
 # both U and V strip indices run in the opposite direction from the +X axis of transport coordinates.
-# the "U" angle should be +30 - 180 degrees or +30 + 180 degrees = -150 or +210 degrees
-# the "V" angle should be -30 - 180 degrees or -30 + 180 degrees = -210 or +150 degrees
-bb.gem.m0.uangle = -150.0
-bb.gem.m0.vangle = 150.0
+# the "U" angle should be -30 + 180 degrees or -30 - 180 degrees = 150 or -210 degrees
+# the "V" angle should be 30 - 180 degrees or 30 + 180 degrees = 210 or -150 degrees
+bb.gem.m0.uangle = 150.0
+bb.gem.m0.vangle = -150.0
 
-# for the INFN X/Y modules we assume "x" and "y" match their definitions in the TCS: This may need to be revisited:
-bb.gem.m1.uangle = 0.0
-bb.gem.m1.vangle = 90.0
-bb.gem.m2.uangle = 0.0
-bb.gem.m2.vangle = 90.0
-bb.gem.m3.uangle = 0.0
-bb.gem.m3.vangle = 90.0
+# for the INFN X/Y modules both "X" and "Y" axis directions need to be reversed:
+bb.gem.m1.uangle = 180.0
+bb.gem.m1.vangle = -90.0
+bb.gem.m2.uangle = 180.0
+bb.gem.m2.vangle = -90.0
+bb.gem.m3.uangle = 180.0
+bb.gem.m3.vangle = -90.0
 
-bb.gem.m4.uangle = -150.0
-bb.gem.m4.vangle = 150.0
+bb.gem.m4.uangle = 150.0
+bb.gem.m4.vangle = -150.0
 
-bb.gem.m5.uangle = 0.0
-bb.gem.m5.vangle = 90.0
-bb.gem.m6.uangle = 0.0
-bb.gem.m6.vangle = 90.0
-bb.gem.m7.uangle = 0.0
-bb.gem.m7.vangle = 90.0
+bb.gem.m5.uangle = 180.0
+bb.gem.m5.vangle = -90.0
+bb.gem.m6.uangle = 180.0
+bb.gem.m6.vangle = -90.0
+bb.gem.m7.uangle = 180.0
+bb.gem.m7.vangle = -90.0
 
-# for the UVA X/Y modules the "x" and "y" axes coincide with those of the TRANSPORT coordinates,
+# for the UVA X/Y modules the "X" axis coincides with the direction of transport coordinates but the "Y" axis is opposite the direction of transport coordinates:
 # as confirmed by Sean Jeffas:
 
 bb.gem.m8.uangle = 0.0
-bb.gem.m8.vangle = 90.0
+bb.gem.m8.vangle = -90.0
 bb.gem.m9.uangle = 0.0
-bb.gem.m9.vangle = 90.0
+bb.gem.m9.vangle = -90.0
 bb.gem.m10.uangle = 0.0
-bb.gem.m10.vangle = 90.0
+bb.gem.m10.vangle = -90.0
 bb.gem.m11.uangle = 0.0
-bb.gem.m11.vangle = 90.0
+bb.gem.m11.vangle = -90.0
+
+# U/V strip offsets: for X/Y GEMS, INFN and UVA alike, we are probably safe to stick with (0,0).
+# for U/V strip GEMs, the needed offsets are non-zero:
+
+# U offsets:
+bb.gem.m0.uoffset = 0.0108
+
+bb.gem.m1.uoffset = 0.0
+bb.gem.m2.uoffset = 0.0
+bb.gem.m3.uoffset = 0.0
+
+bb.gem.m4.uoffset = 0.0108
+
+bb.gem.m5.uoffset = 0.0
+bb.gem.m6.uoffset = 0.0
+bb.gem.m7.uoffset = 0.0
+
+bb.gem.m8.uoffset = 0.0
+bb.gem.m9.uoffset = 0.0
+bb.gem.m10.uoffset = 0.0
+bb.gem.m11.uoffset = 0.0
+
+# U offsets:
+bb.gem.m0.voffset = 0.0108
+
+bb.gem.m1.voffset = 0.0
+bb.gem.m2.voffset = 0.0
+bb.gem.m3.voffset = 0.0
+
+bb.gem.m4.voffset = 0.0108
+
+bb.gem.m5.voffset = 0.0
+bb.gem.m6.voffset = 0.0
+bb.gem.m7.voffset = 0.0
+
+bb.gem.m8.voffset = 0.0
+bb.gem.m9.voffset = 0.0
+bb.gem.m10.voffset = 0.0
+bb.gem.m11.voffset = 0.0
 
 # strip counts: these are easy for the X/Y modules but less trivial for the U/V modules:
 
@@ -130,6 +169,7 @@ bb.gem.m11.vangle = 90.0
 # however, not all physical readout strips are connected to APV cards and not all APV cards have
 # all channels connected to physical readout strips, so we probably will need an additional
 # optional database parameter to specify the "strip offset" from the physical center of the GEM active area:
+# for now, we keep nstripsu,v = 3,840 for the U/V strip GEMs, changing this parameter would change the definition of uoffset and voffset
 bb.gem.m0.nstripsu = 3840
 bb.gem.m0.nstripsv = 3840
 
