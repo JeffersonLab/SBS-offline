@@ -24,7 +24,10 @@ bb.gem.m9.layer = 4
 bb.gem.m10.layer = 4
 bb.gem.m11.layer = 4
 
-bb.gem.pedestalmode = 1
+bb.gem.pedestalmode = 0
+bb.gem.commonmode_flag = 1
+
+bb.gem.dump_geometry_info = 1
 
 # to start with, let's not worry about the misalignments, let's put everything at its nominal/ideal position:
 
@@ -202,6 +205,33 @@ bb.gem.m11.nstripsv = 1536
 # all modules have the same strip pitch along both dimensions, 0.4 mm:
 bb.gem.upitch = 0.0004
 bb.gem.vpitch = 0.0004
+
+# tracking parameters:
+bb.gem.threshold_sample = 50.0
+bb.gem.threshold_stripsum = 200.0
+bb.gem.threshold_clustersum = 200.0
+
+bb.gem.peakprominence_minsigma = 5.0
+bb.gem.peakprominence_minfraction = 0.2
+
+bb.gem.maxnu_charge = 4
+bb.gem.maxnv_charge = 4
+
+bb.gem.maxnu_pos = 2
+bb.gem.maxnv_pos = 2
+
+bb.gem.sigmahitshape = 0.0004 
+bb.gem.sigmahitpos = 0.00015 # 0.15 mm or 150 um
+bb.gem.trackchi2cut = 10000.0
+bb.gem.onlinezerosuppression = 0
+bb.gem.zerosuppress_nsigma = 3.5
+bb.gem.minhitsontrack = 3
+bb.gem.maxhitcombos = 20000
+bb.gem.gridbinwidthx = 0.1
+bb.gem.gridbinwidthy = 0.1
+bb.gem.gridedgetolerancex = 0.03
+bb.gem.gridedgetolerancey = 0.03
+bb.gem.useconstraint = 0
 
 ################### DECODE INFO ########################################################################
 ## Channel maps for decoding explained                                                                ##
