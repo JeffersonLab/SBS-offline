@@ -59,25 +59,31 @@ void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long f
 
   TClonesArray *filelist = new TClonesArray("THaRun",10);
 
-  
-
+  int segcounter=0;
   //This loop adds all file segments found to the list of THaRuns to process:
-  while( segmentexists && segment-firstsegment < maxsegments ){
+  while( segcounter < maxsegments && segment - firstsegment < maxsegments ){
 
     TString codafilename;
     codafilename.Form( "%s/bbgem_%d.evio.%d", prefix.Data(), runnum, segment );
 
+    segmentexists = true;
+    
     if( gSystem->AccessPathName( codafilename.Data() ) ){
       segmentexists = false;
-    } else if( segment == 0 ){
-      new( (*filelist)[segment] ) THaRun( codafilename.Data() );
+    } else if( segcounter == 0 ){
+      new( (*filelist)[segcounter] ) THaRun( codafilename.Data() );
+      cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
     } else {
-      THaRun *rtemp = ( (THaRun*) (*filelist)[segment-1] ); //make otherwise identical copy of previous run in all respects except coda file name:
-      new( (*filelist)[segment] ) THaRun( *rtemp );
-      ( (THaRun*) (*filelist)[segment] )->SetFilename( codafilename.Data() );
+      THaRun *rtemp = ( (THaRun*) (*filelist)[segcounter-1] ); //make otherwise identical copy of previous run in all respects except coda file name:
+      new( (*filelist)[segcounter] ) THaRun( *rtemp );
+      ( (THaRun*) (*filelist)[segcounter] )->SetFilename( codafilename.Data() );
+      cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
     }
+    if( segmentexists ) segcounter++;
     segment++;
   }
+
+  cout << "n segments to analyze = " << segcounter << endl;
 
   prefix = gSystem->Getenv("OUT_DIR");
 
