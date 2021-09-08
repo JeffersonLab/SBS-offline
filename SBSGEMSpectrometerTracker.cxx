@@ -92,7 +92,6 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
     { "is_mc",        &fIsMC,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
-    { "onlinezerosuppression", &onlinezerosuppressflag, kInt, 0, 1},
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
     { "gridbinwidthx", &fGridBinWidthX, kDouble, 0, 1},
@@ -123,12 +122,12 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
   
-  fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
+  //fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
 
-  if( fPedestalMode ){ //then we will just dump raw data to the tree:
-    fZeroSuppress = false;
+  if( fPedestalMode ){ //then we will just dump raw data to the tree and/or histograms:
+    //fZeroSuppress = false;
     fMakeEfficiencyPlots = false; //If in pedestal mode, we don't want efficiency plots
   }
   
