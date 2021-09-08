@@ -5,21 +5,22 @@
 #include "THaAnalyzer.h"
 #include "THaApparatus.h"
 #include "TString.h"
+#include "TClonesArray.h"
 
 #include "SBSGEMSpectrometerTracker.h"
 #include "SBSBigBite.h"
 //#include "SBSGEMStand.h"
 //#include "SBSBigBite.h"
 
-void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, long firstevent=0, long nevents=-1 ){
+void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long firstevent=0, long nevents=-1 ){
 
-    gSystem->Load("libsbs.so");
+  //  gSystem->Load("libsbs.so");
 
-    SBSBigBite   *sbs = new SBSBigBite("sbs", "Generic apparatus");
-    //SBSGEMStand *gems = new SBSGEMStand("gems", "Collection of GEMs in stand");
-    SBSGEMSpectrometerTracker *uvagem = new SBSGEMSpectrometerTracker("uvagem", "5-layer cosmic test stand");
+  SBSBigBite   *bb = new SBSBigBite("bb", "Generic apparatus");
+  //SBSGEMStand *gems = new SBSGEMStand("gems", "Collection of GEMs in stand");
+  SBSGEMSpectrometerTracker *bbgem = new SBSGEMSpectrometerTracker("gem", "BigBite Hall A GEM data");
     
-    sbs->AddDetector(uvagem);
+  bb->AddDetector(bbgem);
 
   //
   //  Steering script for Hall A analyzer demo
@@ -32,8 +33,8 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
   // Collect information about a easily modified random set of channels
   // (see DB_DIR/*/db_D.dat)
   /*
-  THaApparatus* DECDAT = new THaDecData("D","Misc. Decoder Data");
-  gHaApps->Add( DECDAT );
+    THaApparatus* DECDAT = new THaDecData("D","Misc. Decoder Data");
+    gHaApps->Add( DECDAT );
   */
   
 
@@ -44,10 +45,13 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
   // and executes the output routines.
   THaAnalyzer* analyzer = new THaAnalyzer;
   
-  gHaApps->Add(sbs);
+  gHaApps->Add(bb);
 
+  // A simple event class to be output to the resulting tree.
+  // Creating your own descendant of THaEvent is one way of
+  // defining and controlling the output.
   THaEvent* event = new THaEvent;
-  
+
   TString prefix = gSystem->Getenv("DATA_DIR");
   
   bool segmentexists = true;
@@ -55,13 +59,12 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
 
   TClonesArray *filelist = new TClonesArray("THaRun",10);
 
-  
   int segcounter=0;
   //This loop adds all file segments found to the list of THaRuns to process:
   while( segcounter < maxsegments && segment - firstsegment < maxsegments ){
 
     TString codafilename;
-    codafilename.Form( "%s/gem_cleanroom_%d.evio.%d", prefix.Data(), runnum, segment );
+    codafilename.Form( "%s/bbgem_%d.evio.%d", prefix.Data(), runnum, segment );
 
     segmentexists = true;
     
@@ -81,11 +84,11 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
   }
 
   cout << "n segments to analyze = " << segcounter << endl;
-  
+
   prefix = gSystem->Getenv("OUT_DIR");
 
   TString outfilename;
-  outfilename.Form( "%s/sbs_uvagem_replayed_%d.root", prefix.Data(), runnum );
+  outfilename.Form( "%s/bbgem_replayed_%d.root", prefix.Data(), runnum );
 
   // Define the run(s) that we want to analyze.
   // We just set up one, but this could be many.
@@ -107,7 +110,7 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
   // File to record cuts accounting information
   analyzer->SetSummaryFile("summary_example.log"); // optional
 
-  analyzer->SetOdefFile( "replay_UVA_EEL.odef" );
+  analyzer->SetOdefFile( "replay_BB_TEDF.odef" );
   
   //analyzer->SetCompressionLevel(0); // turn off compression
 

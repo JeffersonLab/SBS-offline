@@ -27,6 +27,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fZeroSuppressRMS = 5.0;
 
   fPedestalMode = kFALSE;
+  fPedHistosInitialized = kFALSE;
   
   //Default online zero suppression to FALSE: actually I wonder if it would be better to use this in 
   // Moved this to MPDModule, since this should be done during the decoding of the raw APV data:
@@ -47,7 +48,12 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //     fadc[i] = NULL;
   // }
 
+  // default these offsets to zero: 
+  fUStripOffset = 0.0;
+  fVStripOffset = 0.0;
+  
   fMakeEfficiencyPlots = true;
+  fEfficiencyInitialized = false;
   
   return;
 }
@@ -75,6 +81,7 @@ SBSGEMModule::~SBSGEMModule() {
 }
 
 Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
+  
   std::cout << "[SBSGEMModule::ReadDatabase]" << std::endl;
 
   Int_t status;
@@ -99,6 +106,10 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   //   Int_t            search;   // (opt) Search for key along name tree
   //   const char*      descript; // (opt) Key description (if 0, same as name)
   // };
+
+  // default these offsets to zero: 
+  fUStripOffset = 0.0;
+  fVStripOffset = 0.0;
   
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
@@ -111,6 +122,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "nstripsv",       &fNstripsV,     kUInt, 0, 0, 1}, //mandatory: number of strips in module along V axis
     { "uangle",         &fUAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "U" strips wrt X axis
     { "vangle",         &fVAngle,       kDouble, 0, 0, 1}, //mandatory: Angle of "V" strips wrt X axis
+    { "uoffset",        &fUStripOffset, kDouble, 0, 1, 1}, //optional: position of first U strip
+    { "voffset",        &fVStripOffset, kDouble, 0, 1, 1}, //optional: position of first V strip
     { "upitch",         &fUStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of U strips
     { "vpitch",         &fVStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of V strips
     { "ugain",          &fUgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of U strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
@@ -163,6 +176,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   //Count APV cards by axis. Each APV card must have one decode map entry:
   fNAPVs_U = 0;
   fNAPVs_V = 0;
+
+  fMPDmap.clear();
   
   Int_t nentry = fChanMapData.size()/fMPDMAP_ROW_SIZE;
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
@@ -607,6 +622,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   fNstrips_hitV = 0;
 
   UInt_t MAXNSAMP_PER_APV = fN_APV25_CHAN * fN_MPD_TIME_SAMP;
+
+  //std::cout << "MAXNSAMP_PER_APV = " << MAXNSAMP_PER_APV << std::endl;
   
   vector<int> Strip( MAXNSAMP_PER_APV );
   vector<int> rawStrip( MAXNSAMP_PER_APV );
@@ -1067,7 +1084,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   UShort_t maxsepcoord; 
   UInt_t Nstrips;
   Double_t pitch;
-
+  Double_t offset = (axis == SBSGEM::kUaxis) ? fUStripOffset : fVStripOffset;
+  
   //hopefully this compiles and works correctly:
   std::vector<sbsgemcluster_t> &clusters = (axis == SBSGEM::kUaxis ) ? fUclusters : fVclusters;
 
@@ -1248,7 +1266,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     map<int,double> splitfraction;
     vector<double> stripADCsum(nstrips);
 
-    double maxpos = (stripmax + 0.5 - 0.5*Nstrips) * pitch;
+    double maxpos = (stripmax + 0.5 - 0.5*Nstrips) * pitch + offset;
 
     //If peak position falls inside the "track search region" constraint, add a new cluster: 
     if( fabs( maxpos - constraint_center ) <= constraint_width ){
@@ -1279,7 +1297,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
    
 	splitfraction[istrip] = maxweight/sumweight;
 
-	double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch; //local hit position along direction measured by these strips
+	double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips
 	double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
 	double tstrip = fTmean[hitindex[istrip]];
 
@@ -1371,8 +1389,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	hittemp.uhit = fUclusters[iu].hitpos_mean;
 	hittemp.vhit = fVclusters[iv].hitpos_mean;
 
-	double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch;
-	double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch;
+	double pos_maxstripu = ( fUclusters[iu].istripmax + 0.5 - 0.5*fNstripsU ) * fUStripPitch + fUStripOffset;
+	double pos_maxstripv = ( fVclusters[iv].istripmax + 0.5 - 0.5*fNstripsV ) * fVStripPitch + fVStripOffset;
 
 	//"Cluster moments" defined as differences between reconstructed hit position and center of strip with max. signal in the cluster:
 	hittemp.umom = (hittemp.uhit - pos_maxstripu)/fUStripPitch;
@@ -1449,8 +1467,8 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   detname += "_";
   detname += GetName();
   
-  if( fMakeEfficiencyPlots ){
-    
+  if( fMakeEfficiencyPlots && !fEfficiencyInitialized ){
+    fEfficiencyInitialized = true;
   
     fhdidhitx = new TH1F( histname.Format( "hdidhitx_%s", detname.Data() ), "local x coordinate of hits on good tracks (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
     fhdidhity = new TH1F( histname.Format( "hdidhity_%s", detname.Data() ), "local y coordinate of hits on good tracks (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
@@ -1462,10 +1480,12 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     fhshouldhity = new TH1F( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
     fhshouldhitxy = new TH2F( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m)",
 			      100, -0.51*GetYSize(), 0.51*GetYSize(),
-			      100, -0.51*GetXSize(), 0.51*GetXSize() );			
+			      100, -0.51*GetXSize(), 0.51*GetXSize() );
+
+    fEfficiencyInitialized = true;
   }
 
-  if( fPedestalMode ){ //make pedestal histograms:
+  if( fPedestalMode && !fPedHistosInitialized ){ //make pedestal histograms:
 
     //Procedure:
     // 1. Analyze pedestal data with no pedestals supplied from the database.
@@ -1519,6 +1539,8 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     hcommonmode_mean_by_APV_V = new TH2F( histname.Format( "hCommonModeMean_by_APV_V_%s", detname.Data() ), "distribution of common-mode means for V strip pedestal data",
 					  nAPVs_V, -0.5, nAPVs_V-0.5,
 					  2048, -0.5, 4095.5 );
+
+    fPedHistosInitialized = true;
     
     // Uncomment these later if you want them:
     // hrawADCs_by_strip_sampleU = new TClonesArray( "TH2F", fN_MPD_TIME_SAMP );
@@ -1785,7 +1807,8 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
       hefficiency_vs_x->SetName( histname.Format( "hefficiency_vs_x_%s", detname.Data() ) );
       hefficiency_vs_x->SetTitle( histname.Format( "Track-based efficiency vs x, module %s", GetName() ) );
       hefficiency_vs_x->Divide( fhshouldhitx );
-      hefficiency_vs_x->Write();
+      hefficiency_vs_x->Write( 0, kOverwrite );
+      hefficiency_vs_x->Delete();
     }
 
     if( fhdidhity != NULL && fhshouldhity != NULL ){ //Create efficiency histograms and write to the ROOT file:
@@ -1793,7 +1816,8 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
       hefficiency_vs_y->SetName( histname.Format( "hefficiency_vs_y_%s", detname.Data() ) );
       hefficiency_vs_y->SetTitle( histname.Format( "Track-based efficiency vs y, module %s", GetName() ) );
       hefficiency_vs_y->Divide( fhshouldhity );
-      hefficiency_vs_y->Write();
+      hefficiency_vs_y->Write( 0, kOverwrite);
+      hefficiency_vs_y->Delete();
     }
 
     if( fhdidhitxy != NULL && fhshouldhitxy != NULL ){ //Create efficiency histograms and write to the ROOT file:
@@ -1801,16 +1825,17 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
       hefficiency_vs_xy->SetName( histname.Format( "hefficiency_vs_xy_%s", detname.Data() ) );
       hefficiency_vs_xy->SetTitle( histname.Format( "Track-based efficiency vs x and y, module %s", GetName() ) );
       hefficiency_vs_xy->Divide( fhshouldhitxy );
-      hefficiency_vs_xy->Write();
+      hefficiency_vs_xy->Write( 0, kOverwrite );
+      hefficiency_vs_xy->Delete();
     }
   
-    if( fhdidhitx != NULL  ) fhdidhitx->Write();
-    if( fhdidhity != NULL  ) fhdidhity->Write();
-    if( fhdidhitxy != NULL  ) fhdidhitxy->Write();
+    if( fhdidhitx != NULL  ) fhdidhitx->Write(fhdidhitx->GetName(), kOverwrite );
+    if( fhdidhity != NULL  ) fhdidhity->Write(fhdidhity->GetName(), kOverwrite );
+    if( fhdidhitxy != NULL  ) fhdidhitxy->Write(fhdidhitxy->GetName(), kOverwrite );
 
-    if( fhshouldhitx != NULL  ) fhshouldhitx->Write();
-    if( fhshouldhity != NULL  ) fhshouldhity->Write();
-    if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write();
+    if( fhshouldhitx != NULL  ) fhshouldhitx->Write(fhshouldhitx->GetName(), kOverwrite );
+    if( fhshouldhity != NULL  ) fhshouldhity->Write(fhshouldhity->GetName(), kOverwrite );
+    if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write(fhshouldhitxy->GetName(), kOverwrite );
   }
 
   if( fPedestalMode ){ //write out pedestal histograms, print out pedestals in the format needed for both database and DAQ:
@@ -1819,22 +1844,22 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     //But we want ONE database file and ONE DAQ file for the entire tracker.
     //So probably the best way to proceed is to have the  
     
-    hrawADCs_by_stripU->Write();
-    hrawADCs_by_stripV->Write();
-    hcommonmode_subtracted_ADCs_by_stripU->Write();
-    hcommonmode_subtracted_ADCs_by_stripV->Write();
-    hpedestal_subtracted_ADCs_by_stripU->Write();
-    hpedestal_subtracted_ADCs_by_stripV->Write();
-    hpedestal_subtracted_rawADCs_by_stripU->Write();
-    hpedestal_subtracted_rawADCs_by_stripV->Write();
+    hrawADCs_by_stripU->Write(0,kOverwrite);
+    hrawADCs_by_stripV->Write(0,kOverwrite);
+    hcommonmode_subtracted_ADCs_by_stripU->Write(0,kOverwrite);
+    hcommonmode_subtracted_ADCs_by_stripV->Write(0,kOverwrite);
+    hpedestal_subtracted_ADCs_by_stripU->Write(0,kOverwrite);
+    hpedestal_subtracted_ADCs_by_stripV->Write(0,kOverwrite);
+    hpedestal_subtracted_rawADCs_by_stripU->Write(0,kOverwrite);
+    hpedestal_subtracted_rawADCs_by_stripV->Write(0,kOverwrite);
 
-    hpedestal_subtracted_rawADCsU->Write();
-    hpedestal_subtracted_rawADCsV->Write();
-    hpedestal_subtracted_ADCsU->Write();
-    hpedestal_subtracted_ADCsV->Write();
+    hpedestal_subtracted_rawADCsU->Write(0,kOverwrite);
+    hpedestal_subtracted_rawADCsV->Write(0,kOverwrite);
+    hpedestal_subtracted_ADCsU->Write(0,kOverwrite);
+    hpedestal_subtracted_ADCsV->Write(0,kOverwrite);
 
-    hcommonmode_mean_by_APV_U->Write();
-    hcommonmode_mean_by_APV_V->Write();
+    hcommonmode_mean_by_APV_U->Write(0,kOverwrite);
+    hcommonmode_mean_by_APV_V->Write(0,kOverwrite);
 
     // hrawADCs_by_strip_sampleU->Write();
     // hrawADCs_by_strip_sampleV->Write();

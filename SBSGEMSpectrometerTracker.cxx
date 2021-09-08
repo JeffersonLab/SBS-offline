@@ -18,6 +18,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   THaTrackingDetector(name,desc,app), SBSGEMTrackerBase() {
 
   fModules.clear();
+  fModulesInitialized = false;
+  
   fIsMC = false;//by default!
   //fCrateMap = 0;
   fPedestalMode = false;
@@ -138,12 +140,61 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   int modcounter = 0;
 
-  for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
-    fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this) );
+  
 
-    modcounter = fModules.size()-1;
-    fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
+  //If a previous module configuration exists, check if anything changed.
+  //We will still re-initialize the modules (for now), but we just need to decide whether to re-allocate the modules:
+
+  if( fModulesInitialized ){
+    //first check if the size changed:
+    if( fModules.size() != modules.size() ) { //If the size of the configuration changed, we know that we have to re-initialize everything!
+      fModules.clear();
+      fModules.resize( modules.size() );
+      fModulesInitialized = false;
+    } else { //size stayed the same, but we need to check if any of the names changed:
+      
+      for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
+	if( fModules[modcounter] ){
+
+	  std::string modname = fModules[modcounter]->GetName();
+	  if( modname.compare( *it ) != 0 ){ //name of one or more modules changed, assume we need to re-init everything:
+	    fModules.clear();
+	    fModules.resize( modules.size() );
+	    fModulesInitialized = false;
+	    break;
+	  }
+	} else { //one or more modules not allocated, re-init everything:
+	  fModules.clear();
+	  fModules.resize( modules.size() );
+	  fModulesInitialized = false;
+	  break;
+	}
+
+	modcounter++;
+      }
+    }
+  } else {
+    fModules.resize( modules.size() );
   }
+
+  modcounter = 0;
+
+  
+
+  std::cout << "Modules initialized = " << fModulesInitialized << ", number of modules = " << fModules.size() << std::endl;
+  //we need to implement some checks to make sure the modules are not already allocated:
+  for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
+
+    if( !fModulesInitialized ){
+      std::cout << "Initializing module " << *it << "... ";
+      fModules[modcounter] = new SBSGEMModule( (*it).c_str(), (*it).c_str(), this);
+      std::cout << " done." << std::endl;
+    }
+    fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
+    modcounter++;
+  }
+
+  if( !fModulesInitialized ) fModulesInitialized = true;
 
   //Define the number of modules from the "modules" string:
   fNmodules = fModules.size();
@@ -181,6 +232,8 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
 }
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
+  SBSGEMTrackerBase::Clear();
+  
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     (*it)->Clear(opt);
   }
@@ -195,7 +248,9 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //Triggers decoding of each module:
   
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+    //std::cout << "Decoding module " << (*it)->GetName() << std::endl;
     (*it)->Decode(evdata);
+    //std::cout << "done..." << std::endl;
   }
   
   return 0;
@@ -266,91 +321,30 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     hefficiency_y_layer->Compress();
     hefficiency_xy_layer->Compress();
 
-    hdidhit_x_layer->Write();
-    hdidhit_y_layer->Write();
-    hdidhit_xy_layer->Write();
+    hdidhit_x_layer->Write(0,kOverwrite);
+    hdidhit_y_layer->Write(0,kOverwrite);
+    hdidhit_xy_layer->Write(0,kOverwrite);
 
-    hshouldhit_x_layer->Write();
-    hshouldhit_y_layer->Write();
-    hshouldhit_xy_layer->Write();
+    hshouldhit_x_layer->Write(0,kOverwrite);
+    hshouldhit_y_layer->Write(0,kOverwrite);
+    hshouldhit_xy_layer->Write(0,kOverwrite);
 
-    hefficiency_x_layer->Write();
-    hefficiency_y_layer->Write();
-    hefficiency_xy_layer->Write();
+    hefficiency_x_layer->Write(0,kOverwrite);
+    hefficiency_y_layer->Write(0,kOverwrite);
+    hefficiency_xy_layer->Write(0,kOverwrite);
   }
 
   if( fDumpGeometryInfo ){ //Print out geometry info for alignment:
+
+    //Maybe this should go to $OUT_DIR:
     TString fnametemp;
     fnametemp.Form( "GEM_alignment_info_%s_%s_run%d.txt",
 		    GetApparatus()->GetName(),
 		    GetName(), runnum );
 
-    std::ofstream outfile( fnametemp );
+    PrintGeometry( fnametemp.Data() );
 
-    std::vector<double> mod_x0(fNmodules), mod_y0(fNmodules), mod_z0(fNmodules);
-    std::vector<double> mod_ax(fNmodules), mod_ay(fNmodules), mod_az(fNmodules);
-    for( int imodule=0; imodule<fNmodules; imodule++ ){
-      TVector3 pos   = fModules[imodule]->GetOrigin();
-      TVector3 xaxis = fModules[imodule]->GetXax();
-      TVector3 yaxis = fModules[imodule]->GetYax();
-      TVector3 zaxis = fModules[imodule]->GetZax();
-
-      mod_x0[imodule] = pos.X();
-      mod_y0[imodule] = pos.Y();
-      mod_z0[imodule] = pos.Z();
-      
-      //Get (rough) x,y,z rotation angles:
-      // TVector3 xax0(1,0,0);
-      // TVector3 yax0(0,1,0);
-      // TVector3 zax0(0,0,1);
-
-      //How to reverse-engineer the rotation angles from the detector axes:
-      //Rx = | 1        0        0        |
-      //     | 0        cos(ax) -sin(ax)  |
-      //     | 0        sin(ax)  cos(ax)  |
-      //Ry = | cos(ay)  0        sin(ay)  |
-      //     | 0        1        0        |
-      //     | -sin(ay) 0        cos(ay)  |
-      //Rz = | cos(az)  -sin(az) 0        |
-      //     | sin(az)   cos(az) 0        |
-      //     | 0         0       1        |
-
-      //These are approximate, first-order expressions that should be
-      //fairly accurate in the case that the angles represent small misalignments from some
-      //"ideal" orientation
-      mod_ax[imodule] = asin( yaxis.Z() );
-      mod_ay[imodule] = asin( zaxis.X() );
-      mod_az[imodule] = asin( xaxis.Y() );
-    }
-
-    outfile << "mod_x0 ";
-    for( int imodule=0; imodule<fNmodules; imodule++ ){
-      outfile << std::setw(15) << std::setprecision(6) << mod_x0[imodule];
-    }
-    outfile << "mod_y0 ";
-    for( int imodule=0; imodule<fNmodules; imodule++ ){
-      outfile << std::setw(15) << std::setprecision(6) << mod_y0[imodule];
-    }
-    outfile << "mod_z0 ";
-    for( int imodule=0; imodule<fNmodules; imodule++ ){
-      outfile << std::setw(15) << std::setprecision(6) << mod_z0[imodule];
-    }
-
-
-    outfile << "mod_ax ";
-    for( int imodule=0; imodule<fNmodules; imodule++ ){
-      outfile << std::setw(15) << std::setprecision(6) << mod_ax[imodule];
-    }
-    outfile << "mod_ay ";
-    for( int imodule=0; imodule<fNmodules; imodule++ ){
-      outfile << std::setw(15) << std::setprecision(6) << mod_ay[imodule];
-    }
-    outfile << "mod_az ";
-    for( int imodule=0; imodule<fNmodules; imodule++ ){
-      outfile << std::setw(15) << std::setprecision(6) << mod_az[imodule];
-    }
-
-    outfile.close();
+    
   }
   
   return 0;

@@ -256,11 +256,11 @@ sbs.uvagem.maxnv_pos = 2
 
 sbs.uvagem.sigmahitshape = 0.0004 
 sbs.uvagem.sigmahitpos = 0.00015 # 0.15 mm or 150 um
-sbs.uvagem.trackchi2cut = 300.0
+sbs.uvagem.trackchi2cut = 200.0
 sbs.uvagem.onlinezerosuppression = 0
-sbs.uvagem.zerosuppress_nsigma = 2.5
+sbs.uvagem.zerosuppress_nsigma = 3.5
 sbs.uvagem.minhitsontrack = 3
-sbs.uvagem.maxhitcombos = 100000
+sbs.uvagem.maxhitcombos = 20000
 sbs.uvagem.gridbinwidthx = 0.01
 sbs.uvagem.gridbinwidthy = 0.01
 sbs.uvagem.gridedgetolerancex = 0.003

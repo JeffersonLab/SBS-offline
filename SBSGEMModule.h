@@ -186,6 +186,8 @@ class SBSGEMModule : public THaSubDetector {
   std::map<Int_t, Int_t> fADCch_by_Vstrip;
   
   Bool_t fPedestalMode;
+  //Bool_t fPedestalsInitialized;
+  
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
   //Moved to the MPD module class:
@@ -319,6 +321,8 @@ class SBSGEMModule : public THaSubDetector {
   //GEOMETRICAL PARAMETERS:
   Double_t fUStripPitch;    //strip pitch along U, will virtually always be 0.4 mm
   Double_t fVStripPitch;    //strip pitch along V, will virtually always be 0.4 mm
+  Double_t fUStripOffset;   //position of first U strip along the direction it measures:
+  Double_t fVStripOffset;   //position of first V sttrip alogn the direction it measures:
   Double_t fUAngle;         //Angle between U strips and "X" axis of TRANSPORT coordinates;
   Double_t fVAngle;         //Angle between V strips and "X" axis of TRANSPORT coordinates;
   Double_t fPxU;            //U Strip X projection = cos( UAngle );
@@ -353,8 +357,10 @@ class SBSGEMModule : public THaSubDetector {
 
   //we should let the user configure this: this is set at the "tracker level" which then propagates down to all the modules:
   bool fMakeEfficiencyPlots;
+  bool fEfficiencyInitialized;
 
   //Pedestal plots: only generate if pedestal mode = true:
+  bool fPedHistosInitialized;
   
   TH2F *hrawADCs_by_stripU; //raw adcs by strip, no corrections, filled for each SAMPLE:
   TH2F *hrawADCs_by_stripV; //raw adcs by strip, no corrections, filled for each SAMPLE:
