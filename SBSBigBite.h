@@ -12,7 +12,9 @@ class SBSBigBite : public THaSpectrometer {
     public:
     SBSBigBite( const char *name, const char *description );
     virtual ~SBSBigBite();
-
+    
+    virtual void             Clear( Option_t* opt="");
+  
     virtual Int_t	CoarseReconstruct();
     virtual Int_t	CoarseTrack();
     virtual Int_t	Reconstruct();
@@ -55,6 +57,7 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t DefineVariables( EMode mode = kDefine );
     
     void CalcTargetCoords( THaTrack* the_track );
+    void CalcTimingPID( THaTrack* the_track );
     
     int fOpticsOrder;
     std::vector<double> fb_xptar;
@@ -68,10 +71,18 @@ class SBSBigBite : public THaSpectrometer {
     Double_t fBackConstraintWidthY;
 
     //for output only... Vectors instead?
-    Double_t fFrontConstraintX;
-    Double_t fFrontConstraintY;
-    Double_t fBackConstraintX;
-    Double_t fBackConstraintY;
+    std::vector<double> fFrontConstraintX;
+    std::vector<double> fFrontConstraintY;
+    std::vector<double> fBackConstraintX;
+    std::vector<double> fBackConstraintY;
+    
+    std::vector<double> fEpsEtotRatio;
+    
+    double fMinEpsEtotRatio;
+    
+    double fTrackGrinchClusCorr_0;
+    double fTrackGrinchClusCorr_1;
+    double fTrackGrinchClusCorr_Sigma;
     
     /*
     TH2D* h1_yVx_bcp;

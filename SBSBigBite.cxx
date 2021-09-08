@@ -7,9 +7,12 @@
 
 #include "SBSBigBite.h"
 #include "THaTrack.h"
+#include "THaPIDinfo.h"
 #include "TList.h"
 #include "SBSBBShower.h"
 #include "SBSBBTotalShower.h"
+#include "SBSTimingHodoscope.h"
+#include "SBSGRINCH.h"
 #include "SBSGEMSpectrometerTracker.h"
 #include "THaTrackingDetector.h"
 #include "TH2D.h"
@@ -42,6 +45,17 @@ SBSBigBite::~SBSBigBite()
 {
   // Destructor
 }
+
+void SBSBigBite::Clear( Option_t *opt )
+{
+  THaSpectrometer::Clear(opt);
+  fEpsEtotRatio.clear();
+  fFrontConstraintX.clear();
+  fFrontConstraintY.clear();
+  fBackConstraintX.clear();
+  fBackConstraintY.clear();
+}
+
 
 //_____________________________________________________________________________
 Int_t SBSBigBite::ReadDatabase( const TDatime& date )
@@ -152,6 +166,7 @@ Int_t SBSBigBite::CoarseReconstruct()
   double sumweights_x = 0, sumweights_y = 0;
   double Etot = 0;
   int npts = 0;
+  double EpsEtotRatio = 0;
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {
@@ -178,6 +193,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12)) << endl;
 	
 	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
+	EpsEtotRatio = BBTotalShower->GetPreShower()->GetECorrected()/Etot;
+	fEpsEtotRatio.push_back(EpsEtotRatio);
 	//x_bcp+= -BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	//y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	//z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
@@ -206,12 +223,65 @@ Int_t SBSBigBite::CoarseReconstruct()
     // apply first order optics???
     // Yes, with the electron energy
     //TODO: replace hard-coded coefficients with optics coefficients
-    double dx = (x_bcp*(0.522*Etot-0.121)+0.1729*Etot-0.278)/(Etot*2.224-0.249);
-    double dy = y_bcp*0.251;
+    // relationship 
+    // x_5 = xfp+z_5*xpfp
+    // thetabend = 10deg+xptar-xpfp
+    // p ~= Ecalo
+    // p*thetabend = 0.277+0.122*xfp-0.063*xpfp = Ecalo*(10deg+xptar-xpfp)
+    // xptar = 0.523 * xfp - 0.414 * xpfp
+    // 0.277+0.122*xfp-0.063*xpfp = Ecalo*(10deg+(0.523 * xfp -0.414 * xpfp)-xpfp)
+    // 0.277+0.122*(x_5-z_5*xpfp)-0.063*xpfp = 
+    //   Ecalo*(10deg + 0.523*(x_5-z_5*xpfp) + (-0.414-1)*xpfp) =>OK
+    // 
+    // 0.277 = fb_pinv_00000 = fb_pinv[0] = M_{p0}
+    // 0.122 = fb_pinv_00001 = fb_pinv[1] = M_{px}
+    // -0.063 = fb_pinv_00100 = fb_pinv[6] = M_{px'}
+    // 0.523 = fb_xptar_00001 = fb_xptar[1] = M_{x'x}
+    // -0.414 = fb_xptar_00100 = fb_xptar[6] = M_{x'x'}
+
+    // fb_pinv_00000+fb_pinv_00001*(x_bcp-z_bcp*xpfp)+fb_pinv_00100*xpfp = 
+    //   Ecalo*(10deg+fb_xptar_00001*(x_bcp-z_bcp*xpfp)+(fb_xptar_00100-1)*xpfp)
+
+    // +fb_pinv[0]
+    // +fb_pinv[1]*x_bcp
+    // -fb_pinv[1]*z_bcp*xpfp
+    // +fb_pinv[6]*xpfp
+    //  =
+    // +Etot*10.*TMath::DegToRad()
+    // +Etot*fb_xptar[1]*x_bcp
+    // -Etot*fb_xptar[1]*z_bcp*xpfp
+    // +Etot*(fb_xptar[6]-1)*xpfp
+    
+    // -fb_pinv[1]*z_bcp*xpfp
+    // +fb_pinv[6]*xpfp
+    // -Etot*(fb_xptar[6]-1)*xpfp
+    // +Etot*fb_xptar[1]*z_bcp*xpfp
+    //  =
+    // +Etot*10.*TMath::DegToRad()
+    // +Etot*fb_xptar[1]*x_bcp
+    // -fb_pinv[0]
+    // -fb_pinv[1]*x_bcp
+        
+    double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
+      (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
+    double dy = y_bcp*0.251;//y_bcp*fb_yptar[3]/(1+fb_yptar[3]*z_bcp-fb_yptar[10]);
+    
+    //cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
+    //<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
+    //<< " (Etot*" << (fb_xptar[1]*z_bcp+1-fb_xptar[6]) << "+" << -fb_pinv[1]*z_bcp+fb_pinv[6] << ")" << endl;
+    //cout << fb_yptar[3]/(1+fb_yptar[3]*z_bcp-fb_yptar[10]) << endl;
+    
+    //(x_bcp*(0.522891*Etot-0.121773)+0.174533*Etot-0.276919)/
+    //(Etot*2.43719+-0.301327)
+    
+    //double dx_2 = (x_bcp*(0.522*Etot-0.121)+0.1729*Etot-0.278)/(Etot*2.224-0.249);
+    //double dy_2 = y_bcp*0.251;
     
     z_fcp = 0;
     x_fcp = x_bcp+dx*(z_fcp-z_bcp);
     y_fcp = y_bcp+dy*(z_fcp-z_bcp);
+    
+    //cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
     
     /*
     h1_yVx_bcp->Fill(x_bcp, y_bcp);
@@ -221,10 +291,10 @@ Int_t SBSBigBite::CoarseReconstruct()
     h1_dyVdx->Fill(dx, dy);
     */
     
-    fFrontConstraintX = x_fcp;
-    fFrontConstraintY = y_fcp;
-    fBackConstraintX = x_bcp;
-    fBackConstraintY = y_bcp;
+    fFrontConstraintX.push_back(x_fcp);
+    fFrontConstraintY.push_back(y_fcp);
+    fBackConstraintX.push_back(x_bcp);
+    fBackConstraintY.push_back(y_bcp);
 
     //wx_fcp = wx_bcp;
     //wy_fcp = wy_bcp;
@@ -397,8 +467,70 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
 Int_t SBSBigBite::TrackCalc()
 {
   // Additioal track calculations
-
+  // Timing here???
+  // PID info here???
   // TODO
-
+  
+  for( Int_t t = 0; t < fTracks->GetLast()+1; t++ ) {
+    auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
+    THaPIDinfo* PIDinfo = new THaPIDinfo(2, 2);
+    theTrack->SetPIDinfo(PIDinfo);
+    CalcTimingPID(theTrack);
+  }
+  
   return 0;
+}
+
+//_____________________________________________________________________________
+void SBSBigBite::CalcTimingPID(THaTrack* the_track)
+{
+  // Additioal track calculations
+  // Timing here???
+  // PID info here???
+  // TODO
+  
+  TIter next( fNonTrackingDetectors );
+  while( auto* theNonTrackDetector =
+	 static_cast<THaNonTrackingDetector*>( next() )) {
+    //if(theNonTrackDetector->InheritsFrom("SBSBBShower")){
+    // match a hodoscope cluster to a track:
+    if(theNonTrackDetector->InheritsFrom("SBSTimingHodoscope")){
+      SBSTimingHodoscope* TH = reinterpret_cast<SBSTimingHodoscope*>(theNonTrackDetector);
+      
+      //x, y of track at z = Z_hodoscope
+      double x_track = the_track->GetX()+
+	the_track->GetTheta()*TH->GetOrigin().Z();
+      double y_track = the_track->GetY()+
+	the_track->GetPhi()*TH->GetOrigin().Z();
+      // Not sure what to use for the hodoscope. 
+      // Perhaps we'd have to complete the class with a cluster
+    }
+    
+    bool match = false;
+    // match a GRINCH cluster to a track:
+    if(theNonTrackDetector->InheritsFrom("SBSGRINCH")){
+      SBSGRINCH* GRINCH = reinterpret_cast<SBSGRINCH*>(theNonTrackDetector);
+
+      //x, y of track at z = Z_GRINCH
+      double x_track = the_track->GetX()+
+	the_track->GetTheta()*GRINCH->GetOrigin().Z();
+      //double y_track = the_track->GetY()+
+      //the_track->GetPhi()*GRINCH->GetOrigin().Z();
+
+      for(int i = 0; i<GRINCH->GetNumClusters(); i++){
+	SBSGRINCH_Cluster* gc_clus = GRINCH->GetCluster(i);
+	
+	if( fabs(x_track-gc_clus->GetXcenter()*fTrackGrinchClusCorr_1-fTrackGrinchClusCorr_0)<fTrackGrinchClusCorr_Sigma)match = true;
+	//if(y_track)
+      }
+    }
+    if(match){
+      //Use THaPIDinfo... but how?
+      //the_track->GetPIDinfo()->SetProb();
+    }
+    if(fEpsEtotRatio[the_track->GetIndex()]<fMinEpsEtotRatio){
+      //the_track->GetPIDinfo()->SetProb();
+    }
+    
+  }
 }
