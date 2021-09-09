@@ -242,7 +242,7 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
 
 Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
-  std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  std::endl;
+  // std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  std::endl;
 
   //Triggers decoding of each module:
   
