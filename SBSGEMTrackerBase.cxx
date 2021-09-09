@@ -20,10 +20,11 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fMinHitsOnTrack = 3;
 
   fMaxHitCombinations = 100000;
-  
-  fOnlineZeroSuppression = false;
-  fZeroSuppress = true;
-  fZeroSuppressRMS = 5.0; //5 sigma
+
+  //moved zero suppression/common-mode parameters to module class
+  //  fOnlineZeroSuppression = false;
+  // fZeroSuppress = true;
+  // fZeroSuppressRMS = 5.0; //5 sigma
 
   fGridBinWidthX = 0.01; //1 cm = 10 mm;
   fGridBinWidthY = 0.01; //1 cm = 10 mm;
@@ -143,8 +144,8 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     fModules[imod]->fIsMC = fIsMC;
     fModules[imod]->fMakeEfficiencyPlots = fMakeEfficiencyPlots;
     fModules[imod]->fPedestalMode = fPedestalMode;
-    fModules[imod]->fZeroSuppress = !fPedestalMode;
-    
+    //fModules[imod]->fZeroSuppress = !fPedestalMode;
+    //moved "zero suppress" flag to GEMModule
   }
 
   fNmodules = fModules.size();

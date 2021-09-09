@@ -34,6 +34,7 @@
 
 #include "MPDModule.h"
 #include "THaSlotData.h"
+#include "THaCrateMap.h"
 #include <limits>
 #include <vector>
 #include <map>
@@ -58,7 +59,7 @@ namespace Decoder {
   }
   
   void MPDModule::Init() { 
-    Module::Init();
+    VmeModule::Init();
     //    Config(0,25,6,16,128); // should be called by the user (but how?)
     fDebugFile=0;
     Clear("");
@@ -79,7 +80,19 @@ namespace Decoder {
     fSLOTID_VTP = 11;
     
     fNumSample = 6;
+
+    fChan_CM_flags = 512; //reference channel for common-mode and zero suppression flags
     
+  }
+
+  void MPDModule::Init( const char *configstr ) { //parse (optional) configuration parameters:
+    Init();
+
+    vector<ConfigStrReq> req = { {"chan_cmflags", fChan_CM_flags} };
+    ParseConfigStr(configstr, req);
+
+    assert( fChan_CM_flags < THaCrateMap::MAXCHAN );
+
   }
 
   //This version ASSUMES that there is no online zero suppression, so all 128 APV channels are present in every event!
@@ -109,9 +122,13 @@ namespace Decoder {
     UInt_t prev_slot=0;
 
     UInt_t effChan=0;
+    //UInt_t effChan_old = MAXCHAN+1; //set "old" effective channel to something impossible so that the first channel will always trigger "loading" of the cm_flags:
 
+    //The use of a map here insures that the cm_flags will only be "loaded" into the "slot" once per APV card:
+    std::map<UInt_t, UInt_t> cm_flags_vs_chan; //key = "effective channel", mapped value = common-mode flags (and possibly other information)
+    
     bool ENABLE_CM=false;
-    bool BUILD_ALL_SAMPLES=false;
+    bool BUILD_ALL_SAMPLES=true; 
 
     bool is_SSP = false; //assume VTP by default which only has the MPD data, no block header/trailer.
     
@@ -181,6 +198,11 @@ namespace Decoder {
 
 	  found_MPD_header = true;
 
+	  //now how should we "load" the data into the "slot"?
+	  //Each "hit" in this channel
+	  // UInt_t flags = 2*ENABLE_CM + BUILD_ALL_SAMPLES;
+	  
+	  // status = sldat->loadData( fChan_CM_flags, flags, fiber );
 	  // std::cout << "found MPD frame header, fiber, mpd_id, ENABLE_CM, BUILD_ALL_SAMPLES, is_SSP, SLOT, THIS_SLOT = " << fiber << ", " << mpd_id << ", "
 	  // 	    << ENABLE_CM << ", " << BUILD_ALL_SAMPLES << ", "
 	  // 	    << is_SSP << ", " << slot << ", " << this_slot << std::endl;
@@ -230,15 +252,22 @@ namespace Decoder {
 	    UInt_t apv_chan40 = (hitwords[0] & 0x7C000000) >> 26;
 	    UInt_t apv_chan65 = (hitwords[1] & 0x0C000000) >> 26;
 	    apv_chan = (apv_chan65 << 5) | apv_chan40;
-
+	    
 	    effChan = (fiber << 4) | apv_id;  
 
+	    UInt_t cm_flags = 2*ENABLE_CM + BUILD_ALL_SAMPLES;
+
+	    cm_flags_vs_chan[effChan] = cm_flags;
+	    
 	    for( int is=0; is<6; is++ ){
 	      // This loads each of the six ADC samples as a new "hit" into sldat, with "effChan" as the unique "channel" number,
 	      // the ADC samples as the "data", and the APV channel number as the "rawData"
 	      // std::cout << "decoded one strip hit: (crate, slot, fiber, apv_id, apv_chan, effChan, isample, ADCsamples[isample]) = ("
 	      // 		<< sldat->getCrate() << ", " << slot << ", " << fiber << ", " << apv_id << ", " << apv_chan << ", " << effChan << ", "
 	      // 		<< is <<  ", " << int(ADCsamples[is]) << ")" << std::endl;
+
+	      //Since we need only two bits to encode the ENABLE_CM and BUILD_ALL_SAMPLES flags, we can
+	      
 	      
 	      status = sldat->loadData( "adc", effChan, ADCsamples[is], apv_chan );
 	      if( status != SD_OK ) return -1;
@@ -252,6 +281,14 @@ namespace Decoder {
       fWordsSeen++;
     }
 
+    //now load the cm flags:
+    for( auto iapv = cm_flags_vs_chan.begin(); iapv != cm_flags_vs_chan.end(); ++iapv ){
+
+      //The "flags" word is the mapped value (iapv->second)
+      //The effective channel is the key (iapv->first)
+      sldat->loadData( fChan_CM_flags, iapv->second, iapv->first );
+    }
+    
     //std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
     
     return fWordsSeen;

@@ -24,10 +24,13 @@ bb.gem.m9.layer = 4
 bb.gem.m10.layer = 4
 bb.gem.m11.layer = 4
 
+# basic flags controlling decoding:
 bb.gem.pedestalmode = 0
 bb.gem.commonmode_flag = 1
-
+bb.gem.chan_cm_flags = 512 # defines the "dummy" reference channel for storing the cm_enable and build_all_samples flags
 bb.gem.dump_geometry_info = 1
+
+
 
 # to start with, let's not worry about the misalignments, let's put everything at its nominal/ideal position:
 

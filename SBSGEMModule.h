@@ -192,8 +192,10 @@ class SBSGEMModule : public THaSubDetector {
   Bool_t fZeroSuppress;
   //Moved to the MPD module class:
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
+  
+  Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method, other = ONLINE
 
-  Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method
+  UInt_t fChan_CM_flags; //same as in MPDModule: unavoidable
   
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation

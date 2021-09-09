@@ -99,10 +99,10 @@ protected:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
   bool fModulesInitialized;
 
-  
-  bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
-  bool fZeroSuppress;
-  double fZeroSuppressRMS;
+  //Moved these to SBSGEMModule:
+  //bool fOnlineZeroSuppression; //Flag specifying whether pedestal subtraction has been done "online" (maybe this should be module-specific? probably not)
+  //bool fZeroSuppress;
+  //double fZeroSuppressRMS;
 
   bool fPedestalMode;
   // bool fPedestalsInitialized;

@@ -111,7 +111,7 @@
 ### How about GEMs on Hadron arm side?? (TODO: add them later!)
 
 ====Crate 19 type vme
-11 3561 3561
+11 3561 3561 cfg: chan_cmflags=512
 
 ====Crate 20 type vme
-11 3561 3561
+11 3561 3561 cfg: chan_cmflags=512

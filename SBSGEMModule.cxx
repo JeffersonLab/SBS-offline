@@ -24,7 +24,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   // FIXME:  To database
   //Set Default values for fZeroSuppress and fZeroSuppressRMS:
   fZeroSuppress    = kTRUE;
-  fZeroSuppressRMS = 5.0;
+  fZeroSuppressRMS = 5.0; //threshold in units of RMS:
 
   fPedestalMode = kFALSE;
   fPedHistosInitialized = kFALSE;
@@ -54,6 +54,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   
   fMakeEfficiencyPlots = true;
   fEfficiencyInitialized = false;
+
+  fChan_CM_flags = 512; //default to 512:
   
   return;
 }
@@ -140,12 +142,15 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "maxnu_pos", &fMaxNeighborsU_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
     { "maxnv_pos", &fMaxNeighborsV_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
     { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1, 1}, //(optional): width parameter for cluster-splitting algorithm
-    { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1, 1}, //(optional):
+    { "zerosuppress", &fZeroSuppress, kUInt, 0, 1, 1}, //(optional, search): toggle offline zero suppression (default = true).
+    { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1, 1}, //(optional, search):
+    { "onlinezerosuppress", &fOnlineZeroSuppression, kUInt, 0, 1, 1}, //(optional, search)
     { "commonmode_meanU", &fCommonModeMeanU, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_meanV", &fCommonModeMeanV, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_rmsU", &fCommonModeRMSU, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_rmsV", &fCommonModeRMSV, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_flag", &fCommonModeFlag, kInt, 0, 1, 1}, //optional, search up the tree
+    { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -296,31 +301,34 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     } 
   }
 
-  //resize all the "decoded strip" arrays to their maximum possible values for this module:
+
+  //Moved the following to the beginning of SBSGEMModule::Decode()
+  // //resize all the "decoded strip" arrays to their maximum possible values for this module:
   UInt_t nstripsmax = fNstripsU + fNstripsV;
   
-  fStrip.resize( nstripsmax );
-  fAxis.resize( nstripsmax );
-  fADCsamples.resize( nstripsmax );
-  fRawADCsamples.resize( nstripsmax );
-  for( int istrip=0; istrip<nstripsmax; istrip++ ){
-    fADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
-    fRawADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
-  }
-  fADCsums.resize( nstripsmax );
-  fStripADCavg.resize( nstripsmax );
-  fStripIsU.resize( nstripsmax );
-  fStripIsV.resize( nstripsmax );
-  fKeepStrip.resize( nstripsmax );
-  fMaxSamp.resize( nstripsmax );
-  fADCmax.resize( nstripsmax );
-  fTmean.resize( nstripsmax );
-  fTsigma.resize( nstripsmax );
-  fTcorr.resize( nstripsmax );
+  fStrip.reserve( nstripsmax );
+  fAxis.reserve( nstripsmax );
+  fADCsamples.reserve( nstripsmax );
+  fRawADCsamples.reserve( nstripsmax );
+  //The lines below are problematic and unnecessary
+  // for( int istrip=0; istrip<nstripsmax; istrip++ ){
+  //   fADCsamples[istrip].reserve( fN_MPD_TIME_SAMP );
+  //   fRawADCsamples[istrip].reserve( fN_MPD_TIME_SAMP );
+  // }
+  fADCsums.reserve( nstripsmax );
+  fStripADCavg.reserve( nstripsmax );
+  fStripIsU.reserve( nstripsmax );
+  fStripIsV.reserve( nstripsmax );
+  fKeepStrip.reserve( nstripsmax );
+  fMaxSamp.reserve( nstripsmax );
+  fADCmax.reserve( nstripsmax );
+  fTmean.reserve( nstripsmax );
+  fTsigma.reserve( nstripsmax );
+  fTcorr.reserve( nstripsmax );
 
-  fADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
-  fRawADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
-  fStripTrackIndex.resize( nstripsmax );
+  fADCsamples1D.reserve( nstripsmax * fN_MPD_TIME_SAMP );
+  fRawADCsamples1D.reserve( nstripsmax * fN_MPD_TIME_SAMP );
+  fStripTrackIndex.reserve( nstripsmax );
   
   
   //default all common-mode mean and RMS values to 0 and 10 respectively if they were
@@ -631,6 +639,34 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   vector<double> pedsubADC( MAXNSAMP_PER_APV ); //ped-subtracted, not necessarily common-mode subtracted
   vector<double> commonModeSubtractedADC( MAXNSAMP_PER_APV );
   
+  //resize all the "decoded strip" arrays to their maximum possible values for this module:
+  //we need to do this event-by-event, because we shrink the size of the arrays to fNstrips_hit after decoding to prevent
+  //enormous ROOT output:
+  UInt_t nstripsmax = fNstripsU + fNstripsV;
+  
+  fStrip.resize( nstripsmax );
+  fAxis.resize( nstripsmax );
+  fADCsamples.resize( nstripsmax );
+  fRawADCsamples.resize( nstripsmax );
+  for( int istrip=0; istrip<nstripsmax; istrip++ ){
+    fADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
+    fRawADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
+  }
+  fADCsums.resize( nstripsmax );
+  fStripADCavg.resize( nstripsmax );
+  fStripIsU.resize( nstripsmax );
+  fStripIsV.resize( nstripsmax );
+  fKeepStrip.resize( nstripsmax );
+  fMaxSamp.resize( nstripsmax );
+  fADCmax.resize( nstripsmax );
+  fTmean.resize( nstripsmax );
+  fTsigma.resize( nstripsmax );
+  fTcorr.resize( nstripsmax );
+  
+  fADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
+  fRawADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
+  fStripTrackIndex.resize( nstripsmax );
+  
   // fUstripIndex.clear();
   // fVstripIndex.clear();
   //This could be written more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it too much:
@@ -639,7 +675,39 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     Int_t effChan = it->mpd_id << 4 | it->adc_id; //left-shift mpd id by 4 bits and take the bitwise OR with ADC_id to uniquely identify the APV card.
     //mpd_id is not necessarily equal to slot, but that seems to be the convention in many cases
     // Find channel for this crate/slot
-    Int_t nchan = evdata.GetNumChan( it->crate, it->slot );
+
+    // Get common-mode flags, if applicable:
+    // Default to the values from the database (or the default values):
+
+    Bool_t CM_ENABLED = fCommonModeFlag != 0 && fCommonModeFlag != 1;
+    Bool_t BUILD_ALL_SAMPLES = !fOnlineZeroSuppression;
+    
+    UInt_t cm_flags=2*CM_ENABLED + BUILD_ALL_SAMPLES;
+    UInt_t nhits_cm_flag=evdata.GetNumHits( it->crate, it->slot, fChan_CM_flags );
+    
+    if( nhits_cm_flag > 0 ){
+      // If applicable, find the common-mode/zero-suppression settings loaded from the raw data for this APV:
+      // In principle in the SSP/VTP event format, there should be exactly one "hit" per APV in this "channel":
+      for( int ihit=0; ihit<nhits_cm_flag; ihit++ ){ 
+	int chan_temp = evdata.GetRawData( it->crate, it->slot, fChan_CM_flags, ihit );
+	if( chan_temp == effChan ){ //assume that this is only filled once per MPD per event, and exit the loop when we find this MPD:
+	  cm_flags = evdata.GetData( it->crate, it->slot, fChan_CM_flags, ihit );
+	  break;
+	}
+      }
+    }
+
+    //The proper logic of common-mode calculation/subtraction and zero suppression is as follows:
+    // 1. If CM_ENABLED is true, we never calculate the common-mode ourselves, it has already been subtracted from the data:
+    // 2. If BUILD_ALL_SAMPLES is false, then online zero suppression is enabled. We can, in addition, apply our own higher thresholds if we want:
+    // 3. If CM_ENABLED is true, the pedestal has also been subtracted, so we don't subtract it again.
+    // 4. If CM_ENABLED is false, we need to subtract the pedestals AND calculate and subtract the common-mode:
+    
+    CM_ENABLED = cm_flags/2;
+    BUILD_ALL_SAMPLES = cm_flags%2;
+    //fOnlineZeroSuppression = !BUILD_ALL_SAMPLES;
+    
+    Int_t nchan = evdata.GetNumChan( it->crate, it->slot ); //this could be made faster
 
     SBSGEM::GEMaxis_t axis = it->axis == 0 ? SBSGEM::kUaxis : SBSGEM::kVaxis; 
     
@@ -650,7 +718,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     for( Int_t ichan = 0; ichan < nchan; ++ichan ) { //this is looping over all the "channels" (APV cards) in the crate and slot containing this decode map entry/APV card:
       Int_t chan = evdata.GetNextChan( it->crate, it->slot, ichan ); //"chan" here refers to one APV card 
       //std::cout << it->crate << " " << it->slot << " mpd_id ??? " << it->mpd_id << " " << chan << " " << effChan << std::endl;
-      
+
       if( chan != effChan ) continue; // 
 
       Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, chan );
@@ -679,8 +747,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 
-	//not sure if this is correct, ask Ben:
-	if( fOnlineZeroSuppression ) ped = 0.0;
+	// If common-mode subtraction is enabled, the pedestal has already been subtracted:
+	if( CM_ENABLED ) ped = 0.0;
 	
 	rawADC[iraw] = ADC;
 	pedsubADC[iraw] = double(ADC) - ped;
@@ -688,7 +756,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	//the calculation of common mode in pedestal mode analysis differs from the
 	// offline or online zero suppression analysis; here we use a simple average of all 128 channels:
-	if( fPedestalMode && nstrips == fN_APV25_CHAN ){
+	if( fPedestalMode && nstrips == fN_APV25_CHAN && !CM_ENABLED ){
 	  //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
 	  //values
 	  int isamp = iraw%fN_MPD_TIME_SAMP;
@@ -697,7 +765,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       }
       
       //(OPTIONAL) second loop over the hits to calculate and apply common-mode correction (sorting method)
-      if( !fOnlineZeroSuppression && nstrips == fN_APV25_CHAN && !fPedestalMode ){ //need to calculate common mode:
+      if( BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN && !fPedestalMode && !CM_ENABLED ){ //need to calculate common mode:
 	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	  if( fCommonModeFlag == 0 ){ //"sorting method": for now this algorithm is hard-coded to use samples 28-100 of the sorted array, later we want to make the behavior database-configurable:
 	    vector<double> sortedADCs(fN_APV25_CHAN);
@@ -732,10 +800,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    double cm_min = cm_mean - fZeroSuppressRMS*cm_rms;
 	    double cm_max = cm_mean + fZeroSuppressRMS*cm_rms;
 
-	    //for now, hard-code 4 iterations:
+	    //for now, hard-code 3 iterations:
 	    for( int iter=0; iter<3; iter++ ){
 	      int nstripsinrange=0;
 	      double sumADCinrange=0.0;
+	      double sum2ADCinrange=0.0;
 	      for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
 		int iraw=isamp + fN_MPD_TIME_SAMP * ihit;
 
@@ -743,17 +812,26 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 		if( ADCtemp >= cm_min && ADCtemp <= cm_max ){
 		  nstripsinrange++;
 		  sumADCinrange += ADCtemp;
+		  sum2ADCinrange += pow(ADCtemp,2);
 		}
 	      }
 
-	      commonMode[isamp] = sumADCinrange/double(nstripsinrange);
+	      double rmsinrange = cm_rms;
+
+	      //TO-DO: don't hard-code the minimum strip count. 
 	      
-	      cm_max = commonMode[isamp] + 2.0*cm_rms;
-	      
-	    }
-	    
-	  }
-	  
+	      if( nstripsinrange >= 10 ){ //require minimum 10 strips in range:
+		commonMode[isamp] = sumADCinrange/double(nstripsinrange);
+		rmsinrange = sqrt( sum2ADCinrange/double(nstripsinrange) - pow(commonMode[isamp],2) );
+
+		cm_max = commonMode[isamp] + fZeroSuppressRMS*std::min( rmsinrange, cm_rms );
+	      } else if( iter==0 ){ //not enough strips on first iteration, use mean from database and exit the loop:
+		commonMode[isamp] = cm_mean;
+		break;
+	      } 
+	    } //loop over iterations for "Danning method" CM calculation
+     
+	  } //else Danning method
 	} //loop over time samples
       } //check if conditions are satisfied to require offline common-mode calculation
       
@@ -781,7 +859,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
-	double gaintemp = ( axis == SBSGEM::kUaxis ) ? fUgain[strip/128] : fVgain[strip/128]; //should probably not hard-code 128 here
+	double gaintemp = ( axis == SBSGEM::kUaxis ) ? fUgain[strip/fN_APV25_CHAN] : fVgain[strip/fN_APV25_CHAN]; //should probably not hard-code 128 here
 	
 	// std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress, pedestal mode = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
 	//   	  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << ", " << fPedestalMode << std::endl;
@@ -792,7 +870,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  int iraw = adc_samp + fN_MPD_TIME_SAMP * istrip;
 
 	  //If applicable, subtract common-mode here:
-	  if( (fPedestalMode || !fOnlineZeroSuppression) && nstrips == fN_APV25_CHAN ){
+	  //if( (fPedestalMode || !fOnlineZeroSuppression) && nstrips == fN_APV25_CHAN ){
+	  //We need to subtract the common-mode if it was calculated:
+	  if( !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN ){
 	    commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[adc_samp];
 	  }
 	  
@@ -808,7 +888,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //rawADCtemp.push_back( RawADC );
 	  rawADCtemp[adc_samp] = RawADC;
 	  
-	  //The following value already has pedestal and common-mode subtracted:
+	  //The following value already has pedestal and common-mode subtracted (if applicable):
 	  double ADCvalue = commonModeSubtractedADC[iraw]; //zero-suppress BEFORE we apply gain correction
 
 	  // if( fPedestalMode ){ //If we are analyzing pedestal data, DON'T substract the pedestal
@@ -981,6 +1061,33 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     } //end loop over APV cards with hits
   } //end loop on decode map entries for this module
 
+  //We will want to resize the 
+
+  //resize all the "decoded strip" arrays to the actual number of fired strips:
+  
+  fStrip.resize( fNstrips_hit );
+  fAxis.resize( fNstrips_hit );
+  fADCsamples.resize( fNstrips_hit );
+  fRawADCsamples.resize( fNstrips_hit );
+  for( int istrip=0; istrip<fNstrips_hit; istrip++ ){
+    fADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
+    fRawADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
+  }
+  fADCsums.resize( fNstrips_hit );
+  fStripADCavg.resize( fNstrips_hit );
+  fStripIsU.resize( fNstrips_hit );
+  fStripIsV.resize( fNstrips_hit );
+  fKeepStrip.resize( fNstrips_hit );
+  fMaxSamp.resize( fNstrips_hit );
+  fADCmax.resize( fNstrips_hit );
+  fTmean.resize( fNstrips_hit );
+  fTsigma.resize( fNstrips_hit );
+  fTcorr.resize( fNstrips_hit );
+
+  fADCsamples1D.resize( fNstrips_hit * fN_MPD_TIME_SAMP );
+  fRawADCsamples1D.resize( fNstrips_hit * fN_MPD_TIME_SAMP );
+  fStripTrackIndex.resize( fNstrips_hit );
+  
   // No longer necessary:
   //fNstrips_hitU = fUstripIndex.size();
   //fNstrips_hitV = fVstripIndex.size();
@@ -1404,7 +1511,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 
 	//Check if candidate 2D hit is inside the constraint region before doing anything else:
 	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
-	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax ){
+	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax &&
+	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) ){
     
 	  hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
 	  hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
@@ -1459,7 +1567,8 @@ void    SBSGEMModule::Print( Option_t* opt) const{
 Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   //Here we can create some histograms that will be written to the ROOT file:
   //This is a natural place to do the hit maps/efficiency maps:
-
+  fZeroSuppress = fZeroSuppress && !fPedestalMode; 
+  
   //pulled these lines out of the if-block below to avoid code duplication:
   TString histname,histtitle;
   TString detname = GetParent()->GetName();
