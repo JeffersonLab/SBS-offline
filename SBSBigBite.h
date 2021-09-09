@@ -23,32 +23,6 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t FindVertices( TClonesArray& tracks );
     virtual Int_t TrackCalc();
     
-    /*
-    // Class for storing matrix element data
-    class THaMatrixElement {
-    public:
-    THaMatrixElement() : iszero(true), order(0), v(0)
-	{ pw.reserve(5); poly.reserve(kPORDER); }
-      bool match( const THaMatrixElement& rhs ) const
-      { assert(pw.size() == rhs.pw.size()); return ( pw == rhs.pw ); }
-      void clear()
-      { iszero = true; pw.clear(); order = 0; v = 0.0; poly.clear(); }
-      
-      bool iszero;             // whether the element is zero
-      std::vector<int> pw;     // exponents of matrix element
-      //   e.g. D100 = { 1, 0, 0 }
-      int  order;
-      double v;                // its computed value
-      std::vector<double> poly;// the associated polynomial
-    };
-    enum { kPORDER = 4 };
-
-    std::vector<THaMatrixElement> fXptarMatrixElems;
-    std::vector<THaMatrixElement> fYptarMatrixElems;
-    std::vector<THaMatrixElement> fYtarMatrixElems;
-    std::vector<THaMatrixElement> fPinvMatrixElems;
-    std::vector<THaMatrixElement> fXtarMatrixElems;
-    */
     //virtual Int_t   Begin( THaRunBase* r=0 );
     //virtual Int_t   End( THaRunBase* r=0 );
 
@@ -58,6 +32,13 @@ class SBSBigBite : public THaSpectrometer {
     
     void CalcTargetCoords( THaTrack* the_track );
     void CalcTimingPID( THaTrack* the_track );
+    
+    Double_t eproba_pssh(Double_t eps_etot_ratio);
+    Double_t eproba_gemcal(Double_t etot_p_ratio);
+    Double_t eproba_grinch(Int_t npmt);
+    Double_t piproba_pssh(Double_t eps_etot_ratio);
+    Double_t piproba_gemcal(Double_t etot_p_ratio);
+    Double_t piproba_grinch(Int_t npmt, Double_t p);
     
     int fOpticsOrder;
     std::vector<double> fb_xptar;
@@ -77,6 +58,7 @@ class SBSBigBite : public THaSpectrometer {
     std::vector<double> fBackConstraintY;
     
     std::vector<double> fEpsEtotRatio;
+    std::vector<double> fEtot;
     
     double fMinEpsEtotRatio;
     

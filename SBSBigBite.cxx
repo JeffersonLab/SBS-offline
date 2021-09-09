@@ -79,6 +79,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 0, 0},
     { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 0, 0},
     { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 0, 0},
+    { "trackgrinchcorr_const", &fTrackGrinchClusCorr_0, kDouble, 0, 1, 0},
+    { "trackgrinchcorr_slope", &fTrackGrinchClusCorr_1, kDouble, 0, 1, 0},
+    { "trackgrinchcorr_sigma", &fTrackGrinchClusCorr_Sigma, kDouble, 0, 1, 0},
     {0}
   };
   
@@ -195,6 +198,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
 	EpsEtotRatio = BBTotalShower->GetPreShower()->GetECorrected()/Etot;
 	fEpsEtotRatio.push_back(EpsEtotRatio);
+	fEtot.push_back(Etot);
 	//x_bcp+= -BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	//y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	//z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
@@ -489,6 +493,18 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
   // PID info here???
   // TODO
   
+  //particles: 0: electron, 1: pion
+  //detectors: 0: ps/sh
+  THaPIDinfo* pidinfo = new THaPIDinfo(3, 2);
+  pidinfo->SetDefaultPriors();
+  
+  the_track->SetPIDinfo(pidinfo);
+  the_track->GetPIDinfo()->SetProb(0, 0, eproba_pssh(fEpsEtotRatio[the_track->GetIndex()]));
+  the_track->GetPIDinfo()->SetProb(1, 0, eproba_gemcal(fEtot[the_track->GetIndex()]/the_track->GetP()));
+  
+  the_track->GetPIDinfo()->SetProb(0, 1, piproba_pssh(fEpsEtotRatio[the_track->GetIndex()]));
+  the_track->GetPIDinfo()->SetProb(1, 1, piproba_gemcal(fEtot[the_track->GetIndex()]/the_track->GetP()));
+  
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {
@@ -506,7 +522,8 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
       // Perhaps we'd have to complete the class with a cluster
     }
     
-    bool match = false;
+    //bool match = false;
+    int NGRINCHPMTs_match = 0;
     // match a GRINCH cluster to a track:
     if(theNonTrackDetector->InheritsFrom("SBSGRINCH")){
       SBSGRINCH* GRINCH = reinterpret_cast<SBSGRINCH*>(theNonTrackDetector);
@@ -520,17 +537,45 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
       for(int i = 0; i<GRINCH->GetNumClusters(); i++){
 	SBSGRINCH_Cluster* gc_clus = GRINCH->GetCluster(i);
 	
-	if( fabs(x_track-gc_clus->GetXcenter()*fTrackGrinchClusCorr_1-fTrackGrinchClusCorr_0)<fTrackGrinchClusCorr_Sigma)match = true;
+	if( fabs(x_track-gc_clus->GetXcenter()*fTrackGrinchClusCorr_1-fTrackGrinchClusCorr_0)<fTrackGrinchClusCorr_Sigma)NGRINCHPMTs_match = gc_clus->GetNHits();
+	
 	//if(y_track)
       }
     }
-    if(match){
-      //Use THaPIDinfo... but how?
-      //the_track->GetPIDinfo()->SetProb();
-    }
-    if(fEpsEtotRatio[the_track->GetIndex()]<fMinEpsEtotRatio){
-      //the_track->GetPIDinfo()->SetProb();
-    }
+
+    the_track->GetPIDinfo()->SetProb(2, 0, eproba_grinch(NGRINCHPMTs_match));
+    the_track->GetPIDinfo()->SetProb(2, 1, piproba_grinch(NGRINCHPMTs_match, the_track->GetP()));
     
   }
+}
+
+
+Double_t SBSBigBite::eproba_pssh(Double_t eps_etot_ratio)
+{
+  return 0;
+}
+
+Double_t SBSBigBite::eproba_gemcal(Double_t etot_p_ratio)
+{
+  return 0;
+}
+
+Double_t SBSBigBite::eproba_grinch(Int_t npmt)
+{
+  return 0;
+}
+
+Double_t SBSBigBite::piproba_pssh(Double_t eps_etot_ratio)
+{
+  return 0;
+}
+
+Double_t SBSBigBite::piproba_gemcal(Double_t etot_p_ratio)
+{
+  return 0;
+}
+
+Double_t SBSBigBite::piproba_grinch(Int_t npmt, Double_t p)
+{
+  return 0;
 }
