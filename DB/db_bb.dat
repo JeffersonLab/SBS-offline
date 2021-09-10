@@ -32,8 +32,12 @@ bb.frontconstraintwidth_y = 0.05 # m
 bb.backconstraintwidth_x = 0.05 # m
 bb.backconstraintwidth_y = 0.05 # m
 
+trackgrinchcorr_const = 0.071
+trackgrinchcorr_slope = 1.365
+trackgrinchcorr_sigma = 0.25
 
-psshPIDprobatable = 0   0   1
+psshPIDprobatable = 
+0   0   1
 0.01   0.0102965   0.939074
 0.02   0.0160108   0.672653
 0.03   0.0223125   0.503606
@@ -134,7 +138,8 @@ psshPIDprobatable = 0   0   1
 0.98   1   1.77626e-05
 0.99   1   1.77626e-05
 
-pcalPIDprobatable = 0   0   1
+pcalPIDprobatable = 
+0   0   1
 0.01   0   1
 0.02   0   1
 0.03   0   1
@@ -253,7 +258,8 @@ pcalPIDprobatable = 0   0   1
 
 bb.grinchPIDpbins = 2.7  2.9  3.2  3.5  4  5  
 
-grinchPIDprobatable = 0   0   1   1   1   1   1   1
+grinchPIDprobatable = 
+0   0   1   1   1   1   1   1
 1   0.000750035   0.708333   0.981651   1   0.999186   0.997845   0.994909
 2   0.000808966   0.319444   0.834862   0.982544   0.994304   0.997845   0.994431
 3   0.000851825   0.0555556   0.518349   0.900249   0.982099   0.996337   0.99353

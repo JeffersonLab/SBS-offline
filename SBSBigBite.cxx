@@ -542,8 +542,6 @@ Int_t SBSBigBite::TrackCalc()
   
   for( Int_t t = 0; t < fTracks->GetLast()+1; t++ ) {
     auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
-    THaPIDinfo* PIDinfo = new THaPIDinfo(2, 2);
-    theTrack->SetPIDinfo(PIDinfo);
     CalcTimingPID(theTrack);
   }
   
@@ -564,16 +562,18 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
   pidinfo->SetDefaultPriors();
   
   the_track->SetPIDinfo(pidinfo);
+  
   double eproba, piproba;
   proba_pssh(fEpsEtotRatio[the_track->GetIndex()], eproba, piproba);
-  proba_pcal(fEtot[the_track->GetIndex()]/the_track->GetP(), eproba, piproba);
-  
   the_track->GetPIDinfo()->SetProb(0, 0, eproba);
-  the_track->GetPIDinfo()->SetProb(1, 0, eproba);
-  
   the_track->GetPIDinfo()->SetProb(0, 1, piproba);
-  the_track->GetPIDinfo()->SetProb(1, 1, piproba);
   
+  proba_pcal(fEtot[the_track->GetIndex()]/the_track->GetP(), eproba, piproba);
+  the_track->GetPIDinfo()->SetProb(1, 0, eproba);
+  the_track->GetPIDinfo()->SetProb(1, 1, piproba);
+
+  
+    
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {
@@ -596,13 +596,15 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
     // match a GRINCH cluster to a track:
     if(theNonTrackDetector->InheritsFrom("SBSGRINCH")){
       SBSGRINCH* GRINCH = reinterpret_cast<SBSGRINCH*>(theNonTrackDetector);
-
+      
       //x, y of track at z = Z_GRINCH
       double x_track = the_track->GetX()+
 	the_track->GetTheta()*GRINCH->GetOrigin().Z();
       //double y_track = the_track->GetY()+
       //the_track->GetPhi()*GRINCH->GetOrigin().Z();
 
+      cout << GRINCH->GetNumClusters() << " GRINCH clusters " << endl;
+      
       for(int i = 0; i<GRINCH->GetNumClusters(); i++){
 	SBSGRINCH_Cluster* gc_clus = GRINCH->GetCluster(i);
 	
@@ -616,6 +618,22 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
     the_track->GetPIDinfo()->SetProb(2, 0, eproba);
     the_track->GetPIDinfo()->SetProb(2, 1, piproba);
     
+    the_track->GetPIDinfo()->CombinePID();
+    
+    cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
+	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
+	 << " N GRINCH PMTs = " << NGRINCHPMTs_match 
+	 << ", P = " << the_track->GetP() << endl;
+    cout << " => combined track PID: electron " 
+	 << the_track->GetPIDinfo()->GetProb(0, 0) << " "
+	 << the_track->GetPIDinfo()->GetProb(1, 0) << " "
+	 << the_track->GetPIDinfo()->GetProb(2, 0) << " "
+	 << the_track->GetPIDinfo()->GetCombinedProb(0) 
+	 << " pion " << the_track->GetPIDinfo()->GetProb(0, 1) << " "
+	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
+	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
+	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
+    
   }
 }
 
@@ -627,7 +645,7 @@ Int_t SBSBigBite::proba_pssh(Double_t eps_etot_ratio,
   proba_e = fProba_e_PSSH_table[fProba_e_PSSH_table.size()-1];
   proba_pi = fProba_pi_PSSH_table[fProba_pi_PSSH_table.size()-1];
   for(size_t i = 0; i<fEpsEtotRatio_table.size()-1; i++){
-    if(fEpsEtotRatio_table[i]<eps_etot_ratio && 
+    if(fEpsEtotRatio_table[i]<=eps_etot_ratio && 
        eps_etot_ratio<fEpsEtotRatio_table[i+1]){
       proba_e = fProba_e_PSSH_table[i]+
 	(fProba_e_PSSH_table[i+1]-fProba_e_PSSH_table[i])/
@@ -649,7 +667,7 @@ Int_t SBSBigBite::proba_pcal(Double_t etot_p_ratio,
   proba_e = fProba_e_PCAL_table[fProba_e_PCAL_table.size()-1];
   proba_pi = fProba_e_PCAL_table[fProba_pi_PCAL_table.size()-1];
   for(size_t i = 0; i<fEtotPratio_table.size()-1; i++){
-    if(fEtotPratio_table[i]<etot_p_ratio && etot_p_ratio<fEtotPratio_table[i+1]){
+    if(fEtotPratio_table[i]<=etot_p_ratio && etot_p_ratio<fEtotPratio_table[i+1]){
       proba_e = fProba_e_PCAL_table[i]+
 	(fProba_e_PCAL_table[i+1]-fProba_e_PCAL_table[i])/
 	(fEtotPratio_table[i+1]-fEtotPratio_table[i])*
@@ -675,7 +693,7 @@ Int_t SBSBigBite::proba_grinch(Int_t npmt, Double_t p,
   proba_e = fProba_e_GRINCH_table[fProba_e_GRINCH_table.size()-1];
   proba_pi = fProba_e_GRINCH_table[fProba_pi_GRINCH_table.size()-1];
   for(size_t i = 0; i<fNGRINCHPMTs_table.size()-1; i++){
-    if(fNGRINCHPMTs_table[i]<npmt && npmt<fNGRINCHPMTs_table[i+1]){
+    if(fNGRINCHPMTs_table[i]<=npmt && npmt<fNGRINCHPMTs_table[i+1]){
       proba_e = fProba_e_GRINCH_table[i]+
 	(fProba_e_GRINCH_table[i+1]-fProba_e_GRINCH_table[i])/
 	(fNGRINCHPMTs_table[i+1]-fNGRINCHPMTs_table[i])*
