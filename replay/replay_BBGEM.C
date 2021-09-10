@@ -100,7 +100,8 @@ void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long f
 
   
 
-  analyzer->SetVerbosity(0);
+  analyzer->SetVerbosity(2);
+  analyzer->SetMarkInterval(100);
 
   analyzer->EnableBenchmarks();
   
@@ -108,9 +109,9 @@ void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long f
   analyzer->SetEvent( event );
   analyzer->SetOutFile( outfilename.Data() );
   // File to record cuts accounting information
-  analyzer->SetSummaryFile("summary_example.log"); // optional
+  analyzer->SetSummaryFile("replay_BBGEM.log"); // optional
 
-  analyzer->SetOdefFile( "replay_BB_TEDF.odef" );
+  analyzer->SetOdefFile( "replay_BBGEM.odef" );
   
   //analyzer->SetCompressionLevel(0); // turn off compression
 

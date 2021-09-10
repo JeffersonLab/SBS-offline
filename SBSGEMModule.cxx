@@ -563,8 +563,12 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "hity",   "local Y coordinate of hit",   "fHits.yhit" },
     { "hitxg",   "transport X coordinate of hit",   "fHits.xghit" },
     { "hityg",   "transport Y coordinate of hit",   "fHits.yghit" },
-    { "hitADCasym",   "hit ADC asymmetry",   "fHits.ADCasym" },
+    { "hitADCasym",   "hit ADC asymmetry (ADCU-ADCV)/2",   "fHits.ADCasym" },
+    { "hitADCavg",  "(ADCU+ADCV)/2", "fHits.Ehit" },
     { "hitTdiff",   "hit time difference (u-v)",   "fHits.tdiff" },
+    { "hitTavg",   "average time of 2D hit", "fHits.thitcorr" },
+    { "hit_iuclust", "index in u cluster array", "fHits.iuclust" },
+    { "hit_ivclust", "index in v cluster array", "fHits.ivclust" },
     { nullptr },
   };
 
