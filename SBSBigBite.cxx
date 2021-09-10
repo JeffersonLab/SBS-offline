@@ -71,6 +71,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   
   UInt_t nparams;
   std::vector<Double_t> optics_param;
+  std::vector<Double_t> pssh_pidproba;
+  std::vector<Double_t> pcal_pidproba;
+  std::vector<Double_t> grinch_pidproba;
   const DBRequest request[] = {
     { "optics_order",    &fOpticsOrder, kUInt,  0, 0, 1},
     { "optics_nelem",     &nparams,      kUInt,   0, 0, 1},
@@ -82,6 +85,10 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "trackgrinchcorr_const", &fTrackGrinchClusCorr_0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_slope", &fTrackGrinchClusCorr_1, kDouble, 0, 1, 0},
     { "trackgrinchcorr_sigma", &fTrackGrinchClusCorr_Sigma, kDouble, 0, 1, 0},
+    { "psshPIDprobatable",    &pssh_pidproba, kDoubleV,  0, 1, 0},
+    { "pcalPIDprobatable",    &pcal_pidproba, kDoubleV,  0, 1, 0},
+    { "grinchPIDpbins",    &fP_table, kDoubleV,  0, 1, 0},
+    { "grinchPIDprobatable",    &grinch_pidproba, kDoubleV,  0, 1, 0},
     {0}
   };
   
@@ -113,6 +120,64 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     fb_yptar[i] = optics_param[n_elem*i+1];
     fb_ytar[i] = optics_param[n_elem*i+2];
     fb_pinv[i] = optics_param[n_elem*i+3];
+  }
+  
+  //PID stuff
+  fEpsEtotRatio_table.clear();
+  fProba_e_PSSH_table.clear();
+  fProba_pi_PSSH_table.clear();
+  
+  if(pssh_pidproba.size()){
+    int npts = pssh_pidproba.size()/3;
+    fEpsEtotRatio_table.resize(npts);
+    fProba_e_PSSH_table.resize(npts);
+    fProba_pi_PSSH_table.resize(npts);
+    
+    for(int i = 0; i<npts; i++){
+      fEpsEtotRatio_table[i] = pssh_pidproba[3*i];
+      fProba_e_PSSH_table[i] = pssh_pidproba[3*i+1];
+      fProba_pi_PSSH_table[i] = pssh_pidproba[3*i+2];
+    }
+  }
+  
+  //PID stuff
+  fEtotPratio_table.clear();
+  fProba_e_PCAL_table.clear();
+  fProba_pi_PCAL_table.clear();
+  
+  if(pcal_pidproba.size()){
+    int npts = pcal_pidproba.size()/3;
+    fEtotPratio_table.resize(npts);
+    fProba_e_PCAL_table.resize(npts);
+    fProba_pi_PCAL_table.resize(npts);
+    
+    for(int i = 0; i<npts; i++){
+      fEtotPratio_table[i] = pcal_pidproba[3*i];
+      fProba_e_PCAL_table[i] = pcal_pidproba[3*i+1];
+      fProba_pi_PCAL_table[i] = pcal_pidproba[3*i+2];
+    }
+  }
+  
+  fNGRINCHPMTs_table.clear();
+  fProba_e_GRINCH_table.clear();
+  fProba_pi_GRINCH_table.clear();
+  
+  if(grinch_pidproba.size() && fP_table.size()){
+    int n_ppts = 2+fP_table.size();
+    int npts = grinch_pidproba.size()/(n_ppts);
+    fNGRINCHPMTs_table.resize(npts);
+    fProba_e_GRINCH_table.resize(npts);
+    fProba_pi_GRINCH_table.resize(fP_table.size());
+    for(int j = 0; j<fP_table.size(); j++){
+      fProba_pi_GRINCH_table[j].resize(npts);
+    }
+    for(int i = 0; i<npts; i++){
+      fNGRINCHPMTs_table[i] = grinch_pidproba[n_ppts*i];
+      fProba_e_GRINCH_table[i] = grinch_pidproba[n_ppts*i+1];
+      for(int j = 0; j<fP_table.size(); j++){
+	fProba_pi_GRINCH_table[j][i] = grinch_pidproba[n_ppts*i+2+j];
+      }
+    }
   }
   
   fIsInit = true;
@@ -499,11 +564,15 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
   pidinfo->SetDefaultPriors();
   
   the_track->SetPIDinfo(pidinfo);
-  the_track->GetPIDinfo()->SetProb(0, 0, eproba_pssh(fEpsEtotRatio[the_track->GetIndex()]));
-  the_track->GetPIDinfo()->SetProb(1, 0, eproba_gemcal(fEtot[the_track->GetIndex()]/the_track->GetP()));
+  double eproba, piproba;
+  proba_pssh(fEpsEtotRatio[the_track->GetIndex()], eproba, piproba);
+  proba_pcal(fEtot[the_track->GetIndex()]/the_track->GetP(), eproba, piproba);
   
-  the_track->GetPIDinfo()->SetProb(0, 1, piproba_pssh(fEpsEtotRatio[the_track->GetIndex()]));
-  the_track->GetPIDinfo()->SetProb(1, 1, piproba_gemcal(fEtot[the_track->GetIndex()]/the_track->GetP()));
+  the_track->GetPIDinfo()->SetProb(0, 0, eproba);
+  the_track->GetPIDinfo()->SetProb(1, 0, eproba);
+  
+  the_track->GetPIDinfo()->SetProb(0, 1, piproba);
+  the_track->GetPIDinfo()->SetProb(1, 1, piproba);
   
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
@@ -542,40 +611,80 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
 	//if(y_track)
       }
     }
-
-    the_track->GetPIDinfo()->SetProb(2, 0, eproba_grinch(NGRINCHPMTs_match));
-    the_track->GetPIDinfo()->SetProb(2, 1, piproba_grinch(NGRINCHPMTs_match, the_track->GetP()));
+    
+    proba_grinch(NGRINCHPMTs_match, the_track->GetP(), eproba, piproba);
+    the_track->GetPIDinfo()->SetProb(2, 0, eproba);
+    the_track->GetPIDinfo()->SetProb(2, 1, piproba);
     
   }
 }
 
 
-Double_t SBSBigBite::eproba_pssh(Double_t eps_etot_ratio)
+Int_t SBSBigBite::proba_pssh(Double_t eps_etot_ratio, 
+			     Double_t& proba_e, Double_t& proba_pi)
 {
+  if(fProba_e_PSSH_table.size()==0)return -1;
+  proba_e = fProba_e_PSSH_table[fProba_e_PSSH_table.size()-1];
+  proba_pi = fProba_pi_PSSH_table[fProba_pi_PSSH_table.size()-1];
+  for(size_t i = 0; i<fEpsEtotRatio_table.size()-1; i++){
+    if(fEpsEtotRatio_table[i]<eps_etot_ratio && 
+       eps_etot_ratio<fEpsEtotRatio_table[i+1]){
+      proba_e = fProba_e_PSSH_table[i]+
+	(fProba_e_PSSH_table[i+1]-fProba_e_PSSH_table[i])/
+	(fEpsEtotRatio_table[i+1]-fEpsEtotRatio_table[i])*
+	(eps_etot_ratio-fEpsEtotRatio_table[i]);
+      proba_pi = fProba_pi_PSSH_table[i]+
+	(fProba_pi_PSSH_table[i+1]-fProba_pi_PSSH_table[i])/
+	(fEpsEtotRatio_table[i+1]-fEpsEtotRatio_table[i])*
+	(eps_etot_ratio-fEpsEtotRatio_table[i]);
+    }
+  }
   return 0;
 }
 
-Double_t SBSBigBite::eproba_gemcal(Double_t etot_p_ratio)
+Int_t SBSBigBite::proba_pcal(Double_t etot_p_ratio, 
+			     Double_t& proba_e, Double_t& proba_pi)
 {
+  if(fEtotPratio_table.size()==0)return -1;
+  proba_e = fProba_e_PCAL_table[fProba_e_PCAL_table.size()-1];
+  proba_pi = fProba_e_PCAL_table[fProba_pi_PCAL_table.size()-1];
+  for(size_t i = 0; i<fEtotPratio_table.size()-1; i++){
+    if(fEtotPratio_table[i]<etot_p_ratio && etot_p_ratio<fEtotPratio_table[i+1]){
+      proba_e = fProba_e_PCAL_table[i]+
+	(fProba_e_PCAL_table[i+1]-fProba_e_PCAL_table[i])/
+	(fEtotPratio_table[i+1]-fEtotPratio_table[i])*
+	(etot_p_ratio-fEtotPratio_table[i]);
+      proba_pi = fProba_pi_PCAL_table[i]+
+	(fProba_pi_PCAL_table[i+1]-fProba_pi_PCAL_table[i])/
+	(fEtotPratio_table[i+1]-fEtotPratio_table[i])*
+	(etot_p_ratio-fEtotPratio_table[i]);
+    }
+  }
   return 0;
 }
 
-Double_t SBSBigBite::eproba_grinch(Int_t npmt)
+Int_t SBSBigBite::proba_grinch(Int_t npmt, Double_t p,
+			       Double_t& proba_e, Double_t& proba_pi)
 {
-  return 0;
-}
-
-Double_t SBSBigBite::piproba_pssh(Double_t eps_etot_ratio)
-{
-  return 0;
-}
-
-Double_t SBSBigBite::piproba_gemcal(Double_t etot_p_ratio)
-{
-  return 0;
-}
-
-Double_t SBSBigBite::piproba_grinch(Int_t npmt, Double_t p)
-{
+  if(fProba_e_GRINCH_table.size()==0)return -1;
+  int j = fP_table.size()-1;
+  if(j==-1)return -1;
+  for(size_t i = 0; i<fP_table.size()-1;i++){
+    if(fP_table[i]<p && p<fP_table[i])j = i;
+  }
+  proba_e = fProba_e_GRINCH_table[fProba_e_GRINCH_table.size()-1];
+  proba_pi = fProba_e_GRINCH_table[fProba_pi_GRINCH_table.size()-1];
+  for(size_t i = 0; i<fNGRINCHPMTs_table.size()-1; i++){
+    if(fNGRINCHPMTs_table[i]<npmt && npmt<fNGRINCHPMTs_table[i+1]){
+      proba_e = fProba_e_GRINCH_table[i]+
+	(fProba_e_GRINCH_table[i+1]-fProba_e_GRINCH_table[i])/
+	(fNGRINCHPMTs_table[i+1]-fNGRINCHPMTs_table[i])*
+	(npmt-fNGRINCHPMTs_table[i]);
+      proba_pi = fProba_pi_GRINCH_table[j][i]+
+	(fProba_pi_GRINCH_table[j][i+1]-fProba_pi_GRINCH_table[j][i])/
+	(fNGRINCHPMTs_table[i+1]-fNGRINCHPMTs_table[i])*
+	(npmt-fNGRINCHPMTs_table[i]);
+    }
+  }
   return 0;
 }

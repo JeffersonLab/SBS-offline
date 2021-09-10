@@ -33,12 +33,12 @@ class SBSBigBite : public THaSpectrometer {
     void CalcTargetCoords( THaTrack* the_track );
     void CalcTimingPID( THaTrack* the_track );
     
-    Double_t eproba_pssh(Double_t eps_etot_ratio);
-    Double_t eproba_gemcal(Double_t etot_p_ratio);
-    Double_t eproba_grinch(Int_t npmt);
-    Double_t piproba_pssh(Double_t eps_etot_ratio);
-    Double_t piproba_gemcal(Double_t etot_p_ratio);
-    Double_t piproba_grinch(Int_t npmt, Double_t p);
+    Int_t proba_pssh(Double_t eps_etot_ratio, 
+		     Double_t& proba_e, Double_t& proba_pi);
+    Int_t proba_pcal(Double_t etot_p_ratio, 
+		     Double_t& proba_e, Double_t& proba_pi);
+    Int_t proba_grinch(Int_t npmt, Double_t p, 
+		       Double_t& proba_e, Double_t& proba_pi);
     
     int fOpticsOrder;
     std::vector<double> fb_xptar;
@@ -60,11 +60,22 @@ class SBSBigBite : public THaSpectrometer {
     std::vector<double> fEpsEtotRatio;
     std::vector<double> fEtot;
     
-    double fMinEpsEtotRatio;
-    
     double fTrackGrinchClusCorr_0;
     double fTrackGrinchClusCorr_1;
     double fTrackGrinchClusCorr_Sigma;
+    
+    std::vector<double> fEpsEtotRatio_table;
+    std::vector<double> fProba_e_PSSH_table;
+    std::vector<double> fProba_pi_PSSH_table;
+    
+    std::vector<double> fEtotPratio_table;
+    std::vector<double> fProba_e_PCAL_table;
+    std::vector<double> fProba_pi_PCAL_table;
+    
+    std::vector<double> fP_table;
+    std::vector<double> fNGRINCHPMTs_table;
+    std::vector<double> fProba_e_GRINCH_table;
+    std::vector<std::vector<double>> fProba_pi_GRINCH_table;
     
     /*
     TH2D* h1_yVx_bcp;
