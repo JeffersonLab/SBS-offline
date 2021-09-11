@@ -70,6 +70,11 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
     } else if( segcounter == 0 ){
       new( (*filelist)[segcounter] ) THaRun( codafilename.Data() );
       cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
+
+      ( (THaRun*) (*filelist)[segcounter] )->SetDate(TDatime());
+      ( (THaRun*) (*filelist)[segcounter] )->SetNumber( runnum );
+      
+      
     } else {
       THaRun *rtemp = ( (THaRun*) (*filelist)[segcounter-1] ); //make otherwise identical copy of previous run in all respects except coda file name:
       new( (*filelist)[segcounter] ) THaRun( *rtemp );
@@ -121,8 +126,7 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
     run->SetFirstEvent( firstevent );
     
     run->SetDataRequired(0);
-    run->SetDate(TDatime());
-
+    
     analyzer->Process(run);     // start the actual analysis
   }
 }

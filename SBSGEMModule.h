@@ -262,6 +262,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
 
+  UInt_t fMAX2DHITS; // Max. 2d hits per module, to limit memory usage:
   UInt_t fN2Dhits; // number of 2D hits found in region of interest:
   std::vector<sbsgemhit_t> fHits; //2D hit reconstruction results
 

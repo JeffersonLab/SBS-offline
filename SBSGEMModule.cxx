@@ -64,6 +64,9 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fRawADC_APV.resize( MAXNSAMP_PER_APV );
   fPedSubADC_APV.resize( MAXNSAMP_PER_APV );
   fCommonModeSubtractedADC_APV.resize( MAXNSAMP_PER_APV );
+
+  //default to 
+  fMAX2DHITS = 250000;
   
   return;
 }
@@ -159,6 +162,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_rmsV", &fCommonModeRMSV, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_flag", &fCommonModeFlag, kInt, 0, 1, 1}, //optional, search up the tree
     { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
+    { "max2Dhits", &fMAX2DHITS, kUInt, 0, 1, 1}, //optional, search up tree
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -616,6 +620,7 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fNstrips_hit = 0;
   fNstrips_hitU = 0;
   fNstrips_hitV = 0;
+  fNdecoded_ADCsamples = 0;
   fIsDecoded = false;
 
   fNclustU = 0;
@@ -1517,8 +1522,14 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   //fHits.clear();
   fN2Dhits = 0;
 
-  fHits.resize( fNclustU * fNclustV );
-    
+  //fHits.resize( fNclustU * fNclustV );
+  //fHits.clear();
+  fHits.resize( std::min( fNclustU*fNclustV, fMAX2DHITS ) );
+
+  // if( fNclustU * fNclustV > fMAX2DHITS ){
+  //   std::cout << "Warning in SBSGEMModule::fill_2D_hit_arrays(): 
+  // }
+  
   //This routine is simple: just form all possible 2D hits from combining one "U" cluster with one "V" cluster. Here we assume that find_clusters_1D has already
   //been called, if that is NOT the case, then this routine will just do nothing:
   for( int iu=0; iu<fNclustU; iu++ ){
@@ -1558,7 +1569,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	//Check if candidate 2D hit is inside the constraint region before doing anything else:
 	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
 	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax &&
-	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) ){
+	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) &&
+	    fN2Dhits < fMAX2DHITS ){
     
 	  hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
 	  hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
