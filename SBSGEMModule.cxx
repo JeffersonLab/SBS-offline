@@ -724,7 +724,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     // Get common-mode flags, if applicable:
     // Default to the values from the database (or the default values):
 
-    Bool_t CM_ENABLED = fCommonModeFlag != 0 && fCommonModeFlag != 1;
+    Bool_t CM_ENABLED = fCommonModeFlag != 0 && fCommonModeFlag != 1 && !fPedestalMode;
     Bool_t BUILD_ALL_SAMPLES = !fOnlineZeroSuppression;
     
     UInt_t cm_flags=2*CM_ENABLED + BUILD_ALL_SAMPLES;
@@ -747,6 +747,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     // 2. If BUILD_ALL_SAMPLES is false, then online zero suppression is enabled. We can, in addition, apply our own higher thresholds if we want:
     // 3. If CM_ENABLED is true, the pedestal has also been subtracted, so we don't subtract it again.
     // 4. If CM_ENABLED is false, we need to subtract the pedestals AND calculate and subtract the common-mode:
+    // 5. If BUILD_ALL_SAMPLES is false then CM_ENABLED had better be true!
     
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
@@ -777,117 +778,138 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       
       // std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
       // 		<< it->adc_id << ", " << nstrips << std::endl;
-      
-      //declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
+
       double commonMode[fN_MPD_TIME_SAMP];
-      
+	
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	commonMode[isamp] = 0.0;
       }
       
+      if( !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN ){ //then two loops over the data are necessary, first one to calculate common-mode:
+	//declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
 
-      //First loop over the hits: populate strip, raw strip, raw ADC, ped sub ADC and common-mode-subtracted aDC:
-      for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
-	int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
-	int ADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+	//First loop over the hits: populate strip, raw strip, raw ADC, ped sub ADC and common-mode-subtracted aDC:
+	for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
+	  int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
+	  int ADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
 	
-	rawStrip[iraw] = strip;
-	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
+	  rawStrip[iraw] = strip;
+	  Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
-	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+	  double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 
-	// If common-mode subtraction is enabled, the pedestal has already been subtracted:
-	if( CM_ENABLED ) ped = 0.0;
+	  // If common-mode subtraction is enabled, the pedestal has already been subtracted:
+	  if( CM_ENABLED ) ped = 0.0;
 	
-	rawADC[iraw] = ADC;
-	pedsubADC[iraw] = double(ADC) - ped;
-	commonModeSubtractedADC[iraw] = double(ADC) - ped; 
+	  rawADC[iraw] = ADC;
+	  pedsubADC[iraw] = double(ADC) - ped;
+	  commonModeSubtractedADC[iraw] = double(ADC) - ped; 
 
-	//the calculation of common mode in pedestal mode analysis differs from the
-	// offline or online zero suppression analysis; here we use a simple average of all 128 channels:
-	if( fPedestalMode && nstrips == fN_APV25_CHAN && !CM_ENABLED ){
-	  //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
-	  //values
-	  int isamp = iraw%fN_MPD_TIME_SAMP;
-	  commonMode[isamp] += (double(ADC)-ped)/double(nstrips);
+	  //the calculation of common mode in pedestal mode analysis differs from the
+	  // offline or online zero suppression analysis; here we use a simple average of all 128 channels:
+	  if( fPedestalMode ){
+	    //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
+	    //values
+	    int isamp = iraw%fN_MPD_TIME_SAMP;
+	    commonMode[isamp] += pedsubADC[iraw]/fN_APV25_CHAN;
+	  }
 	}
-      }
-      
-      //(OPTIONAL) second loop over the hits to calculate and apply common-mode correction (sorting method)
-      if( BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN && !fPedestalMode && !CM_ENABLED ){ //need to calculate common mode:
-	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	  if( fCommonModeFlag == 0 ){ //"sorting method": for now this algorithm is hard-coded to use samples 28-100 of the sorted array, later we want to make the behavior database-configurable:
-	    vector<double> sortedADCs(fN_APV25_CHAN);
+	
+	//(OPTIONAL) second loop over the hits to calculate and apply common-mode correction (sorting method)
+	if( !fPedestalMode ){ //need to calculate common mode:
+	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	    if( fCommonModeFlag == 0 ){ //"sorting method": for now this algorithm is hard-coded to use samples 28-100 of the sorted array, later we want to make the behavior database-configurable:
+	      vector<double> sortedADCs(fN_APV25_CHAN);
 	    
-	    for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
-	      int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	    
-	      sortedADCs[ihit] = pedsubADC[ iraw ];
-	    }
-	    
-	    std::sort( sortedADCs.begin(), sortedADCs.end() );
-	    
-	    commonMode[isamp] = 0.0;
-	    
-	    for( int k=28; k<100; k++ ){
-	      commonMode[isamp] += sortedADCs[k];
-	    }
-	    commonMode[isamp] /= 72.0;
-	    //moved this to the next loop for efficiency and code re-use:
-	    // for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
-	    //   int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	
-	    //   commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[isamp];
-	    // }
-	  } else {
-	    //"Danning method": this ASSUMES that sensible values of common-mode mean and rms have been
-	    // configured via the database:
-	    int iAPV = it->pos;
-	    double cm_mean = ( it->axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
-	    double cm_rms = ( it->axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
-
-	    //TODO: don't hard-code this or use a different parameter than the one used for
-	    // zero-suppression:
-	    double cm_min = cm_mean - fZeroSuppressRMS*cm_rms;
-	    double cm_max = cm_mean + fZeroSuppressRMS*cm_rms;
-
-	    //for now, hard-code 3 iterations:
-	    for( int iter=0; iter<3; iter++ ){
-	      int nstripsinrange=0;
-	      double sumADCinrange=0.0;
-	      double sum2ADCinrange=0.0;
 	      for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
-		int iraw=isamp + fN_MPD_TIME_SAMP * ihit;
-
-		double ADCtemp = pedsubADC[iraw];
-		if( ADCtemp >= cm_min && ADCtemp <= cm_max ){
-		  nstripsinrange++;
-		  sumADCinrange += ADCtemp;
-		  sum2ADCinrange += pow(ADCtemp,2);
-		}
+		int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	    
+		sortedADCs[ihit] = pedsubADC[ iraw ];
 	      }
+	    
+	      std::sort( sortedADCs.begin(), sortedADCs.end() );
+	    
+	      commonMode[isamp] = 0.0;
+	    
+	      for( int k=28; k<100; k++ ){
+		commonMode[isamp] += sortedADCs[k];
+	      }
+	      commonMode[isamp] /= 72.0;
+	      //moved this to the next loop for efficiency and code re-use:
+	      // for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+	      //   int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	
+	      //   commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[isamp];
+	      // }
+	    } else {
+	      //"Danning method": this ASSUMES that sensible values of common-mode mean and rms have been
+	      // configured via the database:
+	      int iAPV = it->pos;
+	      double cm_mean = ( it->axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
+	      double cm_rms = ( it->axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
 
-	      double rmsinrange = cm_rms;
+	      //TODO: don't hard-code this or use a different parameter than the one used for
+	      // zero-suppression:
+	      double cm_min = cm_mean - fZeroSuppressRMS*cm_rms;
+	      double cm_max = cm_mean + fZeroSuppressRMS*cm_rms;
 
-	      //TO-DO: don't hard-code the minimum strip count. 
+	      //for now, hard-code 3 iterations:
+	      for( int iter=0; iter<3; iter++ ){
+		int nstripsinrange=0;
+		double sumADCinrange=0.0;
+		double sum2ADCinrange=0.0;
+		for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+		  int iraw=isamp + fN_MPD_TIME_SAMP * ihit;
+
+		  double ADCtemp = pedsubADC[iraw];
+		  if( ADCtemp >= cm_min && ADCtemp <= cm_max ){
+		    nstripsinrange++;
+		    sumADCinrange += ADCtemp;
+		    sum2ADCinrange += pow(ADCtemp,2);
+		  }
+		}
+
+		double rmsinrange = cm_rms;
+
+		//TO-DO: don't hard-code the minimum strip count. 
 	      
-	      if( nstripsinrange >= 10 ){ //require minimum 10 strips in range:
-		commonMode[isamp] = sumADCinrange/double(nstripsinrange);
-		rmsinrange = sqrt( sum2ADCinrange/double(nstripsinrange) - pow(commonMode[isamp],2) );
+		if( nstripsinrange >= 10 ){ //require minimum 10 strips in range:
+		  commonMode[isamp] = sumADCinrange/double(nstripsinrange);
+		  rmsinrange = sqrt( sum2ADCinrange/double(nstripsinrange) - pow(commonMode[isamp],2) );
 
-		cm_max = commonMode[isamp] + fZeroSuppressRMS*std::min( rmsinrange, cm_rms );
-	      } else if( iter==0 ){ //not enough strips on first iteration, use mean from database and exit the loop:
-		commonMode[isamp] = cm_mean;
-		break;
-	      } 
-	    } //loop over iterations for "Danning method" CM calculation
+		  cm_max = commonMode[isamp] + fZeroSuppressRMS*std::min( rmsinrange, cm_rms );
+		} else if( iter==0 ){ //not enough strips on first iteration, use mean from database and exit the loop:
+		  commonMode[isamp] = cm_mean;
+		  break;
+		} 
+	      } //loop over iterations for "Danning method" CM calculation
      
-	  } //else Danning method
-	} //loop over time samples
-      } //check if conditions are satisfied to require offline common-mode calculation
-      
+	    } //else Danning method
+	  } //loop over time samples
+	} //check if conditions are satisfied to require offline common-mode calculation
+      } //End check !CM_ENABLED && BUILD_ALL_SAMPLES
+
+      if( !BUILD_ALL_SAMPLES && !CM_ENABLED ) { //This should never happen:
+	return 0;
+      }
       //std::cout << "finished common mode " << std::endl;
       // Last loop over all the strips and samples in the data and populate/calculate global variables that are passed to track-finding:
       //Int_t ihit = 0;
+            
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
+	if( CM_ENABLED ){
+	  //then we skipped the first loop over the data; need to grab the actual data:
+	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	    int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
+	    int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
+	    int ADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+	    rawStrip[iraw] = strip;
+	    Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
+	    //no need to grab pedestal if CM_ENABLED is true:
+	    rawADC[iraw] = ADC;
+	    pedsubADC[iraw] = double(ADC);
+	    commonModeSubtractedADC[iraw] = double(ADC);
+	  }
+	}
+	
 	//Temporary vector to hold ped-subtracted ADC samples for this strip:
 	std::vector<double> ADCtemp(fN_MPD_TIME_SAMP);
 	std::vector<int> rawADCtemp(fN_MPD_TIME_SAMP);
@@ -922,6 +944,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //if( (fPedestalMode || !fOnlineZeroSuppression) && nstrips == fN_APV25_CHAN ){
 	  //We need to subtract the common-mode if it was calculated:
 	  if( !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN ){
+	    
+	    // std::cout << "isamp, commonMode = " << adc_samp << ", " << commonMode[adc_samp]
+	    // 	      << std::endl;
 	    commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[adc_samp];
 	  }
 	  
