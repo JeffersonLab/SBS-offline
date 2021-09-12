@@ -113,7 +113,12 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitEResidV.clear();
   fHitUADC.clear();
   fHitVADC.clear();
+  fHitUADCmaxstrip.clear();
+  fHitVADCmaxstrip.clear();
+  fHitUADCmaxsample.clear();
+  fHitVADCmaxsample.clear();
 
+  
   fHitADCasym.clear();
   fHitUTime.clear();
   fHitVTime.clear();
@@ -1118,12 +1123,24 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitUstripMax.push_back( uclustinfo->istripmax );
       fHitUstripLo.push_back( uclustinfo->istriplo );
       fHitUstripHi.push_back( uclustinfo->istriphi );
+
+      //Also set the "trackindex" variable for all strips on this track:
+      for( int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
+	fModules[module]->fStripTrackIndex[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = itrack;
+      }
+      
       //
       fHitNstripsV.push_back( vclustinfo->nstrips );
       fHitVstripMax.push_back( vclustinfo->istripmax );
       fHitVstripLo.push_back( vclustinfo->istriplo );
       fHitVstripHi.push_back( vclustinfo->istriphi );
       //
+
+      //Also set the "trackindex" variable for all strips on this track:
+      for( int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
+	fModules[module]->fStripTrackIndex[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = itrack;
+      }
+      
       fHitUlocal.push_back( hitinfo->uhit );
       fHitVlocal.push_back( hitinfo->vhit );
       fHitXlocal.push_back( hitinfo->xhit );
@@ -1141,6 +1158,14 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitEResidV.push_back( feresidv_hits[itrack][ihit] );
       fHitUADC.push_back( uclustinfo->clusterADCsum );
       fHitVADC.push_back( vclustinfo->clusterADCsum );
+
+      fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo]] );
+      fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo]] );
+
+      fHitUADCmaxsample.push_back( fModules[module]->fADCmax[uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo]] );
+      fHitVADCmaxsample.push_back( fModules[module]->fADCmax[vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo]] );
+      
+      
       fHitADCasym.push_back( hitinfo->ADCasym );
       fHitUTime.push_back( uclustinfo->t_mean );
       fHitVTime.push_back( vclustinfo->t_mean );

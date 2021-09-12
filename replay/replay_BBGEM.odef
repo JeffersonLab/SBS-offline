@@ -1,17 +1,19 @@
-#block bb.gem.track.*
-#block bb.gem.hit.*
+block bb.gem.track.*
+block bb.gem.hit.*
+block bb.gem.*.strip.*
+block bb.gem.*.clust.*
 
-block bb.gem.*
+#block bb.gem.*
 
-#variable bb.gem.nlayershit
-#variable bb.gem.nlayershitu
-#variable bb.gem.nlayershitv
-#variable bb.gem.nlayershituv
-#variable bb.gem.nstripsu_layer
-#variable bb.gem.nstripsv_layer
-#variable bb.gem.nclustu_layer
-#variable bb.gem.nclustv_layer
-#variable bb.gem.n2Dhit_layer
+variable bb.gem.nlayershit
+variable bb.gem.nlayershitu
+variable bb.gem.nlayershitv
+variable bb.gem.nlayershituv
+variable bb.gem.nstripsu_layer
+variable bb.gem.nstripsv_layer
+variable bb.gem.nclustu_layer
+variable bb.gem.nclustv_layer
+variable bb.gem.n2Dhit_layer
 
 #cut onbesttrack bb.gem.hit.trackindex==0
 cut singletrack bb.gem.track.ntrack==1
