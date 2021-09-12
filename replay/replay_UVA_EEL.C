@@ -53,6 +53,8 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
   bool segmentexists = true;
   int segment=firstsegment; 
 
+  int lastsegment=firstsegment;
+  
   TClonesArray *filelist = new TClonesArray("THaRun",10);
 
   
@@ -81,7 +83,10 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
       ( (THaRun*) (*filelist)[segcounter] )->SetFilename( codafilename.Data() );
       cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
     }
-    if( segmentexists ) segcounter++;
+    if( segmentexists ){
+      segcounter++;
+      lastsegment = segment;
+    }
     segment++;
   }
 
@@ -90,7 +95,8 @@ void replay_UVA_EEL( int runnum=2811, int firstsegment=0, int maxsegments=1, lon
   prefix = gSystem->Getenv("OUT_DIR");
 
   TString outfilename;
-  outfilename.Form( "%s/sbs_uvagem_replayed_%d.root", prefix.Data(), runnum );
+  outfilename.Form( "%s/sbs_uvagem_replayed_%d_seg%d_%d.root", prefix.Data(), runnum,
+		    firstsegment, lastsegment );
 
   // Define the run(s) that we want to analyze.
   // We just set up one, but this could be many.
