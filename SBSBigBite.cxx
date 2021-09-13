@@ -198,6 +198,13 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   };
   DefineVarsFromList( vars, mode );
 
+ RVarDef pidvars[] = {
+    { "prob_e", "electron probability", "fTracks.THaTrack.GetPIDinfo().GetCombinedProb(0)" },
+    { "prob_pi", "pion probability", "fTracks.THaTrack.GetPIDinfo().GetCombinedProb(1)" },
+    { nullptr }
+  };
+  DefineVarsFromList( pidvars, mode );  
+  
   return 0;
 }
 
@@ -602,11 +609,19 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
 	the_track->GetTheta()*GRINCH->GetOrigin().Z();
       //double y_track = the_track->GetY()+
       //the_track->GetPhi()*GRINCH->GetOrigin().Z();
-
-      cout << GRINCH->GetNumClusters() << " GRINCH clusters " << endl;
+      
+      // cout << "x, y track = " << x_track << ", " 
+      // 	   << the_track->GetY()+the_track->GetPhi()*GRINCH->GetOrigin().Z() << endl;
+      
+      // cout << GRINCH->GetNumClusters() << " GRINCH clusters " << endl;
       
       for(int i = 0; i<GRINCH->GetNumClusters(); i++){
 	SBSGRINCH_Cluster* gc_clus = GRINCH->GetCluster(i);
+	// cout << "x,y grinch " << gc_clus->GetXcenter() << ", "
+	//      << gc_clus->GetYcenter() << endl;
+	
+	// cout << gc_clus->GetXcenter()*fTrackGrinchClusCorr_1+fTrackGrinchClusCorr_0 << " " << x_track << endl;
+	// cout << fabs(x_track-gc_clus->GetXcenter()*fTrackGrinchClusCorr_1-fTrackGrinchClusCorr_0) << " " << fTrackGrinchClusCorr_Sigma << endl;
 	
 	if( fabs(x_track-gc_clus->GetXcenter()*fTrackGrinchClusCorr_1-fTrackGrinchClusCorr_0)<fTrackGrinchClusCorr_Sigma)NGRINCHPMTs_match = gc_clus->GetNHits();
 	
@@ -620,19 +635,19 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
     
     the_track->GetPIDinfo()->CombinePID();
     
-    cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
-	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
-	 << " N GRINCH PMTs = " << NGRINCHPMTs_match 
-	 << ", P = " << the_track->GetP() << endl;
-    cout << " => combined track PID: electron " 
-	 << the_track->GetPIDinfo()->GetProb(0, 0) << " "
-	 << the_track->GetPIDinfo()->GetProb(1, 0) << " "
-	 << the_track->GetPIDinfo()->GetProb(2, 0) << " "
-	 << the_track->GetPIDinfo()->GetCombinedProb(0) 
-	 << " pion " << the_track->GetPIDinfo()->GetProb(0, 1) << " "
-	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
-	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
-	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
+    // cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
+    // 	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
+    // 	 << " N GRINCH PMTs = " << NGRINCHPMTs_match 
+    // 	 << ", P = " << the_track->GetP() << endl;
+    // cout << " => combined track PID: electron " 
+    // 	 << the_track->GetPIDinfo()->GetProb(0, 0) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(1, 0) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(2, 0) << " "
+    // 	 << the_track->GetPIDinfo()->GetCombinedProb(0) 
+    // 	 << " pion " << the_track->GetPIDinfo()->GetProb(0, 1) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
+    // 	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
     
   }
 }
