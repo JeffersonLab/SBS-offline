@@ -259,6 +259,10 @@ protected:
   std::vector<double> fHitEResidV; //V tracking residual ("exclusive");
   std::vector<double> fHitUADC; // cluster ADC sum, U strips
   std::vector<double> fHitVADC; // cluster ADC sum, V strips
+  std::vector<double> fHitUADCmaxstrip; //ADC sum on max U strip
+  std::vector<double> fHitVADCmaxstrip; //ADC sum on max V strip
+  std::vector<double> fHitUADCmaxsample; //max ADC sample on max U strip
+  std::vector<double> fHitVADCmaxsample; //max ADC sample on max V strip
   std::vector<double> fHitADCasym; // (ADCU-ADCV)/(ADCU + ADCV)
   std::vector<double> fHitUTime; // cluster-mean time, U strips
   std::vector<double> fHitVTime; // cluster-mean time, V strips

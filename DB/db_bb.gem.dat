@@ -212,7 +212,7 @@ bb.gem.vpitch = 0.0004
 # tracking parameters:
 bb.gem.threshold_sample = 50.0
 bb.gem.threshold_stripsum = 200.0
-bb.gem.threshold_clustersum = 200.0
+bb.gem.threshold_clustersum = 300.0
 
 bb.gem.peakprominence_minsigma = 5.0
 bb.gem.peakprominence_minfraction = 0.2
@@ -227,7 +227,7 @@ bb.gem.sigmahitshape = 0.0004
 bb.gem.sigmahitpos = 0.00015 # 0.15 mm or 150 um
 bb.gem.trackchi2cut = 10000.0
 bb.gem.onlinezerosuppression = 0
-bb.gem.zerosuppress_nsigma = 3.5
+bb.gem.zerosuppress_nsigma = 4.5
 bb.gem.minhitsontrack = 3
 bb.gem.maxhitcombos = 20000
 bb.gem.gridbinwidthx = 0.1

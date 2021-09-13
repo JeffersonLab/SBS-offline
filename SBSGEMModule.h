@@ -11,8 +11,8 @@
 class THaDetectorBase;
 class THaEvData;
 class THaRunBase;
-class TH1F;
-class TH2F;
+class TH1D;
+class TH2D;
 class TClonesArray;
 
 namespace SBSGEM {
@@ -84,11 +84,11 @@ struct sbsgemcluster_t {  //1D clusters;
   UInt_t istriplo;
   UInt_t istriphi;
   UInt_t istripmax;
-  std::vector<double> ADCsamples; //cluster-summed ADC samples (accounting for split fraction)
+  std::vector<Double_t> ADCsamples; //cluster-summed ADC samples (accounting for split fraction)
   Double_t hitpos_mean;  //ADC-weighted mean coordinate along the direction measured by the strip
   Double_t hitpos_sigma; //ADC-weighted RMS coordinate deviation from the mean along the direction measured by the strip
   Double_t clusterADCsum; //Sum of ADCs over all samples on all strips
-  std::vector<double> stripADCsum; //Sum of individual strip ADCs over all samples on all strips; accounting for split fraction
+  std::vector<Double_t> stripADCsum; //Sum of individual strip ADCs over all samples on all strips; accounting for split fraction
   Double_t t_mean; //reconstructed hit time
   Double_t t_sigma; //unclear what we might use this for
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
@@ -206,7 +206,7 @@ class SBSGEMModule : public THaSubDetector {
   // Short_t/UShort_t is two bytes signed/unsigned = 16 bits = 0..65535 for unsigned
   // Int_t/UInt_t is four bytes signed/unsigned = 32 bits
   // Long_t/ULong_t is eight bytes = 64 bit
-  // Float_t/Double_t is four bytes/eight bytes
+  // Double_t/Double_t is four bytes/eight bytes
 
   UChar_t fN_APV25_CHAN;     //number of APV25 channels, default 128
   UChar_t fN_MPD_TIME_SAMP;  //number of MPD time samples, default = 6
@@ -218,11 +218,18 @@ class SBSGEMModule : public THaSubDetector {
   //variables defining rectangular track search region constraint (NOTE: these will change event-to-event, they are NOT constant!)
   Double_t fxcmin, fxcmax;
   Double_t fycmin, fycmax;
-  
+
+  //Arrays to temporarily hold raw data from ONE APV card:
+  std::vector<UInt_t> fStripAPV;
+  std::vector<UInt_t> fRawStripAPV;
+  std::vector<Int_t> fRawADC_APV;
+  std::vector<Double_t> fPedSubADC_APV;
+  std::vector<Double_t> fCommonModeSubtractedADC_APV;
   
   //BASIC DECODED STRIP HIT INFO:
   //By the time the information is populated here, the ADC values are already assumed to be pedestal/common-mode subtracted and/or zero-suppressed as appropriate:
-  UInt_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
+  Int_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
+  Int_t fNdecoded_ADCsamples; //= fNstrips_hit * fN_MPD_TIME_SAMP
   UInt_t fNstrips_hitU; //total number of U strips fired
   UInt_t fNstrips_hitV; //total number of V strips fired
   
@@ -230,6 +237,8 @@ class SBSGEMModule : public THaSubDetector {
   //key = U or V  strip number, mapped value is position of that strip's information in the "decoded strip" arrays below:
   /* std::map<UInt_t, UInt_t> fUstripIndex;  */
   /* std::map<UInt_t, UInt_t> fVstripIndex;  */
+
+  //std::vector<sbsgemstrip_t> fDecodedStrips;
   
   std::vector<UInt_t> fStrip;  //Strip index of hit (these could be "U" or "V" generalized X and Y), assumed to run from 0..N-1
   std::vector<SBSGEM::GEMaxis_t>  fAxis;  //We just made our enumerated type that has two possible values, makes the code more readable (maybe)
@@ -253,6 +262,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
 
+  UInt_t fMAX2DHITS; // Max. 2d hits per module, to limit memory usage:
   UInt_t fN2Dhits; // number of 2D hits found in region of interest:
   std::vector<sbsgemhit_t> fHits; //2D hit reconstruction results
 
@@ -349,13 +359,13 @@ class SBSGEMModule : public THaSubDetector {
   Bool_t fIsMC;//we kinda want this guy no matter what don't we...
 
   //Efficiency histograms:
-  TH1F *fhdidhitx;
-  TH1F *fhdidhity;
-  TH2F *fhdidhitxy;
+  TH1D *fhdidhitx;
+  TH1D *fhdidhity;
+  TH2D *fhdidhitxy;
 
-  TH1F *fhshouldhitx;
-  TH1F *fhshouldhity;
-  TH2F *fhshouldhitxy;
+  TH1D *fhshouldhitx;
+  TH1D *fhshouldhity;
+  TH2D *fhshouldhitxy;
 
   //we should let the user configure this: this is set at the "tracker level" which then propagates down to all the modules:
   bool fMakeEfficiencyPlots;
@@ -364,27 +374,27 @@ class SBSGEMModule : public THaSubDetector {
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;
   
-  TH2F *hrawADCs_by_stripU; //raw adcs by strip, no corrections, filled for each SAMPLE:
-  TH2F *hrawADCs_by_stripV; //raw adcs by strip, no corrections, filled for each SAMPLE:
-  TH2F *hcommonmode_subtracted_ADCs_by_stripU; //common-mode subtracted ADCS without ped subtraction
-  TH2F *hcommonmode_subtracted_ADCs_by_stripV; 
-  TH2F *hpedestal_subtracted_ADCs_by_stripU; //common-mode AND pedestal subtracted ADCs
-  TH2F *hpedestal_subtracted_ADCs_by_stripV;
+  TH2D *hrawADCs_by_stripU; //raw adcs by strip, no corrections, filled for each SAMPLE:
+  TH2D *hrawADCs_by_stripV; //raw adcs by strip, no corrections, filled for each SAMPLE:
+  TH2D *hcommonmode_subtracted_ADCs_by_stripU; //common-mode subtracted ADCS without ped subtraction
+  TH2D *hcommonmode_subtracted_ADCs_by_stripV; 
+  TH2D *hpedestal_subtracted_ADCs_by_stripU; //common-mode AND pedestal subtracted ADCs
+  TH2D *hpedestal_subtracted_ADCs_by_stripV;
 
-  TH2F *hpedestal_subtracted_rawADCs_by_stripU; //pedestal-subtracted ADCs w/o common-mode correction
-  TH2F *hpedestal_subtracted_rawADCs_by_stripV;
+  TH2D *hpedestal_subtracted_rawADCs_by_stripU; //pedestal-subtracted ADCs w/o common-mode correction
+  TH2D *hpedestal_subtracted_rawADCs_by_stripV;
 
   //Summed over all strips, pedestal-subtracted (but not common-mode subtracted) ADCs:
-  TH1F *hpedestal_subtracted_rawADCsU;
-  TH1F *hpedestal_subtracted_rawADCsV;
+  TH1D *hpedestal_subtracted_rawADCsU;
+  TH1D *hpedestal_subtracted_rawADCsV;
 
   //Summed over all strips, pedestal-subtracted and  common-mode subtracted ADCs:
-  TH1F *hpedestal_subtracted_ADCsU;
-  TH1F *hpedestal_subtracted_ADCsV;
+  TH1D *hpedestal_subtracted_ADCsU;
+  TH1D *hpedestal_subtracted_ADCsV;
 
   //in pedestal-mode analysis, we 
-  TH2F *hcommonmode_mean_by_APV_U;
-  TH2F *hcommonmode_mean_by_APV_V;
+  TH2D *hcommonmode_mean_by_APV_U;
+  TH2D *hcommonmode_mean_by_APV_V;
   
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;

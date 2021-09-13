@@ -57,6 +57,8 @@ void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long f
   bool segmentexists = true;
   int segment=firstsegment; 
 
+  int lastsegment=firstsegment;
+  
   TClonesArray *filelist = new TClonesArray("THaRun",10);
 
   int segcounter=0;
@@ -73,13 +75,18 @@ void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long f
     } else if( segcounter == 0 ){
       new( (*filelist)[segcounter] ) THaRun( codafilename.Data() );
       cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
+      ( (THaRun*) (*filelist)[segcounter] )->SetDate(TDatime());
+      ( (THaRun*) (*filelist)[segcounter] )->SetNumber( runnum );
     } else {
       THaRun *rtemp = ( (THaRun*) (*filelist)[segcounter-1] ); //make otherwise identical copy of previous run in all respects except coda file name:
       new( (*filelist)[segcounter] ) THaRun( *rtemp );
       ( (THaRun*) (*filelist)[segcounter] )->SetFilename( codafilename.Data() );
       cout << "Added segment " << segcounter << ", CODA file name = " << codafilename << endl;
     }
-    if( segmentexists ) segcounter++;
+    if( segmentexists ){
+      segcounter++;
+      lastsegment = segment;
+    }
     segment++;
   }
 
@@ -88,7 +95,8 @@ void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long f
   prefix = gSystem->Getenv("OUT_DIR");
 
   TString outfilename;
-  outfilename.Form( "%s/bbgem_replayed_%d.root", prefix.Data(), runnum );
+  outfilename.Form( "%s/bbgem_replayed_%d_seg%d_%d.root", prefix.Data(), runnum,
+		    firstsegment, lastsegment );
 
   // Define the run(s) that we want to analyze.
   // We just set up one, but this could be many.
@@ -124,7 +132,7 @@ void replay_BBGEM( int runnum=220, int firstsegment=0, int maxsegments=1, long f
     run->SetFirstEvent( firstevent );
     
     run->SetDataRequired(0);
-    run->SetDate(TDatime());
+    
 
     analyzer->Process(run);     // start the actual analysis
   }
