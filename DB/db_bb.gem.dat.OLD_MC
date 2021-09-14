@@ -2,6 +2,9 @@
 
 ## A chamber is a "Tracker-Plane" composed of vertically stacked modules
 bb.gem.is_mc = 1
+bb.gem.pedestalmode = 0
+bb.gem.commonmode_flag = 0
+bb.gem.chan_cm_flags = 512
 bb.gem.modules = ft0_m0 ft0_m1 ft0_m2
 	         ft1_m0 ft1_m1 ft1_m2
 	         ft2_m0 ft2_m1 ft2_m2

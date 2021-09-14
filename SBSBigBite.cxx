@@ -199,8 +199,8 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   DefineVarsFromList( vars, mode );
 
  RVarDef pidvars[] = {
-    { "prob_e", "electron probability", "fTracks.THaTrack.GetPIDinfo().GetCombinedProb(0)" },
-    { "prob_pi", "pion probability", "fTracks.THaTrack.GetPIDinfo().GetCombinedProb(1)" },
+    { "prob_e", "electron probability", "fTracks.THaTrack.GetPIDinfo()->GetCombinedProb(0)" },
+    { "prob_pi", "pion probability", "fTracks.THaTrack.GetPIDinfo()->GetCombinedProb(1)" },
     { nullptr }
   };
   DefineVarsFromList( pidvars, mode );  
