@@ -32,8 +32,8 @@ bb.frontconstraintwidth_y = 0.05 # m
 bb.backconstraintwidth_x = 0.05 # m
 bb.backconstraintwidth_y = 0.05 # m
 
-trackgrinchcorr_const = 0.071
-trackgrinchcorr_slope = 1.365
+trackgrinchcorr_const = -0.44160517
+trackgrinchcorr_slope = 0.90774908
 trackgrinchcorr_sigma = 0.25
 
 psshPIDprobatable = 

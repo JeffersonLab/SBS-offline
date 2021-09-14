@@ -441,7 +441,25 @@ Int_t SBSBigBite::Reconstruct()
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
     CalcTargetCoords(theTrack);
   }  
+  
+  if( GetNTracks() > 0 ) {
+    // Select first track in the array. If there is more than one track
+    // and track sorting is enabled, then this is the best fit track
+    // (smallest chi2/ndof).  Otherwise, it is the track with the best
+    // geometrical match (smallest residuals) between the U/V clusters
+    // in the upper and lower VDCs (old behavior).
+    // 
+    // Chi2/dof is a well-defined quantity, and the track selected in this
+    // way is immediately physically meaningful. The geometrical match
+    // criterion is mathematically less well defined and not usually used
+    // in track reconstruction. Hence, chi2 sorting is preferable, albeit
+    // obviously slower.
 
+    fGoldenTrack = static_cast<THaTrack*>( fTracks->At(0) );
+    fTrkIfo      = *fGoldenTrack;
+    fTrk         = fGoldenTrack;
+  } else
+    fGoldenTrack = nullptr;  
   
   return 0;
 }
@@ -606,22 +624,23 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
       
       //x, y of track at z = Z_GRINCH
       double x_track = the_track->GetX()+
-	the_track->GetTheta()*GRINCH->GetOrigin().Z();
+	the_track->GetTheta()*GRINCH->GetZ();
       //double y_track = the_track->GetY()+
       //the_track->GetPhi()*GRINCH->GetOrigin().Z();
       
-      // cout << "x, y track = " << x_track << ", " 
-      // 	   << the_track->GetY()+the_track->GetPhi()*GRINCH->GetOrigin().Z() << endl;
+      //cout << "x, y track = " << x_track << ", " 
+      //<< the_track->GetY()+the_track->GetPhi()*GRINCH->GetZ() << endl;
       
-      // cout << GRINCH->GetNumClusters() << " GRINCH clusters " << endl;
+      //cout << GRINCH->GetNumClusters() << " GRINCH clusters " << endl;
       
       for(int i = 0; i<GRINCH->GetNumClusters(); i++){
 	SBSGRINCH_Cluster* gc_clus = GRINCH->GetCluster(i);
-	// cout << "x,y grinch " << gc_clus->GetXcenter() << ", "
-	//      << gc_clus->GetYcenter() << endl;
+	//cout << "N hits = " << gc_clus->GetNHits() << endl;
+	//cout << "x,y grinch " << gc_clus->GetXcenter() << ", "
+	//   << gc_clus->GetYcenter() << endl;
 	
-	// cout << gc_clus->GetXcenter()*fTrackGrinchClusCorr_1+fTrackGrinchClusCorr_0 << " " << x_track << endl;
-	// cout << fabs(x_track-gc_clus->GetXcenter()*fTrackGrinchClusCorr_1-fTrackGrinchClusCorr_0) << " " << fTrackGrinchClusCorr_Sigma << endl;
+	//cout << gc_clus->GetXcenter()*fTrackGrinchClusCorr_1+fTrackGrinchClusCorr_0 << " " <<  x_track << endl;
+	//cout << fabs(x_track-(gc_clus->GetXcenter()*fTrackGrinchClusCorr_1+fTrackGrinchClusCorr_0)) << " " << fTrackGrinchClusCorr_Sigma << endl;
 	
 	if( fabs(x_track-gc_clus->GetXcenter()*fTrackGrinchClusCorr_1-fTrackGrinchClusCorr_0)<fTrackGrinchClusCorr_Sigma)NGRINCHPMTs_match = gc_clus->GetNHits();
 	
@@ -635,19 +654,19 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
     
     the_track->GetPIDinfo()->CombinePID();
     
-    // cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
-    // 	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
-    // 	 << " N GRINCH PMTs = " << NGRINCHPMTs_match 
-    // 	 << ", P = " << the_track->GetP() << endl;
-    // cout << " => combined track PID: electron " 
-    // 	 << the_track->GetPIDinfo()->GetProb(0, 0) << " "
-    // 	 << the_track->GetPIDinfo()->GetProb(1, 0) << " "
-    // 	 << the_track->GetPIDinfo()->GetProb(2, 0) << " "
-    // 	 << the_track->GetPIDinfo()->GetCombinedProb(0) 
-    // 	 << " pion " << the_track->GetPIDinfo()->GetProb(0, 1) << " "
-    // 	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
-    // 	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
-    // 	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
+    cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
+    	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
+    	 << " N GRINCH PMTs = " << NGRINCHPMTs_match 
+    	 << ", P = " << the_track->GetP() << endl;
+    cout << " => combined track PID: electron " 
+    	 << the_track->GetPIDinfo()->GetProb(0, 0) << " "
+    	 << the_track->GetPIDinfo()->GetProb(1, 0) << " "
+    	 << the_track->GetPIDinfo()->GetProb(2, 0) << " "
+    	 << the_track->GetPIDinfo()->GetCombinedProb(0) 
+    	 << " pion " << the_track->GetPIDinfo()->GetProb(0, 1) << " "
+    	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
+    	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
+    	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
     
   }
 }

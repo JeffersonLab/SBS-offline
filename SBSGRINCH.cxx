@@ -622,7 +622,7 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   
   // Clusters matched with tracks here (obviously if there are any tracks to match)
   if(tracks.GetLast()>0){
-    MatchClustersWithTracks(tracks);
+    //MatchClustersWithTracks(tracks);
   }
   
   if( fDoBench ) fBench->Stop("FineProcess");
