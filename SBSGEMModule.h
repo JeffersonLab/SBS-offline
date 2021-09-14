@@ -382,12 +382,19 @@ class SBSGEMModule : public THaSubDetector {
   bool fMakeEfficiencyPlots;
   bool fEfficiencyInitialized;
   bool fMakeCommonModePlots; //diagnostic plots for offline common-mode stuff: default = false;
+  bool fCommonModePlotsInitialized;
   
   //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
-  TH1D *fCommonModeDist; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
-  TH1D *fCommonModeDist_Sorting;
-  TH1D *fCommonModeDist_Danning;
-  TH1D *fCommonModeDiff; //difference between sorting and danning mode calculations:
+  TH2D *fCommonModeDistU; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
+  TH2D *fCommonModeDistU_Sorting;
+  TH2D *fCommonModeDistU_Danning;
+  TH2D *fCommonModeDiffU; //difference between sorting and danning mode calculations:
+
+  //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
+  TH2D *fCommonModeDistV; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
+  TH2D *fCommonModeDistV_Sorting;
+  TH2D *fCommonModeDistV_Danning;
+  TH2D *fCommonModeDiffV; //difference between sorting and danning mode calculations:
   
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;

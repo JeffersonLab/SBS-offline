@@ -41,6 +41,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCommonModeNumIterations = 3;
   fCommonModeMinStripsInRange = 10;
   fMakeCommonModePlots = false;
+  fCommonModePlotsInitialized = false;
   
   //Set default values for decode map parameters:
   fN_APV25_CHAN = 128;
@@ -175,7 +176,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_nstriphi", &fCommonModeNstripRejectHigh, kInt, 0, 1, 1}, //optional, search:
     { "commonmode_niter", &fCommonModeNumIterations, kInt, 0, 1, 1},
     { "commonmode_minstrips", &fCommonModeMinStripsInRange, kInt, 0, 1, 1},
-    { "plot_common_mode", &fMakeCommonModePlots, kInt, 0, 1, 1},
+    { "plot_common_mode", &fMakeCommonModePlots, kUInt, 0, 1, 1},
     { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
     { "max2Dhits", &fMAX2DHITS, kUInt, 0, 1, 1}, //optional, search up tree
     {0}
@@ -809,6 +810,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       if( !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN ){ //then two loops over the data are necessary, first one to calculate common-mode:
 	//declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
 
+	//std::cout << "Common-mode calculation: " << std::endl;
+	
 	//First loop over the hits: populate strip, raw strip, raw ADC, ped sub ADC and common-mode-subtracted aDC:
 	for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
 	  int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
@@ -836,109 +839,54 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  }
 	}
 	
-	//(OPTIONAL) second loop over the hits to calculate and apply common-mode correction (sorting method)
+	// second loop over the hits to calculate and apply common-mode correction (sorting method)
 	if( !fPedestalMode ){ //need to calculate common mode:
 	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	    //if( fCommonModeFlag == 0 ){ //"sorting method": for now this algorithm is hard-coded to use samples 28-100 of the sorted array, later we want to make the behavior database-configurable:
-	      // vector<double> sortedADCs(fN_APV25_CHAN);
-	    
-	      // for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
-	      // 	int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	    
-	      // 	sortedADCs[ihit] = pedsubADC[ iraw ];
-	      // }
-	    
-	      // std::sort( sortedADCs.begin(), sortedADCs.end() );
-	    
-	      // commonMode[isamp] = 0.0;
-	    
-	      // for( int k=28; k<100; k++ ){
-	      // 	commonMode[isamp] += sortedADCs[k];
-	      // }
-	      // commonMode[isamp] /= 72.0;
 
+	    //moved common-mode calculation to its own function:
+
+	    //std::cout << "Starting common-mode calculation for time sample " << isamp << std::endl;
+	    
 	    if( fMakeCommonModePlots ){ // calculate both ways:
 	      double cm_danning = GetCommonMode( isamp, 1, *it );
 	      double cm_sorting = GetCommonMode( isamp, 0, *it );
 
+	      //std::cout << "cm danning, sorting = " << cm_danning << ", " << cm_sorting << std::endl;
+	      
 	      commonMode[isamp] = fCommonModeFlag == 0 ? cm_sorting : cm_danning;
 
-	      double cm_mean = (it->axis == SBSGEM::kUaxis) ? fCommonModeMeanU[it->pos] : fCommonModeMeanV[it->pos];
+	      double cm_mean;
 
-	      fCommonModeDist->Fill( commonMode[isamp] - cm_mean );
-	      fCommonModeDist_Sorting->Fill( cm_sorting - cm_mean );
-	      fCommonModeDist_Danning->Fill( cm_danning - cm_mean );
-	      fCommonModeDiff->Fill( cm_sorting - cm_danning );
+	      UInt_t iAPV = it->pos;
 	      
-	    } else { //if not doing diagnostic, just calculate whichever way the user wanted:
+	      // std::cout << "Filling common-mode histograms..." << std::endl;
+
+	      // std::cout << "iAPV, nAPVsU, nAPVsV, axis = " << iAPV << ", " << fNAPVs_U << ", "
+	      // 		<< fNAPVs_V << ", " << axis << std::endl;
+	      
+	      if( axis == SBSGEM::kUaxis ){
+		cm_mean = fCommonModeMeanU[iAPV];
+		
+		fCommonModeDistU->Fill( iAPV, commonMode[isamp] - cm_mean );
+		fCommonModeDistU_Sorting->Fill( iAPV, cm_sorting - cm_mean );
+		fCommonModeDistU_Danning->Fill( iAPV, cm_danning - cm_mean );
+		fCommonModeDiffU->Fill( iAPV, cm_sorting - cm_danning );
+	      } else {
+		cm_mean = fCommonModeMeanV[iAPV];
+		
+		fCommonModeDistV->Fill( iAPV, commonMode[isamp] - cm_mean );
+		fCommonModeDistV_Sorting->Fill( iAPV, cm_sorting - cm_mean );
+		fCommonModeDistV_Danning->Fill( iAPV, cm_danning - cm_mean );
+		fCommonModeDiffV->Fill( iAPV, cm_sorting - cm_danning );
+	      }
+
+	      //std::cout << "Done..." << std::endl;
+	      
+	    } else { //if not doing diagnostic plots, just calculate whichever way the user wanted:
 	    
 	      commonMode[isamp] = GetCommonMode( isamp, fCommonModeFlag, *it );
 
 	    }
-	      //moved this to the next loop for efficiency and code re-use:
-	      // for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
-	      //   int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	
-	      //   commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[isamp];
-	      // }
-	      // } else {
-	      //"Danning method": this ASSUMES that sensible values of common-mode mean and rms have been
-	      // configured via the database:
-	      //commonMode[isamp] = GetCommonMode( isamp, fCommonModFlag, *it );
-	      
-	      // int iAPV = it->pos;
-	      // double cm_mean = ( it->axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
-	      // double cm_rms = ( it->axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
-
-	      
-	      
-	      // //TODO: don't hard-code this or use a different parameter than the one used for
-	      // // zero-suppression:
-	      // double cm_min = cm_mean - fZeroSuppressRMS*cm_rms;
-	      // double cm_max = cm_mean + fZeroSuppressRMS*cm_rms;
-
-	      // //for now, hard-code 3 iterations:
-	      // for( int iter=0; iter<3; iter++ ){
-	      // 	int nstripsinrange=0;
-	      // 	double sumADCinrange=0.0;
-	      // 	//double sum2ADCinrange=0.0;
-	      // 	for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
-	      // 	  int iraw=isamp + fN_MPD_TIME_SAMP * ihit;
-
-	      // 	  double ADCtemp = pedsubADC[iraw];
-
-	      // 	  //on iterations after the first iteration, reject strips with signals above nsigma * pedrms:
-	      // 	  double rmstemp = ( it->axis == SBSGEM::kUaxis ) ? fPedRMSU[Strip[iraw]] : fPedRMSV[Strip[iraw]];
-
-	      // 	  double maxtemp = cm_max;
-
-	      // 	  if( iter > 0 ) maxtemp = commonMode[isamp] + fZeroSuppressRMS*rmstemp;
-		  
-	      // 	  if( ADCtemp >= cm_min && ADCtemp <= maxtemp ){
-	      // 	    nstripsinrange++;
-	      // 	    sumADCinrange += ADCtemp;
-	      // 	    //sum2ADCinrange += pow(ADCtemp,2);
-	      // 	  }
-	      // 	}
-
-	      // 	double rmsinrange = cm_rms;
-
-	      // 	//TO-DO: don't hard-code the minimum strip count. 
-	      
-	      // 	if( nstripsinrange >= 10 ){ //require minimum 10 strips in range:
-	      // 	  commonMode[isamp] = sumADCinrange/double(nstripsinrange);
-	      // 	  //rmsinrange = sqrt( sum2ADCinrange/double(nstripsinrange) - pow(commonMode[isamp],2) );
-	      // 	  //cm_max = commonMode[isamp] + fZeroSuppressRMS*std::min( rmsinrange, cm_rms );
-	      // 	} else if( iter==0 ){ //not enough strips on FIRST iteration, use mean from database and exit the loop:
-	      // 	  std::cout << "Warning: fewer than ten strips in range for common-mode calculation, eventID, crate, slot, MPD, ADC, cm_min, cm_max, n strips in range = "
-	      // 		    << evdata.GetEvNum() << ", " 
-	      // 		    << it->crate << ", " << it->slot << ", " << it->mpd_id << ", " << it->adc_id << ", "
-	      // 		    << cm_min << ", " << cm_max << ", " << nstripsinrange << ", defaulting to CM = "
-	      // 		    << cm_mean << endl;
-	      // 	  commonMode[isamp] = cm_mean;
-	      // 	  break;
-	      // 	} 
-	      // } //loop over iterations for "Danning method" CM calculation
-     
-	    //} //else Danning method
 	  } //loop over time samples
 	} //check if conditions are satisfied to require offline common-mode calculation
       } //End check !CM_ENABLED && BUILD_ALL_SAMPLES
@@ -1826,20 +1774,47 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     
   }
 
-  if( fMakeCommonModePlots ){
-    if( !fCommonModeDist ){
-      fCommonModeDist = new TH1D( histname.Format( "hcommonmode_%s", detname.Data() ), "Common mode - common-mode mean(iAPV)", 500, -1000.0,1000.0 );
-    }
-    if( !fCommonModeDist_Sorting ){
-      fCommonModeDist_Sorting = new TH1D( histname.Format( "hcommonmode_sorting_%s", detname.Data() ), "Common mode - common-mode mean(iAPV), Sorting Method", 500, -1000.0,1000.0 );
-    }
-    if( !fCommonModeDist_Danning ){
-      fCommonModeDist_Danning = new TH1D( histname.Format( "hcommonmode_danning_%s", detname.Data() ), "Common mode - common-mode mean(iAPV), Danning Method", 500, -1000.0,1000.0 );
-    }
-    if( !fCommonModeDiff ){
-      fCommonModeDiff = new TH1D( histname.Format( "hcommonmode_diff_%s", detname.Data() ), "Common mode (Sorting) - Common mode (Danning)", 250, -250.0,250.0 );
-    }
+  if( fMakeCommonModePlots && !fCommonModePlotsInitialized ){
+
+    //std::cout << "SBSGEMModule::Begin: making common-mode histograms for module " << GetName() << std::endl;
+    //U strips:
+   
+    fCommonModeDistU = new TH2D( histname.Format( "hcommonmodeU_%s", detname.Data() ), "Common mode - common-mode mean(iAPV) vs APV card", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
+    
+    fCommonModeDistU_Sorting = new TH2D( histname.Format( "hcommonmodeU_sorting_%s", detname.Data() ), "Common mode - common-mode mean(iAPV) vs APV card, Sorting Method", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    
+    
+    fCommonModeDistU_Danning = new TH2D( histname.Format( "hcommonmodeU_danning_%s", detname.Data() ), "Common mode - common-mode mean(iAPV) vs APV card, Danning Method", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    
+   
+    fCommonModeDiffU = new TH2D( histname.Format( "hcommonmodeU_diff_%s", detname.Data() ), "Common mode (Sorting) - Common mode (Danning) vs APV card", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -25.0, 25.0 );
+    
+
+    //V strips:
+    
+    fCommonModeDistV = new TH2D( histname.Format( "hcommonmodeV_%s", detname.Data() ), "Common mode - common-mode mean(iAPV) vs APV card", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    
+    
+    fCommonModeDistV_Sorting = new TH2D( histname.Format( "hcommonmodeV_sorting_%s", detname.Data() ), "Common mode - common-mode mean(iAPV) vs APV card, Sorting Method", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    
+    
+    fCommonModeDistV_Danning = new TH2D( histname.Format( "hcommonmodeV_danning_%s", detname.Data() ), "Common mode - common-mode mean(iAPV) vs APV card, Danning Method", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    
+    
+    fCommonModeDiffV = new TH2D( histname.Format( "hcommonmodeV_diff_%s", detname.Data() ), "Common mode (Sorting) - Common mode (Danning) vs APV card", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -25.0,25.0 );
+    
+
+    // fCommonModeDistU->Print();
+    // fCommonModeDistU_Sorting->Print();
+    // fCommonModeDistU_Danning->Print();
+    // fCommonModeDiffU->Print();
+
+    // fCommonModeDistV->Print();
+    // fCommonModeDistV_Sorting->Print();
+    // fCommonModeDistV_Danning->Print();
+    // fCommonModeDiffV->Print();
+    fCommonModePlotsInitialized = true;
   }
   
     
@@ -2134,10 +2109,15 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
   }
 
   if ( fMakeCommonModePlots ){
-    fCommonModeDist->Write(0,kOverwrite);
-    fCommonModeDist_Sorting->Write(0,kOverwrite);
-    fCommonModeDist_Danning->Write(0,kOverwrite);
-    fCommonModeDiff->Write(0,kOverwrite);
+    fCommonModeDistU->Write(0,kOverwrite);
+    fCommonModeDistU_Sorting->Write(0,kOverwrite);
+    fCommonModeDistU_Danning->Write(0,kOverwrite);
+    fCommonModeDiffU->Write(0,kOverwrite);
+
+    fCommonModeDistV->Write(0,kOverwrite);
+    fCommonModeDistV_Sorting->Write(0,kOverwrite);
+    fCommonModeDistV_Danning->Write(0,kOverwrite);
+    fCommonModeDiffV->Write(0,kOverwrite);
   }
     
   return 0;
