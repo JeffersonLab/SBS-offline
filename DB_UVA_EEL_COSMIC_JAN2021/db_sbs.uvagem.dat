@@ -10,18 +10,23 @@
 sbs.uvagem.modules =
   m0 m1 m2 m3
   m4 m5 m6 m7
-  m8 m9 m10 m11
+  m8 m9 m10 m11 
   m12 m13 m14 m15
   m16 m17 m18 m19
 
-sbs.uvagem.pedestalmode = 0
-sbs.uvagem.commonmode_flag = 1
+sbs.uvagem.pedestalmode = 0 
+sbs.uvagem.commonmode_flag = 0
+sbs.uvagem.commonmode_nstriplo = 20
+sbs.uvagem.commonmode_nstriphi = 20
+sbs.uvagem.commonmode_niter = 3
+sbs.uvagem.commonmode_minstrips = 20
+sbs.uvagem.plot_common_mode = 1
 
 sbs.uvagem.dump_geometry_info = 1
 
 # module layer indices:
 sbs.uvagem.m0.layer = 0
-sbs.uvagem.m1.layer = 0
+sbs.uvagem.m1.layer = 0 
 sbs.uvagem.m2.layer = 0
 sbs.uvagem.m3.layer = 0
 
@@ -235,7 +240,7 @@ sbs.uvagem.m19.nstripsv = 1280
 
 sbs.uvagem.threshold_sample = 50.0
 sbs.uvagem.threshold_stripsum = 200.0
-sbs.uvagem.threshold_clustersum = 400.0
+sbs.uvagem.th reshold_clustersum = 400.0
 
 #
 sbs.uvagem.ADCasym_cut = 0.3
@@ -258,7 +263,7 @@ sbs.uvagem.sigmahitshape = 0.0004
 sbs.uvagem.sigmahitpos = 0.00015 # 0.15 mm or 150 um
 sbs.uvagem.trackchi2cut = 200.0
 sbs.uvagem.onlinezerosuppression = 0
-sbs.uvagem.zerosuppress_nsigma = 4.5
+sbs.uvagem.zerosuppress_nsigma = 5.0
 sbs.uvagem.minhitsontrack = 3
 sbs.uvagem.maxhitcombos = 20000
 sbs.uvagem.gridbinwidthx = 0.01

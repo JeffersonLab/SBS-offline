@@ -160,6 +160,8 @@ class SBSGEMModule : public THaSubDetector {
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
 
   void PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
+
+  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
   
   bool fIsDecoded;
 
@@ -195,7 +197,14 @@ class SBSGEMModule : public THaSubDetector {
   
   Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method, other = ONLINE
 
+  //Number of strips on low and high side to reject for common-mode calculation:
+  Int_t fCommonModeNstripRejectHigh; //default = 28;
+  Int_t fCommonModeNstripRejectLow; //default = 28;
+  Int_t fCommonModeNumIterations; //number of iterations for Danning Method: default = 3
+  Int_t fCommonModeMinStripsInRange; //Minimum strips in range for Danning Method: default = 10;
+
   UInt_t fChan_CM_flags; //same as in MPDModule: unavoidable
+
   
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
@@ -291,6 +300,8 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fPedestalU, fPedRMSU; 
   std::vector<Double_t> fPedestalV, fPedRMSV;
 
+  Double_t fRMS_ConversionFactor; // = sqrt(fN_MPD_TIME_SAMP);
+  
   //To be determined from channel map/strip count information:
   UShort_t fNAPVs_U; //Number of APV cards per module along "U" strip direction; this is typically 8, 10, or 12, but could be larger for U/V GEMs
   UShort_t fNAPVs_V; //Number of APV cards per module along "V" strip direction; 
@@ -370,7 +381,14 @@ class SBSGEMModule : public THaSubDetector {
   //we should let the user configure this: this is set at the "tracker level" which then propagates down to all the modules:
   bool fMakeEfficiencyPlots;
   bool fEfficiencyInitialized;
-
+  bool fMakeCommonModePlots; //diagnostic plots for offline common-mode stuff: default = false;
+  
+  //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
+  TH1D *fCommonModeDist; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
+  TH1D *fCommonModeDist_Sorting;
+  TH1D *fCommonModeDist_Danning;
+  TH1D *fCommonModeDiff; //difference between sorting and danning mode calculations:
+  
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;
   
