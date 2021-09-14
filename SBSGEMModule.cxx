@@ -198,7 +198,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   //std::cout << GetName() << " fThresholdStripSum " << fThresholdStripSum 
   //<< " fThresholdSample " << fThresholdSample << std::endl;
   
-  
+  if( fIsMC ){
+    fCommonModeFlag = -1;
+    fPedestalMode = false;
+    fOnlineZeroSuppression = true;
+  }
 
   fPxU = cos( fUAngle * TMath::DegToRad() );
   fPyU = sin( fUAngle * TMath::DegToRad() );
