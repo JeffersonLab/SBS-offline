@@ -67,7 +67,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSSimFile.cxx SBSSimEvent.cxx
   SBSRPBeamSideHodo.cxx SBSRPFarSideHodo.cxx SBSCHAnalyzer.cxx
   SBSTimingHodoscopePMT.cxx SBSTimingHodoscopeBar.cxx
-  gmn_tree_digitized.cxx
+  gmn_tree_digitized.cxx VETROC.cxx
   )
 #gmn_tree_digitized.C
 #g4sbs_data.cxx g4sbs_tree.cxx
