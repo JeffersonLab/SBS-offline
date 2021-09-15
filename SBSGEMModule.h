@@ -17,6 +17,7 @@ class TClonesArray;
 
 namespace SBSGEM {
   enum GEMaxis_t { kUaxis=0, kVaxis };
+  enum APVmap_t { kINFN=0, kUVA_XY, kUVA_UV };
 }
 
 struct mpdmap_t {
@@ -179,6 +180,12 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
+  UInt_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
+
+  std::map<UInt_t, std::vector<UInt_t> > APVMAP;
+
+  void InitAPVMAP();
+  
   //some convenience maps: are these actually used yet? 
   std::map<Int_t, Int_t> fAPVch_by_Ustrip;
   std::map<Int_t, Int_t> fAPVch_by_Vstrip;
