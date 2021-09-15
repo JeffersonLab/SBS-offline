@@ -11,7 +11,7 @@ void rootlogon(){
   
   FILE *ftest = fopen( fnametemp.Data(),"r");
 
-  if( ftest != NULL && cwd != "${CMAKE_INSTALL_PREFIX}/scripts"){
+  if( ftest != NULL && cwd != "${CMAKE_INSTALL_FULL_SYSCONFDIR}"){
     cout << "found rootlogon.C in current working directory, executing..." << endl;
     TString cmd = ".x " + fnametemp;
     gROOT->ProcessLine(cmd.Data());

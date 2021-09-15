@@ -78,6 +78,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fMAX2DHITS = 250000;
 
   fRMS_ConversionFactor = sqrt(fN_MPD_TIME_SAMP); //=2.45
+
+  fIsMC = false; //need to set default value!
   
   return;
 }
