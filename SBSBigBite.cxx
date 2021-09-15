@@ -50,10 +50,13 @@ void SBSBigBite::Clear( Option_t *opt )
 {
   THaSpectrometer::Clear(opt);
   fEpsEtotRatio.clear();
+  fEtot.clear();
   fFrontConstraintX.clear();
   fFrontConstraintY.clear();
   fBackConstraintX.clear();
   fBackConstraintY.clear();
+  fProbaE.clear();
+  fProbaPi.clear();
 }
 
 
@@ -189,21 +192,63 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
-  RVarDef vars[] = {
+  RVarDef constraintvars[] = {
     { "x_fcp", "front track constraint x", "fFrontConstraintX" },
     { "y_fcp", "front track constraint y", "fFrontConstraintY" },
     { "x_bcp", "back track constraint x", "fBackConstraintX" },
     { "y_bcp", "back track constraint y", "fBackConstraintY" },
     { nullptr }
   };
-  DefineVarsFromList( vars, mode );
+  DefineVarsFromList( constraintvars, mode );
 
- RVarDef pidvars[] = {
-    { "prob_e", "electron probability", "fTracks.THaTrack.GetPIDinfo()->GetCombinedProb(0)" },
-    { "prob_pi", "pion probability", "fTracks.THaTrack.GetPIDinfo()->GetCombinedProb(1)" },
+  RVarDef pidvars[] = {
+    { "prob_e", "electron probability", "fProbaE" },
+    { "prob_pi", "pion probability", "fProbaPi" },
     { nullptr }
   };
-  DefineVarsFromList( pidvars, mode );  
+  DefineVarsFromList( pidvars, mode );
+  
+   /*
+  RVarDef goldenvars[] = {
+    { "gtr.x",    "Track x coordinate (m)",       "fGoldenTrack.fX" },
+    { "gtr.y",    "Track x coordinate (m)",       "fGoldenTrack.fY" },
+    { "gtr.th",   "Tangent of track theta angle", "fGoldenTrack.fTheta" },
+    { "gtr.ph",   "Tangent of track phi angle",   "fGoldenTrack.fPhi" },
+    { "gtr.p",    "Track momentum (GeV)",         "fGoldenTrack.fP" },
+    { "gtr.flag", "Track status flag",            "fGoldenTrack.fFlag" },
+    { "gtr.chi2", "Track's chi2 from hits",       "fGoldenTrack.fChi2" },
+    { "gtr.ndof", "Track's NDoF",                 "fGoldenTrack.fNDoF" },
+    { "gtr.d_x",  "Detector x coordinate (m)",    "fGoldenTrack.fDX" },
+    { "gtr.d_y",  "Detector y coordinate (m)",    "fGoldenTrack.fDY" },
+    { "gtr.d_th", "Detector tangent of theta",    "fGoldenTrack.fDTheta" },
+    { "gtr.d_ph", "Detector tangent of phi",      "fGoldenTrack.fDPhi" },
+    { "gtr.r_x",  "Rotated x coordinate (m)",     "fGoldenTrack.fRX" },
+    { "gtr.r_y",  "Rotated y coordinate (m)",     "fGoldenTrack.fRY" },
+    { "gtr.r_th", "Rotated tangent of theta",     "fGoldenTrack.fRTheta" },
+    { "gtr.r_ph", "Rotated tangent of phi",       "fGoldenTrack.fRPhi" },
+    { "gtr.tg_y", "Target y coordinate",          "fGoldenTrack.fTY"},
+    { "gtr.tg_th", "Tangent of target theta angle", "fGoldenTrack.fTTheta"},
+    { "gtr.tg_ph", "Tangent of target phi angle",   "fGoldenTrack.fTPhi"},    
+    { "gtr.tg_dp", "Target delta",                "fGoldenTrack.fDp"},
+    { "gtr.px",    "Lab momentum x (GeV)",        "fGoldenTrack.GetLabPx()"},
+    { "gtr.py",    "Lab momentum y (GeV)",        "fGoldenTrack.GetLabPy()"},
+    { "gtr.pz",    "Lab momentum z (GeV)",        "fGoldenTrack.GetLabPz()"},
+    { "gtr.vx",    "Vertex x (m)",                "fGoldenTrack.GetVertexX()"},
+    { "gtr.vy",    "Vertex y (m)",                "fGoldenTrack.GetVertexY()"},
+    { "gtr.vz",    "Vertex z (m)",                "fGoldenTrack.GetVertexZ()"},
+    { "gtr.pathl", "Pathlength from tg to fp (m)","fGoldenTrack.GetPathLen()"},
+    { "gtr.time",  "Time of golden track@Ref Plane (s)", "fGoldenTrack.GetTime()"},
+    { "gtr.dtime", "uncer of time (s)",           "fGoldenTrack.GetdTime()"},
+    { "gtr.beta",  "Beta of track",               "fGoldenTrack.GetBeta()"},
+    { "gtr.dbeta", "uncertainty of beta",         "fGoldenTrack.GetdBeta()"},
+    { "status",   "Bits of completed analysis stages", "fStagesDone" },
+    { "gtr.prob_e", "electron probability", "fGoldenTrack.GetPIDinfo()->GetCombinedProb(0)" },
+    { "gtr.prob_pi", "pion probability", "fGoldenTrack.GetPIDinfo()->GetCombinedProb(1)" },
+    { nullptr }
+  };
+  
+  DefineVarsFromList( goldenvars, mode );  
+    */
   
   return 0;
 }
@@ -340,12 +385,12 @@ Int_t SBSBigBite::CoarseReconstruct()
         
     double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
       (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
-    double dy = y_bcp*0.251;//y_bcp*fb_yptar[3]/(1+fb_yptar[3]*z_bcp-fb_yptar[10]);
+    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
     
     //cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
     //<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
     //<< " (Etot*" << (fb_xptar[1]*z_bcp+1-fb_xptar[6]) << "+" << -fb_pinv[1]*z_bcp+fb_pinv[6] << ")" << endl;
-    //cout << fb_yptar[3]/(1+fb_yptar[3]*z_bcp-fb_yptar[10]) << endl;
+    //cout << fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]) << endl;
     
     //(x_bcp*(0.522891*Etot-0.121773)+0.174533*Etot-0.276919)/
     //(Etot*2.43719+-0.301327)
@@ -667,6 +712,9 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
     // 	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
     // 	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
     // 	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
+    
+    fProbaE.push_back(the_track->GetPIDinfo()->GetCombinedProb(0));
+    fProbaPi.push_back(the_track->GetPIDinfo()->GetCombinedProb(1));
     
   }
 }

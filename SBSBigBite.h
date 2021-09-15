@@ -77,6 +77,10 @@ class SBSBigBite : public THaSpectrometer {
     std::vector<double> fProba_e_GRINCH_table;
     std::vector<std::vector<double>> fProba_pi_GRINCH_table;
     
+    std::vector<double> fProbaE;
+    std::vector<double> fProbaPi;
+   
+    
     /*
     TH2D* h1_yVx_bcp;
     TH2D* h1_x_fcpVbcp;
