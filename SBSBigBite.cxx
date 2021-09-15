@@ -654,19 +654,19 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
     
     the_track->GetPIDinfo()->CombinePID();
     
-    cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
-    	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
-    	 << " N GRINCH PMTs = " << NGRINCHPMTs_match 
-    	 << ", P = " << the_track->GetP() << endl;
-    cout << " => combined track PID: electron " 
-    	 << the_track->GetPIDinfo()->GetProb(0, 0) << " "
-    	 << the_track->GetPIDinfo()->GetProb(1, 0) << " "
-    	 << the_track->GetPIDinfo()->GetProb(2, 0) << " "
-    	 << the_track->GetPIDinfo()->GetCombinedProb(0) 
-    	 << " pion " << the_track->GetPIDinfo()->GetProb(0, 1) << " "
-    	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
-    	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
-    	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
+    // cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
+    // 	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
+    // 	 << " N GRINCH PMTs = " << NGRINCHPMTs_match 
+    // 	 << ", P = " << the_track->GetP() << endl;
+    // cout << " => combined track PID: electron " 
+    // 	 << the_track->GetPIDinfo()->GetProb(0, 0) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(1, 0) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(2, 0) << " "
+    // 	 << the_track->GetPIDinfo()->GetCombinedProb(0) 
+    // 	 << " pion " << the_track->GetPIDinfo()->GetProb(0, 1) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
+    // 	 << the_track->GetPIDinfo()->GetProb(2, 1) << " "
+    // 	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
     
   }
 }

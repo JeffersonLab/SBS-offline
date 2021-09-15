@@ -912,9 +912,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    rawStrip[iraw] = strip;
 	    Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 	    //no need to grab pedestal if CM_ENABLED is true:
+	    
+	    double ped = 0;
+	    if(fIsMC)ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+	    
 	    rawADC[iraw] = ADC;
-	    pedsubADC[iraw] = double(ADC);
-	    commonModeSubtractedADC[iraw] = double(ADC);
+	    pedsubADC[iraw] = double(ADC) - ped;
+	    commonModeSubtractedADC[iraw] = double(ADC) - ped;
 	  }
 	}
 	
