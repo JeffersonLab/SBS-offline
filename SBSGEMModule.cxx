@@ -767,9 +767,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
     UInt_t cm_flags=2*CM_ENABLED + BUILD_ALL_SAMPLES;
     UInt_t nhits_cm_flag=evdata.GetNumHits( it->crate, it->slot, fChan_CM_flags );
-
-    //std::cout << "num. hits in cm flags channel = " << nhits_cm_flag << std::endl;
     
+    std::cout << "Before decoding cm flags, CM_ENABLED, BUILD_ALL_SAMPLES = " << CM_ENABLED << ", "
+	      << BUILD_ALL_SAMPLES << ", num. hits in cm flags channel = " << nhits_cm_flag << std::endl;
+											       
     if( nhits_cm_flag > 0 ){
       // If applicable, find the common-mode/zero-suppression settings loaded from the raw data for this APV:
       // In principle in the SSP/VTP event format, there should be exactly one "hit" per APV in this "channel":
@@ -791,8 +792,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
+
+    std::cout << "after cm flags decoding, CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
     //fOnlineZeroSuppression = !BUILD_ALL_SAMPLES;
-    
+    if( !BUILD_ALL_SAMPLES && !CM_ENABLED ) { //This should never happen:
+      continue;
+    }
     //Int_t nchan = evdata.GetNumChan( it->crate, it->slot ); //this could be made faster
 
     SBSGEM::GEMaxis_t axis = it->axis == 0 ? SBSGEM::kUaxis : SBSGEM::kVaxis; 
@@ -833,8 +838,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//First loop over the hits: populate strip, raw strip, raw ADC, ped sub ADC and common-mode-subtracted aDC:
 	for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
 	  int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
-	  int ADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
-	
+	  UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+
+	  Int_t ADC = Int_t( decoded_rawADC );
+	  
 	  rawStrip[iraw] = strip;
 	  Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
@@ -909,9 +916,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	} //check if conditions are satisfied to require offline common-mode calculation
       } //End check !CM_ENABLED && BUILD_ALL_SAMPLES
 
-      if( !BUILD_ALL_SAMPLES && !CM_ENABLED ) { //This should never happen:
-	return 0;
-      }
+      
       //std::cout << "finished common mode " << std::endl;
       // Last loop over all the strips and samples in the data and populate/calculate global variables that are passed to track-finding:
       //Int_t ihit = 0;
