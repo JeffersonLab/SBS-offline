@@ -195,7 +195,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     return status;
   }
 
-  if( fAPVmapping < SBSGEM::kINFN || fAPVmapping > SBSGEM::kUVA_UV ) {
+  if( fAPVmapping < SBSGEM::kINFN || fAPVmapping > SBSGEM::kMC ) {
     std::cout << "Warning in SBSGEMModule::Decode for module " << GetParent()->GetName() << "." << GetName() << ": invalid APV mapping choice, defaulting to UVA X/Y." << std::endl
 	      << " Analysis results may be incorrect" << std::endl;
     fAPVmapping = SBSGEM::kUVA_XY;
@@ -215,6 +215,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fCommonModeFlag = -1;
     fPedestalMode = false;
     fOnlineZeroSuppression = true;
+    fAPVmapping = SBSGEM::kMC;
   }
 
   fPxU = cos( fUAngle * TMath::DegToRad() );
@@ -2393,6 +2394,7 @@ void SBSGEMModule::InitAPVMAP(){
   APVMAP[SBSGEM::kINFN].resize(fN_APV25_CHAN);
   APVMAP[SBSGEM::kUVA_XY].resize(fN_APV25_CHAN);
   APVMAP[SBSGEM::kUVA_UV].resize(fN_APV25_CHAN);
+  APVMAP[SBSGEM::kMC].resize(fN_APV25_CHAN);
 
   for( UInt_t i=0; i<fN_APV25_CHAN; i++ ){
     Int_t strip1 = 32*(i%4) + 8*(i/4) - 31*(i/16);
@@ -2401,6 +2403,7 @@ void SBSGEMModule::InitAPVMAP(){
     APVMAP[SBSGEM::kINFN][i] = strip1; 
     APVMAP[SBSGEM::kUVA_XY][i] = strip2;
     APVMAP[SBSGEM::kUVA_UV][i] = strip3;
+    APVMAP[SBSGEM::kMC][i] = i;
   }
 
   //Print out to test:

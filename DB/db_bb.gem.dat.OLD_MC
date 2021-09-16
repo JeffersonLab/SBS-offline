@@ -34,6 +34,8 @@ bb.gem.ft0_m0.chanmap =
       19    1   1   0   0   0   6   0    1 # Strip  768- 895
       19    1   1   0   1   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft0_m0.apvmap = 3 
 bb.gem.ft0_m0.layer = 0
 bb.gem.ft0_m0.threshold_stripsum = 240
 bb.gem.ft0_m0.threshold_sample = 100
@@ -75,6 +77,8 @@ bb.gem.ft0_m1.chanmap =
       19    2   2   0   2   0   6   0    1 # Strip  768- 895
       19    2   2   0   3   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft0_m1.apvmap = 3 
 bb.gem.ft0_m1.layer = 0
 bb.gem.ft0_m1.threshold_stripsum = 240
 bb.gem.ft0_m1.threshold_sample = 100
@@ -116,6 +120,8 @@ bb.gem.ft0_m2.chanmap =
       19    3   3   0   4   0   6   0    1 # Strip  768- 895
       19    3   3   0   5   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft0_m2.apvmap = 3 
 bb.gem.ft0_m2.layer = 0
 bb.gem.ft0_m2.threshold_stripsum = 240
 bb.gem.ft0_m2.threshold_sample = 100
@@ -157,6 +163,8 @@ bb.gem.ft1_m0.chanmap =
       19    4   4   0   6   0   6   0    1 # Strip  768- 895
       19    4   4   0   7   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft1_m0.apvmap = 3 
 bb.gem.ft1_m0.layer = 1
 bb.gem.ft1_m0.threshold_stripsum = 240
 bb.gem.ft1_m0.threshold_sample = 100
@@ -198,6 +206,8 @@ bb.gem.ft1_m1.chanmap =
       19    5   5   0   8   0   6   0    1 # Strip  768- 895
       19    5   5   0   9   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft1_m1.apvmap = 3 
 bb.gem.ft1_m1.layer = 1
 bb.gem.ft1_m1.threshold_stripsum = 240
 bb.gem.ft1_m1.threshold_sample = 100
@@ -238,6 +248,8 @@ bb.gem.ft1_m2.chanmap =
       19    6   6   0  10   0   6   0    1 # Strip  768- 895
       19    6   6   0  11   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft1_m2.apvmap = 3 
 bb.gem.ft1_m2.layer = 1
 bb.gem.ft1_m2.threshold_stripsum = 240
 bb.gem.ft1_m2.threshold_sample = 100
@@ -278,6 +290,8 @@ bb.gem.ft2_m0.chanmap =
       19    7   7   0  12   0   6   0    1 # Strip  768- 895
       19    7   7   0  13   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft2_m0.apvmap = 3 
 bb.gem.ft2_m0.layer = 2
 bb.gem.ft2_m0.threshold_stripsum = 240
 bb.gem.ft2_m0.threshold_sample = 100
@@ -319,6 +333,8 @@ bb.gem.ft2_m1.chanmap =
       19    8   8   0  14   0   6   0    1 # Strip  768- 895
       19    8   8   0  15   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft2_m1.apvmap = 3 
 bb.gem.ft2_m1.layer = 2
 bb.gem.ft2_m1.threshold_stripsum = 240
 bb.gem.ft2_m1.threshold_sample = 100
@@ -360,6 +376,8 @@ bb.gem.ft2_m2.chanmap =
       19   10  10   0   0   0   6   0    1 # Strip  768- 895
       19   10  10   0   1   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft2_m2.apvmap = 3 
 bb.gem.ft2_m2.layer = 2
 bb.gem.ft2_m2.threshold_stripsum = 240
 bb.gem.ft2_m2.threshold_sample = 100
@@ -401,6 +419,8 @@ bb.gem.ft3_m0.chanmap =
       19   11  11   0   2   0   6   0    1 # Strip  768- 895
       19   11  11   0   3   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft3_m0.apvmap = 3 
 bb.gem.ft3_m0.layer = 3
 bb.gem.ft3_m0.threshold_stripsum = 240
 bb.gem.ft3_m0.threshold_sample = 100
@@ -442,6 +462,8 @@ bb.gem.ft3_m1.chanmap =
       19   12  12   0   4   0   6   0    1 # Strip  768- 895
       19   12  12   0   5   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft3_m1.apvmap = 3 
 bb.gem.ft3_m1.layer = 3
 bb.gem.ft3_m1.threshold_stripsum = 240
 bb.gem.ft3_m1.threshold_sample = 100
@@ -483,6 +505,8 @@ bb.gem.ft3_m2.chanmap =
       19   13  13   0   6   0   6   0    1 # Strip  768- 895
       19   13  13   0   7   0   7   0    1 # Strip  896-1023
 
+# MC apvmap
+bb.gem.ft3_m2.apvmap = 3 
 bb.gem.ft3_m2.layer = 3
 bb.gem.ft3_m2.threshold_stripsum = 240
 bb.gem.ft3_m2.threshold_sample = 100
@@ -528,6 +552,8 @@ bb.gem.bt0_m0.chanmap =
       19   14  14   0  12   0  10   0    1 # Strip 1280-1407
       19   14  14   0  13   0  11   0    1 # Strip 1408-1535
 
+# MC apvmap
+bb.gem.bt0_m0.apvmap = 3 
 bb.gem.bt0_m0.layer = 4
 bb.gem.bt0_m0.threshold_stripsum = 240
 bb.gem.bt0_m0.threshold_sample = 100
@@ -573,6 +599,8 @@ bb.gem.bt0_m1.chanmap =
       19   16  16   0   2   0  10   0    1 # Strip 1280-1407
       19   16  16   0   3   0  11   0    1 # Strip 1408-1535
 
+# MC apvmap
+bb.gem.bt0_m1.apvmap = 3 
 bb.gem.bt0_m1.layer = 4
 bb.gem.bt0_m1.threshold_stripsum = 240
 bb.gem.bt0_m1.threshold_sample = 100
@@ -618,6 +646,8 @@ bb.gem.bt0_m2.chanmap =
       19   17  17   0   8   0  10   0    1 # Strip 1280-1407
       19   17  17   0   9   0  11   0    1 # Strip 1408-1535
 
+# MC apvmap
+bb.gem.bt0_m2.apvmap = 3 
 bb.gem.bt0_m2.layer = 4
 bb.gem.bt0_m2.threshold_stripsum = 240
 bb.gem.bt0_m2.threshold_sample = 100
@@ -663,6 +693,8 @@ bb.gem.bt0_m3.chanmap =
       19   18  18   0  14   0  10   0    1 # Strip 1280-1407
       19   18  18   0  15   0  11   0    1 # Strip 1408-1535
 
+# MC apvmap
+bb.gem.bt0_m3.apvmap = 3 
 bb.gem.bt0_m3.layer = 4
 bb.gem.bt0_m3.threshold_stripsum = 240
 bb.gem.bt0_m3.threshold_sample = 100

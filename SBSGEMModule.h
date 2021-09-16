@@ -17,7 +17,7 @@ class TClonesArray;
 
 namespace SBSGEM {
   enum GEMaxis_t { kUaxis=0, kVaxis };
-  enum APVmap_t { kINFN=0, kUVA_XY, kUVA_UV };
+  enum APVmap_t { kINFN=0, kUVA_XY, kUVA_UV, kMC };
 }
 
 struct mpdmap_t {
