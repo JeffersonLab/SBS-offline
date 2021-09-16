@@ -245,14 +245,17 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  "...";
 
   //Triggers decoding of each module:
-  
+
+  Int_t stripcounter=0;
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     //std::cout << "Decoding module " << (*it)->GetName() << std::endl;
     (*it)->Decode(evdata);
+
+    stripcounter += (*it)->fNstrips_hit;
     //std::cout << "done..." << std::endl;
   }
 
-  std::cout << "done" <<  std::endl;
+  std::cout << "done, fNstrips_hit = " << stripcounter << std::endl;
   
   return 0;
 }

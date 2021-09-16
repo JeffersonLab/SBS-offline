@@ -99,7 +99,7 @@ namespace Decoder {
   
   UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
 
-    //std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << std::endl;
+    std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << "..."; 
     //AJRP: LoadSlot method for MPD SSP data format to be used in Hall A during the GMN run:
     const UInt_t *datawords = &(evbuffer[pos]);
 
@@ -290,7 +290,7 @@ namespace Decoder {
     }
     
     //std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
-    
+    std::cout << "done." << std::endl;
     return fWordsSeen;
   
   }

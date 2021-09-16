@@ -267,9 +267,11 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
 Int_t SBSBigBite::CoarseTrack()
 {
   // Coarse track Reconstruction
+  std::cout << " SBSBigBite::CoarseTrack()...";
   THaSpectrometer::CoarseTrack();
   // TODO
   //std::cout << " call SBSBigBite::CoarseTrack" << std::endl;
+  std::cout << "done" << std::endl;
   return 0;
 }
 
