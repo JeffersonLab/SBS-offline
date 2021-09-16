@@ -14,7 +14,7 @@ using namespace std;
 //using namespace SBSGEMModule;
 
 //This should not be hard-coded, I think, but read in from the database (or perhaps not, if it never changes? For now we keep it hard-coded)
-const int APVMAP[128] = {1, 33, 65, 97, 9, 41, 73, 105, 17, 49, 81, 113, 25, 57, 89, 121, 3, 35, 67, 99, 11, 43, 75, 107, 19, 51, 83, 115, 27, 59, 91, 123, 5, 37, 69, 101, 13, 45, 77, 109, 21, 53, 85, 117, 29, 61, 93, 125, 7, 39, 71, 103, 15, 47, 79, 111, 23, 55, 87, 119, 31, 63, 95, 127, 0, 32, 64, 96, 8, 40, 72, 104, 16, 48, 80, 112, 24, 56, 88, 120, 2, 34, 66, 98, 10, 42, 74, 106, 18, 50, 82, 114, 26, 58, 90, 122, 4, 36, 68, 100, 12, 44, 76, 108, 20, 52, 84, 116, 28, 60, 92, 124, 6, 38, 70, 102, 14, 46, 78, 110, 22, 54, 86, 118, 30, 62, 94, 126};
+// const int APVMAP[128] = {1, 33, 65, 97, 9, 41, 73, 105, 17, 49, 81, 113, 25, 57, 89, 121, 3, 35, 67, 99, 11, 43, 75, 107, 19, 51, 83, 115, 27, 59, 91, 123, 5, 37, 69, 101, 13, 45, 77, 109, 21, 53, 85, 117, 29, 61, 93, 125, 7, 39, 71, 103, 15, 47, 79, 111, 23, 55, 87, 119, 31, 63, 95, 127, 0, 32, 64, 96, 8, 40, 72, 104, 16, 48, 80, 112, 24, 56, 88, 120, 2, 34, 66, 98, 10, 42, 74, 106, 18, 50, 82, 114, 26, 58, 90, 122, 4, 36, 68, 100, 12, 44, 76, 108, 20, 52, 84, 116, 28, 60, 92, 124, 6, 38, 70, 102, 14, 46, 78, 110, 22, 54, 86, 118, 30, 62, 94, 126};
 
 
 SBSGEMModule::SBSGEMModule( const char *name, const char *description,
@@ -78,6 +78,12 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fMAX2DHITS = 250000;
 
   fRMS_ConversionFactor = sqrt(fN_MPD_TIME_SAMP); //=2.45
+
+  fIsMC = false; //need to set default value!
+
+  fAPVmapping = SBSGEM::kUVA_XY; //default to UVA X/Y style APV mapping, but require this in the database::
+
+  InitAPVMAP();
   
   return;
 }
@@ -137,6 +143,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
+    { "apvmap",         &fAPVmapping,    kUInt, 0, 0, 1}, //optional, allow search up the tree if all modules in a setup have the same APV mapping
     { "pedu",           &rawpedu,        kDoubleV, 0, 1, 0}, // optional raw pedestal info (u strips)
     { "pedv",           &rawpedv,        kDoubleV, 0, 1, 0}, // optional raw pedestal info (v strips)
     { "rmsu",           &rawrmsu,        kDoubleV, 0, 1, 0}, // optional pedestal rms info (u strips)
@@ -186,6 +193,12 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   if( status != 0 ){
     fclose(file);
     return status;
+  }
+
+  if( fAPVmapping < SBSGEM::kINFN || fAPVmapping > SBSGEM::kUVA_UV ) {
+    std::cout << "Warning in SBSGEMModule::Decode for module " << GetParent()->GetName() << "." << GetName() << ": invalid APV mapping choice, defaulting to UVA X/Y." << std::endl
+	      << " Analysis results may be incorrect" << std::endl;
+    fAPVmapping = SBSGEM::kUVA_XY;
   }
   
   //prevent the user from defining something silly for the common-mode stuff:
@@ -2182,7 +2195,7 @@ TVector2 SBSGEMModule::XYtoUV( TVector2 XY ){
 }
 
 Int_t SBSGEMModule::GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert ){
-  Int_t RstripNb = APVMAP[rawstrip];
+  Int_t RstripNb = APVMAP[fAPVmapping][rawstrip];
   RstripNb = RstripNb + (127-2*RstripNb)*invert;
   Int_t RstripPos = RstripNb + 128*pos;
 
@@ -2372,4 +2385,47 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     //std::cout << std::endl;
     return cm_temp;
   }
+}
+
+void SBSGEMModule::InitAPVMAP(){
+  APVMAP.clear();
+
+  APVMAP[SBSGEM::kINFN].resize(fN_APV25_CHAN);
+  APVMAP[SBSGEM::kUVA_XY].resize(fN_APV25_CHAN);
+  APVMAP[SBSGEM::kUVA_UV].resize(fN_APV25_CHAN);
+
+  for( UInt_t i=0; i<fN_APV25_CHAN; i++ ){
+    Int_t strip1 = 32*(i%4) + 8*(i/4) - 31*(i/16);
+    Int_t strip2 = strip1 + 1 + strip1 % 4 - 5 * ( ( strip1/4 ) % 2 );
+    Int_t strip3 = ( strip2 % 2 == 0 ) ? strip2/2 + 32 : ( (strip2<64) ? (63 - strip2)/2 : 127 + (65-strip2)/2 ); 
+    APVMAP[SBSGEM::kINFN][i] = strip1; 
+    APVMAP[SBSGEM::kUVA_XY][i] = strip2;
+    APVMAP[SBSGEM::kUVA_UV][i] = strip3;
+  }
+
+  //Print out to test:
+  // //std::cout << "INFN X/Y APV mapping: " << std::endl;
+  // for( UInt_t i=0; i<fN_APV25_CHAN; i++ ){
+  //   std::cout << std::setw(8) << APVMAP[SBSGEM::kINFN][i] << ", ";
+  //   if( (i+1) % 10 == 0 ) std::cout << endl;
+  // }
+  // std::cout << endl;
+
+
+  // //Print out to test:
+  // std::cout << "UVA X/Y APV mapping: " << std::endl;
+  // for( UInt_t i=0; i<fN_APV25_CHAN; i++ ){
+  //   std::cout << std::setw(8) << APVMAP[SBSGEM::kUVA_XY][i] << ", ";
+  //   if( (i+1) % 10 == 0 ) std::cout << endl;
+  // }
+  // std::cout << endl;
+
+  // //Print out to test:
+  // std::cout << "UVA U/V APV mapping: " << std::endl;
+  // for( UInt_t i=0; i<fN_APV25_CHAN; i++ ){
+  //   std::cout << std::setw(8) << APVMAP[SBSGEM::kUVA_UV][i] << ", ";
+  //   if( (i+1) % 10 == 0 ) std::cout << endl;
+  // }
+  // std::cout << endl;
+  
 }
