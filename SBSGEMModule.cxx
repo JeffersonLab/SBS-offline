@@ -143,7 +143,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
-    { "apvmap",         &fAPVmapping,    kUInt, 0, 0, 1}, //optional, allow search up the tree if all modules in a setup have the same APV mapping
+    { "apvmap",         &fAPVmapping,    kUInt, 0, 1, 1}, //optional, allow search up the tree if all modules in a setup have the same APV mapping
     { "pedu",           &rawpedu,        kDoubleV, 0, 1, 0}, // optional raw pedestal info (u strips)
     { "pedv",           &rawpedv,        kDoubleV, 0, 1, 0}, // optional raw pedestal info (v strips)
     { "rmsu",           &rawrmsu,        kDoubleV, 0, 1, 0}, // optional pedestal rms info (u strips)
