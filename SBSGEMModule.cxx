@@ -768,16 +768,19 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     UInt_t cm_flags=2*CM_ENABLED + BUILD_ALL_SAMPLES;
     UInt_t nhits_cm_flag=evdata.GetNumHits( it->crate, it->slot, fChan_CM_flags );
     
-    std::cout << "Before decoding cm flags, CM_ENABLED, BUILD_ALL_SAMPLES = " << CM_ENABLED << ", "
-	      << BUILD_ALL_SAMPLES << ", num. hits in cm flags channel = " << nhits_cm_flag << std::endl;
+    
 											       
     if( nhits_cm_flag > 0 ){
+      
       // If applicable, find the common-mode/zero-suppression settings loaded from the raw data for this APV:
       // In principle in the SSP/VTP event format, there should be exactly one "hit" per APV in this "channel":
       for( int ihit=0; ihit<nhits_cm_flag; ihit++ ){ 
 	int chan_temp = evdata.GetRawData( it->crate, it->slot, fChan_CM_flags, ihit );
 	if( chan_temp == effChan ){ //assume that this is only filled once per MPD per event, and exit the loop when we find this MPD:
+	  std::cout << "Before decoding cm flags, CM_ENABLED, BUILD_ALL_SAMPLES = " << CM_ENABLED << ", "
+		    << BUILD_ALL_SAMPLES << std::endl;
 	  cm_flags = evdata.GetData( it->crate, it->slot, fChan_CM_flags, ihit );
+	  std::cout << "after cm flags decoding, CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
 	  break;
 	}
       }
@@ -793,7 +796,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
 
-    std::cout << "after cm flags decoding, CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
+    
     //fOnlineZeroSuppression = !BUILD_ALL_SAMPLES;
     if( !BUILD_ALL_SAMPLES && !CM_ENABLED ) { //This should never happen:
       continue;
