@@ -66,6 +66,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   // Hack from THaVDC::ReadDatabase()
   const char* const here = "SBSBigBite::ReadDatabase()";
   
+  //THaSpectrometer::ReadRunDatabase();
+  
   FILE* file = OpenFile( date );
   if( !file ){
     std::cerr << here << "(): database not found!"<< std::endl;
@@ -81,6 +83,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "optics_order",    &fOpticsOrder, kUInt,  0, 0, 1},
     { "optics_nelem",     &nparams,      kUInt,   0, 0, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 0, 1},
+    { "do_pid",    &fPID, kUInt,  0, 1, 1},
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 0, 0},
     { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 0, 0},
     { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 0, 0},
@@ -102,6 +105,16 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     return status;
   }
   
+  //do we have non tracking detectors
+  bool nontrackdet = false;
+  TIter next( fNonTrackingDetectors );
+  while( auto* theNonTrackDetector =
+	 static_cast<THaNonTrackingDetector*>( next() )) {
+    cout << theNonTrackDetector->GetName() << endl;
+    nontrackdet = true;
+  }//if we do not find any non tracking detectors, we force fPID to be false.
+  if(!nontrackdet)fPID = false;
+
   int n_elem = TMath::FloorNint(optics_param.size()/nparams);
   
   if(n_elem<4){
@@ -285,16 +298,23 @@ Int_t SBSBigBite::CoarseReconstruct()
   double x_bcp = 0, y_bcp = 0, z_bcp = 0; //, wx_bcp = 0, wy_bcp = 0;
   double sumweights_x = 0, sumweights_y = 0;
   double Etot = 0;
+  //npts is incremented only if there are clusters in the preshower and shower
   int npts = 0;
   double EpsEtotRatio = 0;
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {
     //if(theNonTrackDetector->InheritsFrom("SBSBBShower")){
-    if(theNonTrackDetector->InheritsFrom("SBSCalorimeter")){
+    //if(theNonTrackDetector->InheritsFrom("SBSCalorimeter")){
+    if(theNonTrackDetector->InheritsFrom("SBSBBTotalShower")){//More explicit
+      //cout << "found SBSBBTtotalShower" << endl;
       SBSBBTotalShower* BBTotalShower = reinterpret_cast<SBSBBTotalShower*>(theNonTrackDetector);
       //BBShower->EresMax();
-      // gather here the info useful for
+      // explicitely return and 0 if there is no cluster in the calorimeter;
+      if(BBTotalShower->GetShower()->GetNclust()==0 || BBTotalShower->GetPreShower()->GetNclust()==0){
+	//cout << BBTotalShower->GetPreShower()->GetNclust() << " clusters in preshower, " << BBTotalShower->GetShower()->GetNclust() << " clusters in shower, kill here" << endl;
+	return 0;
+      }
       if(BBTotalShower->GetShower()->GetNclust()){
 	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12)) << endl;
 	
@@ -325,130 +345,135 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//wx_bcp+=BBTotalShower->GetPreShower()->SizeRow()/sqrt(12);
 	//wy_bcp+=BBTotalShower->GetPreShower()->SizeCol()/sqrt(12);
       }
-    }
-    
-  }
-  if(npts){
-    x_bcp/=sumweights_x;
-    y_bcp/=sumweights_y;
-    //z_bcp/=npts;
-    
-    //wx_bcp/=npts;
-    //wy_bcp/=npts;
-    
-    // std::cout << "Back constraint point x, y, z: " 
-    //  	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
-    //   //<< "; width x, y: " << wx_bcp << ", " << wy_bcp 
-    //  	      << endl;
-    
-    // apply first order optics???
-    // Yes, with the electron energy
-    //TODO: replace hard-coded coefficients with optics coefficients
-    // relationship 
-    // x_5 = xfp+z_5*xpfp
-    // thetabend = 10deg+xptar-xpfp
-    // p ~= Ecalo
-    // p*thetabend = 0.277+0.122*xfp-0.063*xpfp = Ecalo*(10deg+xptar-xpfp)
-    // xptar = 0.523 * xfp - 0.414 * xpfp
-    // 0.277+0.122*xfp-0.063*xpfp = Ecalo*(10deg+(0.523 * xfp -0.414 * xpfp)-xpfp)
-    // 0.277+0.122*(x_5-z_5*xpfp)-0.063*xpfp = 
-    //   Ecalo*(10deg + 0.523*(x_5-z_5*xpfp) + (-0.414-1)*xpfp) =>OK
-    // 
-    // 0.277 = fb_pinv_00000 = fb_pinv[0] = M_{p0}
-    // 0.122 = fb_pinv_00001 = fb_pinv[1] = M_{px}
-    // -0.063 = fb_pinv_00100 = fb_pinv[6] = M_{px'}
-    // 0.523 = fb_xptar_00001 = fb_xptar[1] = M_{x'x}
-    // -0.414 = fb_xptar_00100 = fb_xptar[6] = M_{x'x'}
-
-    // fb_pinv_00000+fb_pinv_00001*(x_bcp-z_bcp*xpfp)+fb_pinv_00100*xpfp = 
-    //   Ecalo*(10deg+fb_xptar_00001*(x_bcp-z_bcp*xpfp)+(fb_xptar_00100-1)*xpfp)
-
-    // +fb_pinv[0]
-    // +fb_pinv[1]*x_bcp
-    // -fb_pinv[1]*z_bcp*xpfp
-    // +fb_pinv[6]*xpfp
-    //  =
-    // +Etot*10.*TMath::DegToRad()
-    // +Etot*fb_xptar[1]*x_bcp
-    // -Etot*fb_xptar[1]*z_bcp*xpfp
-    // +Etot*(fb_xptar[6]-1)*xpfp
-    
-    // -fb_pinv[1]*z_bcp*xpfp
-    // +fb_pinv[6]*xpfp
-    // -Etot*(fb_xptar[6]-1)*xpfp
-    // +Etot*fb_xptar[1]*z_bcp*xpfp
-    //  =
-    // +Etot*10.*TMath::DegToRad()
-    // +Etot*fb_xptar[1]*x_bcp
-    // -fb_pinv[0]
-    // -fb_pinv[1]*x_bcp
+      
+      //if we're here we've found the totalshower
+      if(npts){
+	x_bcp/=sumweights_x;
+	y_bcp/=sumweights_y;
+	//z_bcp/=npts;
+	
+	//wx_bcp/=npts;
+	//wy_bcp/=npts;
+	
+	// std::cout << "Back constraint point x, y, z: " 
+	//  	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
+	//   //<< "; width x, y: " << wx_bcp << ", " << wy_bcp 
+	//  	      << endl;
+	
+	// apply first order optics???
+	// Yes, with the electron energy
+	//TODO: replace hard-coded coefficients with optics coefficients
+	// relationship 
+	// x_5 = xfp+z_5*xpfp
+	// thetabend = 10deg+xptar-xpfp
+	// p ~= Ecalo
+	// p*thetabend = 0.277+0.122*xfp-0.063*xpfp = Ecalo*(10deg+xptar-xpfp)
+	// xptar = 0.523 * xfp - 0.414 * xpfp
+	// 0.277+0.122*xfp-0.063*xpfp = Ecalo*(10deg+(0.523 * xfp -0.414 * xpfp)-xpfp)
+	// 0.277+0.122*(x_5-z_5*xpfp)-0.063*xpfp = 
+	//   Ecalo*(10deg + 0.523*(x_5-z_5*xpfp) + (-0.414-1)*xpfp) =>OK
+	// 
+	// 0.277 = fb_pinv_00000 = fb_pinv[0] = M_{p0}
+	// 0.122 = fb_pinv_00001 = fb_pinv[1] = M_{px}
+	// -0.063 = fb_pinv_00100 = fb_pinv[6] = M_{px'}
+	// 0.523 = fb_xptar_00001 = fb_xptar[1] = M_{x'x}
+	// -0.414 = fb_xptar_00100 = fb_xptar[6] = M_{x'x'}
+	
+	// fb_pinv_00000+fb_pinv_00001*(x_bcp-z_bcp*xpfp)+fb_pinv_00100*xpfp = 
+	//   Ecalo*(10deg+fb_xptar_00001*(x_bcp-z_bcp*xpfp)+(fb_xptar_00100-1)*xpfp)
+	
+	// +fb_pinv[0]
+	// +fb_pinv[1]*x_bcp
+	// -fb_pinv[1]*z_bcp*xpfp
+	// +fb_pinv[6]*xpfp
+	//  =
+	// +Etot*10.*TMath::DegToRad()
+	// +Etot*fb_xptar[1]*x_bcp
+	// -Etot*fb_xptar[1]*z_bcp*xpfp
+	// +Etot*(fb_xptar[6]-1)*xpfp
+	
+	// -fb_pinv[1]*z_bcp*xpfp
+	// +fb_pinv[6]*xpfp
+	// -Etot*(fb_xptar[6]-1)*xpfp
+	// +Etot*fb_xptar[1]*z_bcp*xpfp
+	//  =
+	// +Etot*10.*TMath::DegToRad()
+	// +Etot*fb_xptar[1]*x_bcp
+	// -fb_pinv[0]
+	// -fb_pinv[1]*x_bcp
         
-    double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
-      (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
-    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
-    
-    //cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
-    //<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
-    //<< " (Etot*" << (fb_xptar[1]*z_bcp+1-fb_xptar[6]) << "+" << -fb_pinv[1]*z_bcp+fb_pinv[6] << ")" << endl;
-    //cout << fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]) << endl;
-    
-    //(x_bcp*(0.522891*Etot-0.121773)+0.174533*Etot-0.276919)/
-    //(Etot*2.43719+-0.301327)
-    
-    //double dx_2 = (x_bcp*(0.522*Etot-0.121)+0.1729*Etot-0.278)/(Etot*2.224-0.249);
-    //double dy_2 = y_bcp*0.251;
-    
-    z_fcp = 0;
-    x_fcp = x_bcp+dx*(z_fcp-z_bcp);
-    y_fcp = y_bcp+dy*(z_fcp-z_bcp);
-    
-    //cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
-    
-    /*
-    h1_yVx_bcp->Fill(x_bcp, y_bcp);
-    h1_x_fcpVbcp->Fill(x_bcp, x_fcp);
-    h1_yVx_fcp->Fill(x_fcp, y_fcp);
-    h1_y_fcpVbcp->Fill(y_bcp, y_fcp);
-    h1_dyVdx->Fill(dx, dy);
-    */
-    
-    fFrontConstraintX.push_back(x_fcp);
-    fFrontConstraintY.push_back(y_fcp);
-    fBackConstraintX.push_back(x_bcp);
-    fBackConstraintY.push_back(y_bcp);
-
-    //wx_fcp = wx_bcp;
-    //wy_fcp = wy_bcp;
-    
-    // std::cout << "Front constraint point x, y, z: " 
-    // 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
-    //   //<< "; width x, y: " << wx_fcp << ", " << wy_fcp 
-    // 	      << endl;
-    
-    TIter next2( fTrackingDetectors );
-    while( auto* theTrackDetector =
-	   static_cast<THaTrackingDetector*>( next2() )) {
-      if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
-	SBSGEMSpectrometerTracker* BBGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
-	//std::cout << "setting constraints for tracks" << std::endl;
-	BBGEM->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
-	BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
-	BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
-				       fFrontConstraintWidthY);
-	//(wx_fcp, wy_fcp);
-	BBGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
-				      fBackConstraintWidthY);
-	//(wx_bcp, wy_bcp);
+	double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
+	  (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
+	double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
+	
+	//cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
+	//<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
+	//<< " (Etot*" << (fb_xptar[1]*z_bcp+1-fb_xptar[6]) << "+" << -fb_pinv[1]*z_bcp+fb_pinv[6] << ")" << endl;
+	//cout << fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]) << endl;
+	
+	//(x_bcp*(0.522891*Etot-0.121773)+0.174533*Etot-0.276919)/
+	//(Etot*2.43719+-0.301327)
+	
+	//double dx_2 = (x_bcp*(0.522*Etot-0.121)+0.1729*Etot-0.278)/(Etot*2.224-0.249);
+	//double dy_2 = y_bcp*0.251;
+	
+	z_fcp = 0;
+	x_fcp = x_bcp+dx*(z_fcp-z_bcp);
+	y_fcp = y_bcp+dy*(z_fcp-z_bcp);
+	
+	//cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
+	
 	/*
-	BBGEM->SetFrontConstraintPoint(TVector3(x_fcp, y_fcp, z_fcp));
-	BBGEM->SetBackConstraintPoint(TVector3(x_bcp, y_bcp, z_bcp));
-	BBGEM->SetFrontConstraintWidth(TVector2(fFrontConstraintWidthX, fFrontConstraintWidthY));
-	BBGEM->SetBackConstraintWidth(TVector2(fBackConstraintWidthX, fBackConstraintWidthY));
+	  h1_yVx_bcp->Fill(x_bcp, y_bcp);
+	  h1_x_fcpVbcp->Fill(x_bcp, x_fcp);
+	  h1_yVx_fcp->Fill(x_fcp, y_fcp);
+	  h1_y_fcpVbcp->Fill(y_bcp, y_fcp);
+	  h1_dyVdx->Fill(dx, dy);
 	*/
-      }
-    }
-
-  }
+	
+	fFrontConstraintX.push_back(x_fcp);
+	fFrontConstraintY.push_back(y_fcp);
+	fBackConstraintX.push_back(x_bcp);
+	fBackConstraintY.push_back(y_bcp);
+	
+	//wx_fcp = wx_bcp;
+	//wy_fcp = wy_bcp;
+	
+	// std::cout << "Front constraint point x, y, z: " 
+	// 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
+	//   //<< "; width x, y: " << wx_fcp << ", " << wy_fcp 
+	// 	      << endl;
+	
+	TIter next2( fTrackingDetectors );
+	while( auto* theTrackDetector =
+	   static_cast<THaTrackingDetector*>( next2() )) {
+	  if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
+	    SBSGEMSpectrometerTracker* BBGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+	    //std::cout << "setting constraints for tracks" << std::endl;
+	    BBGEM->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
+	    BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
+	    BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
+					   fFrontConstraintWidthY);
+	    //(wx_fcp, wy_fcp);
+	    BBGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
+					  fBackConstraintWidthY);
+	    //(wx_bcp, wy_bcp);
+	    /*
+	      BBGEM->SetFrontConstraintPoint(TVector3(x_fcp, y_fcp, z_fcp));
+	      BBGEM->SetBackConstraintPoint(TVector3(x_bcp, y_bcp, z_bcp));
+	      BBGEM->SetFrontConstraintWidth(TVector2(fFrontConstraintWidthX, fFrontConstraintWidthY));
+	      BBGEM->SetBackConstraintWidth(TVector2(fBackConstraintWidthX, fBackConstraintWidthY));
+	    */
+	  }
+	}
+	
+      }//end if(npts>0);
+      
+      
+    }//end if(inheritsfrom(SBSCalorimeter))
+    
+  }//end loop on non tracking detectors
+  
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
   //THaSpectrometer::CoarseReconstruct();
   return 0;
@@ -485,8 +510,18 @@ Int_t SBSBigBite::Reconstruct()
   for( Int_t t = 0; t < n_trk; t++ ) {
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
     CalcTargetCoords(theTrack);
-  }  
+  }
   
+  //if( GetTrSorting() ) {
+  fTracks->Sort();
+  // Reassign track indexes. Sorting may have changed the order
+  for( int i = 0; i < fTracks->GetLast()+1; i++ ) {
+    auto* theTrack = static_cast<THaTrack*>( fTracks->At(i) );
+    assert( theTrack );
+    theTrack->SetIndex(i);
+  }
+  //}
+ 
   if( GetNTracks() > 0 ) {
     // Select first track in the array. If there is more than one track
     // and track sorting is enabled, then this is the best fit track
@@ -499,13 +534,13 @@ Int_t SBSBigBite::Reconstruct()
     // criterion is mathematically less well defined and not usually used
     // in track reconstruction. Hence, chi2 sorting is preferable, albeit
     // obviously slower.
-
+    
     fGoldenTrack = static_cast<THaTrack*>( fTracks->At(0) );
     fTrkIfo      = *fGoldenTrack;
     fTrk         = fGoldenTrack;
   } else
     fGoldenTrack = nullptr;  
-  
+   
   return 0;
 }
 
@@ -609,13 +644,20 @@ Int_t SBSBigBite::TrackCalc()
   // Timing here???
   // PID info here???
   // TODO
-  
+
+  return 0; 
+}
+
+//_____________________________________________________________________________
+Int_t SBSBigBite::CalcPID()
+{
+  cout << " calling calcPID " << endl;
+  // Additioal track calculations
   for( Int_t t = 0; t < fTracks->GetLast()+1; t++ ) {
     auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
     CalcTimingPID(theTrack);
   }
   
-  return 0;
 }
 
 //_____________________________________________________________________________
@@ -634,16 +676,18 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
   the_track->SetPIDinfo(pidinfo);
   
   double eproba, piproba;
-  proba_pssh(fEpsEtotRatio[the_track->GetIndex()], eproba, piproba);
-  the_track->GetPIDinfo()->SetProb(0, 0, eproba);
-  the_track->GetPIDinfo()->SetProb(0, 1, piproba);
+  if(fEpsEtotRatio.size()){
+    proba_pssh(fEpsEtotRatio[the_track->GetIndex()], eproba, piproba);
+    the_track->GetPIDinfo()->SetProb(0, 0, eproba);
+    the_track->GetPIDinfo()->SetProb(0, 1, piproba);
+  }
   
-  proba_pcal(fEtot[the_track->GetIndex()]/the_track->GetP(), eproba, piproba);
-  the_track->GetPIDinfo()->SetProb(1, 0, eproba);
-  the_track->GetPIDinfo()->SetProb(1, 1, piproba);
-
-  
-    
+  if(fEtot.size()){
+    proba_pcal(fEtot[the_track->GetIndex()]/the_track->GetP(), eproba, piproba);
+    the_track->GetPIDinfo()->SetProb(1, 0, eproba);
+    the_track->GetPIDinfo()->SetProb(1, 1, piproba);
+  }
+      
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {

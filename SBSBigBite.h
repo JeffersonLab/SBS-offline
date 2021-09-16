@@ -19,7 +19,8 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t	CoarseTrack();
     virtual Int_t	Reconstruct();
     virtual Int_t	Track();
-    
+    virtual Int_t       CalcPID();
+   
     virtual Int_t FindVertices( TClonesArray& tracks );
     virtual Int_t TrackCalc();
     
