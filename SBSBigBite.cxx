@@ -609,10 +609,12 @@ Int_t SBSBigBite::TrackCalc()
   // Timing here???
   // PID info here???
   // TODO
-  
-  for( Int_t t = 0; t < fTracks->GetLast()+1; t++ ) {
-    auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
-    CalcTimingPID(theTrack);
+
+  if( fPID ){
+    for( Int_t t = 0; t < fTracks->GetLast()+1; t++ ) {
+      auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
+      CalcTimingPID(theTrack);
+    }
   }
   
   return 0;
