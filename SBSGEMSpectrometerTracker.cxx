@@ -242,7 +242,7 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
 
 Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
-  // std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  std::endl;
+  std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  "...";
 
   //Triggers decoding of each module:
   
@@ -251,6 +251,8 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
     (*it)->Decode(evdata);
     //std::cout << "done..." << std::endl;
   }
+
+  std::cout << "done" <<  std::endl;
   
   return 0;
 }
@@ -444,9 +446,10 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 
 
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
-
-  //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack" << std::endl;
+  
+  
   if( !fUseConstraint && !fPedestalMode ){
+    std::cout << "SBSGEMSpectrometerTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
     find_tracks();
@@ -463,7 +466,7 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
       Track->SetIndex( index );
     }
 
-    //std::cout << "found " << fNtracks_found << " tracks" << std::endl;
+    std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
   }
   
@@ -471,9 +474,9 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 }
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 
-  //std::cout << "SBSGEMSpectrometerTracker::FineTrack" << std::endl;
+  
   if( fUseConstraint && !fPedestalMode ){ //
-
+    std::cout << "SBSGEMSpectrometerTracker::FineTrack..."; 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;
     find_tracks();
@@ -493,6 +496,8 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
       Track->SetIndex( index );
       
     }
+
+    std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
   }
   
