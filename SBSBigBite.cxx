@@ -634,6 +634,11 @@ Int_t SBSBigBite::TrackCalc()
 {
   // Additioal track calculations
   // Timing calculation goes here
+  // PID calculation goes here!
+  for( Int_t t = 0; t < fTracks->GetLast()+1; t++ ) {
+    auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
+    CalcTrackTiming(theTrack);
+  }
   
   return 0; 
 }
@@ -644,21 +649,40 @@ Int_t SBSBigBite::CalcPID()
   // PID calculation goes here!
   for( Int_t t = 0; t < fTracks->GetLast()+1; t++ ) {
     auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
-    CalcTimingPID(theTrack);
+    CalcTrackPID(theTrack);
   }
   
 }
 
 //_____________________________________________________________________________
-void SBSBigBite::CalcTimingPID(THaTrack* the_track)
+void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
+{
+  TIter next( fNonTrackingDetectors );
+  while( auto* theNonTrackDetector =
+	 static_cast<THaNonTrackingDetector*>( next() )) {
+    // match a hodoscope cluster to a track:
+    //the hodoscope has to be found for anything to be done.
+    if(theNonTrackDetector->InheritsFrom("SBSTimingHodoscope")){
+      SBSTimingHodoscope* TH = reinterpret_cast<SBSTimingHodoscope*>(theNonTrackDetector);
+      
+      //x, y of track at z = Z_hodoscope
+      double x_track = the_track->GetX()+
+	the_track->GetTheta()*TH->GetOrigin().Z();
+      double y_track = the_track->GetY()+
+	the_track->GetPhi()*TH->GetOrigin().Z();
+      // Not sure what to use for the hodoscope. 
+      // Perhaps we'd have to complete the class with a cluster
+    }
+  }
+  
+}
+
+//_____________________________________________________________________________
+void SBSBigBite::CalcTrackPID(THaTrack* the_track)
 {
   if(fEpsEtotRatio.size()==0 || fEtot.size()==0 || 
      fFrontConstraintX.size()==0 || fFrontConstraintY.size()==0 ||
      fBackConstraintX.size()==0 || fBackConstraintY.size()==0)return;
-  // Additioal track calculations
-  // Timing here???
-  // PID info here???
-  // TODO
   
   //particles: 0: electron, 1: pion
   //detectors: 0: ps/sh
@@ -698,20 +722,7 @@ void SBSBigBite::CalcTimingPID(THaTrack* the_track)
       the_track->GetPIDinfo()->SetProb(0, 1, piproba);
     }//end if(inheritsfrom(SBSBBTotalShower))
     
-    // match a hodoscope cluster to a track:
-    if(theNonTrackDetector->InheritsFrom("SBSTimingHodoscope")){
-      SBSTimingHodoscope* TH = reinterpret_cast<SBSTimingHodoscope*>(theNonTrackDetector);
-      
-      //x, y of track at z = Z_hodoscope
-      double x_track = the_track->GetX()+
-	the_track->GetTheta()*TH->GetOrigin().Z();
-      double y_track = the_track->GetY()+
-	the_track->GetPhi()*TH->GetOrigin().Z();
-      // Not sure what to use for the hodoscope. 
-      // Perhaps we'd have to complete the class with a cluster
-    }
-    
-    // Finally, GRINCH PID
+    // then, GRINCH PID
     // match a GRINCH cluster to a track:
     // again, the grinch has to be found for anything to be done.
     if(theNonTrackDetector->InheritsFrom("SBSGRINCH")){

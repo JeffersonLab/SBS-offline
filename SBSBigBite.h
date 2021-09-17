@@ -39,7 +39,8 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t DefineVariables( EMode mode = kDefine );
     
     void CalcTargetCoords( THaTrack* the_track );
-    void CalcTimingPID( THaTrack* the_track );
+    void CalcTrackTiming( THaTrack* the_track );
+    void CalcTrackPID( THaTrack* the_track );
     
     Int_t proba_pssh(Double_t eps_etot_ratio, 
 		     Double_t& proba_e, Double_t& proba_pi);
