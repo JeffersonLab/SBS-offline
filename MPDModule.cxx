@@ -99,7 +99,7 @@ namespace Decoder {
   
   UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
 
-    //std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << std::endl;
+    std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << "..."; 
     //AJRP: LoadSlot method for MPD SSP data format to be used in Hall A during the GMN run:
     const UInt_t *datawords = &(evbuffer[pos]);
 
@@ -189,7 +189,7 @@ namespace Decoder {
 	  //(maybe define some arbitrary "dummy" channel to hold this info, as well as trigger time words)
 	  ENABLE_CM = TESTBIT( thisword, 26 );        
 	  BUILD_ALL_SAMPLES = TESTBIT(thisword, 25 );
-
+	  
 	  //FIBER number is in bits 20-16:
 	  fiber = (thisword & 0x001F0000)>>16;
 
@@ -281,16 +281,18 @@ namespace Decoder {
       fWordsSeen++;
     }
 
+    std::cout << "Loading common-mode flags for this event: " << std::endl;
     //now load the cm flags:
     for( auto iapv = cm_flags_vs_chan.begin(); iapv != cm_flags_vs_chan.end(); ++iapv ){
 
+      std::cout << "effChan = " << iapv->first << ", ENABLE_CM = " << (iapv->second / 2) << ", BUILD_ALL_SAMPLES = " << (iapv->second % 2 ) << std::endl;
       //The "flags" word is the mapped value (iapv->second)
       //The effective channel is the key (iapv->first)
       sldat->loadData( fChan_CM_flags, iapv->second, iapv->first );
     }
     
     //std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
-    
+    std::cout << "MPDModule::LoadSlot done." << std::endl;
     return fWordsSeen;
   
   }
