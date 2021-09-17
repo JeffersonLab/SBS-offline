@@ -159,7 +159,7 @@ Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 void SBSBBTotalShower::ClearEvent() {
   fShower->ClearEvent();
   fPreShower->ClearEvent();
-  
+  fSHclusPSclusIDmap.clear();
 }
 
 //_____________________________________________________________________________
@@ -287,6 +287,7 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
   fShower->FindClusters();
   // match blocks hit in Preshower to clusters in the  Shower
   std::vector<SBSCalorimeterCluster*> ShowerClusters = fShower->GetClusters();
+  fSHclusPSclusIDmap.resize(ShowerClusters.size());
   std::vector<SBSBlockSet> PreShowerBlockSet = fPreShower->GetBlockSet();
   Int_t PreShower_Nclus= 0;
   for (Int_t nc=0;nc<ShowerClusters.size();nc++) {
@@ -303,12 +304,13 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 	PreShowerBlockSet[nps].InCluster = kTRUE;
 	if (!AddToPreShowerCluster) {
 	  fPreShower->MakeCluster(PreShowerBlockSet.size(),psblk);
+	  fSHclusPSclusIDmap[nc] = fPreShower->GetClusters().size()-1;
 	  AddToPreShowerCluster = kTRUE;
 	  PreShower_Nclus++;
 	} else {
 	  fPreShower->AddToCluster(PreShower_Nclus-1,psblk);
 	}
-      }
+      }else{fSHclusPSclusIDmap[nc] = -1;}
       }
     }
     if (!AddToPreShowerCluster && PreShowerBlockSet.size()>0) fPreShower->MakeCluster(PreShowerBlockSet.size()); // If preshower not matched to shower, make preshower cluster with mult = 0

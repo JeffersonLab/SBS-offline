@@ -24,6 +24,13 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t FindVertices( TClonesArray& tracks );
     virtual Int_t TrackCalc();
     
+    //copied from THaHRS...
+    Bool_t GetTrSorting() const;
+    Bool_t SetTrSorting( Bool_t set = false );
+
+    Bool_t GetMultiTracks() const;
+    Bool_t SetMultiTracks( Bool_t set = false );
+    
     //virtual Int_t   Begin( THaRunBase* r=0 );
     //virtual Int_t   End( THaRunBase* r=0 );
 
@@ -80,7 +87,6 @@ class SBSBigBite : public THaSpectrometer {
     
     std::vector<double> fProbaE;
     std::vector<double> fProbaPi;
-   
     
     /*
     TH2D* h1_yVx_bcp;
@@ -89,6 +95,12 @@ class SBSBigBite : public THaSpectrometer {
     TH2D* h1_y_fcpVbcp;
     TH2D* h1_dyVdx;
     */
+
+    enum {
+      kMultiTracks  = BIT(13), // Tracks are to be sorted by chi2
+      kSortTracks   = BIT(14), // Tracks are to be sorted by chi2
+      kAutoStdDets  = BIT(15)  // Auto-create standard detectors if no "vdc"
+    };
     
     ClassDef(SBSBigBite,0) // BigBite spectrometer
 };
