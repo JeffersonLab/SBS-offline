@@ -282,11 +282,11 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
 Int_t SBSBigBite::CoarseTrack()
 {
   // Coarse track Reconstruction
-  std::cout << " SBSBigBite::CoarseTrack()...";
+  //std::cout << " SBSBigBite::CoarseTrack()...";
   THaSpectrometer::CoarseTrack();
   // TODO
   //std::cout << " call SBSBigBite::CoarseTrack" << std::endl;
-  std::cout << "done" << std::endl;
+  //std::cout << "done" << std::endl;
   return 0;
 }
 
@@ -294,7 +294,7 @@ Int_t SBSBigBite::CoarseTrack()
 Int_t SBSBigBite::CoarseReconstruct()
 {
 
-  std::cout << "SBSBigBite::CoarseReconstruct()..."; 
+  //  std::cout << "SBSBigBite::CoarseReconstruct()..."; 
   // Coarse Reconstruction of particles in spectrometer
   THaSpectrometer::CoarseReconstruct(); 
   // TODO
@@ -460,7 +460,7 @@ Int_t SBSBigBite::CoarseReconstruct()
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
   //THaSpectrometer::CoarseReconstruct();
 
-  std::cout << "done." << std::endl; 
+  //std::cout << "done." << std::endl; 
   
   return 0;
 }
@@ -491,7 +491,7 @@ Int_t SBSBigBite::Reconstruct()
   Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
 {
 
-  std::cout << "SBSBigBite::FindVertices()...";
+  //  std::cout << "SBSBigBite::FindVertices()...";
   // Reconstruct target coordinates for all tracks found.
   Int_t n_trk = tracks.GetLast()+1;
   for( Int_t t = 0; t < n_trk; t++ ) {
@@ -528,14 +528,14 @@ Int_t SBSBigBite::Reconstruct()
   } else
     fGoldenTrack = nullptr;  
 
-  std::cout << "done." << std::endl;
+  //std::cout << "done." << std::endl;
   
   return 0;
 }
 
 void SBSBigBite::CalcTargetCoords( THaTrack* track )
 {
-  std::cout << "SBSBigBite::CalcTargetCoords()...";
+  //std::cout << "SBSBigBite::CalcTargetCoords()...";
   
   const double tracker_pitch_angle = 10.0*TMath::DegToRad();
   const double th_bb = GetThetaGeo();//retrieve the actual angle
@@ -626,7 +626,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   track->SetPvect(TVector3(px, py, pz));
   track->SetVertex(TVector3(0, 0, vz_fit));
 
-  std::cout << "Done." << std::endl;
+  // std::cout << "Done." << std::endl;
 }
 
 //_____________________________________________________________________________
