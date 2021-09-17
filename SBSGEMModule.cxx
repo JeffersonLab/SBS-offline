@@ -43,6 +43,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fMakeCommonModePlots = false;
   fCommonModePlotsInitialized = false;
   
+  fPedSubFlag = 0; //default to no online ped subtraction
+
   //Set default values for decode map parameters:
   fN_APV25_CHAN = 128;
   fN_MPD_TIME_SAMP = 6;
@@ -185,6 +187,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_minstrips", &fCommonModeMinStripsInRange, kInt, 0, 1, 1},
     { "plot_common_mode", &fMakeCommonModePlots, kUInt, 0, 1, 1},
     { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
+    { "pedsub_online", &fPedSubFlag, kInt, 0, 1, 1},
     { "max2Dhits", &fMAX2DHITS, kUInt, 0, 1, 1}, //optional, search up tree
     {0}
   };
@@ -768,7 +771,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     UInt_t cm_flags=2*CM_ENABLED + BUILD_ALL_SAMPLES;
     UInt_t nhits_cm_flag=evdata.GetNumHits( it->crate, it->slot, fChan_CM_flags );
     
-    
+    bool cm_flags_found = false;
 											       
     if( nhits_cm_flag > 0 ){
       
@@ -777,10 +780,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       for( int ihit=0; ihit<nhits_cm_flag; ihit++ ){ 
 	int chan_temp = evdata.GetRawData( it->crate, it->slot, fChan_CM_flags, ihit );
 	if( chan_temp == effChan ){ //assume that this is only filled once per MPD per event, and exit the loop when we find this MPD:
-	  std::cout << "Before decoding cm flags, CM_ENABLED, BUILD_ALL_SAMPLES = " << CM_ENABLED << ", "
-		    << BUILD_ALL_SAMPLES << std::endl;
+	  // std::cout << "Before decoding cm flags, CM_ENABLED, BUILD_ALL_SAMPLES = " << CM_ENABLED << ", "
+	  // 	    << BUILD_ALL_SAMPLES << std::endl;
 	  cm_flags = evdata.GetData( it->crate, it->slot, fChan_CM_flags, ihit );
-	  std::cout << "after cm flags decoding, CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
+	  cm_flags_found = true;
 	  break;
 	}
       }
@@ -796,6 +799,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
 
+    // if( cm_flags_found ){
+    //   std::cout << "cm flag defaults overridden by raw data, effChan = " << effChan << ", CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
+    // }
     
     //fOnlineZeroSuppression = !BUILD_ALL_SAMPLES;
     if( !BUILD_ALL_SAMPLES && !CM_ENABLED ) { //This should never happen:
@@ -850,8 +856,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	  double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 
-	  // If common-mode subtraction is enabled, the pedestal has already been subtracted:
-	  if( CM_ENABLED ) ped = 0.0;
+	  // If pedestal subtraction was done online, don't do it again:
+	  if( fPedSubFlag != 0 ) ped = 0.0;
 	
 	  rawADC[iraw] = ADC;
 	  pedsubADC[iraw] = double(ADC) - ped;
@@ -873,7 +879,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	    //moved common-mode calculation to its own function:
 
-	    //std::cout << "Starting common-mode calculation for time sample " << isamp << std::endl;
+	    
 	    
 	    if( fMakeCommonModePlots ){ // calculate both ways:
 	      double cm_danning = GetCommonMode( isamp, 1, *it );
@@ -915,6 +921,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      commonMode[isamp] = GetCommonMode( isamp, fCommonModeFlag, *it );
 
 	    }
+	    //std::cout << "effChan, isamp, Common-mode = " << effChan << ", " << isamp << ", " << commonMode[isamp] << std::endl;
+
 	  } //loop over time samples
 	} //check if conditions are satisfied to require offline common-mode calculation
       } //End check !CM_ENABLED && BUILD_ALL_SAMPLES
@@ -938,7 +946,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    double ped = 0;
 	    if(fIsMC)ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 	    
-	    rawADC[iraw] = ADC;
+	    rawADC[iraw] = Int_t(ADC);
 	    pedsubADC[iraw] = double(ADC) - ped;
 	    commonModeSubtractedADC[iraw] = double(ADC) - ped;
 	  }
@@ -962,7 +970,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	
 	//Pedestal has already been subtracted by the time we get herre, but let's grab anyway in case it's needed:
 	
+	//"pedtemp" is only used to fill pedestal histograms as of now:
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
+
+	if( fPedSubFlag != 0 && !fIsMC ) pedtemp = 0.0;
+
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
 	double gaintemp = ( axis == SBSGEM::kUaxis ) ? fUgain[strip/fN_APV25_CHAN] : fVgain[strip/fN_APV25_CHAN]; //should probably not hard-code 128 here
 	
@@ -1028,10 +1040,64 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
 
+	// if( !CM_ENABLED && BUILD_ALL_SAMPLES ){
+	//   std::cout << " before zero suppression: common-mode and pedestal-subtracted ADC sum: effChan, istrip, ADC sum = " 
+	// 	    << effChan << ", " << istrip << ", " << ADCsum_temp << std::endl;
+	// }
+
 	//cout << ADCsum_temp << " >? " << fThresholdStripSum << "; " 
 	//   << ADCsum_temp/double(fN_MPD_TIME_SAMP) << " >? " << fZeroSuppressRMS*rmstemp << "; " 
 	//   << maxADC << " >? " << fZeroSuppressRMS*rmstemp 
 	//   << "; " << fThresholdSample << endl;
+
+	//fill pedestal diagnostic histograms if and only if we are in pedestal mode or plot common mode 
+	// AND the CM_ENABLED is not set, meaning we did cm and ped subtraction offline
+	if( (fPedestalMode || fMakeCommonModePlots) && !CM_ENABLED ){ 
+	  int iAPV = strip/fN_APV25_CHAN;
+	  
+	  if( axis == SBSGEM::kUaxis ){
+	    for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	      // std::cout << "U axis: isamp, strip, rawADC, ADC, ped, commonmode = " << isamp << ", " << strip << ", "
+	      // 	  << rawADCtemp[isamp] << ", " << ADCtemp[isamp] << ", " << pedtemp << ", " << commonMode[isamp] << std::endl;
+	      
+	      hrawADCs_by_stripU->Fill( strip, rawADCtemp[isamp] );
+	      hpedestal_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] ); //common-mode AND ped-subtracted
+	      hcommonmode_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] + pedtemp ); //common-mode subtraction only, no ped:
+	      hpedestal_subtracted_rawADCs_by_stripU->Fill( strip, ADCtemp[isamp] + commonMode[isamp] ); //pedestal subtraction only, no common-mode
+
+	      hpedestal_subtracted_rawADCsU->Fill( ADCtemp[isamp] + commonMode[isamp] ); //1D distribution of ped-subtracted ADCs w/o common-mode subtraction
+	      hpedestal_subtracted_ADCsU->Fill( ADCtemp[isamp] ); //1D distribution of ped-and-common-mode subtracted ADCs
+
+	      hcommonmode_mean_by_APV_U->Fill( iAPV, commonMode[isamp] );
+	      // ( (TH2D*) (*hrawADCs_by_strip_sampleU)[isamp] )->Fill( strip, rawADCtemp[isamp] );
+	      // //for this one, we add back in the pedestal:
+	      // ( (TH2D*) (*hcommonmode_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] + pedtemp );
+	      // ( (TH2D*) (*hpedestal_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] );
+	    }
+	  } else {
+	    for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	      // std::cout << "V axis: isamp, strip, rawADC, ADC, ped, commonmode = " << isamp << ", " << strip << ", "
+	      // 	  << rawADCtemp[isamp] << ", " << ADCtemp[isamp] << ", " << pedtemp << ", " << commonMode[isamp] << std::endl;
+	      hrawADCs_by_stripV->Fill( strip, rawADCtemp[isamp] );
+	      hpedestal_subtracted_ADCs_by_stripV->Fill( strip, ADCtemp[isamp] );
+	      hcommonmode_subtracted_ADCs_by_stripV->Fill( strip, ADCtemp[isamp] + pedtemp );
+	      hpedestal_subtracted_rawADCs_by_stripV->Fill( strip, ADCtemp[isamp] + commonMode[isamp] );
+
+	      hpedestal_subtracted_rawADCsV->Fill( ADCtemp[isamp] + commonMode[isamp] );
+	      hpedestal_subtracted_ADCsV->Fill( ADCtemp[isamp] );
+
+		
+	      hcommonmode_mean_by_APV_V->Fill( iAPV, commonMode[isamp] );
+		
+	      // ( (TH2D*) (*hrawADCs_by_strip_sampleV)[isamp] )->Fill( strip, rawADCtemp[isamp] );
+	      // ( (TH2D*) (*hcommonmode_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] );
+	      // ( (TH2D*) (*hpedestal_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] - pedtemp );
+	    }
+	  }
+
+	  // std::cout << "finished pedestal histograms..." << std::endl;
+	    
+	}
 	
 	//the ROOTgui multicrate uses a threshold on the AVERAGE ADC sample (not the MAX). To be consistent
 	// with how the "Hit" root files are produced, let's use the same threshold;
@@ -1116,55 +1182,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	  //std::cout << "starting pedestal histograms..." << std::endl;
 	  
-	  if( fPedestalMode ){ //fill pedestal histograms:
-	    int iAPV = strip/fN_APV25_CHAN;
-	    
-	    if( axis == SBSGEM::kUaxis ){
-	      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-		// std::cout << "U axis: isamp, strip, rawADC, ADC, ped, commonmode = " << isamp << ", " << strip << ", "
-		// 	  << rawADCtemp[isamp] << ", " << ADCtemp[isamp] << ", " << pedtemp << ", " << commonMode[isamp] << std::endl;
-		
-		hrawADCs_by_stripU->Fill( strip, rawADCtemp[isamp] );
-		hpedestal_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] ); //common-mode AND ped-subtracted
-		hcommonmode_subtracted_ADCs_by_stripU->Fill( strip, ADCtemp[isamp] + pedtemp ); //common-mode subtraction only, no ped:
-		hpedestal_subtracted_rawADCs_by_stripU->Fill( strip, ADCtemp[isamp] + commonMode[isamp] ); //pedestal subtraction only, no common-mode
-
-		hpedestal_subtracted_rawADCsU->Fill( ADCtemp[isamp] + commonMode[isamp] ); //1D distribution of ped-subtracted ADCs w/o common-mode subtraction
-		hpedestal_subtracted_ADCsU->Fill( ADCtemp[isamp] ); //1D distribution of ped-and-common-mode subtracted ADCs
-
-		hcommonmode_mean_by_APV_U->Fill( iAPV, commonMode[isamp] );
-		// ( (TH2D*) (*hrawADCs_by_strip_sampleU)[isamp] )->Fill( strip, rawADCtemp[isamp] );
-		// //for this one, we add back in the pedestal:
-		// ( (TH2D*) (*hcommonmode_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] + pedtemp );
-		// ( (TH2D*) (*hpedestal_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] );
-	      }
-	    } else {
-	      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-		// std::cout << "V axis: isamp, strip, rawADC, ADC, ped, commonmode = " << isamp << ", " << strip << ", "
-		// 	  << rawADCtemp[isamp] << ", " << ADCtemp[isamp] << ", " << pedtemp << ", " << commonMode[isamp] << std::endl;
-		hrawADCs_by_stripV->Fill( strip, rawADCtemp[isamp] );
-		hpedestal_subtracted_ADCs_by_stripV->Fill( strip, ADCtemp[isamp] );
-		hcommonmode_subtracted_ADCs_by_stripV->Fill( strip, ADCtemp[isamp] + pedtemp );
-		hpedestal_subtracted_rawADCs_by_stripV->Fill( strip, ADCtemp[isamp] + commonMode[isamp] );
-
-		hpedestal_subtracted_rawADCsV->Fill( ADCtemp[isamp] + commonMode[isamp] );
-		hpedestal_subtracted_ADCsV->Fill( ADCtemp[isamp] );
-
-		
-		hcommonmode_mean_by_APV_V->Fill( iAPV, commonMode[isamp] );
-		
-		// ( (TH2D*) (*hrawADCs_by_strip_sampleV)[isamp] )->Fill( strip, rawADCtemp[isamp] );
-		// ( (TH2D*) (*hcommonmode_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] );
-		// ( (TH2D*) (*hpedestal_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] - pedtemp );
-	      }
-	    }
-
-	    // std::cout << "finished pedestal histograms..." << std::endl;
-	    
-	  }
+	  
 	  
 	  fNstrips_hit++;
-	}
+	} //check if passed zero suppression cuts
       } //end loop over strips on this APV card
     } //end if( nsamp > 0 )
   } //end loop on decode map entries for this module
@@ -1711,7 +1732,7 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     fEfficiencyInitialized = true;
   }
 
-  if( fPedestalMode && !fPedHistosInitialized ){ //make pedestal histograms:
+  if( (fPedestalMode || fMakeCommonModePlots) && !fPedHistosInitialized ){ //make pedestal histograms:
 
     //Procedure:
     // 1. Analyze pedestal data with no pedestals supplied from the database.
@@ -2107,7 +2128,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write(fhshouldhitxy->GetName(), kOverwrite );
   }
 
-  if( fPedestalMode ){ //write out pedestal histograms, print out pedestals in the format needed for both database and DAQ:
+  if( fPedestalMode || fMakeCommonModePlots ){ //write out pedestal histograms, print out pedestals in the format needed for both database and DAQ:
 
     //The channel map and pedestal information are specific to a GEM module.
     //But we want ONE database file and ONE DAQ file for the entire tracker.

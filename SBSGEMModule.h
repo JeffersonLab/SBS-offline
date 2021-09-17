@@ -203,6 +203,8 @@ class SBSGEMModule : public THaSubDetector {
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
   
   Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method, other = ONLINE
+  Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 
+                     // 1 = pedestal subtraction WAS done online, even for full readout events, only subtract the common-mode
 
   //Number of strips on low and high side to reject for common-mode calculation:
   Int_t fCommonModeNstripRejectHigh; //default = 28;

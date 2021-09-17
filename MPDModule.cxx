@@ -99,7 +99,7 @@ namespace Decoder {
   
   UInt_t MPDModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len ){
 
-    std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << "..."; 
+    //std::cout << "Calling MPDModule::LoadSlot()... (pos, len) = " << pos << ", " << len << "..."; 
     //AJRP: LoadSlot method for MPD SSP data format to be used in Hall A during the GMN run:
     const UInt_t *datawords = &(evbuffer[pos]);
 
@@ -260,6 +260,11 @@ namespace Decoder {
 	    cm_flags_vs_chan[effChan] = cm_flags;
 	    
 	    for( int is=0; is<6; is++ ){
+
+	      // if( ADCsamples[is] > 0xFFF && !ENABLE_CM ) {
+	      // 	std::cout << "negative ADC sample encountered when CM not enabled, raw data word = " << ADCsamples[is] << ", signed int representation = " << Int_t(ADCsamples[is]) << std::endl; 
+	      // 	std::cout << "This is not expected" << std::endl;
+	      // }
 	      // This loads each of the six ADC samples as a new "hit" into sldat, with "effChan" as the unique "channel" number,
 	      // the ADC samples as the "data", and the APV channel number as the "rawData"
 	      // std::cout << "decoded one strip hit: (crate, slot, fiber, apv_id, apv_chan, effChan, isample, ADCsamples[isample]) = ("
@@ -281,18 +286,18 @@ namespace Decoder {
       fWordsSeen++;
     }
 
-    std::cout << "Loading common-mode flags for this event: " << std::endl;
+    //std::cout << "Loading common-mode flags for this event: " << std::endl;
     //now load the cm flags:
     for( auto iapv = cm_flags_vs_chan.begin(); iapv != cm_flags_vs_chan.end(); ++iapv ){
 
-      std::cout << "effChan = " << iapv->first << ", ENABLE_CM = " << (iapv->second / 2) << ", BUILD_ALL_SAMPLES = " << (iapv->second % 2 ) << std::endl;
+      //std::cout << "effChan = " << iapv->first << ", ENABLE_CM = " << (iapv->second / 2) << ", BUILD_ALL_SAMPLES = " << (iapv->second % 2 ) << std::endl;
       //The "flags" word is the mapped value (iapv->second)
       //The effective channel is the key (iapv->first)
       sldat->loadData( fChan_CM_flags, iapv->second, iapv->first );
     }
     
     //std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
-    std::cout << "MPDModule::LoadSlot done." << std::endl;
+    //std::cout << "MPDModule::LoadSlot done." << std::endl;
     return fWordsSeen;
   
   }
