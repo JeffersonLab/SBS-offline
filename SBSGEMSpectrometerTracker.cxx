@@ -18,6 +18,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   THaTrackingDetector(name,desc,app), SBSGEMTrackerBase() {
 
   fModules.clear();
+  fModulesInitialized = false;
+  
   fIsMC = false;//by default!
   //fCrateMap = 0;
   fPedestalMode = false;
@@ -80,14 +82,16 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //   Int_t            search;   // (opt) Search for key along name tree
   //   const char*      descript; // (opt) Key description (if 0, same as name)
   // };
+  //std::string pedfilename = ""; //Optional: load pedestals from separate file
+  
   int pedestalmode_flag = 0;
   int doefficiency_flag = 1;
   int onlinezerosuppressflag = 0;
   int useconstraintflag = 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
+    { "pedfile",  &fpedfilename, kString, 0, 1 },
     { "is_mc",        &fIsMC,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
-    { "onlinezerosuppression", &onlinezerosuppressflag, kInt, 0, 1},
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
     { "gridbinwidthx", &fGridBinWidthX, kDouble, 0, 1},
@@ -99,9 +103,12 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
+    { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
     {0}
   };
 
+  
+  
   Int_t status = kInitError;
   LoadDB( file, date, request, fPrefix );
   fclose(file);
@@ -109,16 +116,18 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
   fPedestalMode = ( pedestalmode_flag != 0 );
 
+  std::cout << "pedestal file name = " << fpedfilename << std::endl;
+  
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
   
-  fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
+  //fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
 
-  if( fPedestalMode ){ //then we will just dump raw data to the tree:
-    fZeroSuppress = false;
+  if( fPedestalMode ){ //then we will just dump raw data to the tree and/or histograms:
+    //fZeroSuppress = false;
     fMakeEfficiencyPlots = false; //If in pedestal mode, we don't want efficiency plots
   }
   
@@ -130,12 +139,61 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   int modcounter = 0;
 
-  for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
-    fModules.push_back(new SBSGEMModule( (*it).c_str(), (*it).c_str(), this) );
+  
 
-    modcounter = fModules.size()-1;
-    fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
+  //If a previous module configuration exists, check if anything changed.
+  //We will still re-initialize the modules (for now), but we just need to decide whether to re-allocate the modules:
+
+  if( fModulesInitialized ){
+    //first check if the size changed:
+    if( fModules.size() != modules.size() ) { //If the size of the configuration changed, we know that we have to re-initialize everything!
+      fModules.clear();
+      fModules.resize( modules.size() );
+      fModulesInitialized = false;
+    } else { //size stayed the same, but we need to check if any of the names changed:
+      
+      for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
+	if( fModules[modcounter] ){
+
+	  std::string modname = fModules[modcounter]->GetName();
+	  if( modname.compare( *it ) != 0 ){ //name of one or more modules changed, assume we need to re-init everything:
+	    fModules.clear();
+	    fModules.resize( modules.size() );
+	    fModulesInitialized = false;
+	    break;
+	  }
+	} else { //one or more modules not allocated, re-init everything:
+	  fModules.clear();
+	  fModules.resize( modules.size() );
+	  fModulesInitialized = false;
+	  break;
+	}
+
+	modcounter++;
+      }
+    }
+  } else {
+    fModules.resize( modules.size() );
   }
+
+  modcounter = 0;
+
+  
+
+  std::cout << "Modules initialized = " << fModulesInitialized << ", number of modules = " << fModules.size() << std::endl;
+  //we need to implement some checks to make sure the modules are not already allocated:
+  for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
+
+    if( !fModulesInitialized ){
+      std::cout << "Initializing module " << *it << "... ";
+      fModules[modcounter] = new SBSGEMModule( (*it).c_str(), (*it).c_str(), this);
+      std::cout << " done." << std::endl;
+    }
+    fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
+    modcounter++;
+  }
+
+  if( !fModulesInitialized ) fModulesInitialized = true;
 
   //Define the number of modules from the "modules" string:
   fNmodules = fModules.size();
@@ -173,6 +231,8 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
 }
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
+  SBSGEMTrackerBase::Clear();
+  
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
     (*it)->Clear(opt);
   }
@@ -182,13 +242,20 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
 
 Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
-  std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  std::endl;
+  //std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  "...";
 
   //Triggers decoding of each module:
-  
+
+  Int_t stripcounter=0;
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
+    //std::cout << "Decoding module " << (*it)->GetName() << std::endl;
     (*it)->Decode(evdata);
+
+    stripcounter += (*it)->fNstrips_hit;
+    //std::cout << "done..." << std::endl;
   }
+
+  //std::cout << "done, fNstrips_hit = " << stripcounter << std::endl;
   
   return 0;
 }
@@ -196,11 +263,13 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
+  UInt_t runnum = run->GetNumber(); 
+  
   //To automate the printing out of pedestals for database and DAQ, 
   if( fPedestalMode ){
     TString fname_dbase, fname_daq, fname_cmr;
     
-    UInt_t runnum = run->GetNumber(); 
+    
     TString specname = GetApparatus()->GetName();
     TString detname = GetName();
     fname_dbase.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
@@ -226,14 +295,14 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     
     fpedfile_daq << sdate << std::endl;
     fpedfile_daq <<  message << std::endl;
-    fpedfile_daq << "# format = APV        crate       mpd_id       adc_ch followed by " << std::endl
+    fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
 
     message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
     
     fpedfile_cmr << sdate << std::endl;
     fpedfile_cmr << message << std::endl;
-    fpedfile_cmr << "# format = crate     mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
+    fpedfile_cmr << "# format = crate     slot      mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
   }
   
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
@@ -256,17 +325,30 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     hefficiency_y_layer->Compress();
     hefficiency_xy_layer->Compress();
 
-    hdidhit_x_layer->Write();
-    hdidhit_y_layer->Write();
-    hdidhit_xy_layer->Write();
+    hdidhit_x_layer->Write(0,kOverwrite);
+    hdidhit_y_layer->Write(0,kOverwrite);
+    hdidhit_xy_layer->Write(0,kOverwrite);
 
-    hshouldhit_x_layer->Write();
-    hshouldhit_y_layer->Write();
-    hshouldhit_xy_layer->Write();
+    hshouldhit_x_layer->Write(0,kOverwrite);
+    hshouldhit_y_layer->Write(0,kOverwrite);
+    hshouldhit_xy_layer->Write(0,kOverwrite);
 
-    hefficiency_x_layer->Write();
-    hefficiency_y_layer->Write();
-    hefficiency_xy_layer->Write();
+    hefficiency_x_layer->Write(0,kOverwrite);
+    hefficiency_y_layer->Write(0,kOverwrite);
+    hefficiency_xy_layer->Write(0,kOverwrite);
+  }
+
+  if( fDumpGeometryInfo ){ //Print out geometry info for alignment:
+
+    //Maybe this should go to $OUT_DIR:
+    TString fnametemp;
+    fnametemp.Form( "GEM_alignment_info_%s_%s_run%d.txt",
+		    GetApparatus()->GetName(),
+		    GetName(), runnum );
+
+    PrintGeometry( fnametemp.Data() );
+
+    
   }
   
   return 0;
@@ -300,6 +382,7 @@ void SBSGEMSpectrometerTracker::SetDebug( Int_t level ){
 Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
+  
   RVarDef vars[] = {
     { "track.ntrack", "number of tracks found", "fNtracks_found" },
     { "track.nhits", "number of hits on track", "fNhitsOnTrack" },
@@ -338,6 +421,10 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.eresidv", "v hit residual with fitted track (exclusive method)", "fHitEResidV" },
     { "hit.ADCU", "cluster ADC sum, U strips", "fHitUADC" },
     { "hit.ADCV", "cluster ADC sum, V strips", "fHitVADC" },
+    { "hit.ADCmaxstripU", "ADC sum of max U strip", "fHitUADCmaxstrip" },
+    { "hit.ADCmaxstripV", "ADC sum of max V strip", "fHitVADCmaxstrip" },
+    { "hit.ADCmaxsampU", "max sample of max U strip", "fHitUADCmaxsample" },
+    { "hit.ADCmaxsampV", "max sample of max V strip", "fHitVADCmaxsample" },
     { "hit.ADCasym", "Hit ADC asymmetry: (ADCU - ADCV)/(ADCU + ADCV)", "fHitADCasym" },
     { "hit.Utime", "cluster timing based on U strips", "fHitUTime" },
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
@@ -362,9 +449,10 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 
 
 Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
-
-  //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack" << std::endl;
+  
+  
   if( !fUseConstraint && !fPedestalMode ){
+    //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
     find_tracks();
@@ -381,7 +469,7 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
       Track->SetIndex( index );
     }
 
-    //std::cout << "found " << fNtracks_found << " tracks" << std::endl;
+    //std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
   }
   
@@ -389,9 +477,9 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
 }
 Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 
-  //std::cout << "SBSGEMSpectrometerTracker::FineTrack" << std::endl;
+  
   if( fUseConstraint && !fPedestalMode ){ //
-
+    //std::cout << "SBSGEMSpectrometerTracker::FineTrack..."; 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;
     find_tracks();
@@ -411,6 +499,8 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
       Track->SetIndex( index );
       
     }
+
+    //std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
   }
   

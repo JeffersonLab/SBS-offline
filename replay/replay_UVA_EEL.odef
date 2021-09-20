@@ -1,5 +1,7 @@
 block sbs.uvagem.track.*
 block sbs.uvagem.hit.*
+block sbs.uvagem.*.strip.*
+block sbs.uvagem.*.clust.*
 
 variable sbs.uvagem.nlayershit
 variable sbs.uvagem.nlayershitu

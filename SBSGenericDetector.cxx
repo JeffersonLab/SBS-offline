@@ -1223,8 +1223,8 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	}
     }
     //
-    if(WithADC()) {
-      if(fModeADC != SBSModeADC::kWaveform) {
+    if(WithADC() && blk->HasADCData()) {
+      if (fModeADC == SBSModeADC::kADC && blk->ADC()->HasData()) {
           if(blk->ADC()->HasData() && blk->ADC()->GetGoodHitIndex() >=0){
              fRefGood.ADCrow.push_back(blk->GetRow());
              fRefGood.ADCcol.push_back(blk->GetCol());
@@ -1269,7 +1269,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
               fRefRaw.a_time.push_back(hit.time.val);
              }
           }
-      } else { // Waveform mode
+    } else if  (fModeADC == SBSModeADC::kWaveform && blk->Waveform()->HasData()){ // Waveform mode
         SBSData::Waveform *wave = blk->Waveform();
 	if(wave->HasData()) {		
           if(fStoreRawHits) {
@@ -1312,12 +1312,12 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
             fRefGood.a_amp.push_back(0.0);
             fRefGood.a_amp_p.push_back(0.0);
             fRefGood.a_time.push_back(0.0);
-	}
+	  }
 	}
       }
     }
-
   }
+
 
   
   

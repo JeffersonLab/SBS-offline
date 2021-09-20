@@ -108,6 +108,12 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   cout << "Read SBSSimDecoder variables " << endl;
   
   RVarDef vars[] = {
+    {"mc_px",   "MC track momentum x",   "fPx"},
+    {"mc_py",   "MC track momentum y",   "fPy"},
+    {"mc_pz",   "MC track momentum z",   "fPz"},
+    {"mc_vx",   "MC track vertex x",   "fVx"},
+    {"mc_vy",   "MC track vertex y",   "fVy"},
+    {"mc_vz",   "MC track vertex z",   "fVz"},
     {"nbbtracks",   "number of BB MC tracks",   "fNBBtracks"},
     {"bbtrack_nhits",   "BB MC track hit mult",   "fBBtrack_Nhits"},
     {"bbtrack_tid",   "BB MC track TID",   "fBBtrack_TID"},
@@ -200,6 +206,12 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
   
+  fPx = simEvent->Tgmn->ev_epx;
+  fPy = simEvent->Tgmn->ev_epy;
+  fPz = simEvent->Tgmn->ev_epz;
+  fVx = simEvent->Tgmn->ev_vx;
+  fVy = simEvent->Tgmn->ev_vy;
+  fVz = simEvent->Tgmn->ev_vz;
   fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
   fBBtrack_Nhits = *(simEvent->Tgmn->Earm_BBGEM_Track_NumHits);
   fBBtrack_TID = *(simEvent->Tgmn->Earm_BBGEM_Track_TID);
@@ -1008,7 +1020,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  crate  = chanmap[k];
 	  slot   = chanmap[k+1];
 	  mpd   = chanmap[k+2];
-	  apv_num = mpd << 8 | chanmap[k+4];//
+	  apv_num = mpd << 4 | chanmap[k+4];//
 	  pos = chanmap[k+6];
 	  axis = chanmap[k+8];
 	  if(axis==0)n_ax_x++;

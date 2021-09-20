@@ -67,7 +67,8 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSSimFile.cxx SBSSimEvent.cxx
   SBSRPBeamSideHodo.cxx SBSRPFarSideHodo.cxx SBSCHAnalyzer.cxx
   SBSTimingHodoscopePMT.cxx SBSTimingHodoscopeBar.cxx
-  gmn_tree_digitized.cxx
+  SBSBPM.cxx SBSRaster.cxx SBSRasteredBeam.cxx
+  gmn_tree_digitized.cxx VETROC.cxx
   )
 #gmn_tree_digitized.C
 #g4sbs_data.cxx g4sbs_tree.cxx
@@ -179,22 +180,58 @@ foreach(_def ${SBSEXTRADEF_LIST})
   endif()
 endforeach()
 
+## default SBS_REPLAY_PATH to 
+
+# cmake_path wasn't introduced until cmake 3.20, not yet available on ifarm by default
+#cmake_path(SET DEFAULT_SBS_REPLAY_PATH "${PROJECT_SOURCE_DIR}/../SBS-replay")
+
+
+
+if( DEFINED ENV{SBS_REPLAY} )
+    set( DEFAULT_SBS_REPLAY_PATH $ENV{SBS_REPLAY} )
+else() # look in directory 
+   get_filename_component( DEFAULT_SBS_REPLAY_PATH ../SBS-replay ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR})
+endif()		   
+
+set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to SBS-replay installation")
+
+if( NOT ${SBS_REPLAY_PATH} MATCHES "$/SBS-replay" )
+    string(APPEND SBS_REPLAY_PATH "/SBS-replay")
+endif()
+
+if(NOT EXISTS ${SBS_REPLAY_PATH})
+  if( EXISTS ${DEFAULT_SBS_REPLAY_PATH} )
+    message( WARNING "SBS-replay not found in ${SBS_REPLAY_PATH}, reverting to replay installation found in ${DEFAULT_SBS_REPLAY_PATH}" )
+    set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to SBS-replay installation" FORCE)
+  elseif(${DEFAULT_SBS_REPLAY_PATH} STREQUAL ${SBS_REPLAY_PATH})
+    message(WARNING "SBS-replay not found in default location ${DEFAULT_SBS_REPLAY_PATH}. You can still build SBS-offline, but the \"replay\" and \"scripts\" directories under SBS-replay won't be automatically added to ROOT's macro path in the .rootrc file. To fix this, set environment variable SBS_REPLAY to point to your SBS-replay installation and/or re-run cmake with -DSBS_REPLAY_PATH=/path/to/your/custom/SBS-replay/")
+  else()
+    message(WARNING "SBS-replay not found in either its default location ${DEFAULT_SBS_REPLAY_PATH} or user-specified location ${SBS_REPLAY_PATH}. You can still build SBS-offline, but the \"replay\" and \"scripts\" directories under SBS-replay won't be automatically added to ROOT's macro path in the .rootrc file. To fix this, set environment variable SBS_REPLAY to point to your SBS-replay installation and/or re-run cmake with -DSBS_REPLAY_PATH=/path/to/your/custom/SBS-replay/")
+  endif()	   
+endif()	
+
+if( EXISTS ${SBS_REPLAY_PATH} )
+    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts")
+else()
+    set(SBS_MACRO_PATH ".")
+endif()
+
 configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.csh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.csh @ONLY)
 configure_file( ${PROJECT_SOURCE_DIR}/sbsenv.sh ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.sh)
 
 configure_file( ${PROJECT_SOURCE_DIR}/SBSoffline.rootrc ${CMAKE_CURRENT_BINARY_DIR}/.rootrc )
-configure_file( ${PROJECT_SOURCE_DIR}/rootlogon_install.C ${PROJECT_BINARY_DIR}/scripts/rootlogon.C )
+configure_file( ${PROJECT_SOURCE_DIR}/rootlogon_install.C ${PROJECT_BINARY_DIR}/rootlogon.C )
 
 ## Time to disable this warning. The cmake build works...
 #message(AUTHOR_WARNING ${DEV_WARNING})
 
 #install the library under ${CMAKE_INSTALL_PREFIX}/lib
 INSTALL(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-#install the relevant directories: DB, replay, scripts in the top-level installation folder:
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB DESTINATION ${CMAKE_INSTALL_PREFIX})
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB_UVA_EEL_COSMIC_JAN2021 DESTINATION ${CMAKE_INSTALL_PREFIX})
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/replay DESTINATION ${CMAKE_INSTALL_PREFIX})
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/scripts DESTINATION ${CMAKE_INSTALL_PREFIX})
+#install the relevant directories: DB, replay, scripts in the top-level installation folder (these have been moved to SBS-replay repository)
+#INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB DESTINATION ${CMAKE_INSTALL_PREFIX})
+#INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB_UVA_EEL_COSMIC_JAN2021 DESTINATION ${CMAKE_INSTALL_PREFIX})
+#INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/replay DESTINATION ${CMAKE_INSTALL_PREFIX})
+#INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/scripts DESTINATION ${CMAKE_INSTALL_PREFIX})
 INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.sh DESTINATION ${CMAKE_INSTALL_BINDIR})
 INSTALL(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/sbsenv.csh DESTINATION ${CMAKE_INSTALL_BINDIR})
 #install all headers under cmake_install_prefix/include
@@ -202,9 +239,13 @@ INSTALL(FILES ${headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 # install the ROOT dictionary files: eventually we should learn how to do this in a smarter way. Put the .cxx file under "include"
 # and put the _rdict.pcm and .rootmap files under "lib". This seems to work. Don't ask me why
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_DICTIONARY}.cxx DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/scripts/rootlogon.C DESTINATION ${CMAKE_INSTALL_PREFIX}/scripts )
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/rootlogon.C DESTINATION ${CMAKE_INSTALL_SYSCONFDIR} )
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/.rootrc DESTINATION ${CMAKE_INSTALL_PREFIX}/replay)
+#this creates run_replay_here folder under install prefix
+INSTALL(DIRECTORY DESTINATION ${CMAKE_INSTALL_PREFIX}/run_replay_here)
+
+# put the .rootrc file under run_replay_here
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/.rootrc DESTINATION ${CMAKE_INSTALL_PREFIX}/run_replay_here)
 
 #option(SET_MCFLAG "Set the global MCDATA flag" OFF)
 #if(SET_MCFLAG)

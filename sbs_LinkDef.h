@@ -13,6 +13,7 @@
 #pragma link C++ class Decoder::SBSDecodeF1TDCLowResModule+;
 #pragma link C++ class Decoder::SBSDecodeF1TDCHighResModule+;
 #pragma link C++ class Decoder::MPDModule+;
+#pragma link C++ class Decoder::VETROCModule+;
 #pragma link C++ class Decoder::MPDModuleVMEv4+;
 #pragma link C++ class SBSBigBite+;
 #pragma link C++ class SBSGEMSpectrometerTracker+;
@@ -68,4 +69,7 @@
 #pragma link C++ class SBSRPFarSideHodo+;
 #pragma link C++ class SBSTimingHodoscopePMT+;
 #pragma link C++ class SBSTimingHodoscopeBar+;
+#pragma link C++ class SBSRasteredBeam+; 
+#pragma link C++ class SBSRaster+; 
+#pragma link C++ class SBSBPM+; 
 #endif

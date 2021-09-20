@@ -47,6 +47,7 @@ namespace Decoder {
 
     virtual UInt_t GetData( UInt_t adc, UInt_t sample, UInt_t chan) const;
     virtual void Init();
+    virtual void Init( const char *configstr );
     virtual void Clear(const Option_t *opt);
     virtual Int_t Decode(const UInt_t *p); // { return 0; };
     
@@ -114,8 +115,13 @@ namespace Decoder {
     UInt_t fFillerWord; //Default = 15;
     //UInt_t fAPVHeader;   //Default = 0x4
 
+    UInt_t fSLOTID_VTP; //default = 11
+
+    //Default "reference channel" for common-mode flags:
+    UInt_t fChan_CM_flags; //default = 512
+    // TODO: add trigger time stuff and MPD debug header, etc: 
+    //UInt_t fChan_Trigger_Time; //default "reference channel" for 
     
-  
     std::vector<Int_t> fFrameHeader;  // Frame Header
     std::vector<Int_t> fFrameTrailer;  // Frame Trailer
 

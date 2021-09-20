@@ -1,0 +1,715 @@
+950101
+
+## A chamber is a "Tracker-Plane" composed of vertically stacked modules
+bb.gem.is_mc = 1
+bb.gem.onlinezerosuppress = 0
+bb.gem.pedestalmode = 0
+bb.gem.commonmode_flag = -1
+bb.gem.modules = ft0_m0 ft0_m1 ft0_m2
+	         ft1_m0 ft1_m1 ft1_m2
+	         ft2_m0 ft2_m1 ft2_m2
+	         ft3_m0 ft3_m1 ft3_m2
+		 bt0_m0 bt0_m1 bt0_m2 bt0_m3
+bb.gem.useconstraint = 1
+
+## Channel maps
+bb.gem.ft0_m0.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    0   0   0   0   0   0   0    0 # Strip    0- 127
+      19    0   0   0   1   0   1   0    0 # Strip  128- 255
+      19    0   0   0   2   0   2   0    0 # Strip  256- 383
+      19    0   0   0   3   0   3   0    0 # Strip  384- 511
+      19    0   0   0   4   0   4   0    0 # Strip  512- 639
+      19    0   0   0   5   0   5   0    0 # Strip  640- 767
+      19    0   0   0   6   0   6   0    0 # Strip  768- 895
+      19    0   0   0   7   0   7   0    0 # Strip  896-1023
+      19    0   0   0   8   0   8   0    0 # Strip 1024-1151
+      19    0   0   0   9   0   9   0    0 # Strip 1152-1279
+      19    0   0   0  10   0   0   0    1 # Strip    0- 127
+      19    0   0   0  11   0   1   0    1 # Strip  128- 255
+      19    0   0   0  12   0   2   0    1 # Strip  256- 383
+      19    0   0   0  13   0   3   0    1 # Strip  384- 511
+      19    0   0   0  14   0   4   0    1 # Strip  512- 639
+      19    0   0   0  15   0   5   0    1 # Strip  640- 767
+      19    1   1   0   0   0   6   0    1 # Strip  768- 895
+      19    1   1   0   1   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft0_m0.apvmap = 3 
+bb.gem.ft0_m0.layer = 0
+bb.gem.ft0_m0.threshold_stripsum = 240
+bb.gem.ft0_m0.threshold_sample = 100
+bb.gem.ft0_m0.nstripsu = 1280
+bb.gem.ft0_m0.nstripsv = 1024
+bb.gem.ft0_m0.uangle = 0.
+bb.gem.ft0_m0.vangle = 90.
+bb.gem.ft0_m0.upitch = 0.0004
+bb.gem.ft0_m0.vpitch = 0.0004
+
+bb.gem.ft0_m0.pedu = 1500
+bb.gem.ft0_m0.rmsu = 8
+bb.gem.ft0_m0.pedv = 1500
+bb.gem.ft0_m0.rmsv = 8
+
+bb.gem.ft0_m0.position = -0.512 0.0 0.05
+bb.gem.ft0_m0.size = 0.512 0.4096 0.003
+bb.gem.ft0_m0.angle = 0. 0. 0.
+
+
+bb.gem.ft0_m1.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    1   1   0   2   0   0   0    0 # Strip    0- 127
+      19    1   1   0   3   0   1   0    0 # Strip  128- 255
+      19    1   1   0   4   0   2   0    0 # Strip  256- 383
+      19    1   1   0   5   0   3   0    0 # Strip  384- 511
+      19    1   1   0   6   0   4   0    0 # Strip  512- 639
+      19    1   1   0   7   0   5   0    0 # Strip  640- 767
+      19    1   1   0   8   0   6   0    0 # Strip  768- 895
+      19    1   1   0   9   0   7   0    0 # Strip  896-1023
+      19    1   1   0  10   0   8   0    0 # Strip 1024-1151
+      19    1   1   0  11   0   9   0    0 # Strip 1152-1279
+      19    1   1   0  12   0   0   0    1 # Strip    0- 127
+      19    1   1   0  13   0   1   0    1 # Strip  128- 255
+      19    1   1   0  14   0   2   0    1 # Strip  256- 383
+      19    1   1   0  15   0   3   0    1 # Strip  384- 511
+      19    2   2   0   0   0   4   0    1 # Strip  512- 639
+      19    2   2   0   1   0   5   0    1 # Strip  640- 767
+      19    2   2   0   2   0   6   0    1 # Strip  768- 895
+      19    2   2   0   3   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft0_m1.apvmap = 3 
+bb.gem.ft0_m1.layer = 0
+bb.gem.ft0_m1.threshold_stripsum = 240
+bb.gem.ft0_m1.threshold_sample = 100
+bb.gem.ft0_m1.nstripsu = 1280
+bb.gem.ft0_m1.nstripsv = 1024
+bb.gem.ft0_m1.uangle = 0.
+bb.gem.ft0_m1.vangle = 90.
+bb.gem.ft0_m1.upitch = 0.0004
+bb.gem.ft0_m1.vpitch = 0.0004
+
+bb.gem.ft0_m1.pedu = 1500
+bb.gem.ft0_m1.rmsu = 8
+bb.gem.ft0_m1.pedv = 1500
+bb.gem.ft0_m1.rmsv = 8
+
+bb.gem.ft0_m1.position = 0.0 0.0 0.05
+bb.gem.ft0_m1.size = 0.512 0.4096 0.003
+bb.gem.ft0_m1.angle = 0. 0. 0.
+
+
+bb.gem.ft0_m2.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    2   2   0   4   0   0   0    0 # Strip    0- 127
+      19    2   2   0   5   0   1   0    0 # Strip  128- 255
+      19    2   2   0   6   0   2   0    0 # Strip  256- 383
+      19    2   2   0   7   0   3   0    0 # Strip  384- 511
+      19    2   2   0   8   0   4   0    0 # Strip  512- 639
+      19    2   2   0   9   0   5   0    0 # Strip  640- 767
+      19    2   2   0  10   0   6   0    0 # Strip  768- 895
+      19    2   2   0  11   0   7   0    0 # Strip  896-1023
+      19    2   2   0  12   0   8   0    0 # Strip 1024-1151
+      19    2   2   0  13   0   9   0    0 # Strip 1152-1279
+      19    2   2   0  14   0   0   0    1 # Strip    0- 127
+      19    2   2   0  15   0   1   0    1 # Strip  128- 255
+      19    3   3   0   0   0   2   0    1 # Strip  256- 383
+      19    3   3   0   1   0   3   0    1 # Strip  384- 511
+      19    3   3   0   2   0   4   0    1 # Strip  512- 639
+      19    3   3   0   3   0   5   0    1 # Strip  640- 767
+      19    3   3   0   4   0   6   0    1 # Strip  768- 895
+      19    3   3   0   5   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft0_m2.apvmap = 3 
+bb.gem.ft0_m2.layer = 0
+bb.gem.ft0_m2.threshold_stripsum = 240
+bb.gem.ft0_m2.threshold_sample = 100
+bb.gem.ft0_m2.nstripsu = 1280
+bb.gem.ft0_m2.nstripsv = 1024
+bb.gem.ft0_m2.uangle = 0.
+bb.gem.ft0_m2.vangle = 90.
+bb.gem.ft0_m2.upitch = 0.0004
+bb.gem.ft0_m2.vpitch = 0.0004
+
+bb.gem.ft0_m2.pedu = 1500
+bb.gem.ft0_m2.rmsu = 8
+bb.gem.ft0_m2.pedv = 1500
+bb.gem.ft0_m2.rmsv = 8
+
+bb.gem.ft0_m2.position = 0.512 0.0 0.05
+bb.gem.ft0_m2.size = 0.512 0.4096 0.003
+bb.gem.ft0_m2.angle = 0. 0. 0.
+
+
+bb.gem.ft1_m0.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    3   3   0   6   0   0   0    0 # Strip    0- 127
+      19    3   3   0   7   0   1   0    0 # Strip  128- 255
+      19    3   3   0   8   0   2   0    0 # Strip  256- 383
+      19    3   3   0   9   0   3   0    0 # Strip  384- 511
+      19    3   3   0  10   0   4   0    0 # Strip  512- 639
+      19    3   3   0  11   0   5   0    0 # Strip  640- 767
+      19    3   3   0  12   0   6   0    0 # Strip  768- 895
+      19    3   3   0  13   0   7   0    0 # Strip  896-1023
+      19    3   3   0  14   0   8   0    0 # Strip 1024-1151
+      19    3   3   0  15   0   9   0    0 # Strip 1152-1279
+      19    4   4   0   0   0   0   0    1 # Strip    0- 127
+      19    4   4   0   1   0   1   0    1 # Strip  128- 255
+      19    4   4   0   2   0   2   0    1 # Strip  256- 383
+      19    4   4   0   3   0   3   0    1 # Strip  384- 511
+      19    4   4   0   4   0   4   0    1 # Strip  512- 639
+      19    4   4   0   5   0   5   0    1 # Strip  640- 767
+      19    4   4   0   6   0   6   0    1 # Strip  768- 895
+      19    4   4   0   7   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft1_m0.apvmap = 3 
+bb.gem.ft1_m0.layer = 1
+bb.gem.ft1_m0.threshold_stripsum = 240
+bb.gem.ft1_m0.threshold_sample = 100
+bb.gem.ft1_m0.nstripsu = 1280
+bb.gem.ft1_m0.nstripsv = 1024
+bb.gem.ft1_m0.uangle = 0.
+bb.gem.ft1_m0.vangle = 90.
+bb.gem.ft1_m0.upitch = 0.0004
+bb.gem.ft1_m0.vpitch = 0.0004
+
+bb.gem.ft1_m0.pedu = 1500
+bb.gem.ft1_m0.rmsu = 8
+bb.gem.ft1_m0.pedv = 1500
+bb.gem.ft1_m0.rmsv = 8
+
+bb.gem.ft1_m0.position = -0.512 0.0 0.20
+bb.gem.ft1_m0.size = 0.512 0.4096 0.003
+bb.gem.ft1_m0.angle = 0. 0. 0.
+
+
+bb.gem.ft1_m1.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    4   4   0   8   0   0   0    0 # Strip    0- 127
+      19    4   4   0   9   0   1   0    0 # Strip  128- 255
+      19    4   4   0  10   0   2   0    0 # Strip  256- 383
+      19    4   4   0  11   0   3   0    0 # Strip  384- 511
+      19    4   4   0  12   0   4   0    0 # Strip  512- 639
+      19    4   4   0  13   0   5   0    0 # Strip  640- 767
+      19    4   4   0  14   0   6   0    0 # Strip  768- 895
+      19    4   4   0  15   0   7   0    0 # Strip  896-1023
+      19    5   5   0   0   0   8   0    0 # Strip 1024-1151
+      19    5   5   0   1   0   9   0    0 # Strip 1152-1279
+      19    5   5   0   2   0   0   0    1 # Strip    0- 127
+      19    5   5   0   3   0   1   0    1 # Strip  128- 255
+      19    5   5   0   4   0   2   0    1 # Strip  256- 383
+      19    5   5   0   5   0   3   0    1 # Strip  384- 511
+      19    5   5   0   6   0   4   0    1 # Strip  512- 639
+      19    5   5   0   7   0   5   0    1 # Strip  640- 767
+      19    5   5   0   8   0   6   0    1 # Strip  768- 895
+      19    5   5   0   9   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft1_m1.apvmap = 3 
+bb.gem.ft1_m1.layer = 1
+bb.gem.ft1_m1.threshold_stripsum = 240
+bb.gem.ft1_m1.threshold_sample = 100
+bb.gem.ft1_m1.nstripsu = 1280
+bb.gem.ft1_m1.nstripsv = 1024
+bb.gem.ft1_m1.uangle = 0.
+bb.gem.ft1_m1.vangle = 90.
+bb.gem.ft1_m1.upitch = 0.0004
+bb.gem.ft1_m1.vpitch = 0.0004
+
+bb.gem.ft1_m1.pedu = 1500
+bb.gem.ft1_m1.rmsu = 8
+bb.gem.ft1_m1.pedv = 1500
+bb.gem.ft1_m1.rmsv = 8
+
+bb.gem.ft1_m1.position = 0.0 0.0 0.20
+bb.gem.ft1_m1.size = 0.512 0.4096 0.003
+bb.gem.ft1_m1.angle = 0. 0. 0.
+
+bb.gem.ft1_m2.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    5   5   0  10   0   0   0    0 # Strip    0- 127
+      19    5   5   0  11   0   1   0    0 # Strip  128- 255
+      19    5   5   0  12   0   2   0    0 # Strip  256- 383
+      19    5   5   0  13   0   3   0    0 # Strip  384- 511
+      19    5   5   0  14   0   4   0    0 # Strip  512- 639
+      19    5   5   0  15   0   5   0    0 # Strip  640- 767
+      19    6   6   0   0   0   6   0    0 # Strip  768- 895
+      19    6   6   0   1   0   7   0    0 # Strip  896-1023
+      19    6   6   0   2   0   8   0    0 # Strip 1024-1151
+      19    6   6   0   3   0   9   0    0 # Strip 1152-1279
+      19    6   6   0   4   0   0   0    1 # Strip    0- 127
+      19    6   6   0   5   0   1   0    1 # Strip  128- 255
+      19    6   6   0   6   0   2   0    1 # Strip  256- 383
+      19    6   6   0   7   0   3   0    1 # Strip  384- 511
+      19    6   6   0   8   0   4   0    1 # Strip  512- 639
+      19    6   6   0   9   0   5   0    1 # Strip  640- 767
+      19    6   6   0  10   0   6   0    1 # Strip  768- 895
+      19    6   6   0  11   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft1_m2.apvmap = 3 
+bb.gem.ft1_m2.layer = 1
+bb.gem.ft1_m2.threshold_stripsum = 240
+bb.gem.ft1_m2.threshold_sample = 100
+bb.gem.ft1_m2.nstripsu = 1280
+bb.gem.ft1_m2.nstripsv = 1024
+bb.gem.ft1_m2.uangle = 0.
+bb.gem.ft1_m2.vangle = 90.
+bb.gem.ft1_m2.upitch = 0.0004
+bb.gem.ft1_m2.vpitch = 0.0004
+
+bb.gem.ft1_m2.pedu = 1500
+bb.gem.ft1_m2.rmsu = 8
+bb.gem.ft1_m2.pedv = 1500
+bb.gem.ft1_m2.rmsv = 8
+
+bb.gem.ft1_m2.position = 0.512 0.0 0.20
+bb.gem.ft1_m2.size = 0.512 0.4096 0.003
+bb.gem.ft1_m2.angle = 0. 0. 0.
+
+bb.gem.ft2_m0.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    6   6   0  12   0   0   0    0 # Strip    0- 127
+      19    6   6   0  13   0   1   0    0 # Strip  128- 255
+      19    6   6   0  14   0   2   0    0 # Strip  256- 383
+      19    6   6   0  15   0   3   0    0 # Strip  384- 511
+      19    7   7   0   0   0   4   0    0 # Strip  512- 639
+      19    7   7   0   1   0   5   0    0 # Strip  640- 767
+      19    7   7   0   2   0   6   0    0 # Strip  768- 895
+      19    7   7   0   3   0   7   0    0 # Strip  896-1023
+      19    7   7   0   4   0   8   0    0 # Strip 1024-1151
+      19    7   7   0   5   0   9   0    0 # Strip 1152-1279
+      19    7   7   0   6   0   0   0    1 # Strip    0- 127
+      19    7   7   0   7   0   1   0    1 # Strip  128- 255
+      19    7   7   0   8   0   2   0    1 # Strip  256- 383
+      19    7   7   0   9   0   3   0    1 # Strip  384- 511
+      19    7   7   0  10   0   4   0    1 # Strip  512- 639
+      19    7   7   0  11   0   5   0    1 # Strip  640- 767
+      19    7   7   0  12   0   6   0    1 # Strip  768- 895
+      19    7   7   0  13   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft2_m0.apvmap = 3 
+bb.gem.ft2_m0.layer = 2
+bb.gem.ft2_m0.threshold_stripsum = 240
+bb.gem.ft2_m0.threshold_sample = 100
+bb.gem.ft2_m0.nstripsu = 1280
+bb.gem.ft2_m0.nstripsv = 1024
+bb.gem.ft2_m0.uangle = 0.
+bb.gem.ft2_m0.vangle = 90.
+bb.gem.ft2_m0.upitch = 0.0004
+bb.gem.ft2_m0.vpitch = 0.0004
+
+bb.gem.ft2_m0.pedu = 1500
+bb.gem.ft2_m0.rmsu = 8
+bb.gem.ft2_m0.pedv = 1500
+bb.gem.ft2_m0.rmsv = 8
+
+bb.gem.ft2_m0.position = -0.512 0.0 0.35
+bb.gem.ft2_m0.size = 0.512 0.4096 0.003
+bb.gem.ft2_m0.angle = 0. 0. 0.
+
+
+bb.gem.ft2_m1.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    7   7   0  14   0   0   0    0 # Strip    0- 127
+      19    7   7   0  15   0   1   0    0 # Strip  128- 255
+      19    8   8   0   0   0   2   0    0 # Strip  256- 383
+      19    8   8   0   1   0   3   0    0 # Strip  384- 511
+      19    8   8   0   2   0   4   0    0 # Strip  512- 639
+      19    8   8   0   3   0   5   0    0 # Strip  640- 767
+      19    8   8   0   4   0   6   0    0 # Strip  768- 895
+      19    8   8   0   5   0   7   0    0 # Strip  896-1023
+      19    8   8   0   6   0   8   0    0 # Strip 1024-1151
+      19    8   8   0   7   0   9   0    0 # Strip 1152-1279
+      19    8   8   0   8   0   0   0    1 # Strip    0- 127
+      19    8   8   0   9   0   1   0    1 # Strip  128- 255
+      19    8   8   0  10   0   2   0    1 # Strip  256- 383
+      19    8   8   0  11   0   3   0    1 # Strip  384- 511
+      19    8   8   0  12   0   4   0    1 # Strip  512- 639
+      19    8   8   0  13   0   5   0    1 # Strip  640- 767
+      19    8   8   0  14   0   6   0    1 # Strip  768- 895
+      19    8   8   0  15   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft2_m1.apvmap = 3 
+bb.gem.ft2_m1.layer = 2
+bb.gem.ft2_m1.threshold_stripsum = 240
+bb.gem.ft2_m1.threshold_sample = 100
+bb.gem.ft2_m1.nstripsu = 1280
+bb.gem.ft2_m1.nstripsv = 1024
+bb.gem.ft2_m1.uangle = 0.
+bb.gem.ft2_m1.vangle = 90.
+bb.gem.ft2_m1.upitch = 0.0004
+bb.gem.ft2_m1.vpitch = 0.0004
+
+bb.gem.ft2_m1.pedu = 1500
+bb.gem.ft2_m1.rmsu = 8
+bb.gem.ft2_m1.pedv = 1500
+bb.gem.ft2_m1.rmsv = 8
+
+bb.gem.ft2_m1.position = 0.0 0.0 0.35
+bb.gem.ft2_m1.size = 0.512 0.4096 0.003
+bb.gem.ft2_m1.angle = 0. 0. 0.
+
+
+bb.gem.ft2_m2.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19    9   9   0   0   0   0   0    0 # Strip    0- 127
+      19    9   9   0   1   0   1   0    0 # Strip  128- 255
+      19    9   9   0   2   0   2   0    0 # Strip  256- 383
+      19    9   9   0   3   0   3   0    0 # Strip  384- 511
+      19    9   9   0   4   0   4   0    0 # Strip  512- 639
+      19    9   9   0   5   0   5   0    0 # Strip  640- 767
+      19    9   9   0   6   0   6   0    0 # Strip  768- 895
+      19    9   9   0   7   0   7   0    0 # Strip  896-1023
+      19    9   9   0   8   0   8   0    0 # Strip 1024-1151
+      19    9   9   0   9   0   9   0    0 # Strip 1152-1279
+      19    9   9   0  10   0   0   0    1 # Strip    0- 127
+      19    9   9   0  11   0   1   0    1 # Strip  128- 255
+      19    9   9   0  12   0   2   0    1 # Strip  256- 383
+      19    9   9   0  13   0   3   0    1 # Strip  384- 511
+      19    9   9   0  14   0   4   0    1 # Strip  512- 639
+      19    9   9   0  15   0   5   0    1 # Strip  640- 767
+      19   10  10   0   0   0   6   0    1 # Strip  768- 895
+      19   10  10   0   1   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft2_m2.apvmap = 3 
+bb.gem.ft2_m2.layer = 2
+bb.gem.ft2_m2.threshold_stripsum = 240
+bb.gem.ft2_m2.threshold_sample = 100
+bb.gem.ft2_m2.nstripsu = 1280
+bb.gem.ft2_m2.nstripsv = 1024
+bb.gem.ft2_m2.uangle = 0.
+bb.gem.ft2_m2.vangle = 90.
+bb.gem.ft2_m2.upitch = 0.0004
+bb.gem.ft2_m2.vpitch = 0.0004
+
+bb.gem.ft2_m2.pedu = 1500
+bb.gem.ft2_m2.rmsu = 8
+bb.gem.ft2_m2.pedv = 1500
+bb.gem.ft2_m2.rmsv = 8
+
+bb.gem.ft2_m2.position = 0.512 0.0 0.35
+bb.gem.ft2_m2.size = 0.512 0.4096 0.003
+bb.gem.ft2_m2.angle = 0. 0. 0.
+
+
+bb.gem.ft3_m0.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19   10  10   0   2   0   0   0    0 # Strip    0- 127
+      19   10  10   0   3   0   1   0    0 # Strip  128- 255
+      19   10  10   0   4   0   2   0    0 # Strip  256- 383
+      19   10  10   0   5   0   3   0    0 # Strip  384- 511
+      19   10  10   0   6   0   4   0    0 # Strip  512- 639
+      19   10  10   0   7   0   5   0    0 # Strip  640- 767
+      19   10  10   0   8   0   6   0    0 # Strip  768- 895
+      19   10  10   0   9   0   7   0    0 # Strip  896-1023
+      19   10  10   0  10   0   8   0    0 # Strip 1024-1151
+      19   10  10   0  11   0   9   0    0 # Strip 1152-1279
+      19   10  10   0  12   0   0   0    1 # Strip    0- 127
+      19   10  10   0  13   0   1   0    1 # Strip  128- 255
+      19   10  10   0  14   0   2   0    1 # Strip  256- 383
+      19   10  10   0  15   0   3   0    1 # Strip  384- 511
+      19   11  11   0   0   0   4   0    1 # Strip  512- 639
+      19   11  11   0   1   0   5   0    1 # Strip  640- 767
+      19   11  11   0   2   0   6   0    1 # Strip  768- 895
+      19   11  11   0   3   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft3_m0.apvmap = 3 
+bb.gem.ft3_m0.layer = 3
+bb.gem.ft3_m0.threshold_stripsum = 240
+bb.gem.ft3_m0.threshold_sample = 100
+bb.gem.ft3_m0.nstripsu = 1280
+bb.gem.ft3_m0.nstripsv = 1024
+bb.gem.ft3_m0.uangle = 0.
+bb.gem.ft3_m0.vangle = 90.
+bb.gem.ft3_m0.upitch = 0.0004
+bb.gem.ft3_m0.vpitch = 0.0004
+
+bb.gem.ft3_m0.pedu = 1500
+bb.gem.ft3_m0.rmsu = 8
+bb.gem.ft3_m0.pedv = 1500
+bb.gem.ft3_m0.rmsv = 8
+
+bb.gem.ft3_m0.position = -0.512 0.0 0.50
+bb.gem.ft3_m0.size = 0.512 0.4096 0.003
+bb.gem.ft3_m0.angle = 0. 0. 0.
+
+
+bb.gem.ft3_m1.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19   11  11   0   4   0   0   0    0 # Strip    0- 127
+      19   11  11   0   5   0   1   0    0 # Strip  128- 255
+      19   11  11   0   6   0   2   0    0 # Strip  256- 383
+      19   11  11   0   7   0   3   0    0 # Strip  384- 511
+      19   11  11   0   8   0   4   0    0 # Strip  512- 639
+      19   11  11   0   9   0   5   0    0 # Strip  640- 767
+      19   11  11   0  10   0   6   0    0 # Strip  768- 895
+      19   11  11   0  11   0   7   0    0 # Strip  896-1023
+      19   11  11   0  12   0   8   0    0 # Strip 1024-1151
+      19   11  11   0  13   0   9   0    0 # Strip 1152-1279
+      19   11  11   0  14   0   0   0    1 # Strip    0- 127
+      19   11  11   0  15   0   1   0    1 # Strip  128- 255
+      19   12  12   0   0   0   2   0    1 # Strip  256- 383
+      19   12  12   0   1   0   3   0    1 # Strip  384- 511
+      19   12  12   0   2   0   4   0    1 # Strip  512- 639
+      19   12  12   0   3   0   5   0    1 # Strip  640- 767
+      19   12  12   0   4   0   6   0    1 # Strip  768- 895
+      19   12  12   0   5   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft3_m1.apvmap = 3 
+bb.gem.ft3_m1.layer = 3
+bb.gem.ft3_m1.threshold_stripsum = 240
+bb.gem.ft3_m1.threshold_sample = 100
+bb.gem.ft3_m1.nstripsu = 1280
+bb.gem.ft3_m1.nstripsv = 1024
+bb.gem.ft3_m1.uangle = 0.
+bb.gem.ft3_m1.vangle = 90.
+bb.gem.ft3_m1.upitch = 0.0004
+bb.gem.ft3_m1.vpitch = 0.0004
+
+bb.gem.ft3_m1.pedu = 1500
+bb.gem.ft3_m1.rmsu = 8
+bb.gem.ft3_m1.pedv = 1500
+bb.gem.ft3_m1.rmsv = 8
+
+bb.gem.ft3_m1.position = 0.0 0.0 0.50
+bb.gem.ft3_m1.size = 0.512 0.4096 0.003
+bb.gem.ft3_m1.angle = 0. 0. 0.
+
+
+bb.gem.ft3_m2.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1024 y-strips)
+      19   12  12   0   6   0   0   0    0 # Strip    0- 127
+      19   12  12   0   7   0   1   0    0 # Strip  128- 255
+      19   12  12   0   8   0   2   0    0 # Strip  256- 383
+      19   12  12   0   9   0   3   0    0 # Strip  384- 511
+      19   12  12   0  10   0   4   0    0 # Strip  512- 639
+      19   12  12   0  11   0   5   0    0 # Strip  640- 767
+      19   12  12   0  12   0   6   0    0 # Strip  768- 895
+      19   12  12   0  13   0   7   0    0 # Strip  896-1023
+      19   12  12   0  14   0   8   0    0 # Strip 1024-1151
+      19   12  12   0  15   0   9   0    0 # Strip 1152-1279
+      19   13  13   0   0   0   0   0    1 # Strip    0- 127
+      19   13  13   0   1   0   1   0    1 # Strip  128- 255
+      19   13  13   0   2   0   2   0    1 # Strip  256- 383
+      19   13  13   0   3   0   3   0    1 # Strip  384- 511
+      19   13  13   0   4   0   4   0    1 # Strip  512- 639
+      19   13  13   0   5   0   5   0    1 # Strip  640- 767
+      19   13  13   0   6   0   6   0    1 # Strip  768- 895
+      19   13  13   0   7   0   7   0    1 # Strip  896-1023
+
+# MC apvmap
+bb.gem.ft3_m2.apvmap = 3 
+bb.gem.ft3_m2.layer = 3
+bb.gem.ft3_m2.threshold_stripsum = 240
+bb.gem.ft3_m2.threshold_sample = 100
+bb.gem.ft3_m2.nstripsu = 1280
+bb.gem.ft3_m2.nstripsv = 1024
+bb.gem.ft3_m2.uangle = 0.
+bb.gem.ft3_m2.vangle = 90.
+bb.gem.ft3_m2.upitch = 0.0004
+bb.gem.ft3_m2.vpitch = 0.0004
+
+bb.gem.ft3_m2.pedu = 1500
+bb.gem.ft3_m2.rmsu = 8
+bb.gem.ft3_m2.pedv = 1500
+bb.gem.ft3_m2.rmsv = 8
+
+bb.gem.ft3_m2.position = 0.512 0.0 0.50
+bb.gem.ft3_m2.size = 0.512 0.4096 0.003
+bb.gem.ft3_m2.angle = 0. 0. 0.
+
+
+bb.gem.bt0_m0.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1536 y-strips)
+      19   13  13   0   8   0   0   0    0 # Strip    0- 127
+      19   13  13   0   9   0   1   0    0 # Strip  128- 255
+      19   13  13   0  10   0   2   0    0 # Strip  256- 383
+      19   13  13   0  11   0   3   0    0 # Strip  384- 511
+      19   13  13   0  12   0   4   0    0 # Strip  512- 639
+      19   13  13   0  13   0   5   0    0 # Strip  640- 767
+      19   13  13   0  14   0   6   0    0 # Strip  768- 895
+      19   13  13   0  15   0   7   0    0 # Strip  896-1023
+      19   14  14   0   0   0   8   0    0 # Strip 1024-1151
+      19   14  14   0   1   0   9   0    0 # Strip 1152-1279
+      19   14  14   0   2   0   0   0    1 # Strip    0- 127
+      19   14  14   0   3   0   1   0    1 # Strip  128- 255
+      19   14  14   0   4   0   2   0    1 # Strip  256- 383
+      19   14  14   0   5   0   3   0    1 # Strip  384- 511
+      19   14  14   0   6   0   4   0    1 # Strip  512- 639
+      19   14  14   0   7   0   5   0    1 # Strip  640- 767
+      19   14  14   0   8   0   6   0    1 # Strip  768- 895
+      19   14  14   0   9   0   7   0    1 # Strip  896-1023
+      19   14  14   0  10   0   8   0    1 # Strip 1024-1151
+      19   14  14   0  11   0   9   0    1 # Strip 1152-1279
+      19   14  14   0  12   0  10   0    1 # Strip 1280-1407
+      19   14  14   0  13   0  11   0    1 # Strip 1408-1535
+
+# MC apvmap
+bb.gem.bt0_m0.apvmap = 3 
+bb.gem.bt0_m0.layer = 4
+bb.gem.bt0_m0.threshold_stripsum = 240
+bb.gem.bt0_m0.threshold_sample = 100
+bb.gem.bt0_m0.nstripsu = 1280
+bb.gem.bt0_m0.nstripsv = 1536
+bb.gem.bt0_m0.uangle = 0.
+bb.gem.bt0_m0.vangle = 90.
+bb.gem.bt0_m0.upitch = 0.0004
+bb.gem.bt0_m0.vpitch = 0.0004
+
+bb.gem.bt0_m0.pedu = 1500
+bb.gem.bt0_m0.rmsu = 8
+bb.gem.bt0_m0.pedv = 1500
+bb.gem.bt0_m0.rmsv = 8
+
+bb.gem.bt0_m0.position = -0.768 0.0 1.5582044
+bb.gem.bt0_m0.size = 0.512 0.6144 0.003
+bb.gem.bt0_m0.angle = 0. 0. 0.
+
+
+bb.gem.bt0_m1.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1536 y-strips)
+      19   14  14   0  14   0   0   0    0 # Strip    0- 127
+      19   14  14   0  15   0   1   0    0 # Strip  128- 255
+      19   15  15   0   0   0   2   0    0 # Strip  256- 383
+      19   15  15   0   1   0   3   0    0 # Strip  384- 511
+      19   15  15   0   2   0   4   0    0 # Strip  512- 639
+      19   15  15   0   3   0   5   0    0 # Strip  640- 767
+      19   15  15   0   4   0   6   0    0 # Strip  768- 895
+      19   15  15   0   5   0   7   0    0 # Strip  896-1023
+      19   15  15   0   6   0   8   0    0 # Strip 1024-1151
+      19   15  15   0   7   0   9   0    0 # Strip 1152-1279
+      19   15  15   0   8   0   0   0    1 # Strip    0- 127
+      19   15  15   0   9   0   1   0    1 # Strip  128- 255
+      19   15  15   0  10   0   2   0    1 # Strip  256- 383
+      19   15  15   0  11   0   3   0    1 # Strip  384- 511
+      19   15  15   0  12   0   4   0    1 # Strip  512- 639
+      19   15  15   0  13   0   5   0    1 # Strip  640- 767
+      19   15  15   0  14   0   6   0    1 # Strip  768- 895
+      19   15  15   0  15   0   7   0    1 # Strip  896-1023
+      19   16  16   0   0   0   8   0    1 # Strip 1024-1151
+      19   16  16   0   1   0   9   0    1 # Strip 1152-1279
+      19   16  16   0   2   0  10   0    1 # Strip 1280-1407
+      19   16  16   0   3   0  11   0    1 # Strip 1408-1535
+
+# MC apvmap
+bb.gem.bt0_m1.apvmap = 3 
+bb.gem.bt0_m1.layer = 4
+bb.gem.bt0_m1.threshold_stripsum = 240
+bb.gem.bt0_m1.threshold_sample = 100
+bb.gem.bt0_m1.nstripsu = 1280
+bb.gem.bt0_m1.nstripsv = 1536
+bb.gem.bt0_m1.uangle = 0.
+bb.gem.bt0_m1.vangle = 90.
+bb.gem.bt0_m1.upitch = 0.0004
+bb.gem.bt0_m1.vpitch = 0.0004
+
+bb.gem.bt0_m1.pedu = 1500
+bb.gem.bt0_m1.rmsu = 8
+bb.gem.bt0_m1.pedv = 1500
+bb.gem.bt0_m1.rmsv = 8
+
+bb.gem.bt0_m1.position = -0.256 0.0 1.5582044
+bb.gem.bt0_m1.size = 0.512 0.6144 0.003
+bb.gem.bt0_m1.angle = 0. 0. 0.
+
+
+bb.gem.bt0_m2.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1536 y-strips)
+      19   16  16   0   4   0   0   0    0 # Strip    0- 127
+      19   16  16   0   5   0   1   0    0 # Strip  128- 255
+      19   16  16   0   6   0   2   0    0 # Strip  256- 383
+      19   16  16   0   7   0   3   0    0 # Strip  384- 511
+      19   16  16   0   8   0   4   0    0 # Strip  512- 639
+      19   16  16   0   9   0   5   0    0 # Strip  640- 767
+      19   16  16   0  10   0   6   0    0 # Strip  768- 895
+      19   16  16   0  11   0   7   0    0 # Strip  896-1023
+      19   16  16   0  12   0   8   0    0 # Strip 1024-1151
+      19   16  16   0  13   0   9   0    0 # Strip 1152-1279
+      19   16  16   0  14   0   0   0    1 # Strip    0- 127
+      19   16  16   0  15   0   1   0    1 # Strip  128- 255
+      19   17  17   0   0   0   2   0    1 # Strip  256- 383
+      19   17  17   0   1   0   3   0    1 # Strip  384- 511
+      19   17  17   0   2   0   4   0    1 # Strip  512- 639
+      19   17  17   0   3   0   5   0    1 # Strip  640- 767
+      19   17  17   0   4   0   6   0    1 # Strip  768- 895
+      19   17  17   0   5   0   7   0    1 # Strip  896-1023
+      19   17  17   0   6   0   8   0    1 # Strip 1024-1151
+      19   17  17   0   7   0   9   0    1 # Strip 1152-1279
+      19   17  17   0   8   0  10   0    1 # Strip 1280-1407
+      19   17  17   0   9   0  11   0    1 # Strip 1408-1535
+
+# MC apvmap
+bb.gem.bt0_m2.apvmap = 3 
+bb.gem.bt0_m2.layer = 4
+bb.gem.bt0_m2.threshold_stripsum = 240
+bb.gem.bt0_m2.threshold_sample = 100
+bb.gem.bt0_m2.nstripsu = 1280
+bb.gem.bt0_m2.nstripsv = 1536
+bb.gem.bt0_m2.uangle = 0.
+bb.gem.bt0_m2.vangle = 90.
+bb.gem.bt0_m2.upitch = 0.0004
+bb.gem.bt0_m2.vpitch = 0.0004
+
+bb.gem.bt0_m2.pedu = 1500
+bb.gem.bt0_m2.rmsu = 8
+bb.gem.bt0_m2.pedv = 1500
+bb.gem.bt0_m2.rmsv = 8
+
+bb.gem.bt0_m2.position = 0.256 0.0 1.5582044
+bb.gem.bt0_m2.size = 0.512 0.6144 0.003
+bb.gem.bt0_m2.angle = 0. 0. 0.
+
+
+bb.gem.bt0_m3.chanmap =
+## Crate Slot mpd gem adc i2c pos inv axis # (1280 x-strips, 1536 y-strips)
+      19   17  17   0  10   0   0   0    0 # Strip    0- 127
+      19   17  17   0  11   0   1   0    0 # Strip  128- 255
+      19   17  17   0  12   0   2   0    0 # Strip  256- 383
+      19   17  17   0  13   0   3   0    0 # Strip  384- 511
+      19   17  17   0  14   0   4   0    0 # Strip  512- 639
+      19   17  17   0  15   0   5   0    0 # Strip  640- 767
+      19   18  18   0   0   0   6   0    0 # Strip  768- 895
+      19   18  18   0   1   0   7   0    0 # Strip  896-1023
+      19   18  18   0   2   0   8   0    0 # Strip 1024-1151
+      19   18  18   0   3   0   9   0    0 # Strip 1152-1279
+      19   18  18   0   4   0   0   0    1 # Strip    0- 127
+      19   18  18   0   5   0   1   0    1 # Strip  128- 255
+      19   18  18   0   6   0   2   0    1 # Strip  256- 383
+      19   18  18   0   7   0   3   0    1 # Strip  384- 511
+      19   18  18   0   8   0   4   0    1 # Strip  512- 639
+      19   18  18   0   9   0   5   0    1 # Strip  640- 767
+      19   18  18   0  10   0   6   0    1 # Strip  768- 895
+      19   18  18   0  11   0   7   0    1 # Strip  896-1023
+      19   18  18   0  12   0   8   0    1 # Strip 1024-1151
+      19   18  18   0  13   0   9   0    1 # Strip 1152-1279
+      19   18  18   0  14   0  10   0    1 # Strip 1280-1407
+      19   18  18   0  15   0  11   0    1 # Strip 1408-1535
+
+# MC apvmap
+bb.gem.bt0_m3.apvmap = 3 
+bb.gem.bt0_m3.layer = 4
+bb.gem.bt0_m3.threshold_stripsum = 240
+bb.gem.bt0_m3.threshold_sample = 100
+bb.gem.bt0_m3.nstripsu = 1280
+bb.gem.bt0_m3.nstripsv = 1536
+bb.gem.bt0_m3.uangle = 0.
+bb.gem.bt0_m3.vangle = 90.
+bb.gem.bt0_m3.upitch = 0.0004
+bb.gem.bt0_m3.vpitch = 0.0004
+
+bb.gem.bt0_m3.pedu = 1500
+bb.gem.bt0_m3.rmsu = 8
+bb.gem.bt0_m3.pedv = 1500
+bb.gem.bt0_m3.rmsv = 8
+
+bb.gem.bt0_m3.position = 0.768 0.0 1.5582044
+bb.gem.bt0_m3.size = 0.512 0.6144 0.003
+bb.gem.bt0_m3.angle = 0. 0. 0.

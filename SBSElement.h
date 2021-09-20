@@ -55,6 +55,7 @@ public:
 
   // Check if this block has any data
   virtual Bool_t HasData();
+  virtual Bool_t HasADCData();
 
 protected:
   Float_t fX;       ///< relative x position of the center

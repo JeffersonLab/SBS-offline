@@ -199,7 +199,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
       }
     }
     
-    UInt_t flags = 0;//THaDetMap::kFillPlane;//TestBit(kHaveRefChans) ? THaDetMap::kFillRefChan : 0;
+    UInt_t flags = THaDetMap::kFillRefIndex;//THaDetMap::kFillPlane;//TestBit(kHaveRefChans) ? THaDetMap::kFillRefChan : 0;
     //cout<<"asd################asda"<<flags<<endl;
     // Parse the detector map of the data channels
     if( FillDetMap( *detmap, flags, here ) <= 0 )
@@ -622,7 +622,7 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
   
   // Clusters matched with tracks here (obviously if there are any tracks to match)
   if(tracks.GetLast()>0){
-    MatchClustersWithTracks(tracks);
+    //MatchClustersWithTracks(tracks);
   }
   
   if( fDoBench ) fBench->Stop("FineProcess");

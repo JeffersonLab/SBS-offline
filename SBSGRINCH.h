@@ -66,7 +66,9 @@ public:
   void                 EnableBenchmarks( Bool_t b = kTRUE )
   { fDoBench = b; }
   void                 PrintBenchmarks() const;
-
+  
+  double GetZ() {return fZCkovIn;};
+  
 protected:
 
   //Int_t             fNypads;  // Number of pads along y (transverse)

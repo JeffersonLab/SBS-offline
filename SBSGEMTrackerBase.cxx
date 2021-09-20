@@ -1,7 +1,7 @@
 #include "SBSGEMTrackerBase.h"
 #include "SBSGEMModule.h"
-#include "TH1F.h"
-#include "TH2F.h"
+#include "TH1D.h"
+#include "TH2D.h"
 #include "TRotation.h"
 #include "TClonesArray.h"
 
@@ -10,6 +10,8 @@ using namespace std;
 SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parameters: 
   Clear();
 
+  fPedestalMode = false;
+  
   fIsMC = false;
   fNmodules = 0;
   fNlayers = 0;
@@ -18,10 +20,11 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fMinHitsOnTrack = 3;
 
   fMaxHitCombinations = 100000;
-  
-  fOnlineZeroSuppression = false;
-  fZeroSuppress = true;
-  fZeroSuppressRMS = 5.0; //5 sigma
+
+  //moved zero suppression/common-mode parameters to module class
+  //  fOnlineZeroSuppression = false;
+  // fZeroSuppress = true;
+  // fZeroSuppressRMS = 5.0; //5 sigma
 
   fGridBinWidthX = 0.01; //1 cm = 10 mm;
   fGridBinWidthY = 0.01; //1 cm = 10 mm;
@@ -43,6 +46,12 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fEfficiencyInitialized = false;
   fMakeEfficiencyPlots = true;
+
+  fModulesInitialized = false;
+
+  fpedfilename = "";
+
+  fDumpGeometryInfo = false;
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -51,6 +60,10 @@ SBSGEMTrackerBase::~SBSGEMTrackerBase(){
 }
 
 void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
+  //Also, when we construct the tracker, we want to clear out the modules:
+  //fModules.clear(); we actually DON'T want to clear out the modules here, this gets called event-by-event
+  
+  
   fNtracks_found = 0;
   fNhitsOnTrack.clear();
   fModListTrack.clear();
@@ -100,7 +113,12 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitEResidV.clear();
   fHitUADC.clear();
   fHitVADC.clear();
+  fHitUADCmaxstrip.clear();
+  fHitVADCmaxstrip.clear();
+  fHitUADCmaxsample.clear();
+  fHitVADCmaxsample.clear();
 
+  
   fHitADCasym.clear();
   fHitUTime.clear();
   fHitVTime.clear();
@@ -131,8 +149,8 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     fModules[imod]->fIsMC = fIsMC;
     fModules[imod]->fMakeEfficiencyPlots = fMakeEfficiencyPlots;
     fModules[imod]->fPedestalMode = fPedestalMode;
-    fModules[imod]->fZeroSuppress = !fPedestalMode;
-    
+    //fModules[imod]->fZeroSuppress = !fPedestalMode;
+    //moved "zero suppress" flag to GEMModule
   }
 
   fNmodules = fModules.size();
@@ -163,47 +181,140 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   
   InitLayerCombos();
   InitGridBins();
+
+  if( fpedfilename != "" ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
+    //NOTE: if we load the pedestals from a file formatted in the way the DAQ wants, then we have to assume that SLOT, MPD_ID, and ADC_CH are sufficient to uniquely identify
+
+    LoadPedestals( fpedfilename.c_str() );
+    
+  }
+  
+}
+
+void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
+
+  std::cout << "[SBSGEMTrackerBase::LoadPedestals]: fname = " << fname << std::endl;
+  
+  std::ifstream pedfile( fname );
+
+  //temporary storage for pedestals loaded from file:
+  //vector<int> Slot, MPD, ADC_ch, APV_ch;
+  //vector<double> pedmean, pedrms;
+
+  //let's define a unique index as
+  // index = apvchan + 128*adc_ch + 16*128*MPD +
+  //map by slot, MPD, and adc_ch
+  //std::map<int, std::map<int,std::vector<int> > > Slot;
+  std::map<int, std::map<int, std::map<int,std::vector<double> > > > PedMean;
+  std::map<int, std::map<int, std::map<int,std::vector<double> > > > PedRMS;
+  std::map<int, std::map<int, std::map<int,std::vector<int> > > > APVChan;
+  // std::map<int, std::map<int,std::vector<int> > > APVChan;
+  
+  
+  while( pedfile.good() ){
+    //TString currentline;
+    
+    int crate=-1, slot = -1, mpd = -1, adc_ch = -1;
+    string keyword = "APV";
+    string dummy="";
+    
+    while( pedfile >> dummy && dummy != keyword ){ ;}
+    
+    if ( dummy == keyword ){
+      pedfile >> crate >> slot >> mpd >> adc_ch; 
+    }
+
+    int index = adc_ch + 16*mpd;
+    
+    int apvchan;
+    double mean, rms;
+    for( int i=0; i<128; i++ ){
+      pedfile >> apvchan >> mean >> rms;
+      PedMean[crate][slot][index].push_back( mean );
+      PedRMS[crate][slot][index].push_back( rms );
+      APVChan[crate][slot][index].push_back( apvchan );
+    }
+      
+  }
+
+  //Now loop over the modules
+  for( int module=0; module<fNmodules; module++ ){
+    for ( auto it = fModules[module]->fMPDmap.begin(); it != fModules[module]->fMPDmap.end(); ++it ){
+
+      int this_crate = it->crate;
+      int this_index = it->adc_id + 16 * it->mpd_id;
+      int this_slot = it->slot;
+
+      if( PedMean.find( this_crate ) != PedMean.end() ){
+	if( PedMean[this_crate].find( this_slot ) != PedMean[this_crate].end() ){
+	  if( PedMean[this_crate][this_slot].find( this_index ) != PedMean[this_crate][this_slot].end() ){
+
+	    for( int i=0; i<128; i++ ){
+	      int this_apvchan = APVChan[this_crate][this_slot][this_index][i];
+	      double this_mean = PedMean[this_crate][this_slot][this_index][i];
+	      double this_rms = PedRMS[this_crate][this_slot][this_index][i];
+	      
+	      int this_strip = fModules[module]->GetStripNumber( this_apvchan, it->pos, it->invert );
+	      if ( it->axis == SBSGEM::kUaxis ){
+		fModules[module]->fPedestalU[this_strip] = this_mean;
+		fModules[module]->fPedRMSU[this_strip] = this_rms; 
+	      } else {
+		fModules[module]->fPedestalV[this_strip] = this_mean;
+		fModules[module]->fPedRMSV[this_strip] = this_rms; 
+	      }
+	      
+	    }
+	    
+	  }
+	}
+      }
+    }
+  }
+
+  
+  
 }
 
 void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
 
-  if( fMakeEfficiencyPlots ){
+  if( fMakeEfficiencyPlots && !fEfficiencyInitialized ){
     //Here is the place to book efficiency histograms by layer:
-    hdidhit_x_layer = new TClonesArray( "TH1F", fNlayers );
-    hdidhit_y_layer = new TClonesArray( "TH1F", fNlayers );
-    hdidhit_xy_layer = new TClonesArray( "TH2F", fNlayers );
+    hdidhit_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hdidhit_y_layer = new TClonesArray( "TH1D", fNlayers );
+    hdidhit_xy_layer = new TClonesArray( "TH2D", fNlayers );
   
-    hshouldhit_x_layer = new TClonesArray( "TH1F", fNlayers );
-    hshouldhit_y_layer = new TClonesArray( "TH1F", fNlayers );
-    hshouldhit_xy_layer = new TClonesArray( "TH2F", fNlayers );
+    hshouldhit_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hshouldhit_y_layer = new TClonesArray( "TH1D", fNlayers );
+    hshouldhit_xy_layer = new TClonesArray( "TH2D", fNlayers );
 
-    hefficiency_x_layer = new TClonesArray( "TH1F", fNlayers );
-    hefficiency_y_layer = new TClonesArray( "TH1F", fNlayers );
-    hefficiency_xy_layer = new TClonesArray( "TH2F", fNlayers );
+    hefficiency_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hefficiency_y_layer = new TClonesArray( "TH1D", fNlayers );
+    hefficiency_xy_layer = new TClonesArray( "TH2D", fNlayers );
 
     TString histname;
     TString detname = dname;
     detname.ReplaceAll(".","_");
     for( int ilayer=0; ilayer<fNlayers; ilayer++ ){
       //TODO: don't hard-code the number of bins for these histograms:
-      new( (*hdidhit_x_layer)[ilayer] ) TH1F( histname.Format( "hdidhit_x_%s_layer%d", detname.Data(), ilayer ), "x of hits on good tracks (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hdidhit_y_layer)[ilayer] ) TH1F( histname.Format( "hdidhit_y_%s_layer%d", detname.Data(), ilayer ), "y of hits on good tracks (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      new( (*hdidhit_xy_layer)[ilayer] ) TH2F( histname.Format( "hdidhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of hits on good tracks (m)",
+      new( (*hdidhit_x_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_x_%s_layer%d", detname.Data(), ilayer ), "x of hits on good tracks (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hdidhit_y_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_y_%s_layer%d", detname.Data(), ilayer ), "y of hits on good tracks (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hdidhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hdidhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of hits on good tracks (m)",
 					       100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
 					       100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
 
-      new( (*hshouldhit_x_layer)[ilayer] ) TH1F( histname.Format( "hshouldhit_x_%s_layer%d", detname.Data(), ilayer ), "x of good track crossing layer (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hshouldhit_y_layer)[ilayer] ) TH1F( histname.Format( "hshouldhit_y_%s_layer%d", detname.Data(), ilayer ), "y of good track crossing layer (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      new( (*hshouldhit_xy_layer)[ilayer] ) TH2F( histname.Format( "hshouldhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of good track crossing layer (m)", 
+      new( (*hshouldhit_x_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_x_%s_layer%d", detname.Data(), ilayer ), "x of good track crossing layer (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hshouldhit_y_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_y_%s_layer%d", detname.Data(), ilayer ), "y of good track crossing layer (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hshouldhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hshouldhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of good track crossing layer (m)", 
 						  100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
 						  100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
 
       //Don't create these until the end of the run:
-      // new( (*hefficiency_x_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      // new( (*hefficiency_y_layer)[ilayer] ) TH1F( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      // new( (*hefficiency_xy_layer)[ilayer] ) TH2F( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y", 
-      // 					     100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
-      // 					     100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+      new( (*hefficiency_x_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_y_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_xy_layer)[ilayer] ) TH2D( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y", 
+						   100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+						   100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+      
     }
     
     fEfficiencyInitialized = true;
@@ -211,35 +322,15 @@ void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
 }
 
 void SBSGEMTrackerBase::CalcEfficiency(){
-  if( !fEfficiencyInitialized || !fMakeEfficiencyPlots ) return;
+  if( !fMakeEfficiencyPlots ) return;
 
   TString histname;
   
   for( int i=0; i<fNlayers; i++ ){
-    new( (*hefficiency_x_layer)[i] ) TH1F( *( (TH1F*) (*hdidhit_x_layer)[i] ) );
-    new( (*hefficiency_y_layer)[i] ) TH1F( *( (TH1F*) (*hdidhit_y_layer)[i] ) );
-    new( (*hefficiency_xy_layer)[i] ) TH2F( *( (TH2F*) (*hdidhit_xy_layer)[i] ) );
-
-    histname = ( (TH1F*) (*hefficiency_x_layer)[i] )->GetName();
-    histname.ReplaceAll( "didhit", "efficiency" );
     
-    ( (TH1F*) (*hefficiency_x_layer)[i] )->SetName( histname );
-    ( (TH1F*) (*hefficiency_x_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs x, layer %d", i ) );
-    ( (TH1F*) (*hefficiency_x_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_x_layer)[i] ) );
-
-    histname = ( (TH1F*) (*hefficiency_y_layer)[i] )->GetName();
-    histname.ReplaceAll( "didhit", "efficiency" );
-    
-    ( (TH1F*) (*hefficiency_y_layer)[i] )->SetName( histname );
-    ( (TH1F*) (*hefficiency_y_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs y, layer %d", i ) );
-    ( (TH1F*) (*hefficiency_y_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_y_layer)[i] ) );
-
-    histname = ( (TH1F*) (*hefficiency_xy_layer)[i] )->GetName();
-    histname.ReplaceAll( "didhit", "efficiency" );
-    
-    ( (TH2F*) (*hefficiency_xy_layer)[i] )->SetName( histname );
-    ( (TH2F*) (*hefficiency_xy_layer)[i] )->SetTitle( histname.Format( "Track-based efficiency vs (x,y), layer %d", i ) );
-    ( (TH2F*) (*hefficiency_xy_layer)[i] )->Divide( ( (TH2F*) (*hshouldhit_xy_layer)[i] ) );
+    ( (TH1D*) (*hefficiency_x_layer)[i] )->Divide(  ( (TH1D*) (*hdidhit_x_layer)[i] ), ( (TH1D*) (*hshouldhit_x_layer)[i] ) );
+    ( (TH1D*) (*hefficiency_y_layer)[i] )->Divide(  ( (TH1D*) (*hdidhit_y_layer)[i] ), ( (TH1D*) (*hshouldhit_y_layer)[i] ) );
+    ( (TH2D*) (*hefficiency_xy_layer)[i] )->Divide(  ( (TH2D*) (*hdidhit_xy_layer)[i] ), ( (TH2D*) (*hshouldhit_xy_layer)[i] ) );
   }
 }
 
@@ -387,7 +478,7 @@ void SBSGEMTrackerBase::InitHitList(){
   for( int imodule=0; imodule<fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
     int layer = fIndexByLayer[fModules[imodule]->fLayer];
 
-    int n2Dhits_mod = fModules[imodule]->fHits.size(); 
+    int n2Dhits_mod = fModules[imodule]->fN2Dhits; 
     
     for( int ihit=0; ihit<n2Dhits_mod; ihit++ ){
       sbsgemhit_t hittemp = fModules[imodule]->fHits[ihit];
@@ -831,7 +922,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
 		if( binxdifflo < fGridEdgeToleranceX && binxlo > 0 ) binxlo--;
 		if( binydifflo < fGridEdgeToleranceY && binylo > 0 ) binylo--;
-		  //I x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
+		  //If x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
 		if( fGridBinWidthX - binxdiffhi < fGridEdgeToleranceX && binxhi + 1 < fGridNbinsX_layer[layer] ) binxhi++;
 		if( fGridBinWidthY - binydiffhi < fGridEdgeToleranceY && binyhi + 1 < fGridNbinsY_layer[layer] ) binyhi++;
 
@@ -1032,12 +1123,24 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitUstripMax.push_back( uclustinfo->istripmax );
       fHitUstripLo.push_back( uclustinfo->istriplo );
       fHitUstripHi.push_back( uclustinfo->istriphi );
+
+      //Also set the "trackindex" variable for all strips on this track:
+      for( int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
+	fModules[module]->fStripTrackIndex[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = itrack;
+      }
+      
       //
       fHitNstripsV.push_back( vclustinfo->nstrips );
       fHitVstripMax.push_back( vclustinfo->istripmax );
       fHitVstripLo.push_back( vclustinfo->istriplo );
       fHitVstripHi.push_back( vclustinfo->istriphi );
       //
+
+      //Also set the "trackindex" variable for all strips on this track:
+      for( int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
+	fModules[module]->fStripTrackIndex[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = itrack;
+      }
+      
       fHitUlocal.push_back( hitinfo->uhit );
       fHitVlocal.push_back( hitinfo->vhit );
       fHitXlocal.push_back( hitinfo->xhit );
@@ -1055,6 +1158,14 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitEResidV.push_back( feresidv_hits[itrack][ihit] );
       fHitUADC.push_back( uclustinfo->clusterADCsum );
       fHitVADC.push_back( vclustinfo->clusterADCsum );
+
+      fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo]] );
+      fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo]] );
+
+      fHitUADCmaxsample.push_back( fModules[module]->fADCmax[uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo]] );
+      fHitVADCmaxsample.push_back( fModules[module]->fADCmax[vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo]] );
+      
+      
       fHitADCasym.push_back( hitinfo->ADCasym );
       fHitUTime.push_back( uclustinfo->t_mean );
       fHitVTime.push_back( vclustinfo->t_mean );
@@ -1073,9 +1184,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	  if( fModules[module]->fhdidhity != NULL ) fModules[module]->fhdidhity->Fill( LocalCoord.Y() );
 	  if( fModules[module]->fhdidhitxy != NULL ) fModules[module]->fhdidhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
 
-	  ( (TH1F*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
-	  ( (TH1F*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
-	  ( (TH2F*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
+	  ( (TH1D*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
+	  ( (TH1D*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
+	  ( (TH2D*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
 	}
       }
       
@@ -1114,9 +1225,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	      if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
 
 	      //For the layer coordinates, we should use the global X and Y coordinates:
-	      ( (TH1F*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
-	      ( (TH1F*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
-	      ( (TH2F*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
+	      ( (TH1D*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
+	      ( (TH1D*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
+	      ( (TH2D*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
 	    }
 	  } //end loop over list of modules in this tracking layer
 	} //if number of hits on track >= minhits
@@ -1406,3 +1517,79 @@ int SBSGEMTrackerBase::GetNearestModule( int layer, TVector3 track_origin, TVect
   return nearestmod;
 }
 
+void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
+  std::ofstream outfile( fname );
+  
+  std::vector<double> mod_x0(fNmodules), mod_y0(fNmodules), mod_z0(fNmodules);
+  std::vector<double> mod_ax(fNmodules), mod_ay(fNmodules), mod_az(fNmodules);
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    TVector3 pos   = fModules[imodule]->GetOrigin();
+    TVector3 xaxis = fModules[imodule]->GetXax();
+    TVector3 yaxis = fModules[imodule]->GetYax();
+    TVector3 zaxis = fModules[imodule]->GetZax();
+    
+    mod_x0[imodule] = pos.X();
+    mod_y0[imodule] = pos.Y();
+    mod_z0[imodule] = pos.Z();
+    
+    //Get (rough) x,y,z rotation angles:
+    // TVector3 xax0(1,0,0);
+    // TVector3 yax0(0,1,0);
+    // TVector3 zax0(0,0,1);
+    
+    //How to reverse-engineer the rotation angles from the detector axes:
+    //Rx = | 1        0        0        |
+    //     | 0        cos(ax) -sin(ax)  |
+    //     | 0        sin(ax)  cos(ax)  |
+    //Ry = | cos(ay)  0        sin(ay)  |
+    //     | 0        1        0        |
+    //     | -sin(ay) 0        cos(ay)  |
+    //Rz = | cos(az)  -sin(az) 0        |
+    //     | sin(az)   cos(az) 0        |
+    //     | 0         0       1        |
+    
+    //These are approximate, first-order expressions that should be
+    //fairly accurate in the case that the angles represent small misalignments from some
+    //"ideal" orientation
+    mod_ax[imodule] = asin( yaxis.Z() );
+    mod_ay[imodule] = asin( zaxis.X() );
+    mod_az[imodule] = asin( xaxis.Y() );
+  }
+  
+  outfile << "mod_x0 ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_x0[imodule];
+  }
+  outfile << std::endl;
+  
+  outfile << "mod_y0 ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_y0[imodule];
+  }
+  outfile << std::endl;
+  
+  outfile << "mod_z0 ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_z0[imodule];
+  }
+  outfile << std::endl;
+  
+  
+  outfile << "mod_ax ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_ax[imodule];
+  }
+  outfile << std::endl;
+  outfile << "mod_ay ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_ay[imodule];
+  }
+  outfile << std::endl;
+  outfile << "mod_az ";
+  for( int imodule=0; imodule<fNmodules; imodule++ ){
+    outfile << std::setw(15) << std::setprecision(6) << mod_az[imodule];
+  }
+  outfile << std::endl;
+  
+  outfile.close();
+}
