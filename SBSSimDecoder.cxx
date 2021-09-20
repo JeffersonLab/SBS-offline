@@ -86,10 +86,9 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
 SBSSimDecoder::~SBSSimDecoder() {
   // h1_sizeHCal->Write();
   // h1_sizeGEMs->Write();
-  DefineVariables( THaAnalysisObject::kDelete );
+  //DefineVariables( THaAnalysisObject::kDelete );
   // h1_sizeHCal->Delete();
   // h1_sizeGEMs->Delete();
-  
 }
 
 //-----------------------------------------------------------------------------
@@ -1149,6 +1148,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
      }else{
        int chan_offset = 1;
        if(detname.find("sh")!=std::string::npos)chan_offset = 0;
+       if(detname.find("hodo")!=std::string::npos)chan_offset = 0;
        if(detname.find("ps")!=std::string::npos)chan_offset = 0;
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	 if(ch_count>nlogchan){
