@@ -110,6 +110,7 @@ namespace Decoder {
     UInt_t fEventHeader; //Default = 2
     UInt_t fTriggerTime; //Default = 3
     UInt_t fMPDFrameHeader; //Default = 5
+    UInt_t fMPDEventInfo; //Default = 12
     UInt_t fMPDDebugHeader; //Default = 13 (unclear if we will need to care about this
     UInt_t fDataNotValid; //Default = 14
     UInt_t fFillerWord; //Default = 15;
@@ -119,11 +120,15 @@ namespace Decoder {
 
     //Default "reference channel" for common-mode flags:
     UInt_t fChan_CM_flags; //default = 512
+    UInt_t fChan_TimeStamp_low; //default = 513
+    UInt_t fChan_TimeStamp_high; //default = 514
+    UInt_t fChan_MPD_EventCount; //default = 515
+    
     // TODO: add trigger time stuff and MPD debug header, etc: 
     //UInt_t fChan_Trigger_Time; //default "reference channel" for 
     
-    std::vector<Int_t> fFrameHeader;  // Frame Header
-    std::vector<Int_t> fFrameTrailer;  // Frame Trailer
+    /* std::vector<Int_t> fFrameHeader;  // Frame Header */
+    /* std::vector<Int_t> fFrameTrailer;  // Frame Trailer */
 
     static TypeIter_t fgThisType;
 
