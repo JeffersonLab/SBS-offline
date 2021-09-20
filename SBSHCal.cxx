@@ -21,6 +21,7 @@ SBSHCal::SBSHCal( const char* name, const char* description,
   SetModeTDC(SBSModeTDC::kTDCSimple);
   SetDisableRefTDC(true);
   fWithLED = true;
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
