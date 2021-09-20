@@ -110,11 +110,14 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     }// if time walk map size>0
   }// if tdc then get time walk into a grid if needed
 
-
   // Make sure to call parent class so that the generic variables can be read
   // return SBSGenericDetector::ReadDatabase(date);
   if(err)
     return err;
+  
+  // call the function to build the bars
+  SBSTimingHodoscope::ConstructHodoscope();
+  
   // All is well that ends well
   return kOK;
 }
@@ -171,9 +174,6 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
       return err;
   }// adc mode
 
-  
-  // call the function to build the bars
-  SBSTimingHodoscope::ConstructHodoscope();
   
   // Finally go back
   return err;

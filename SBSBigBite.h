@@ -89,6 +89,7 @@ class SBSBigBite : public THaSpectrometer {
     std::vector<double> fProbaE;
     std::vector<double> fProbaPi;
     
+    double fTrackerPitchAngle;
     /*
     TH2D* h1_yVx_bcp;
     TH2D* h1_x_fcpVbcp;

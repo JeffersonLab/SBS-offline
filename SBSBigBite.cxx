@@ -27,6 +27,7 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
 {
   SetMultiTracks(false);
   SetTrSorting(false);
+  fTrackerPitchAngle = 10.0*TMath::DegToRad();
   // Constructor. Defines standard detectors
   //The standard BigBite detector package in the 12 GeV/SBS era will include:
   // pre-shower + shower calorimeters (inherit from THaNonTrackingDetector OR THaPidDetector)
@@ -82,6 +83,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   std::vector<Double_t> pcal_pidproba;
   std::vector<Double_t> grinch_pidproba;
   const DBRequest request[] = {
+    { "tracker_pitch_angle",    &fTrackerPitchAngle, kDouble,  0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 0, 1},
     { "optics_nelem",     &nparams,      kUInt,   0, 0, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 0, 1},
@@ -106,6 +108,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     fclose(file);
     return status;
   }
+  
+  fTrackerPitchAngle*= TMath::DegToRad();
   
   //do we have non tracking detectors
   bool nontrackdet = false;
@@ -343,7 +347,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	    x_bcp/=sumweights_x;
 	    y_bcp/=sumweights_y;
 	    
-	    double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
+	    double dx = (Etot*fTrackerPitchAngle -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
 	      (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
 	    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	    
@@ -499,6 +503,7 @@ Int_t SBSBigBite::Reconstruct()
     CalcTargetCoords(theTrack);
   }
   
+  //sort on other criteria than chi^2
   if( GetTrSorting() ) {
     fTracks->Sort();
     // Reassign track indexes. Sorting may have changed the order
@@ -537,7 +542,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
 {
   //std::cout << "SBSBigBite::CalcTargetCoords()...";
   
-  const double tracker_pitch_angle = 10.0*TMath::DegToRad();
+  //const double //make it configurable
   const double th_bb = GetThetaGeo();//retrieve the actual angle
  
   TVector3 BB_zaxis( sin(th_bb), 0, cos(th_bb) );
@@ -553,7 +558,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   
   spec_zaxis_fp = BB_zaxis;
   spec_yaxis_fp = BB_yaxis;
-  spec_zaxis_fp.Rotate(-tracker_pitch_angle, spec_yaxis_fp);
+  spec_zaxis_fp.Rotate(-fTrackerPitchAngle, spec_yaxis_fp);
   spec_xaxis_fp = spec_yaxis_fp.Cross(spec_zaxis_fp).Unit();
  
   Double_t x_fp, y_fp, xp_fp, yp_fp;
