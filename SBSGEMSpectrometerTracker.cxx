@@ -226,7 +226,13 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
     (*it)->Begin(run);
   }
 
-  InitEfficiencyHistos(GetName()); //create efficiency histograms (see SBSGEMTrackerBase)
+  TString appname = GetApparatus()->GetName();
+  appname += "_";
+  TString detname = GetName();
+
+  detname.Prepend(appname);
+  
+  InitEfficiencyHistos(detname.Data()); //create efficiency histograms (see SBSGEMTrackerBase)
   
   
   return 0;
