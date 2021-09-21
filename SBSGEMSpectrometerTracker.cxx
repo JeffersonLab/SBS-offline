@@ -104,6 +104,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
+    { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
+    { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -224,7 +226,13 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
     (*it)->Begin(run);
   }
 
-  InitEfficiencyHistos(GetName()); //create efficiency histograms (see SBSGEMTrackerBase)
+  TString appname = GetApparatus()->GetName();
+  appname += "_";
+  TString detname = GetName();
+
+  detname.Prepend(appname);
+  
+  InitEfficiencyHistos(detname.Data()); //create efficiency histograms (see SBSGEMTrackerBase)
   
   
   return 0;
@@ -267,16 +275,18 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
   
   //To automate the printing out of pedestals for database and DAQ, 
   if( fPedestalMode ){
-    TString fname_dbase, fname_daq, fname_cmr;
+    TString fname_dbase, fname_daq, fname_cmr, fname_dbcm;
     
     
     TString specname = GetApparatus()->GetName();
     TString detname = GetName();
     fname_dbase.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+    fname_dbcm.Form( "db_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daq.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_cmr.Form( "CommonModeRange_%s_%s_run%d.txt", specname.Data(), detname.Data(), runnum );
     
     fpedfile_dbase.open( fname_dbase.Data() );
+    fCMfile_dbase.open( fname_dbcm.Data() );
     fpedfile_daq.open( fname_daq.Data() );
     fpedfile_cmr.open( fname_cmr.Data() );
     
@@ -284,6 +294,12 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     sdate.Prepend( "#" );
     
     TString message;
+
+    message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
+    fCMfile_dbase << sdate << std::endl;
+    fCMfile_dbase << message << std::endl;
+    fCMfile_dbase << "# format = detname.commonmode_mean(U,V) and detname.commonmode_rms(U,V) = common-mode mean and RMS for U, V strips by APV card in order of position"
+		  << std::endl;
     
     message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
     
@@ -306,7 +322,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
   }
   
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    if( fPedestalMode ) { (*it)->PrintPedestals( fpedfile_dbase, fpedfile_daq, fpedfile_cmr ); }
+    if( fPedestalMode ) { (*it)->PrintPedestals( fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr ); }
     (*it)->End(run);
   }
 

@@ -69,4 +69,7 @@
 #pragma link C++ class SBSRPFarSideHodo+;
 #pragma link C++ class SBSTimingHodoscopePMT+;
 #pragma link C++ class SBSTimingHodoscopeBar+;
+#pragma link C++ class SBSRasteredBeam+; 
+#pragma link C++ class SBSRaster+; 
+#pragma link C++ class SBSBPM+; 
 #endif
