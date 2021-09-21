@@ -72,6 +72,7 @@ namespace Decoder {
     fEventHeader = 2;  //0010 = 2
     fTriggerTime = 3;  //0011 = 3
     fMPDFrameHeader = 5; //0101 = 5
+    fMPDEventInfo = 12; //1100 = 12
     fMPDDebugHeader = 13; //1101 = 13
     fDataNotValid = 14;  //1110 = 14
     fFillerWord = 15; //1111 = 15
@@ -82,17 +83,25 @@ namespace Decoder {
     fNumSample = 6;
 
     fChan_CM_flags = 512; //reference channel for common-mode and zero suppression flags
+    fChan_TimeStamp_low = 513;
+    fChan_TimeStamp_high = 514;
+    fChan_MPD_EventCount = 515;
     
   }
 
   void MPDModule::Init( const char *configstr ) { //parse (optional) configuration parameters:
     Init();
-
-    vector<ConfigStrReq> req = { {"chan_cmflags", fChan_CM_flags} };
+    //allow users to configure the various dummy/reference channels via the crate map:
+    vector<ConfigStrReq> req = { {"chan_cmflags", fChan_CM_flags},
+				 {"chan_timestamp_low", fChan_TimeStamp_low},
+				 {"chan_timestamp_high", fChan_TimeStamp_high},
+				 {"chan_event_count", fChan_MPD_EventCount} };
     ParseConfigStr(configstr, req);
 
     assert( fChan_CM_flags < THaCrateMap::MAXCHAN );
-
+    assert( fChan_TimeStamp_low < THaCrateMap::MAXCHAN );
+    assert( fChan_TimeStamp_high < THaCrateMap::MAXCHAN );
+    assert( fChan_MPD_EventCount < THaCrateMap::MAXCHAN );
   }
 
   //This version ASSUMES that there is no online zero suppression, so all 128 APV channels are present in every event!
@@ -126,7 +135,14 @@ namespace Decoder {
 
     //The use of a map here insures that the cm_flags will only be "loaded" into the "slot" once per APV card:
     std::map<UInt_t, UInt_t> cm_flags_vs_chan; //key = "effective channel", mapped value = common-mode flags (and possibly other information)
+    std::map<UInt_t, UInt_t> TimeStampL_vs_fiber; //least significant 24 bits of time stamp
+    std::map<UInt_t, UInt_t> TimeStampH_vs_fiber; //most significant 24 bits of time stamp
+    std::map<UInt_t, UInt_t> EventCount_vs_fiber; //20-bit "event count" variable:
+
+    UInt_t TIMESTAMP_LO = 0, TIMESTAMP_HI=0, EVENT_COUNT=0;
+    UInt_t eventinfo_wordcount=0;
     
+    bool CM_OR=false;
     bool ENABLE_CM=false;
     bool BUILD_ALL_SAMPLES=true; 
 
@@ -140,6 +156,8 @@ namespace Decoder {
 
     UInt_t old_type_tag=16;
     UInt_t type_tag=16; //intialize to something that is NOT one of the recognized data types
+
+    
     //following the MPDRawParser in ROOT_GUI_multicrate, loop on all the data in the ROC bank (which corresponds to one "crate"), and populate the
     //temporary data structure above, ONLY if slot == this_slot
     // Since all the data from one slot is (or should be) in a contiguous block, we should 
@@ -189,6 +207,7 @@ namespace Decoder {
 	  //(maybe define some arbitrary "dummy" channel to hold this info, as well as trigger time words)
 	  ENABLE_CM = TESTBIT( thisword, 26 );        
 	  BUILD_ALL_SAMPLES = TESTBIT(thisword, 25 );
+	  CM_OR = TESTBIT(thisword, 24 );
 	  
 	  //FIBER number is in bits 20-16:
 	  fiber = (thisword & 0x001F0000)>>16;
@@ -215,6 +234,14 @@ namespace Decoder {
 	    slot = fSLOTID_VTP; //always 11 
 	    found_this_slot = ( slot == this_slot );
 	  }
+	}
+
+	if( type_tag == fMPDEventInfo ){ //if we see this, next three words give coarse timestamp, fine timestamp, and event counter:
+	  eventinfo_wordcount = 1;
+	  //The lower 16 bits of coarse timestamp and the 8-bit fine timestamp are in
+	  // bits 0-23 of thisword:
+	  TIMESTAMP_LO = thisword & 0x00FFFFFF;
+	  
 	}
 	
       } else if( found_this_slot ){
@@ -255,7 +282,7 @@ namespace Decoder {
 	    
 	    effChan = (fiber << 4) | apv_id;  
 
-	    UInt_t cm_flags = 2*ENABLE_CM + BUILD_ALL_SAMPLES;
+	    UInt_t cm_flags = 4*CM_OR + 2*ENABLE_CM + BUILD_ALL_SAMPLES;
 
 	    cm_flags_vs_chan[effChan] = cm_flags;
 	    
@@ -280,6 +307,23 @@ namespace Decoder {
 	  }
 	  
 	}
+
+	if( type_tag == fMPDEventInfo && found_MPD_header ){
+	  if( eventinfo_wordcount == 1 ){ //upper 24 bits of the coarse timestamp:
+	    TIMESTAMP_HI = thisword & 0x00FFFFFF;
+	    eventinfo_wordcount++;
+	  } else if( eventinfo_wordcount == 2 ){
+	    // event counter is in the first 20 bits:
+	    EVENT_COUNT = thisword & 0x000FFFFF;
+
+	    //fill map with most recently reported MPD fiber number as the key:
+	    TimeStampL_vs_fiber[fiber] = TIMESTAMP_LO;
+	    TimeStampH_vs_fiber[fiber] = TIMESTAMP_HI;
+	    EventCount_vs_fiber[fiber] = EVENT_COUNT;
+	    
+	    eventinfo_wordcount = 0;
+	  }
+	}
 	
       }
       
@@ -294,6 +338,14 @@ namespace Decoder {
       //The "flags" word is the mapped value (iapv->second)
       //The effective channel is the key (iapv->first)
       sldat->loadData( fChan_CM_flags, iapv->second, iapv->first );
+    }
+
+    //It is ASSUMED that time stamp low, time stamp high, and event count 
+    for( auto ifiber = TimeStampL_vs_fiber.begin(); ifiber != TimeStampL_vs_fiber.end(); ++ifiber ){
+      UInt_t fiber = ifiber->first;
+      sldat->loadData( fChan_TimeStamp_low, TimeStampL_vs_fiber[fiber], fiber );
+      sldat->loadData( fChan_TimeStamp_high, TimeStampH_vs_fiber[fiber], fiber );
+      sldat->loadData( fChan_MPD_EventCount, EventCount_vs_fiber[fiber], fiber );
     }
     
     //std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;

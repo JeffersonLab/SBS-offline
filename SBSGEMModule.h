@@ -160,7 +160,7 @@ class SBSGEMModule : public THaSubDetector {
   //function to convert from APV channel number to strip number ordered by position:
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
 
-  void PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
+  void PrintPedestals( std::ofstream &dbfile_ped, std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
 
   double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
   
@@ -193,6 +193,18 @@ class SBSGEMModule : public THaSubDetector {
   std::map<Int_t, Int_t> fMPDID_by_Vstrip;
   std::map<Int_t, Int_t> fADCch_by_Ustrip;
   std::map<Int_t, Int_t> fADCch_by_Vstrip;
+
+  //Bool_t firstevent=
+  //////////// MPD Time Stamp Info: //////////////////////////////////
+  //// An MPD is uniquely defined by crate, slot, and fiber
+  // For time stamp info, we basically want to store one per APV card, although many of
+  // these will be redundant with each other:
+  //
+  std::vector<Long64_t> fT0_by_APV; //T0 for each APV card (really for each MPD)
+  Long64_t fTref_coarse;      //T0 of the "reference" channel (time stamp coarse - T0 of the "reference" APV)
+  std::vector<Long64_t> fTcoarse_by_APV; //Time stamp coarse - T0 of this channel - Tref for each channel
+  std::vector<UInt_t> fTfine_by_APV; //"Fine time stamp" by APV:
+  ////
   
   Bool_t fPedestalMode;
   //Bool_t fPedestalsInitialized;
@@ -212,8 +224,12 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fCommonModeNumIterations; //number of iterations for Danning Method: default = 3
   Int_t fCommonModeMinStripsInRange; //Minimum strips in range for Danning Method: default = 10;
 
-  UInt_t fChan_CM_flags; //same as in MPDModule: unavoidable
-
+  //same as in MPDModule: unavoidable to duplicate this definition unless someone smarter than I cam
+  //can come up with a way to do so:
+  UInt_t fChan_CM_flags;  
+  UInt_t fChan_TimeStamp_low;
+  UInt_t fChan_TimeStamp_high;
+  UInt_t fChan_MPD_EventCount;
   
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
@@ -387,6 +403,10 @@ class SBSGEMModule : public THaSubDetector {
   TH1D *fhshouldhity;
   TH2D *fhshouldhitxy;
 
+  //These will be copied down from GEMtrackerbase
+  double fBinSize_efficiency2D;
+  double fBinSize_efficiency1D;
+  
   //we should let the user configure this: this is set at the "tracker level" which then propagates down to all the modules:
   bool fMakeEfficiencyPlots;
   bool fEfficiencyInitialized;
@@ -429,6 +449,20 @@ class SBSGEMModule : public THaSubDetector {
   //in pedestal-mode analysis, we 
   TH2D *hcommonmode_mean_by_APV_U;
   TH2D *hcommonmode_mean_by_APV_V;
+
+  TH1D *hpedrmsU_distribution;
+  TH1D *hpedrmsU_by_strip;
+
+  TH1D *hpedmeanU_distribution;
+  TH1D *hpedmeanU_by_strip;
+
+  TH1D *hpedrmsV_distribution;
+  TH1D *hpedrmsV_by_strip;
+
+  TH1D *hpedmeanV_distribution;
+  TH1D *hpedmeanV_by_strip;
+
+  TClonesArray *hpedrms_by_APV;
   
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;

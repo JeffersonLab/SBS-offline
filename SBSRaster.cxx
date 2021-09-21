@@ -185,10 +185,6 @@ Int_t SBSRaster::Decode( const THaEvData& evdata )
   Int_t numCh=0,data=0;
   UInt_t k=0,chan=0,chancnt=0;
 
-  // THaDetMap::Print() format is: crate, slot, lo, hi, first, model-type, refchan, refindex, resolution, plane, signal
-  // std::cout << "SBSRaster::Decode() calling THaDetMap::Print()" << std::endl;
-  // fDetMap->Print();
-  // std::cout << "SBSRaster: detMapSize = " << detMapSize << std::endl;
 
   for (Int_t i = 0; i < detMapSize; i++ ){
     THaDetMap::Module* d = fDetMap->GetModule( i );
@@ -225,7 +221,13 @@ Int_t SBSRaster::Decode( const THaEvData& evdata )
   if (fNfired!=NBPM) {
       Warning( Here(here), "Number of fired Channels out of range. "
 	       "Setting beam position to nominal values");
+      // THaDetMap::Print() format is: crate, slot, lo, hi, first, model-type, refchan, refindex, resolution, plane, signal
+      std::cout << "----------------------------------------------" << std::endl;
+      std::cout << "Event " << evdata.GetEvNum() << std::endl;
       std::cout << msg << std::endl;
+      std::cout << "SBSRaster::Decode() calling THaDetMap::Print()" << std::endl;
+      fDetMap->Print();
+      std::cout << "SBSRaster: detMapSize = " << detMapSize << std::endl;
   }
   return 0;
 }

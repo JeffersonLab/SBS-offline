@@ -4,6 +4,9 @@
 #include "TH2D.h"
 #include "TRotation.h"
 #include "TClonesArray.h"
+#include "TSystem.h"
+#include <sstream>
+#include <cstdlib>
 
 using namespace std;
 
@@ -51,6 +54,9 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fpedfilename = "";
 
+  fBinSize_efficiency2D = 0.01; //1 cm
+  fBinSize_efficiency1D = 0.003; //3 mm
+  
   fDumpGeometryInfo = false;
 }
 
@@ -151,6 +157,8 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     fModules[imod]->fPedestalMode = fPedestalMode;
     //fModules[imod]->fZeroSuppress = !fPedestalMode;
     //moved "zero suppress" flag to GEMModule
+    fModules[imod]->fBinSize_efficiency1D = fBinSize_efficiency1D;
+    fModules[imod]->fBinSize_efficiency2D = fBinSize_efficiency2D;
   }
 
   fNmodules = fModules.size();
@@ -194,8 +202,30 @@ void SBSGEMTrackerBase::CompleteInitialization(){
 void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
 
   std::cout << "[SBSGEMTrackerBase::LoadPedestals]: fname = " << fname << std::endl;
+
+  TString pedfilename = fname;
+
+  TString prefix = std::getenv("DB_DIR");
+  prefix += "/";
   
-  std::ifstream pedfile( fname );
+  if( gSystem->AccessPathName( fname ) ){ //
+    
+    std::cout << "[SBSGEMTrackerBase::LoadPedestals]: could not find " << fname << " in working directory, looking in " << prefix << std::endl;
+
+    pedfilename.Prepend(prefix);
+    
+  }
+  std::ifstream pedfile( pedfilename.Data() );
+
+  if( !pedfile.good() ){
+    pedfile.close();
+
+    std::cout << "Warning: could not find ped file " << fname << " in working directory or in " << prefix << ", pedestals not loaded" << std::endl;
+
+    return;
+  } else {
+    std::cout << "Found pedestal file " << pedfilename << endl;
+  }
 
   //temporary storage for pedestals loaded from file:
   //vector<int> Slot, MPD, ADC_ch, APV_ch;
@@ -209,32 +239,45 @@ void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
   std::map<int, std::map<int, std::map<int,std::vector<double> > > > PedRMS;
   std::map<int, std::map<int, std::map<int,std::vector<int> > > > APVChan;
   // std::map<int, std::map<int,std::vector<int> > > APVChan;
-  
-  
-  while( pedfile.good() ){
-    //TString currentline;
-    
-    int crate=-1, slot = -1, mpd = -1, adc_ch = -1;
-    string keyword = "APV";
-    string dummy="";
-    
-    while( pedfile >> dummy && dummy != keyword ){ ;}
-    
-    if ( dummy == keyword ){
-      pedfile >> crate >> slot >> mpd >> adc_ch; 
-    }
 
-    int index = adc_ch + 16*mpd;
-    
-    int apvchan;
-    double mean, rms;
-    for( int i=0; i<128; i++ ){
-      pedfile >> apvchan >> mean >> rms;
-      PedMean[crate][slot][index].push_back( mean );
-      PedRMS[crate][slot][index].push_back( rms );
-      APVChan[crate][slot][index].push_back( apvchan );
-    }
+  //parse the file: Let's do this a bit more intelligently using TString:
+  std::string currentline;
+
+  int crate=0, slot=0, mpd=0, adc_ch=0;
+  
+  while( std::getline(pedfile, currentline) ){
+    //TString currentline;
+    if( pedfile.eof() ) break;
+
+    if( currentline[0] != '#' ){    
       
+      std::istringstream is(currentline);
+
+      string dummy;
+      
+      if ( currentline.find("APV") == 0 ){
+	is >> dummy >> crate >> slot >> mpd >> adc_ch;
+	//std::cout << "crate, slot, mpd, adc_ch = " << crate << ", " << slot << ", " << mpd << ", " << adc_ch << std::endl;
+      } else {
+      
+	int index = adc_ch + 16*mpd;
+	
+	int apvchan;
+	double mean, rms;
+	//for( UInt_t i=0; i<128; i++ ){
+	is >> apvchan >> mean >> rms;
+	//std::cout << "apvchan, mean, rms = " << apvchan << ", " << mean << ", " << rms << std::endl;
+	PedMean[crate][slot][index].push_back( mean );
+	PedRMS[crate][slot][index].push_back( rms );
+	APVChan[crate][slot][index].push_back( apvchan );
+
+	// std::cout << "mapped value of (apvchan, mean, rms) = ( "
+	// 	  << APVChan[crate][slot][index].back() << ", "
+	// 	  << PedMean[crate][slot][index].back() << ", "
+	// 	  << PedRMS[crate][slot][index].back() << ")" << std::endl;
+	
+      }
+    }
   }
 
   //Now loop over the modules
@@ -245,16 +288,26 @@ void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
       int this_index = it->adc_id + 16 * it->mpd_id;
       int this_slot = it->slot;
 
+      //std::cout << "(crate, slot, index)=(" << this_crate << ", " << this_slot << ", " << this_index << ")" << std::endl;
+      
       if( PedMean.find( this_crate ) != PedMean.end() ){
+	//std::cout << "found crate " << this_crate << std::endl;
 	if( PedMean[this_crate].find( this_slot ) != PedMean[this_crate].end() ){
+	  //std::cout << "found slot " << this_slot << std::endl;
 	  if( PedMean[this_crate][this_slot].find( this_index ) != PedMean[this_crate][this_slot].end() ){
-
+	    //std::cout << "found index " << this_index << std::endl;
+	    
 	    for( int i=0; i<128; i++ ){
 	      int this_apvchan = APVChan[this_crate][this_slot][this_index][i];
 	      double this_mean = PedMean[this_crate][this_slot][this_index][i];
 	      double this_rms = PedRMS[this_crate][this_slot][this_index][i];
 	      
 	      int this_strip = fModules[module]->GetStripNumber( this_apvchan, it->pos, it->invert );
+
+	      // std::cout << "axis, strip index, ped. mean, ped. rms = "
+	      // 		<< it->axis << ", " << this_strip << ", " << this_mean << ", " << this_rms
+	      // 		<< std::endl;
+	      
 	      if ( it->axis == SBSGEM::kUaxis ){
 		fModules[module]->fPedestalU[this_strip] = this_mean;
 		fModules[module]->fPedRMSU[this_strip] = this_rms; 
@@ -291,29 +344,37 @@ void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
     hefficiency_y_layer = new TClonesArray( "TH1D", fNlayers );
     hefficiency_xy_layer = new TClonesArray( "TH2D", fNlayers );
 
+    
+     
     TString histname;
     TString detname = dname;
     detname.ReplaceAll(".","_");
     for( int ilayer=0; ilayer<fNlayers; ilayer++ ){
-      //TODO: don't hard-code the number of bins for these histograms:
-      new( (*hdidhit_x_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_x_%s_layer%d", detname.Data(), ilayer ), "x of hits on good tracks (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hdidhit_y_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_y_%s_layer%d", detname.Data(), ilayer ), "y of hits on good tracks (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      new( (*hdidhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hdidhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of hits on good tracks (m)",
-					       100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
-					       100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+      int nbinsx1D = int( round( (fXmax_layer[ilayer]-fXmin_layer[ilayer] + 0.02)/fBinSize_efficiency1D ) );
+      int nbinsy1D = int( round( (fYmax_layer[ilayer]-fYmin_layer[ilayer] + 0.02)/fBinSize_efficiency1D ) );
 
-      new( (*hshouldhit_x_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_x_%s_layer%d", detname.Data(), ilayer ), "x of good track crossing layer (m)", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hshouldhit_y_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_y_%s_layer%d", detname.Data(), ilayer ), "y of good track crossing layer (m)", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      int nbinsx2D = int( round( (fXmax_layer[ilayer]-fXmin_layer[ilayer] + 0.02)/fBinSize_efficiency2D ) );
+      int nbinsy2D = int( round( (fYmax_layer[ilayer]-fYmin_layer[ilayer] + 0.02)/fBinSize_efficiency2D ) );
+      
+      //TODO: don't hard-code the number of bins for these histograms:
+      new( (*hdidhit_x_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_x_%s_layer%d", detname.Data(), ilayer ), "x of hits on good tracks (m)", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hdidhit_y_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_y_%s_layer%d", detname.Data(), ilayer ), "y of hits on good tracks (m)", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hdidhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hdidhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of hits on good tracks (m)",
+					       nbinsy2D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+					       nbinsx2D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+
+      new( (*hshouldhit_x_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_x_%s_layer%d", detname.Data(), ilayer ), "x of good track crossing layer (m)", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hshouldhit_y_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_y_%s_layer%d", detname.Data(), ilayer ), "y of good track crossing layer (m)", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
       new( (*hshouldhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hshouldhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of good track crossing layer (m)", 
-						  100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
-						  100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+						  nbinsy2D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+						  nbinsx2D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
 
       //Don't create these until the end of the run:
-      new( (*hefficiency_x_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", 200, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hefficiency_y_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", 200, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_x_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_y_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
       new( (*hefficiency_xy_layer)[ilayer] ) TH2D( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y", 
-						   100, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
-						   100, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+						   nbinsy2D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
+						   nbinsx2D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
       
     }
     
