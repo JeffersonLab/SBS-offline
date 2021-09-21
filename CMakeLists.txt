@@ -195,7 +195,7 @@ endif()
 
 set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to SBS-replay installation")
 
-if( NOT ${SBS_REPLAY_PATH} MATCHES "$/SBS-replay" )
+if( NOT ${SBS_REPLAY_PATH} MATCHES "/SBS-replay$" )
     string(APPEND SBS_REPLAY_PATH "/SBS-replay")
 endif()
 
@@ -211,7 +211,7 @@ if(NOT EXISTS ${SBS_REPLAY_PATH})
 endif()	
 
 if( EXISTS ${SBS_REPLAY_PATH} )
-    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts")
+    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts:${SBS_REPLAY_PATH}/onlineGUIconfig")
 else()
     set(SBS_MACRO_PATH ".")
 endif()

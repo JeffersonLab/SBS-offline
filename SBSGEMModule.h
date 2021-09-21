@@ -160,7 +160,7 @@ class SBSGEMModule : public THaSubDetector {
   //function to convert from APV channel number to strip number ordered by position:
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
 
-  void PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
+  void PrintPedestals( std::ofstream &dbfile_ped, std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
 
   double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
   
@@ -403,6 +403,10 @@ class SBSGEMModule : public THaSubDetector {
   TH1D *fhshouldhity;
   TH2D *fhshouldhitxy;
 
+  //These will be copied down from GEMtrackerbase
+  double fBinSize_efficiency2D;
+  double fBinSize_efficiency1D;
+  
   //we should let the user configure this: this is set at the "tracker level" which then propagates down to all the modules:
   bool fMakeEfficiencyPlots;
   bool fEfficiencyInitialized;

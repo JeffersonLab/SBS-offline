@@ -448,6 +448,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   if( fPedestalMode ){
     fZeroSuppress = false;
+    //fPedSubFlag = 0;
   }
   
   // for( UInt_t i = 0; i < rawped.size(); i++ ){
@@ -928,33 +929,34 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
 	    //values
 	    int isamp = iraw%fN_MPD_TIME_SAMP;
-	    commonMode[isamp] += pedsubADC[iraw]/fN_APV25_CHAN;
+	    commonMode[isamp] += pedsubADC[iraw]/double(fN_APV25_CHAN);
 	  }
 	}
 	
 	// second loop over the hits to calculate and apply common-mode correction (sorting method)
-	if( !fPedestalMode ){ //need to calculate common mode:
+	//if( !fPedestalMode ){ //need to calculate common mode:
+	if( fMakeCommonModePlots || !fPedestalMode ){ // calculate both ways:
 	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-
+	    
 	    //moved common-mode calculation to its own function:
-
+	    
 	    // Now: a question is should we modify the behavior/do added checks if
 	    // CM_OUT_OF_RANGE is set? 
-	    
-	    if( fMakeCommonModePlots ){ // calculate both ways:
+	  
+	    if( fMakeCommonModePlots ){
 	      double cm_danning = GetCommonMode( isamp, 1, *it );
 	      double cm_sorting = GetCommonMode( isamp, 0, *it );
 
 	      //std::cout << "cm danning, sorting = " << cm_danning << ", " << cm_sorting << std::endl;
 	      
-	      commonMode[isamp] = fCommonModeFlag == 0 ? cm_sorting : cm_danning;
+	      if( !fPedestalMode ) commonMode[isamp] = fCommonModeFlag == 0 ? cm_sorting : cm_danning;
 
 	      double cm_mean;
-
+	      
 	      UInt_t iAPV = it->pos;
 	      
 	      // std::cout << "Filling common-mode histograms..." << std::endl;
-
+	      
 	      // std::cout << "iAPV, nAPVsU, nAPVsV, axis = " << iAPV << ", " << fNAPVs_U << ", "
 	      // 		<< fNAPVs_V << ", " << axis << std::endl;
 	      
@@ -976,13 +978,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	      //std::cout << "Done..." << std::endl;
 	      
-	    } else { //if not doing diagnostic plots, just calculate whichever way the user wanted:
+	    } else if( !fPedestalMode ) { //if not doing diagnostic plots, just calculate whichever way the user wanted:
 	      
 	      commonMode[isamp] = GetCommonMode( isamp, fCommonModeFlag, *it );
-
+	      
 	    }
 	    //std::cout << "effChan, isamp, Common-mode = " << effChan << ", " << isamp << ", " << commonMode[isamp] << std::endl;
-
+	    
 	  } //loop over time samples
 	} //check if conditions are satisfied to require offline common-mode calculation
       } //End check !CM_ENABLED && BUILD_ALL_SAMPLES
@@ -1771,25 +1773,35 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   
   //pulled these lines out of the if-block below to avoid code duplication:
   TString histname,histtitle;
+  TString appname = (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName();
+  appname.ReplaceAll(".","_");
+  appname += "_";
   TString detname = GetParent()->GetName();
+  detname.Prepend(appname);
   detname.ReplaceAll(".","_");
   detname += "_";
   detname += GetName();
   
+  
   if( fMakeEfficiencyPlots && !fEfficiencyInitialized ){
     fEfficiencyInitialized = true;
-  
-    fhdidhitx = new TH1D( histname.Format( "hdidhitx_%s", detname.Data() ), "local x coordinate of hits on good tracks (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
-    fhdidhity = new TH1D( histname.Format( "hdidhity_%s", detname.Data() ), "local y coordinate of hits on good tracks (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
-    fhdidhitxy = new TH2D( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks (m)",
-			   100, -0.51*GetYSize(), 0.51*GetYSize(),
-			   100, -0.51*GetXSize(), 0.51*GetXSize() );
 
-    fhshouldhitx = new TH1D( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m)", 100, -0.51*GetXSize(), 0.51*GetXSize() );
-    fhshouldhity = new TH1D( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m)", 100, -0.51*GetYSize(), 0.51*GetYSize() );
+    int nbinsx1D = int( round( 1.02*GetXSize() )/fBinSize_efficiency1D );
+    int nbinsy1D = int( round( 1.02*GetYSize() )/fBinSize_efficiency1D );
+    int nbinsx2D = int( round( 1.02*GetXSize() )/fBinSize_efficiency2D );
+    int nbinsy2D = int( round( 1.02*GetYSize() )/fBinSize_efficiency2D );
+    
+    fhdidhitx = new TH1D( histname.Format( "hdidhitx_%s", detname.Data() ), "local x coordinate of hits on good tracks (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhdidhity = new TH1D( histname.Format( "hdidhity_%s", detname.Data() ), "local y coordinate of hits on good tracks (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
+    fhdidhitxy = new TH2D( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks (m)",
+			   nbinsy2D, -0.51*GetYSize(), 0.51*GetYSize(),
+			   nbinsx2D, -0.51*GetXSize(), 0.51*GetXSize() );
+
+    fhshouldhitx = new TH1D( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhshouldhity = new TH1D( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
     fhshouldhitxy = new TH2D( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m)",
-			      100, -0.51*GetYSize(), 0.51*GetYSize(),
-			      100, -0.51*GetXSize(), 0.51*GetXSize() );
+			      nbinsy2D, -0.51*GetYSize(), 0.51*GetYSize(),
+			      nbinsx2D, -0.51*GetXSize(), 0.51*GetXSize() );
 
     fEfficiencyInitialized = true;
   }
@@ -1947,7 +1959,7 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   return 0;
 }
 
-void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile, std::ofstream &daqfile_cmr ){
+void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_CM, std::ofstream &daqfile, std::ofstream &daqfile_cmr ){
   //The first argument is a file in the format expected by the database,
   //The second argument is a file in the format expected by the DAQ:
 
@@ -2071,24 +2083,24 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile
 
   header.Form( "%s.%s.%s.commonmode_meanU = ", appname.Data(), detname.Data(), modname.Data() );
 
-  dbfile << std::endl << header << std::endl;
+  dbfile_CM << std::endl << header << std::endl;
   for( int iAPV = 0; iAPV<nAPVsU; iAPV++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", commonmode_meanU[iAPV] );
-    dbfile << sentry;
+    dbfile_CM << sentry;
 
-    if( (iAPV+1) % 16 == 0 ) dbfile << std::endl;
+    if( (iAPV+1) % 16 == 0 ) dbfile_CM << std::endl;
   }
 
   header.Form( "%s.%s.%s.commonmode_rmsU = ", appname.Data(), detname.Data(), modname.Data() );
 
-  dbfile << std::endl << header << std::endl;
+  dbfile_CM << std::endl << header << std::endl;
   for( int iAPV = 0; iAPV<nAPVsU; iAPV++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", commonmode_rmsU[iAPV] );
-    dbfile << sentry;
+    dbfile_CM << sentry;
 
-    if( (iAPV+1) % 16 == 0 ) dbfile << std::endl;
+    if( (iAPV+1) % 16 == 0 ) dbfile_CM << std::endl;
   }
   
   
@@ -2101,28 +2113,28 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &daqfile
 
   header.Form( "%s.%s.%s.commonmode_meanV = ", appname.Data(), detname.Data(), modname.Data() );
 
-  dbfile << std::endl << header << std::endl;
+  dbfile_CM << std::endl << header << std::endl;
   for( int iAPV = 0; iAPV<nAPVsV; iAPV++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", commonmode_meanV[iAPV] );
-    dbfile << sentry;
+    dbfile_CM << sentry;
 
-    if( (iAPV+1) % 16 == 0 ) dbfile << std::endl;
+    if( (iAPV+1) % 16 == 0 ) dbfile_CM << std::endl;
   }
 
   header.Form( "%s.%s.%s.commonmode_rmsV = ", appname.Data(), detname.Data(), modname.Data() );
 
-  dbfile << std::endl << header << std::endl;
+  dbfile_CM << std::endl << header << std::endl;
   for( int iAPV = 0; iAPV<nAPVsV; iAPV++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", commonmode_rmsV[iAPV] );
-    dbfile << sentry;
+    dbfile_CM << sentry;
 
-    if( (iAPV+1) % 16 == 0 ) dbfile << std::endl;
+    if( (iAPV+1) % 16 == 0 ) dbfile_CM << std::endl;
   }
   
 
-  dbfile << std::endl << std::endl;
+  dbfile_CM << std::endl << std::endl;
   
   //That takes care of the database file. For the "DAQ" file, we need to organize things by APV card. For this we can loop over the MPDmap:
   

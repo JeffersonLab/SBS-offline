@@ -303,12 +303,15 @@ protected:
   TClonesArray *hefficiency_y_layer;
   TClonesArray *hefficiency_xy_layer;
 
+  double fBinSize_efficiency2D; //Efficiency bin sizes for 1D and 2D plots
+  double fBinSize_efficiency1D; //define bin size for efficiency plots (assume equal bin width along X and Y, default to 1 cm)
+  
   bool fEfficiencyInitialized;
   bool fMakeEfficiencyPlots; //default to TRUE
   bool fDumpGeometryInfo; //default to FALSE
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fpedfile_daq, fpedfile_cmr; 
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr; 
   // input files for (optional) loading of pedestals from database:
 
   std::string fpedfilename;
