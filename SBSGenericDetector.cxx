@@ -992,7 +992,6 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
       if( chan > d->hi || chan < d->lo || fChanMap[imod][chan-d->lo] == -1 || fChanMap[imod][chan-d->lo] == -1000)
         continue;
        fNhits++;
-
       // Get the block index for this crate,slot,channel combo
       blk = fElements[ fChanMap[imod][chan-d->lo] ];
       if(d->IsADC()) {
@@ -1101,7 +1100,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
     }
   }
   
-  if(fIsMC)reftime = 0;
+  if(fIsMC)reftime = 1000.0;
   
   Int_t edge = 0;
   Int_t elemID=blk->GetID();

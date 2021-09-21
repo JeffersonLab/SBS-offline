@@ -50,6 +50,7 @@ public:
   std::vector<Int_t>   fGoodBarIDsTDC;
   std::vector<Float_t> fGoodBarTDCmean;
   std::vector<Float_t> fGoodBarTDCdiff;
+  std::vector<Float_t> fGoodBarTDCvpos;
   std::vector<Float_t> fGoodBarTDCpos;
   std::vector<Float_t> fGoodBarTDCLle;
   std::vector<Float_t> fGoodBarTDCLleW;

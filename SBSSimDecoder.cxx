@@ -530,12 +530,14 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     myev->push_back(0);
     */
     int ntdc = 0;
-    
     for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
       ntdc = 0;
       lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j);
+      col = lchan%2;
+      row = (lchan-col)/2;
+      lchan = col*90+row;
       ChanToROC(detname, lchan, crate, slot, chan);
-      //cout << detname << " " << lchan << " " << crate << " " << slot << " " << chan << endl;
+      //cout << detname << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << " " << chan << endl;
       //cout << j << " " << simev->Tgmn->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)].get();

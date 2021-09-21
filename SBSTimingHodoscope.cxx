@@ -138,6 +138,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
       { "barmeantime",  "Bar Mean Time [ns]",                 "fGoodBarTDCmean"},
       { "bartimediff",  "Bar Time Diff [ns]",                 "fGoodBarTDCdiff"},
       { "bartimehitpos","Bar Time Hit pos from L [m]",        "fGoodBarTDCpos"},
+      { "barvpos",      "Bar vertical position [m]",          "fGoodBarTDCvpos"},
       { "L.le",         "Left pmt time LE [ns]",              "fGoodBarTDCLle"},
       { "L.leW",        "Left pmt time LE walk corr [ns]",    "fGoodBarTDCLleW"},
       { "L.te",         "Left pmt time TE [ns]",              "fGoodBarTDCLte"},
@@ -174,7 +175,6 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
       return err;
   }// adc mode
 
-  
   // Finally go back
   return err;
 }
@@ -215,6 +215,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   
   // now loop through bars to find good hits in bars
   // should we move this code into findgoodhit?
+
   fGoodBarIDsTDC.clear();
   fGoodBarTDCmean.clear();
   fGoodBarTDCdiff.clear();
@@ -258,7 +259,6 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
     
     if(WithTDC()){
       if(elL->TDC()->HasData() && elR->TDC()->HasData()){
-	
 	Int_t bar = BarInc;
 	// don't need to add offset to tdc since all readout simultaneously
 	fGoodBarIDsTDC.push_back(bar);
@@ -293,6 +293,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	// convert to position? effective velocity times time? should we divide by 2? yes
 	Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
 	fGoodBarTDCpos.push_back(HorizPos);
+	fGoodBarTDCpos.push_back(elR->GetY());
 	
       }// tdc hit on both pmts
     }// with tdc
@@ -356,7 +357,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
   Int_t nElements = fElements.size();
   // std::cout << "n elements " << nElements << std::endl;
   if( nElements%2!=0 ) {
-    Error( Here("CoarseProcess"),
+    Error( Here("ConstructHodoscope"),
 	   "N elements for hodoscope is not even, need an even number for a 2 sided detector analysis.");
     return kInitError;
   }
@@ -364,7 +365,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
   fPMTMapL.clear();
   fPMTMapR.clear();
   if( fNrows!=2 ) {
-    Error( Here("CoarseProcess"),
+    Error( Here("ConstructHodoscope"),
 	   "fNrows for hodoscope is not 2, which we need for left and right.");
     return kInitError;
   }
@@ -421,7 +422,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
   
   // now we have the arrays of left and right pmts, we need to make the bars
   if( fPMTMapL.size()!=fPMTMapR.size() || fPMTMapL.size()!=(nElements/2) || fPMTMapR.size()!=(nElements/2) ) {
-    Error( Here("CoarseProcess"),
+    Error( Here("ConstructHodoscope"),
 	   "PMT arrays for constructing hodoscope bars not of correct length");
     return kInitError;
   }
@@ -461,6 +462,7 @@ void SBSTimingHodoscope::ClearEvent()
   fGoodBarTDCmean.clear();
   fGoodBarTDCdiff.clear();
   fGoodBarTDCpos.clear();
+  fGoodBarTDCvpos.clear();
   fGoodBarTDCLteW.clear();
   fGoodBarTDCLtot.clear();
   fGoodBarTDCLtotW.clear();

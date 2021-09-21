@@ -45,7 +45,7 @@ bb.hodo.nrows = 2
 bb.hodo.ncols = 90
 
 bb.hodo.position = 0 0 0 # Just a test, but should be the origin of this detector
-bb.hodo.xyz  =  0.000 -1.1125 0.000 ## Spacing between modules in local coordinates
+bb.hodo.xyz  =  0.000 1.1125 0.000 ## Spacing between modules in local coordinates
 bb.hodo.dxdydz  =  0.000 0.025 0.000 ## Spacing between modules in local coordinates
 bb.hodo.size = 0.600 2.250  0.025 ## Taken from an old talk where I used 90x25 mm for y
 #bb.hodo.angle = 0.0 0.0 0.0 ## Seems optional, otherwise it assumes no additional angle
