@@ -386,10 +386,13 @@ Int_t SBSBigBite::CoarseReconstruct()
     // +Etot*fb_xptar[1]*x_bcp
     // -fb_pinv[0]
     // -fb_pinv[1]*x_bcp
-        
+
+
     double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
       (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
-    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
+    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]); 
+    //The dy equation is correct under the assumption ytarget = 0: can we refine?
+
     
     //cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
     //<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
@@ -442,6 +445,9 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//(wx_fcp, wy_fcp);
 	BBGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
 				      fBackConstraintWidthY);
+
+	
+	
 	//(wx_bcp, wy_bcp);
 	/*
 	BBGEM->SetFrontConstraintPoint(TVector3(x_fcp, y_fcp, z_fcp));
@@ -488,7 +494,7 @@ Int_t SBSBigBite::Reconstruct()
 }
 
 //_____________________________________________________________________________
-  Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
+Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
 {
 
   //std::cout << "SBSBigBite::FindVertices()...";

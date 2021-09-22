@@ -4,6 +4,7 @@
 #include "TH2D.h"
 #include "TRotation.h"
 #include "TClonesArray.h"
+//#include "THaTrack.h"
 #include "TSystem.h"
 #include <sstream>
 #include <cstdlib>
@@ -61,6 +62,22 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fBinSize_efficiency1D = 0.003; //3 mm
   
   fDumpGeometryInfo = false;
+
+  fIsSpectrometerTracker = true; //default to true
+  fIsPolarimeterTracker = false;
+  fUseOpticsConstraint = false;
+  fUseFrontTrackerConstraint =false;
+
+  fPmin_track = 0.5; //GeV
+  fPmax_track = 11.0; //GeV
+  //set defaults for these parameters fairly wide-open:
+  fxptarmin_track = -0.5;
+  fxptarmax_track = 0.5;
+  fyptarmin_track = -0.25;
+  fyptarmax_track = 0.25;
+  fytarmin_track = -0.3; //m
+  fytarmax_track = 0.3;  //m
+  
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -759,6 +776,7 @@ void SBSGEMTrackerBase::find_tracks(){
   //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
   Long64_t Ncombos_allhits_all_layers = InitHitList();
 
+  
   //std::cout << 
   
   // std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized hit lists, number of layers fired = "
@@ -892,7 +910,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	  } //end check of ncombos_minmax < maxhitcombinations
 
 	  //std::cout << "maxhitcombos = " << fMaxHitCombinations << std::endl;
-	    //If the number of hit combinations STILL exceeds the maximum, skip this layer combination:
+	  //If the number of hit combinations STILL exceeds the maximum, skip this layer combination:
 	  if( ncombos_minmax > fMaxHitCombinations ){
 	    continue;
 	  }
@@ -949,6 +967,13 @@ void SBSGEMTrackerBase::find_tracks(){
 	      TVector3 TrackDirTemp( xptrtemp, yptrtemp, 1.0 );
 
 	      TrackDirTemp = TrackDirTemp.Unit();
+
+	      bool goodoptics = true;
+	      if( fIsSpectrometerTracker && fUseOpticsConstraint ){
+		goodoptics = PassedOpticsConstraint( TrackPosTemp, TrackDirTemp );
+	      }
+
+	      if( !goodoptics ) continue; //skip this pair if we don't pass the good optics requirement:
 	      
 	      //Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
 
@@ -1009,20 +1034,20 @@ void SBSGEMTrackerBase::find_tracks(){
 		double binydiffhi = yprojmax - (fGridYmin_layer[layer]+binyhi*fGridBinWidthY);
 
 		  
-		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
+		//If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
 		if( binxdifflo < fGridEdgeToleranceX && binxlo > 0 ) binxlo--;
 		if( binydifflo < fGridEdgeToleranceY && binylo > 0 ) binylo--;
-		  //If x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
+		//If x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
 		if( fGridBinWidthX - binxdiffhi < fGridEdgeToleranceX && binxhi + 1 < fGridNbinsX_layer[layer] ) binxhi++;
 		if( fGridBinWidthY - binydiffhi < fGridEdgeToleranceY && binyhi + 1 < fGridNbinsY_layer[layer] ) binyhi++;
 
-		  // std::cout << "(binxtemp, binytemp, binxdiff, binydiff)=(" << binxtemp << ", " << binytemp << ", "
-		  // 	    << binxdiff/fGridBinWidthX << ", "
-		  // 	    << binydiff/fGridBinWidthY << ")" << std::endl;
-		  // std::cout << "(binxlo,binxhi,binylo,binyhi)=(" << binxlo << ", " << binxhi << ", "
-		  // 	    << binylo << ", " << binyhi << ")" << std::endl;
+		// std::cout << "(binxtemp, binytemp, binxdiff, binydiff)=(" << binxtemp << ", " << binytemp << ", "
+		// 	    << binxdiff/fGridBinWidthX << ", "
+		// 	    << binydiff/fGridBinWidthY << ")" << std::endl;
+		// std::cout << "(binxlo,binxhi,binylo,binyhi)=(" << binxlo << ", " << binxhi << ", "
+		// 	    << binylo << ", " << binyhi << ")" << std::endl;
 		  
-		  //now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
+		//now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
 		for( int binx = binxlo; binx <= binxhi; binx++ ){
 		  for( int biny = binylo; biny <= binyhi; biny++ ){
 		    int binxy = binx + fGridNbinsX_layer[layer]*biny;
@@ -1745,4 +1770,9 @@ void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
   outfile << std::endl;
   
   outfile.close();
+}
+ 
+bool SBSGEMTrackerBase::PassedOpticsConstraint( TVector3 TrackOrigin, TVector3 TrackDirection ){
+  // for now, do nothing
+  return true;
 }
