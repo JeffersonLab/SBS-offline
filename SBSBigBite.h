@@ -54,7 +54,20 @@ class SBSBigBite : public THaSpectrometer {
     std::vector<double> fb_yptar;
     std::vector<double> fb_ytar;
     std::vector<double> fb_pinv;
+    std::vector<double> f_oi;
+    std::vector<double> f_oj;
+    std::vector<double> f_ok;
+    std::vector<double> f_ol;
+    std::vector<double> f_om;
     
+    Double_t fPtheta_00000;
+    Double_t fPtheta_10000;
+    Double_t fPtheta_00100;
+    Double_t fXptar_10000;
+    Double_t fXptar_00100;
+    Double_t fYtar_01000;
+    Double_t fYtar_00010;
+
     Double_t fFrontConstraintWidthX;
     Double_t fFrontConstraintWidthY;
     Double_t fBackConstraintWidthX;

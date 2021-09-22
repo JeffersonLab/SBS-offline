@@ -12,6 +12,7 @@
 #include "SBSGenericDetector.h"
 #include "SBSTimingHodoscopePMT.h"
 #include "SBSTimingHodoscopeBar.h"
+#include "SBSTimingHodoscopeCluster.h"
 
 class SBSTimingHodoscope : public SBSGenericDetector {
 public:
@@ -30,7 +31,10 @@ public:
   // new functions
   Int_t   ConstructHodoscope();
   Float_t TimeWalk(Float_t time, Float_t tot, Float_t timewalk0, Float_t timewalk1);
-
+  
+  Int_t GetNClusters() {return fClusters.size();};
+  SBSTimingHodoscopeCluster* GetCluster(int i);
+  
  protected:
   Float_t AttLength = 1.0/3.8;//380cm for ej200. units per m?
   /* speed of light in scint? what is n for ej200 */
@@ -79,7 +83,9 @@ public:
   // maps of time walk parameters - in row, col, lay
   std::vector<std::vector<std::vector<Float_t>>> fTimeWalkPar0;
   std::vector<std::vector<std::vector<Float_t>>> fTimeWalkPar1;
-
+  
+  std::vector<SBSTimingHodoscopeCluster*> fClusters; 
+  
   ClassDef(SBSTimingHodoscope,5)  // Describes scintillator plane with F1TDC as a detector
 };
 

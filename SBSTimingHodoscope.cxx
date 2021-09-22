@@ -511,3 +511,11 @@ SBSTimingHodoscope::~SBSTimingHodoscope()
   // Delete any new objects/instances created here
   ClearEvent();
 }
+
+SBSTimingHodoscopeCluster* SBSTimingHodoscope::GetCluster(int i)
+{
+  if(i<GetNClusters())return fClusters[i];
+  
+  return nullptr;
+}
+  

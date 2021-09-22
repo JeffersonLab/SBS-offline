@@ -28,6 +28,21 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   SetMultiTracks(false);
   SetTrSorting(false);
   fTrackerPitchAngle = 10.0*TMath::DegToRad();
+  fOpticsOrder = -1;
+  fFrontConstraintWidthX = 1.5;
+  fFrontConstraintWidthY = 1.5;
+  fBackConstraintWidthX = 1.5;
+  fBackConstraintWidthY = 1.5;
+  fTrackGrinchClusCorr_0 = 0.0;
+  fTrackGrinchClusCorr_1 = 0.0;
+  fTrackGrinchClusCorr_Sigma = 1.5;
+  fPtheta_00000 = 0.0;
+  fPtheta_10000 = 0.0;
+  fPtheta_00100 = 0.0;
+  fXptar_10000 = 0.0;
+  fXptar_00100 = 0.0;
+  fYtar_01000 = 0.0;
+  fYtar_00010 = 0.0;
   // Constructor. Defines standard detectors
   //The standard BigBite detector package in the 12 GeV/SBS era will include:
   // pre-shower + shower calorimeters (inherit from THaNonTrackingDetector OR THaPidDetector)
@@ -77,21 +92,21 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     return kFileError;
   }
   
-  UInt_t nparams;
+  //UInt_t nparams = -1;
   std::vector<Double_t> optics_param;
   std::vector<Double_t> pssh_pidproba;
   std::vector<Double_t> pcal_pidproba;
   std::vector<Double_t> grinch_pidproba;
   const DBRequest request[] = {
     { "tracker_pitch_angle",    &fTrackerPitchAngle, kDouble,  0, 1, 1},
-    { "optics_order",    &fOpticsOrder, kUInt,  0, 0, 1},
-    { "optics_nelem",     &nparams,      kUInt,   0, 0, 1},
-    { "optics_parameters", &optics_param, kDoubleV, 0, 0, 1},
+    { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
+    //{ "optics_nparam",     &nparams,      kUInt,   0, 1, 1},
+    { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "do_pid",    &fPID, kUInt,  0, 1, 1},
-    { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 0, 0},
-    { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 0, 0},
-    { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 0, 0},
-    { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 0, 0},
+    { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 1, 0},
+    { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 1, 0},
+    { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 1, 0},
+    { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 1, 0},
     { "trackgrinchcorr_const", &fTrackGrinchClusCorr_0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_slope", &fTrackGrinchClusCorr_1, kDouble, 0, 1, 0},
     { "trackgrinchcorr_sigma", &fTrackGrinchClusCorr_Sigma, kDouble, 0, 1, 0},
@@ -121,27 +136,61 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   }//if we do not find any non tracking detectors, we force fPID to be false.
   if(!nontrackdet)fPID = false;
 
-  int n_elem = TMath::FloorNint(optics_param.size()/nparams);
-  
-  if(n_elem<4){
-    std::cerr << "Warning: mismatch between " << optics_param.size()/n_elem
-	      << " optics parameters provided and " << nparams
-	      << " optics parameters expected!" << std::endl
-	      << " Fix database! " << endl;
-    return kInitError;
-  }
-  
-  //int o_i, o_j, o_k, o_l, o_m;// shall we use those???
-  fb_xptar.resize(nparams);
-  fb_yptar.resize(nparams);
-  fb_ytar.resize(nparams);
-  fb_pinv.resize(nparams);
-  
-  for(int i=0; i<nparams; i++){
-    fb_xptar[i] = optics_param[n_elem*i];
-    fb_yptar[i] = optics_param[n_elem*i+1];
-    fb_ytar[i] = optics_param[n_elem*i+2];
-    fb_pinv[i] = optics_param[n_elem*i+3];
+  if(fOpticsOrder>-1){
+    int nparams = 0;
+    for(int k = 0; k<=fOpticsOrder; k++){
+      int n = 5+k-1;
+      nparams+= TMath::Factorial(n)/TMath::Factorial(n-k)/TMath::Factorial(k);
+    }
+    cout << nparams << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
+    
+    int n_elem = TMath::FloorNint(optics_param.size()/9);
+    
+    if(n_elem!=nparams){
+      std::cerr << "Warning: mismatch between " << optics_param.size()/9
+		<< " optics parameters provided and " << nparams
+		<< " optics parameters expected!" << std::endl
+		<< " Fix database! " << endl;
+      return kInitError;
+    }
+    
+    //int o_i, o_j, o_k, o_l, o_m;// shall we use those???
+    fb_xptar.resize(nparams);
+    fb_yptar.resize(nparams);
+    fb_ytar.resize(nparams);
+    fb_pinv.resize(nparams);
+    f_oi.resize(nparams);
+    f_oj.resize(nparams);
+    f_ok.resize(nparams);
+    f_ol.resize(nparams);
+    f_om.resize(nparams);
+    
+    for(int i=0; i<nparams; i++){
+      fb_xptar[i] = optics_param[n_elem*i];
+      fb_yptar[i] = optics_param[n_elem*i+1];
+      fb_ytar[i] = optics_param[n_elem*i+2];
+      fb_pinv[i] = optics_param[n_elem*i+3];
+      f_om[i] = optics_param[n_elem*i+4];
+      f_ol[i] = optics_param[n_elem*i+5];
+      f_ok[i] = optics_param[n_elem*i+6];
+      f_oj[i] = optics_param[n_elem*i+7];
+      f_oi[i] = optics_param[n_elem*i+8];
+      
+      if(f_oi[i]==0 && f_oj[i]==0 && f_ok[i]==0 && f_ol[i]==0 && f_om[i]==0)
+	fPtheta_00000 = fb_pinv[i];
+      if(f_oi[i]==1 && f_oj[i]==0 && f_ok[i]==0 && f_ol[i]==0 && f_om[i]==0){
+	fPtheta_10000 = fb_pinv[i];
+	fXptar_10000 = fb_xptar[i];
+      }
+      if(f_oi[i]==0 && f_oj[i]==0 && f_ok[i]==1 && f_ol[i]==0 && f_om[i]==0){
+	fPtheta_00100 = fb_pinv[i];
+	fXptar_00100 = fb_xptar[i];
+      }
+      if(f_oi[i]==0 && f_oj[i]==1 && f_ok[i]==0 && f_ol[i]==0 && f_om[i]==0)
+	fYtar_01000 = fb_ytar[i];
+      if(f_oi[i]==0 && f_oj[i]==0 && f_ok[i]==0 && f_ol[i]==1 && f_om[i]==0)
+	fYtar_00010 = fb_ytar[i];
+    }
   }
   
   //PID stuff
@@ -402,9 +451,9 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//  	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
 	//  	      << endl;
         
-	double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
-	  (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
-	double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
+	double dx = (Etot*10.*TMath::DegToRad() -fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
+	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
 	
 	//cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
 	//<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
@@ -500,7 +549,7 @@ Int_t SBSBigBite::Reconstruct()
   Int_t n_trk = tracks.GetLast()+1;
   for( Int_t t = 0; t < n_trk; t++ ) {
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
-    CalcTargetCoords(theTrack);
+    if(fOpticsOrder>=0)CalcTargetCoords(theTrack);
   }
   
   //sort on other criteria than chi^2
