@@ -11,6 +11,7 @@ class SBSGEMPlane;
 class THaCrateMap;
 class THaTrack;
 class TClonesArray;
+//class THaSpectrometer;
 
 class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrackerBase {
  public:
@@ -37,11 +38,14 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrack
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
+  virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
+
   
   
  private:
   // std::vector <SBSGEMModule *> fPlanes; storing the modules moved to SBSGEMTrackerBase
-	
+
+  TClonesArray *fTestTracks; 
   //bool fIsMC; moved to SBSGEMTrackerBase
 	
   //THaCrateMap *fCrateMap; //Does this do anything? Not as far as I can tell. I wish someone would have commented about why they added this. AJRP

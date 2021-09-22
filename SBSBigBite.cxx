@@ -347,7 +347,7 @@ Int_t SBSBigBite::CoarseTrack()
 Int_t SBSBigBite::CoarseReconstruct()
 {
 
-  //  std::cout << "SBSBigBite::CoarseReconstruct()..."; 
+  //std::cout << "SBSBigBite::CoarseReconstruct()..."; 
   // Coarse Reconstruction of particles in spectrometer
   THaSpectrometer::CoarseReconstruct(); 
   // TODO
@@ -454,6 +454,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	double dx = (Etot*10.*TMath::DegToRad() -fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
 	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
+	//The dy equation is correct under the assumption ytarget = 0: can we refine?
 	
 	//cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
 	//<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
@@ -465,7 +466,6 @@ Int_t SBSBigBite::CoarseReconstruct()
 	y_fcp = y_bcp+dy*(z_fcp-z_bcp);
 	
 	//cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
-	
 	/*
 	  h1_yVx_bcp->Fill(x_bcp, y_bcp);
 	  h1_x_fcpVbcp->Fill(x_bcp, x_fcp);
@@ -533,18 +533,22 @@ Int_t SBSBigBite::Track()
 Int_t SBSBigBite::Reconstruct()
 {
   // Fine Reconstruction of particles in spectrometer
+  //std::cout << "SBSBigBite::Reconstruct()..." << std::endl;
+  
   THaSpectrometer::Reconstruct();
   // TODO
 
+  //std::cout << "Done..." << std::endl;
+  
   return 0;
   
 }
 
 //_____________________________________________________________________________
-  Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
+Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
 {
 
-  //  std::cout << "SBSBigBite::FindVertices()...";
+  //std::cout << "SBSBigBite::FindVertices()...";
   // Reconstruct target coordinates for all tracks found.
   Int_t n_trk = tracks.GetLast()+1;
   for( Int_t t = 0; t < n_trk; t++ ) {
@@ -680,7 +684,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   track->SetPvect(TVector3(px, py, pz));
   track->SetVertex(TVector3(0, 0, vz_fit));
 
-  // std::cout << "Done." << std::endl;
+  //std::cout << "Done." << std::endl;
 }
 
 //_____________________________________________________________________________

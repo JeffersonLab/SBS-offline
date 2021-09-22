@@ -4,6 +4,7 @@
 #include "TH2D.h"
 #include "TRotation.h"
 #include "TClonesArray.h"
+//#include "THaTrack.h"
 #include "TSystem.h"
 #include <sstream>
 #include <cstdlib>
@@ -22,7 +23,10 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fMinHitsOnTrack = 3;
 
-  fMaxHitCombinations = 100000;
+  fMaxHitCombinations = 10000;
+  fMaxHitCombinations_InnerLayers = 25000;
+  fMaxHitCombinations_Total = 100000000;
+  fTryFastTrack = true;
 
   //moved zero suppression/common-mode parameters to module class
   //  fOnlineZeroSuppression = false;
@@ -58,6 +62,22 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fBinSize_efficiency1D = 0.003; //3 mm
   
   fDumpGeometryInfo = false;
+
+  fIsSpectrometerTracker = true; //default to true
+  fIsPolarimeterTracker = false;
+  fUseOpticsConstraint = false;
+  fUseFrontTrackerConstraint =false;
+
+  fPmin_track = 0.5; //GeV
+  fPmax_track = 11.0; //GeV
+  //set defaults for these parameters fairly wide-open:
+  fxptarmin_track = -0.5;
+  fxptarmax_track = 0.5;
+  fyptarmin_track = -0.25;
+  fyptarmax_track = 0.25;
+  fytarmin_track = -0.3; //m
+  fytarmax_track = 0.3;  //m
+  
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -527,7 +547,7 @@ void SBSGEMTrackerBase::InitGridBins() {
 }
 
 //Initialize the "hit list" arrays that are used by the track-finding algorithm: these arrays are UNCHANGING throughout the iterations of track-finding:
-void SBSGEMTrackerBase::InitHitList(){
+Long64_t SBSGEMTrackerBase::InitHitList(){
 
   //clear out any old information:
   layers_with_2Dhits.clear();
@@ -535,6 +555,8 @@ void SBSGEMTrackerBase::InitHitList(){
   modindexhit2D.clear();
   clustindexhit2D.clear();
   hitused2D.clear();
+
+  Long64_t ncombos_all_layers=1;
   
   for( int imodule=0; imodule<fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
     int layer = fIndexByLayer[fModules[imodule]->fLayer];
@@ -554,9 +576,16 @@ void SBSGEMTrackerBase::InitHitList(){
       }
     }
   }
+
+  for( auto ilay=layers_with_2Dhits.begin(); ilay != layers_with_2Dhits.end(); ++ilay ){
+    ncombos_all_layers *= N2Dhits_layer[*ilay];
+  }
+
+  return ncombos_all_layers;
+  
 }
 
-void SBSGEMTrackerBase::InitFreeHitList(){
+Long64_t SBSGEMTrackerBase::InitFreeHitList(){
   //We should clear these things out at the beginning of each iteration just in case:
   layerswithfreehits.clear();
   freehitlist_layer.clear();
@@ -565,7 +594,9 @@ void SBSGEMTrackerBase::InitFreeHitList(){
   
   Nfreehits_binxy_layer.clear();
   freehitlist_binxy_layer.clear();
-  
+
+  Long64_t Ncombos=1;
+
   //This is called at the beginning of each track-finding iteration:
   for( auto ilay = layers_with_2Dhits.begin(); ilay != layers_with_2Dhits.end(); ++ilay ){
     int layer = *ilay;
@@ -624,9 +655,13 @@ void SBSGEMTrackerBase::InitFreeHitList(){
     if( Nfreehits_layer[layer] > 0 ){
       layerswithfreehits.insert(layer);
       freehitcounter[layer] = 0; //
+
+      Ncombos *= Nfreehits_layer[layer];
     }
     
   } //loop over all layers
+
+  return Ncombos;
 }
 
 void SBSGEMTrackerBase::hit_reconstruction(){
@@ -739,10 +774,13 @@ void SBSGEMTrackerBase::find_tracks(){
   //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
 
   //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
-  InitHitList();
+  Long64_t Ncombos_allhits_all_layers = InitHitList();
 
+  
+  //std::cout << 
+  
   // std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized hit lists, number of layers fired = "
-  // 	    << layers_with_2Dhits.size() << std::endl;
+  // 	    << layers_with_2Dhits.size() << ", total hit combinations = " << Ncombos_allhits_all_layers << std::endl;
   //At this stage the static "hit lists" that we need for the tracking are initialized. Let's get started:
   
   if( layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
@@ -766,11 +804,18 @@ void SBSGEMTrackerBase::find_tracks(){
 
       //This happens once per track-finding iteration: if any tracks were found on the previous iteration, then their hits (and any others sharing the same 1D U or V clusters)
       //will have been marked as used, reducing the number of "available" hits for finding additional tracks:
-      InitFreeHitList(); 
+      Long64_t Ncombos_free = InitFreeHitList(); 
 
+      if( Ncombos_free > fMaxHitCombinations_Total ){
+	std::cout << "Warning in [SBSGEMTrackerBase::find_tracks]: total potential hit combinations = "
+		  << Ncombos_free << ", exceeds user maximum of " << fMaxHitCombinations_Total
+		  << ", skipping tracking..." << std::endl;
+	break;
+      }
+      
       // std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized 'free hit list', nhitsrequired = " << nhitsrequired 
       // 		<< ", number of layers with unused hits, ntracks = " 
-      // 		<< layerswithfreehits.size() << ", " << fNtracks_found << std::endl;
+      // 		<< layerswithfreehits.size() << ", " << fNtracks_found << ", free hit combinations = " << Ncombos_free << std::endl;
       
       if( layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
 	//The basic algorithm should do the following:
@@ -865,7 +910,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	  } //end check of ncombos_minmax < maxhitcombinations
 
 	  //std::cout << "maxhitcombos = " << fMaxHitCombinations << std::endl;
-	    //If the number of hit combinations STILL exceeds the maximum, skip this layer combination:
+	  //If the number of hit combinations STILL exceeds the maximum, skip this layer combination:
 	  if( ncombos_minmax > fMaxHitCombinations ){
 	    continue;
 	  }
@@ -918,6 +963,18 @@ void SBSGEMTrackerBase::find_tracks(){
 	      double xtrtemp = 0.5*( hitpos_max.X() - xptrtemp * hitpos_max.Z() + hitpos_min.X() - xptrtemp * hitpos_min.Z() );
 	      double ytrtemp = 0.5*( hitpos_max.Y() - yptrtemp * hitpos_max.Z() + hitpos_min.Y() - yptrtemp * hitpos_min.Z() );
 
+	      TVector3 TrackPosTemp( xtrtemp, ytrtemp, 0.0 );
+	      TVector3 TrackDirTemp( xptrtemp, yptrtemp, 1.0 );
+
+	      TrackDirTemp = TrackDirTemp.Unit();
+
+	      bool goodoptics = true;
+	      if( fIsSpectrometerTracker && fUseOpticsConstraint ){
+		goodoptics = PassedOpticsConstraint( TrackPosTemp, TrackDirTemp );
+	      }
+
+	      if( !goodoptics ) continue; //skip this pair if we don't pass the good optics requirement:
+	      
 	      //Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
 
 	      bool nextcomboexists = true;
@@ -942,10 +999,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		double xprojmin = xproj, xprojmax=xproj;
 		double yprojmin = yproj, yprojmax=yproj;
 		
-		TVector3 TrackPosTemp( xtrtemp, ytrtemp, 0.0 );
-		TVector3 TrackDirTemp( xptrtemp, yptrtemp, 1.0 );
-
-		TrackDirTemp = TrackDirTemp.Unit();
+		
 		//loop over all modules in this layer, test projection to any module for which the track projection falls in the
 		//active area:
 		for( auto imod = fModuleListByLayer[layer].begin(); imod != fModuleListByLayer[layer].end(); ++imod ){
@@ -980,20 +1034,20 @@ void SBSGEMTrackerBase::find_tracks(){
 		double binydiffhi = yprojmax - (fGridYmin_layer[layer]+binyhi*fGridBinWidthY);
 
 		  
-		  //If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
+		//If x or y projection is close to the low edge of bin, include the neighboring bin on the low side in the analysis, assuming it exists:
 		if( binxdifflo < fGridEdgeToleranceX && binxlo > 0 ) binxlo--;
 		if( binydifflo < fGridEdgeToleranceY && binylo > 0 ) binylo--;
-		  //If x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
+		//If x or y projection is close to the high edge of the bin, include the neighboring bin on high side in the analysis, assuming it exists:
 		if( fGridBinWidthX - binxdiffhi < fGridEdgeToleranceX && binxhi + 1 < fGridNbinsX_layer[layer] ) binxhi++;
 		if( fGridBinWidthY - binydiffhi < fGridEdgeToleranceY && binyhi + 1 < fGridNbinsY_layer[layer] ) binyhi++;
 
-		  // std::cout << "(binxtemp, binytemp, binxdiff, binydiff)=(" << binxtemp << ", " << binytemp << ", "
-		  // 	    << binxdiff/fGridBinWidthX << ", "
-		  // 	    << binydiff/fGridBinWidthY << ")" << std::endl;
-		  // std::cout << "(binxlo,binxhi,binylo,binyhi)=(" << binxlo << ", " << binxhi << ", "
-		  // 	    << binylo << ", " << binyhi << ")" << std::endl;
+		// std::cout << "(binxtemp, binytemp, binxdiff, binydiff)=(" << binxtemp << ", " << binytemp << ", "
+		// 	    << binxdiff/fGridBinWidthX << ", "
+		// 	    << binydiff/fGridBinWidthY << ")" << std::endl;
+		// std::cout << "(binxlo,binxhi,binylo,binyhi)=(" << binxlo << ", " << binxhi << ", "
+		// 	    << binylo << ", " << binyhi << ")" << std::endl;
 		  
-		  //now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
+		//now loop over the relevant grid bins (up to 2 in X and Y) in this layer and fill the "reduced" free hit list:
 		for( int binx = binxlo; binx <= binxhi; binx++ ){
 		  for( int biny = binylo; biny <= binyhi; biny++ ){
 		    int binxy = binx + fGridNbinsX_layer[layer]*biny;
@@ -1021,10 +1075,10 @@ void SBSGEMTrackerBase::find_tracks(){
 		  
 	      } //end loop on layers other than minlayer and maxlayer
 
-	      // std::cout << "[SBSGEMTrackerBase::find_tracks]: finished loop on layers other than minlayer and maxlayer, minlayer, maxlayer = "
-	      // 		<< minlayer << ", " << maxlayer << endl;
+	      // std::cout << "[SBSGEMTrackerBase::find_tracks]: finished loop on layers other than minlayer and maxlayer, minlayer, maxlayer, ihit, jhit, ncombos (intermediate layers) = "
+	      //  		<< minlayer << ", " << maxlayer << ", " << ihit << ", " << jhit << ", " << ncombos_otherlayers << std::endl;
 	      
-		//Next, we will loop on all possible combinations of one hit from each of the layers other than minlayer and maxlayer:
+	      //Next, we will loop on all possible combinations of one hit from each of the layers other than minlayer and maxlayer:
 
 	      int ncombostested = 0;
 	      
@@ -1037,82 +1091,145 @@ void SBSGEMTrackerBase::find_tracks(){
 		// std::cout << "looping over combos, icombo, minlayer, maxlayer, nhitsrequired = "
 		// 	  << ncombostested << ", " << minlayer << ", " << maxlayer << ", " << nhitsrequired << std::endl;
 
-		int ncombos = 1;
+		long ncombos = 1;
 		for( auto ilay=otherlayers.begin(); ilay != otherlayers.end(); ++ilay ){
 		  ncombos *= freehitlist_goodxy[*ilay].size();
 		}
 		
 		//std::cout << "Number of hit combinations to test = " << ncombos << endl;
-		
-		while( (nextcomboexists = GetNextCombo( otherlayers, freehitcounter, hitcombo, firstcombo ) ) ){
-		  // I think that the assignment of the result of GetNextCombo() to nextcomboexists in the while loop condition renders an extra check of the value of
-		  // nextcomboexists unnecessary
-		  //Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one:
+
+		if( ncombos <= fMaxHitCombinations_InnerLayers ){
+		  while( (nextcomboexists = GetNextCombo( otherlayers, freehitcounter, hitcombo, firstcombo ) ) ){
+		    // I think that the assignment of the result of GetNextCombo() to nextcomboexists in the while loop condition renders an extra check of the value of
+		    // nextcomboexists unnecessary
+		    //Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one:
 
 		  
-		  //First, add the hits from minlayer and maxlayer to the combo:
-		  hitcombo[minlayer] = hitmin;
-		  hitcombo[maxlayer] = hitmax;
+		    //First, add the hits from minlayer and maxlayer to the combo:
+		    hitcombo[minlayer] = hitmin;
+		    hitcombo[maxlayer] = hitmax;
 
-		  //std::cout << "Testing hit combo: " << ncombostested << std::endl;
-		  for( auto ilay = hitcombo.begin(); ilay != hitcombo.end(); ++ilay ){
+		    //std::cout << "Testing hit combo: " << ncombostested << std::endl;
+		    // for( auto ilay = hitcombo.begin(); ilay != hitcombo.end(); ++ilay ){
 
-		    int layertemp = ilay->first;
-		    int hittemp = ilay->second;
+		    //   int layertemp = ilay->first;
+		    //   int hittemp = ilay->second;
 
-		    int hitcountertemp;
+		    //   int hitcountertemp;
 
-		    if( layertemp == minlayer ) {
-		      hitcountertemp = ihit;
-		    } else if( layertemp == maxlayer ) {
-		      hitcountertemp = jhit;
-		    } else {
-		      hitcountertemp = freehitcounter[layertemp];
-		    }
+		    //   if( layertemp == minlayer ) {
+		    //     hitcountertemp = ihit;
+		    //   } else if( layertemp == maxlayer ) {
+		    //     hitcountertemp = jhit;
+		    //   } else {
+		    //     hitcountertemp = freehitcounter[layertemp];
+		    //   }
 		     
 		  
-		    // std::cout << "(layer, freehitcounter, freehitindex)=(" << layertemp << ", "
-		    // 	      << hitcountertemp << ", " << hittemp << ")" << std::endl;
+		    //   // std::cout << "(layer, freehitcounter, freehitindex)=(" << layertemp << ", "
+		    //   // 	      << hitcountertemp << ", " << hittemp << ")" << std::endl;
+		    // }
+
+		    //ncombostested++;
+		  
+		    //double xptrtemp, yptrtemp, xtrtemp, ytrtemp, chi2ndftemp;
+
+		    double chi2ndftemp;
+		    
+		    //This declaration might shadow another one up above
+		    //(actually it DOESN'T: the ones above are for the "best" hit combo, these are temporary dummy variables. Proceed)
+		    vector<double> uresidtemp, vresidtemp;
+		    
+		    //Fit a track to the current hit combination:
+		    //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
+		    FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
+		  
+		    //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
+		  
+		    if( firstgoodcombo || chi2ndftemp < minchi2 ){
+		    
+		      firstgoodcombo = false;
+		      minchi2 = chi2ndftemp;
+		    
+		      besthitcombo = hitcombo;
+		    
+		      //record track properties so we don't need to re-fit later
+		      besttrack[0] = xtrtemp;
+		      besttrack[1] = ytrtemp;
+		      besttrack[2] = xptrtemp;
+		      besttrack[3] = yptrtemp;
+		    
+		      //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
+		      uresidbest = uresidtemp;
+		      vresidbest = vresidtemp; 
+		    }
+		  
+		    ncombostested++;
+		  
+		    //clear hitcombo just so we start fresh each iteration of the loop: this is PROBABLY unnecessary, but safer than not doing so:
+		    hitcombo.clear();
+		  } //end while( nextcomboexists )
+		} else if( fTryFastTrack ){
+		  std::cout << "Warning in [SBSGEMTrackerBase::find_tracks()]... number of hit combos for inner layers = " << ncombos
+			    << ", exceeds user maximum of " << fMaxHitCombinations_InnerLayers
+			    << ", trying \"fast\" hit association into tracks, may be less accurate" << std::endl;
+		  
+		  //Fall back on "fast" method that involves projecting to each layer in succession and finding the hit closest to the projected track at each layer, and testing that combo
+		  for( auto klay=otherlayers.begin(); klay != otherlayers.end(); ++klay ){
+		    int besthit = -1;
+		    double minresid2 = 1.e20;
+
+		    int layerk = *klay;
+		    
+		    for( int khit=0; khit<freehitlist_goodxy[layerk].size(); khit++ ){
+		      int hitk = freehitlist_goodxy[layerk][khit];
+
+		      int modk = modindexhit2D[layerk][hitk];
+		      int clustk = clustindexhit2D[layerk][hitk];
+		      
+		      //TVector3 hitposk = GetHitPosGlobal( modk, clustk );
+
+		      double uhitk = fModules[modk]->fHits[clustk].uhit;
+		      double vhitk = fModules[modk]->fHits[clustk].vhit;
+		      
+		      TVector2 UVprojtemp = GetUVTrack( modk, TrackPosTemp, TrackDirTemp );
+
+		      double resid2 = ( pow( uhitk - UVprojtemp.X(), 2 ) + pow( vhitk - UVprojtemp.Y(), 2 ) )/pow( fSigma_hitpos, 2 );
+
+		      if( besthit < 0 || resid2 < minresid2 ){
+			minresid2 = resid2;
+			besthit = hitk;
+		      }
+		    }
+
+		    hitcombo[layerk] = besthit;
 		  }
 
-		  //ncombostested++;
-		  
-		  double xptrtemp, yptrtemp, xtrtemp, ytrtemp, chi2ndftemp;
+		  double chi2ndftemp;
+		  vector<double> uresidtemp,vresidtemp;
 
-		  //This declaration might shadow another one up above
-		  //(actually it DOESN'T: the ones above are for the "best" hit combo, these are temporary dummy variables. Proceed)
-		  vector<double> uresidtemp, vresidtemp;
-		    
-		  //Fit a track to the current hit combination:
-		  //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
 		  FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
 
-		  //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
-		  
 		  if( firstgoodcombo || chi2ndftemp < minchi2 ){
-		    
 		    firstgoodcombo = false;
 		    minchi2 = chi2ndftemp;
-
 		    besthitcombo = hitcombo;
 
-		    //record track properties so we don't need to re-fit later
 		    besttrack[0] = xtrtemp;
 		    besttrack[1] = ytrtemp;
 		    besttrack[2] = xptrtemp;
 		    besttrack[3] = yptrtemp;
-
+		    
 		    //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
 		    uresidbest = uresidtemp;
-		    vresidbest = vresidtemp; 
+		    vresidbest = vresidtemp;
 		  }
 
 		  ncombostested++;
-		  
-		  //clear hitcombo just so we start fresh each iteration of the loop: this is PROBABLY unnecessary, but safer than not doing so:
+
 		  hitcombo.clear();
 		    
-		} //end while( nextcomboexists )
+		}//end if( ncombos <= fMaxHitCombinations_InnerLayers )
 	      } //end if( nextcomboexists )		       
 		
 	    } //end loop over hits in maxlayer
@@ -1653,4 +1770,9 @@ void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
   outfile << std::endl;
   
   outfile.close();
+}
+ 
+bool SBSGEMTrackerBase::PassedOpticsConstraint( TVector3 TrackOrigin, TVector3 TrackDirection ){
+  // for now, do nothing
+  return true;
 }

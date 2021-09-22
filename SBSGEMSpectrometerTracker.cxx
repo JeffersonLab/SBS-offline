@@ -7,6 +7,7 @@
 #include "THaCrateMap.h"
 #include "THaAnalysisObject.h"
 
+#include "THaSpectrometer.h"
 #include "SBSGEMSpectrometerTracker.h"
 #include "SBSGEMModule.h"
 #include "THaTrack.h"
@@ -23,9 +24,16 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fIsMC = false;//by default!
   //fCrateMap = 0;
   fPedestalMode = false;
+
+  fIsSpectrometerTracker = true; //used by tracker base
+  fUseOpticsConstraint = false;
+  
+  fTestTracks = new TClonesArray("THaTrack",1);
 }
 
 SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
+  fTestTracks->Clear("C");
+  delete fTestTracks;
   return;
 }
 
@@ -51,6 +59,8 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     }
 
     CompleteInitialization();
+
+    new( (*fTestTracks)[0] ) THaTrack();
     
   } else {
     return kInitError;
@@ -94,12 +104,16 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "is_mc",        &fIsMC,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
+    { "maxhitcombos_inner", &fMaxHitCombinations_InnerLayers, kInt, 0, 1},
+    { "maxhitcombos_total", &fMaxHitCombinations_Total, kInt, 0, 1},
+    { "tryfasttrack", &fTryFastTrack, kInt, 0, 1 },
     { "gridbinwidthx", &fGridBinWidthX, kDouble, 0, 1},
     { "gridbinwidthy", &fGridBinWidthY, kDouble, 0, 1},
     { "gridedgetolerancex", &fGridEdgeToleranceX, kDouble, 0, 1},
     { "gridedgetolerancey", &fGridEdgeToleranceY, kDouble, 0, 1},
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
+    { "useopticsconstraint", &fUseOpticsConstraint, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
@@ -256,9 +270,12 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
   Int_t stripcounter=0;
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    //std::cout << "Decoding module " << (*it)->GetName() << std::endl;
+    
     (*it)->Decode(evdata);
 
+    //std::cout << "Decoding module " << (*it)->GetName() << ", nstrips fired = " << (*it)->fNstrips_hit << std::endl;
+   
+    
     stripcounter += (*it)->fNstrips_hit;
     //std::cout << "done..." << std::endl;
   }
@@ -522,5 +539,42 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
   
   return 0;
 }
+
+bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction ){
+  double xptemp = track_direction.X()/track_direction.Z();
+  double yptemp = track_direction.Y()/track_direction.Z();
+
+  //Project back to z = 0 if appropriate:
+  double xtemp = track_origin.X() - xptemp * track_origin.Z(); 
+  double ytemp = track_origin.Y() - yptemp * track_origin.Z();
+  
+  ( (THaTrack*) (*fTestTracks)[0] )->Set( xtemp, ytemp, xptemp, yptemp );
+
+  THaSpectrometer *spec = static_cast<THaSpectrometer *>( GetApparatus() );
+
+  if( spec ){
+    spec->FindVertices( *fTestTracks );
+  } else {
+    return false;
+  }
+
+  THaTrack *trtemp = ( (THaTrack*) (*fTestTracks)[0] );
+
+  if( trtemp->HasTarget() && trtemp->HasVertex() ){
+    double Ptemp = trtemp->GetP();
+    double xptartemp = trtemp->GetTTheta();
+    double yptartemp = trtemp->GetTPhi();
+    double ytartemp = trtemp->GetTY();
+
+    return ( fxptarmin_track <= xptartemp && xptartemp <= fxptarmax_track &&
+	     fyptarmin_track <= yptartemp && yptartemp <= fyptarmax_track &&
+	     fytarmin_track <= ytartemp && ytartemp <= fytarmax_track &&
+	     fPmin_track <= Ptemp && Ptemp <= fPmax_track );
+  } else {
+    return false;
+  }
+}
+
+
 
 ClassImp(SBSGEMSpectrometerTracker)

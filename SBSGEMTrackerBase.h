@@ -15,6 +15,7 @@
 //class THaEvData;
 class SBSGEMModule;
 class TClonesArray;
+
 //class THaCrateMap;
 
 //This class is not going to inherit from THaAnything or from TObject.
@@ -36,6 +37,24 @@ public:
   void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); }
   void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); }
   void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); }
+
+  void SetPmin( double pmin ){ fPmin_track = pmin; }
+  void SetPmax( double pmax ){ fPmax_track = pmax; }
+  void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
+
+  void SetXpTarmin( double xpmin ){ fxptarmin_track = xpmin; }
+  void SetXpTarmax( double xpmax ){ fxptarmax_track = xpmax; }
+  void SetXpTarRange( double xpmin, double xpmax ){ fxptarmin_track = xpmin; fxptarmax_track = xpmax; }
+
+  void SetYpTarmin( double ypmin ){ fyptarmin_track = ypmin; }
+  void SetYpTarmax( double ypmax ){ fyptarmax_track = ypmax; }
+  void SetYpTarRange( double ypmin, double ypmax ){ fyptarmin_track = ypmin; fyptarmax_track = ypmax; }
+
+  void SetYTarmin( double ymin ){ fytarmin_track = ymin; }
+  void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
+  void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
+
+  virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -43,6 +62,11 @@ protected:
 
   bool fclustering_done;
   bool ftracking_done;
+
+  bool fIsSpectrometerTracker; //default to true:
+  bool fIsPolarimeterTracker; 
+  bool fUseOpticsConstraint; //default to FALSE:
+  bool fUseFrontTrackerConstraint; //default to FALSE:
   
   //1D and 2D clustering: 
   void hit_reconstruction();
@@ -62,8 +86,8 @@ protected:
 
   void PrintGeometry( const char *fname );
   
-  void InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
-  void InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
+  Long64_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
+  Long64_t InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
   //Retrieve the global position of a hit by module and hit index:
   TVector3 GetHitPosGlobal( int modidx, int clustidx );
@@ -116,7 +140,10 @@ protected:
 
   int fMinHitsOnTrack; //default = 3; cannot be less than 3, cannot be more than total number of layers
   
-  long fMaxHitCombinations; //default = 100000; skip 
+  long fMaxHitCombinations; //default = 10000; this is for "outer" layers
+  long fMaxHitCombinations_InnerLayers; //default = 10000?
+  long fMaxHitCombinations_Total; //default = 100000000
+  bool fTryFastTrack; //default = true?
   
   // The use of maps here instead of vectors may be slightly algorithmically inefficient, but it DOES guarantee that the maps are
   //  (a) sorted by increasing layer index, which, generally speaking, for a sensibly constructed database, will also be in ascending order of Z.
@@ -155,6 +182,16 @@ protected:
   TVector2 fConstraintWidth_Front;
   TVector2 fConstraintWidth_Back;
 
+  TVector2 fConstraintSlope_Min; //Min and max slope along X and Y
+  TVector2 fConstraintSlope_Max; //Min and max slope along X and Y
+
+  //Optics-based constraints:
+  double fPmin_track; //GeV
+  double fPmax_track; //GeV
+  double fxptarmin_track, fxptarmax_track;
+  double fyptarmin_track, fyptarmax_track;
+  double fytarmin_track, fytarmax_track; 
+  
   Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
