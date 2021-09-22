@@ -328,8 +328,8 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fRMS_ConversionFactor; // = sqrt(fN_MPD_TIME_SAMP);
   
   //To be determined from channel map/strip count information:
-  UShort_t fNAPVs_U; //Number of APV cards per module along "U" strip direction; this is typically 8, 10, or 12, but could be larger for U/V GEMs
-  UShort_t fNAPVs_V; //Number of APV cards per module along "V" strip direction; 
+  UInt_t fNAPVs_U; //Number of APV cards per module along "U" strip direction; this is typically 8, 10, or 12, but could be larger for U/V GEMs
+  UInt_t fNAPVs_V; //Number of APV cards per module along "V" strip direction; 
   //UInt_t fNTimeSamplesADC; //Number of ADC time samples (this could be variable in principle, but should be the same for all strips within a module within a run) redundant with fN_MPD_TIME_SAMP
 
   // Should we define the parameters controlling cluster-finding in the Module class? Why not:

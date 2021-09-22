@@ -286,6 +286,15 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fTfine_by_APV.push_back( 0 );
   }
 
+  //if a different number of decode map entries is counted than the expectation based on the number of strips, 
+  //e.g., because we commented out one or more decode map entries, then we go with the larger of the two numbers. 
+  //This isn't perfectly idiot-proof, but prevents the kind of undefined behavior we want to avoid:
+  //if( fNAPVs_U != fNstripsU/fN_APV25_CHAN ){
+  fNAPVs_U = std::max( fNAPVs_U, fNstripsU/fN_APV25_CHAN );
+    //}
+  fNAPVs_V = std::max( fNAPVs_V, fNstripsV/fN_APV25_CHAN );
+
+
   //resize vectors that hold APV-card specific parameters:
   // fUgain.resize( fNAPVs_U );
   // fVgain.resize( fNAPVs_V );
@@ -400,7 +409,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   
   //default all common-mode mean and RMS values to 0 and 10 respectively if they were
-  // NOT loaded from the DB:
+  // NOT loaded from the DB and/or they are loaded with the wrong size:
   if( fCommonModeMeanU.size() != fNAPVs_U ){
     fCommonModeMeanU.resize( fNAPVs_U );
     for( int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
@@ -416,7 +425,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   }
 
   //default all common-mode mean and RMS values to 0 and 10 respectively if they were
-  // NOT loaded from the DB:
+  // NOT loaded from the DB and/or they were loaded with the wrong size:
   if( fCommonModeMeanV.size() != fNAPVs_V ){
     fCommonModeMeanV.resize( fNAPVs_V );
     for( int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
@@ -431,7 +440,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     }
   }
   
-  //default all gains to 1 if they were not loaded from the DB:
+  //default all gains to 1 if they were not loaded from the DB and/or if they were loaded with the 
+  //wrong size: 
   if( fUgain.size() != fNAPVs_U ){
     fUgain.resize(fNAPVs_U);
     for( int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
