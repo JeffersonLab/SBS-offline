@@ -62,8 +62,8 @@ protected:
 
   void PrintGeometry( const char *fname );
   
-  void InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
-  void InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
+  Long64_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
+  Long64_t InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
   //Retrieve the global position of a hit by module and hit index:
   TVector3 GetHitPosGlobal( int modidx, int clustidx );
@@ -116,7 +116,10 @@ protected:
 
   int fMinHitsOnTrack; //default = 3; cannot be less than 3, cannot be more than total number of layers
   
-  long fMaxHitCombinations; //default = 100000; skip 
+  long fMaxHitCombinations; //default = 10000; this is for "outer" layers
+  long fMaxHitCombinations_InnerLayers; //default = 10000?
+  long fMaxHitCombinations_Total; //default = 100000000
+  bool fTryFastTrack; //default = true?
   
   // The use of maps here instead of vectors may be slightly algorithmically inefficient, but it DOES guarantee that the maps are
   //  (a) sorted by increasing layer index, which, generally speaking, for a sensibly constructed database, will also be in ascending order of Z.

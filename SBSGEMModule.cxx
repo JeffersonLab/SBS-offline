@@ -59,6 +59,18 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //     fadc[i] = NULL;
   // }
 
+  //Default clustering parameters:
+  fThresholdSample = 50.0;
+  fThresholdStripSum = 250.0;
+  fThresholdClusterSum = 500.0;
+
+  fADCasymCut = 1.1;
+  fTimeCutUVdiff = 30.0;
+  fCorrCoeffCut = 0.5;
+
+  fFiltering_flag1D = 0; //"soft" cuts
+  fFiltering_flag2D = 0; //"soft" cuts
+  
   // default these offsets to zero: 
   fUStripOffset = 0.0;
   fVStripOffset = 0.0;
@@ -170,6 +182,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "threshold_clustersum", &fThresholdClusterSum, kDouble, 0, 1, 1}, //(optional): threshold on sum of all ADCs over all strips in a cluster (baseline-subtracted)
     { "ADCasym_cut", &fADCasymCut, kDouble, 0, 1, 1}, //(optional): filter 2D hits by ADC asymmetry, |Asym| < cut
     { "deltat_cut", &fTimeCutUVdiff, kDouble, 0, 1, 1}, //(optional): filter 2D hits by U/V time difference
+    { "corrcoeff_cut", &fCorrCoeffCut, kDouble, 0, 1, 1},
+    { "filterflag1D", &fFiltering_flag1D, kInt, 0, 1, 1},
+    { "filterflag2D", &fFiltering_flag2D, kInt, 0, 1, 1},
     { "peakprominence_minsigma", &fThresh_2ndMax_nsigma, kDouble, 0, 1, 1}, //(optional): reject overlapping clusters with peak prominence less than this number of sigmas
     { "peakprominence_minfraction", &fThresh_2ndMax_fraction, kDouble, 0, 1, 1}, //(optional): reject overlapping clusters with peak prominence less than this fraction of height of nearby higher peak
     { "maxnu_charge", &fMaxNeighborsU_totalcharge, kUShort, 0, 1, 1}, //(optional): cluster size restriction along U for total charge calculation
@@ -1306,6 +1321,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster finding with default (wide-open) track search constraints
   //these functions will fill the 1D cluster arrays:
+
   
   find_clusters_1D(SBSGEM::kUaxis); //u strips
   find_clusters_1D(SBSGEM::kVaxis); //v strips
@@ -1318,10 +1334,9 @@ void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster f
     fxcmax = 1.e12;
     fycmin = -1.e12;
     fycmax = 1.e12;
-  
+
     fill_2D_hit_arrays();
 
-    //std::cout << "Module " << fName << ", found " << fHits.size() << " 2D cluster candidates" << std::endl;
   }
 }
 
@@ -2387,6 +2402,9 @@ Int_t SBSGEMModule::GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert )
 
 void SBSGEMModule::filter_1Dhits(SBSGEM::GEMaxis_t axis){
 
+  if( fFiltering_flag1D < 0 ) return; //flag < 0 means don't filter 1D clusters at all
+  // flag = 0 means use a "soft" filter (only reject if at least one other cluster passed)
+  // flag > 0 means use a "hard" filter (reject failing clusters no matter what)
   //First filter on cluster ADC sum:
   int ngood = 0;
   int nclust = (axis == SBSGEM::kUaxis) ? fNclustU : fNclustV; 
@@ -2406,7 +2424,7 @@ void SBSGEMModule::filter_1Dhits(SBSGEM::GEMaxis_t axis){
       }
 
       //on the second pass, if at least one good cluster was found passing the criterion, we set "keep" for all others to false:
-      if( ipass == 1 && !passed[icl] && ngood > 0  ){
+      if( ipass == 1 && !passed[icl] && (ngood > 0 || fFiltering_flag1D > 0 ) ){
 	clusters[icl].keep = false;
       }
     }
@@ -2424,7 +2442,7 @@ void SBSGEMModule::filter_1Dhits(SBSGEM::GEMaxis_t axis){
 	if( passed[icl] ) ngood++;
       }
 
-      if( ipass == 1 && !passed[icl] && ngood > 0 ){
+      if( ipass == 1 && !passed[icl] && (ngood > 0 || fFiltering_flag1D > 0 ) ){
 	clusters[icl].keep = false;
       }
     }
@@ -2438,6 +2456,8 @@ void SBSGEMModule::filter_1Dhits(SBSGEM::GEMaxis_t axis){
 void SBSGEMModule::filter_2Dhits(){
   //Here we will initially filter only based on time U/V time difference, ADC asymmetry, and perhaps correlation coefficient:
 
+  if( fFiltering_flag2D < 0 ) return;
+  
   //First U/V time difference:
   bool passed[fN2Dhits];
   int ngood = 0;
@@ -2449,13 +2469,29 @@ void SBSGEMModule::filter_2Dhits(){
 	if( passed[ihit] ) ngood++;
       }
 
-      if( ipass == 1 && !passed[ihit] && ngood > 0 ){
+      if( ipass == 1 && !passed[ihit] && ( ngood > 0 || fFiltering_flag2D > 0 ) ){
 	fHits[ihit].keep = false;
       }
     }
   }
 
-  //Second: ADC asymmetry:
+  //Second: Cluster Correlation Coefficient:
+  ngood = 0;
+  for( int ipass=0; ipass<2; ipass++ ){
+    if( ipass == 0 ) ngood = 0;
+    for( int ihit=0; ihit<fN2Dhits; ihit++ ){
+      if( ipass == 0 ){
+	passed[ihit] = fHits[ihit].keep &&  fHits[ihit].corrcoeff_clust >= fCorrCoeffCut;
+	if( passed[ihit] ) ngood++;
+      }
+
+      if( ipass == 1 && !passed[ihit] && ( ngood > 0 || fFiltering_flag2D > 0 ) ){
+	fHits[ihit].keep = false;
+      }
+    }
+  }
+  
+  //Third: ADC asymmetry:
   ngood = 0;
   for( int ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
@@ -2465,7 +2501,7 @@ void SBSGEMModule::filter_2Dhits(){
 	if( passed[ihit] ) ngood++;
       }
 
-      if( ipass == 1 && !passed[ihit] && ngood > 0 ){
+      if( ipass == 1 && !passed[ihit] && ( ngood > 0 || fFiltering_flag2D > 0 ) ){
 	fHits[ihit].keep = false;
       }
     }

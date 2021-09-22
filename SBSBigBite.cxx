@@ -279,7 +279,7 @@ Int_t SBSBigBite::CoarseTrack()
 Int_t SBSBigBite::CoarseReconstruct()
 {
 
-  //  std::cout << "SBSBigBite::CoarseReconstruct()..."; 
+  //std::cout << "SBSBigBite::CoarseReconstruct()..."; 
   // Coarse Reconstruction of particles in spectrometer
   THaSpectrometer::CoarseReconstruct(); 
   // TODO
@@ -476,9 +476,13 @@ Int_t SBSBigBite::Track()
 Int_t SBSBigBite::Reconstruct()
 {
   // Fine Reconstruction of particles in spectrometer
+  //std::cout << "SBSBigBite::Reconstruct()..." << std::endl;
+  
   THaSpectrometer::Reconstruct();
   // TODO
 
+  //std::cout << "Done..." << std::endl;
+  
   return 0;
   
 }
@@ -487,7 +491,7 @@ Int_t SBSBigBite::Reconstruct()
   Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
 {
 
-  //  std::cout << "SBSBigBite::FindVertices()...";
+  //std::cout << "SBSBigBite::FindVertices()...";
   // Reconstruct target coordinates for all tracks found.
   Int_t n_trk = tracks.GetLast()+1;
   for( Int_t t = 0; t < n_trk; t++ ) {
@@ -612,7 +616,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   track->SetPvect(TVector3(px, py, pz));
   track->SetVertex(TVector3(0, 0, vz_fit));
 
-  // std::cout << "Done." << std::endl;
+  //std::cout << "Done." << std::endl;
 }
 
 //_____________________________________________________________________________

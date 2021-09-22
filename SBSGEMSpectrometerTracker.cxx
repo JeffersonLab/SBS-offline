@@ -94,6 +94,9 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "is_mc",        &fIsMC,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
+    { "maxhitcombos_inner", &fMaxHitCombinations_InnerLayers, kInt, 0, 1},
+    { "maxhitcombos_total", &fMaxHitCombinations_Total, kInt, 0, 1},
+    { "tryfasttrack", &fTryFastTrack, kInt, 0, 1 },
     { "gridbinwidthx", &fGridBinWidthX, kDouble, 0, 1},
     { "gridbinwidthy", &fGridBinWidthY, kDouble, 0, 1},
     { "gridedgetolerancex", &fGridEdgeToleranceX, kDouble, 0, 1},
@@ -256,9 +259,12 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
   Int_t stripcounter=0;
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    //std::cout << "Decoding module " << (*it)->GetName() << std::endl;
+    
     (*it)->Decode(evdata);
 
+    //std::cout << "Decoding module " << (*it)->GetName() << ", nstrips fired = " << (*it)->fNstrips_hit << std::endl;
+   
+    
     stripcounter += (*it)->fNstrips_hit;
     //std::cout << "done..." << std::endl;
   }

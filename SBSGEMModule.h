@@ -353,6 +353,11 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fADCasymCut;       // Filtering criterion for ADC X/Y (or U/V) asymmetry
   Double_t fTimeCutUVdiff;    // Filtering criterion for ADC X/Y (or U/V) time difference (this is distinct from any timing cuts relative to
   //trigger or reference timing at the individual strip level
+  Double_t fCorrCoeffCut;    //Filtering of 2D clusters best on ADC correlation
+
+  Int_t fFiltering_flag1D; // controls whether 1D cluster filtering criteria are strict requirements or "soft" requirements
+  Int_t fFiltering_flag2D; // controls whether 2D hit association criteria are strict requirements of "soft" requirements
+
   //Parameters controlling cluster splitting and insignificant peak elimination based on "peak prominence" calculation
   Double_t fThresh_2ndMax_nsigma;   //Number of sigmas above noise level for minimum peak prominence in splitting overlapping clusters
   Double_t fThresh_2ndMax_fraction; //Peak prominence threshold as a fraction of peak height for splitting overlapping clusters
