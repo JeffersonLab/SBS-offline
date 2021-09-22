@@ -29,7 +29,7 @@ public:
   virtual void    ClearEvent();
   // new functions
   Int_t   ConstructHodoscope();
-  Float_t TimeWalk(Float_t time);
+  Float_t TimeWalk(Float_t time, Float_t tot, Float_t timewalk0, Float_t timewalk1);
 
  protected:
   Float_t AttLength = 1.0/3.8;//380cm for ej200. units per m?

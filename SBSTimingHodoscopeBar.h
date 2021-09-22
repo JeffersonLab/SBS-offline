@@ -9,7 +9,7 @@
 // SBSTimingHodoscopeBar                                                     //
 //                                                                           //
 // Class to represent a timing hodoscope bar                                 //
-// rmontgom@jlab.org drafting jul 2021                                       //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 /* class SBSTimingHodoscopeBar; */
