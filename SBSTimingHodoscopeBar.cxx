@@ -2,7 +2,7 @@
 //                                                                           //
 // SBSTimingHodoscopeBar                                                     //
 //                                                                           //
-// rmontgom@jlab.org drafting jul 2021                                       //
+//                                                                           //
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "SBSTimingHodoscopeBar.h"
