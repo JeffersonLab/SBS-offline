@@ -103,7 +103,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 
   InitAPVMAP();
   
-  std::cout << "SBSGEMModule constructor invoked, name = " << name << std::endl;
+  //  std::cout << "SBSGEMModule constructor invoked, name = " << name << std::endl;
   
   return;
 }

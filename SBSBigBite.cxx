@@ -91,7 +91,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     std::cerr << here << "(): database not found!"<< std::endl;
     return kFileError;
   }
-  
+
+  int pidflag = fPID ? 1 : 0;
 
   std::vector<Double_t> optics_param;
   std::vector<Double_t> pssh_pidproba;
@@ -101,7 +102,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "tracker_pitch_angle",    &fTrackerPitchAngle, kDouble,  0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
-    { "do_pid",    &fPID, kUInt,  0, 1, 1},
+    { "do_pid",    &pidflag, kInt,  0, 1, 1},
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 1, 0},
     { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 1, 0},
     { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 1, 0},
@@ -122,6 +123,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     fclose(file);
     return status;
   }
+
+  fPID = ( pidflag != 0 );
   
   fTrackerPitchAngle*= TMath::DegToRad();
   
