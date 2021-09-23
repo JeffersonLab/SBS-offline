@@ -54,11 +54,12 @@ class SBSBigBite : public THaSpectrometer {
     std::vector<double> fb_yptar;
     std::vector<double> fb_ytar;
     std::vector<double> fb_pinv;
-    std::vector<double> f_oi;
-    std::vector<double> f_oj;
-    std::vector<double> f_ok;
-    std::vector<double> f_ol;
-    std::vector<double> f_om;
+    //AJRP: changed the exponents to integers here for speed:
+    std::vector<int> f_oi;
+    std::vector<int> f_oj;
+    std::vector<int> f_ok;
+    std::vector<int> f_ol;
+    std::vector<int> f_om;
     
     Double_t fPtheta_00000;
     Double_t fPtheta_10000;
