@@ -92,7 +92,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     return kFileError;
   }
   
-  Int_t n_elem = 9;//number of elements per line of the optics table. Default value.
+
   std::vector<Double_t> optics_param;
   std::vector<Double_t> pssh_pidproba;
   std::vector<Double_t> pcal_pidproba;
@@ -100,7 +100,6 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   const DBRequest request[] = {
     { "tracker_pitch_angle",    &fTrackerPitchAngle, kDouble,  0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
-    { "optics_nelem",     &n_elem,      kUInt,   0, 1, 0},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "do_pid",    &fPID, kUInt,  0, 1, 1},
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 1, 0},
@@ -137,27 +136,32 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   if(!nontrackdet)fPID = false;
 
   if(fOpticsOrder>=0){
-    int nparams = 0;
-    if(n_elem<0){
-      std::cerr << "number of elements per optics parameter lines not supplied" 
-		<< std::endl;
-      return kInitError;
+    int nterms = 0;
+    
+    for(int i = 0; i<=fOpticsOrder; i++){ //x 
+      for( int j=0; j<=fOpticsOrder-i; j++){ //y
+	for( int k=0; k<=fOpticsOrder-i-j; k++){
+	  for( int l=0; l<=fOpticsOrder-i-j-k; l++){
+	    for( int m=0; m<=fOpticsOrder-i-j-k-l; m++ ){
+	      nterms++;
+	    }
+	  }
+	}
+      }
     }
-    for(int k = 0; k<=fOpticsOrder; k++){
-      int n = 5+k-1;
-      nparams+= TMath::Factorial(n)/TMath::Factorial(n-k)/TMath::Factorial(k);
-    }
-    cout << nparams << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
+    cout << nterms << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
     
     //int n_elem = TMath::FloorNint(optics_param.size()/nparam);
     
-    if(n_elem*nparams!=optics_param.size()){
+    //we expect 9 parameters per line: four coefficients plus five exponents:
+
+    int nparams = 9*nterms;
+
+    if(nparams!=optics_param.size()){
       std::cerr << "Warning: mismatch between " << optics_param.size()
-		<< " optics parameters provided and " << nparams*n_elem
+		<< " optics parameters provided and " << nparams*9
 		<< " optics parameters expected!" << std::endl;
-      std::cerr << " either optics parameters are missing or n_elem = " 
-		<< n_elem << " is not setup at the right value " << std::endl
-		<< " Fix database! " << std::endl;
+      std::cerr << " Fix database! " << std::endl;
       return kInitError;
     }
     
@@ -173,15 +177,15 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     f_om.resize(nparams);
     
     for(int i=0; i<nparams; i++){
-      fb_xptar[i] = optics_param[n_elem*i];
-      fb_yptar[i] = optics_param[n_elem*i+1];
-      fb_ytar[i] = optics_param[n_elem*i+2];
-      fb_pinv[i] = optics_param[n_elem*i+3];
-      f_om[i] = optics_param[n_elem*i+4];
-      f_ol[i] = optics_param[n_elem*i+5];
-      f_ok[i] = optics_param[n_elem*i+6];
-      f_oj[i] = optics_param[n_elem*i+7];
-      f_oi[i] = optics_param[n_elem*i+8];
+      fb_xptar[i] = optics_param[9*i];
+      fb_yptar[i] = optics_param[9*i+1];
+      fb_ytar[i] = optics_param[9*i+2];
+      fb_pinv[i] = optics_param[9*i+3];
+      f_om[i] = int(optics_param[9*i+4]);
+      f_ol[i] = int(optics_param[9*i+5]);
+      f_ok[i] = int(optics_param[9*i+6]);
+      f_oj[i] = int(optics_param[9*i+7]);
+      f_oi[i] = int(optics_param[9*i+8]);
       
       if(f_om[i]==0 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==0 && f_oi[i]==0)
 	fPtheta_00000 = fb_pinv[i];
