@@ -136,26 +136,28 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   if(!nontrackdet)fPID = false;
 
   if(fOpticsOrder>=0){
-    int nparams = 0;
+    int nterms = 0;
     
     for(int i = 0; i<=fOpticsOrder; i++){ //x 
-      for( int j=i; j<=fOpticsOrder; j++){ //y
-	for( int k=i+j; k<=fOpticsOrder; k++){
-	  for( int l=i+j+k; l<=fOpticsOrder; l++){
-	    for( int m=i+j+k+l; m<=fOpticsOrder; m++ ){
-	      nparams++;
+      for( int j=0; j<=fOpticsOrder-i; j++){ //y
+	for( int k=0; k<=fOpticsOrder-i-j; k++){
+	  for( int l=0; l<=fOpticsOrder-i-j-k; l++){
+	    for( int m=0; m<=fOpticsOrder-i-j-k-l; m++ ){
+	      nterms++;
 	    }
 	  }
 	}
       }
     }
-    cout << nparams << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
+    cout << nterms << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
     
     //int n_elem = TMath::FloorNint(optics_param.size()/nparam);
     
     //we expect 9 parameters per line: four coefficients plus five exponents:
 
-    if(9*nparams!=optics_param.size()){
+    int nparams = 9*nterms;
+
+    if(nparams!=optics_param.size()){
       std::cerr << "Warning: mismatch between " << optics_param.size()
 		<< " optics parameters provided and " << nparams*9
 		<< " optics parameters expected!" << std::endl;
