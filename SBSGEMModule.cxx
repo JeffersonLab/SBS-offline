@@ -705,6 +705,18 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
 
   ret = DefineVarsFromList( varhits, mode );
 
+  RVarDef vartiming[] = {
+    { "time.T0_by_APV", "Coarse MPD timestamp of first event", "fT0_by_APV" },
+    { "time.Tref_coarse", "Reference coarse MPD time stamp for this event", "fTref_coarse" },
+    { "time.Tcoarse_by_APV", "Coarse MPD timestamp by APV relative to Tref_coarse", "fTcoarse_by_APV" },
+    { "time.Tfine_by_APV", "Fine MPD timestamp by APV", "fTfine_by_APV" },
+    { "time.EventCount_by_APV", "MPD event counter by APV (these should all agree in any one event)", "fEventCount_by_APV" },
+    { "time.T_ns_by_APV", "Time stamp in ns relative to coarse T_ref", "fTimeStamp_ns_by_APV" },
+    { nullptr },
+  };
+
+  ret = DefineVarsFromList( vartiming, mode );
+  
   if( ret != kOK )
     return ret;
 
@@ -832,6 +844,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  UInt_t Thigh = evdata.GetData( it->crate, it->slot, fChan_TimeStamp_high, ihit );
 	  UInt_t EvCnt = evdata.GetData( it->crate, it->slot, fChan_MPD_EventCount, ihit );
 
+	  fEventCount_by_APV[apvcounter] = EvCnt;
+	  
 	  // Fine time stamp is in the first 8 bits of Tlow;
 	  fTfine_by_APV[apvcounter] = Tlow & 0x000000FF;
 
@@ -844,6 +858,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //This SHOULD make fTcoarse_by_APV the Tcoarse RELATIVE to the
 	  // "reference" APV
 	  fTcoarse_by_APV[apvcounter] = Tcoarse - fT0_by_APV[apvcounter] - fTref_coarse;
+
+	  //We probably don't want to hard-code 24 ns and 4 ns here for the units of
+	  //Tcoarse and Tfine, but this should be fine for initial checkout of decoding:
+	  fTimeStamp_ns_by_APV[apvcounter] = 24.0 * fTcoarse_by_APV[apvcounter] + 4.0 * (fTfine_by_APV[apvcounter] % 6);
 	  
 	  break;
 	}	
