@@ -94,26 +94,30 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   // };
   //std::string pedfilename = ""; //Optional: load pedestals from separate file
   
-  int pedestalmode_flag = 0;
-  int doefficiency_flag = 1;
-  int onlinezerosuppressflag = 0;
-  int useconstraintflag = 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
+  int pedestalmode_flag = fPedestalMode ? 1 : 0;
+  int doefficiency_flag = fMakeEfficiencyPlots ? 1 : 0;
+  //int onlinezerosuppressflag = fOnlineZeroSuppression ? 1 : 0;
+  int useconstraintflag = fUseConstraint ? 1 : 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
+  int mc_flag = fIsMC ? 1 : 0;
+  int fasttrack_flag = fTryFastTrack ? 1 : 0;
+  int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
+
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
-    { "is_mc",        &fIsMC,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
+    { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
     { "maxhitcombos_inner", &fMaxHitCombinations_InnerLayers, kInt, 0, 1},
     { "maxhitcombos_total", &fMaxHitCombinations_Total, kInt, 0, 1},
-    { "tryfasttrack", &fTryFastTrack, kInt, 0, 1 },
+    { "tryfasttrack", &fasttrack_flag, kInt, 0, 1 },
     { "gridbinwidthx", &fGridBinWidthX, kDouble, 0, 1},
     { "gridbinwidthy", &fGridBinWidthY, kDouble, 0, 1},
     { "gridedgetolerancex", &fGridEdgeToleranceX, kDouble, 0, 1},
     { "gridedgetolerancey", &fGridEdgeToleranceY, kDouble, 0, 1},
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
-    { "useopticsconstraint", &fUseOpticsConstraint, kInt, 0, 1},
+    { "useopticsconstraint", &useopticsconstraint, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
@@ -131,6 +135,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
   fPedestalMode = ( pedestalmode_flag != 0 );
+  fIsMC = (mc_flag != 0);
+  fTryFastTrack = (fasttrack_flag != 0);
 
   std::cout << "pedestal file name = " << fpedfilename << std::endl;
   

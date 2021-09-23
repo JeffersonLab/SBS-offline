@@ -103,6 +103,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 
   InitAPVMAP();
   
+  std::cout << "SBSGEMModule constructor invoked, name = " << name << std::endl;
+  
   return;
 }
 
@@ -158,7 +160,14 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   // default these offsets to zero: 
   fUStripOffset = 0.0;
   fVStripOffset = 0.0;
+
+  //std::cout << "Before loadDB, fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
+
+  int cmplots_flag = fMakeCommonModePlots ? 1 : 0;
+  int zerosuppress_flag = fZeroSuppress ? 1 : 0;
+  int onlinezerosuppress_flag = fOnlineZeroSuppression ? 1 : 0;
   
+
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
     { "apvmap",         &fAPVmapping,    kUInt, 0, 1, 1}, //optional, allow search up the tree if all modules in a setup have the same APV mapping
@@ -192,9 +201,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "maxnu_pos", &fMaxNeighborsU_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
     { "maxnv_pos", &fMaxNeighborsV_hitpos, kUShort, 0, 1, 1}, //(optional): cluster size restriction for position reconstruction
     { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1, 1}, //(optional): width parameter for cluster-splitting algorithm
-    { "zerosuppress", &fZeroSuppress, kUInt, 0, 1, 1}, //(optional, search): toggle offline zero suppression (default = true).
+    { "zerosuppress", &zerosuppress_flag, kUInt, 0, 1, 1}, //(optional, search): toggle offline zero suppression (default = true).
     { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1, 1}, //(optional, search):
-    { "onlinezerosuppress", &fOnlineZeroSuppression, kUInt, 0, 1, 1}, //(optional, search)
+    { "onlinezerosuppress", &onlinezerosuppress_flag, kUInt, 0, 1, 1}, //(optional, search)
     { "commonmode_meanU", &fCommonModeMeanU, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_meanV", &fCommonModeMeanV, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_rmsU", &fCommonModeRMSU, kDoubleV, 0, 1, 0}, //(optional, don't search)
@@ -204,7 +213,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_nstriphi", &fCommonModeNstripRejectHigh, kInt, 0, 1, 1}, //optional, search:
     { "commonmode_niter", &fCommonModeNumIterations, kInt, 0, 1, 1},
     { "commonmode_minstrips", &fCommonModeMinStripsInRange, kInt, 0, 1, 1},
-    { "plot_common_mode", &fMakeCommonModePlots, kUInt, 0, 1, 1},
+    { "plot_common_mode", &cmplots_flag, kInt, 0, 1, 1},
     { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
     { "chan_timestamp_low", &fChan_TimeStamp_low, kUInt, 0, 1, 1},
     { "chan_timestamp_high", &fChan_TimeStamp_high, kUInt, 0, 1, 1},
@@ -219,6 +228,12 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fclose(file);
     return status;
   }
+
+  fMakeCommonModePlots = cmplots_flag != 0;
+  fZeroSuppress = zerosuppress_flag != 0;
+  fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
+
+  //  std::cout << "After loadDB, fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
  
   if( fAPVmapping < SBSGEM::kINFN || fAPVmapping > SBSGEM::kMC ) {
     std::cout << "Warning in SBSGEMModule::Decode for module " << GetParent()->GetName() << "." << GetName() << ": invalid APV mapping choice, defaulting to UVA X/Y." << std::endl
@@ -473,6 +488,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   if( fPedestalMode ){
     fZeroSuppress = false;
+    fOnlineZeroSuppression = false;
     //fPedSubFlag = 0;
   }
   
@@ -1954,6 +1970,7 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     
   }
 
+  //std::cout << "fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
   if( fMakeCommonModePlots && !fCommonModePlotsInitialized ){
 
     //std::cout << "SBSGEMModule::Begin: making common-mode histograms for module " << GetName() << std::endl;
@@ -1996,7 +2013,8 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     // fCommonModeDiffV->Print();
     fCommonModePlotsInitialized = true;
   }
-  
+
+  //  std::cout << "fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
     
   return 0;
 }
