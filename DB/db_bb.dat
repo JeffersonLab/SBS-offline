@@ -1,7 +1,9 @@
+bb.tracker_pitch_angle = 10.
+
 ## optics parameters:
 bb.optics_order = 2
 
-#bb.optics_nparam = 21
+bb.optics_nelem = 9
 
 bb.optics_parameters = 
   -0.0014629237  0.00037941994 -0.00095754244      0.2769191  0 0 0 0 0

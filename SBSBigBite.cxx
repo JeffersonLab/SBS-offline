@@ -27,7 +27,7 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
 {
   SetMultiTracks(false);
   SetTrSorting(false);
-  fTrackerPitchAngle = 10.0*TMath::DegToRad();
+  fTrackerPitchAngle = 10.0;
   fOpticsOrder = -1;
   fFrontConstraintWidthX = 1.5;
   fFrontConstraintWidthY = 1.5;
@@ -92,7 +92,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     return kFileError;
   }
   
-  //UInt_t nparams = -1;
+  Int_t n_elem = -1;
   std::vector<Double_t> optics_param;
   std::vector<Double_t> pssh_pidproba;
   std::vector<Double_t> pcal_pidproba;
@@ -100,7 +100,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   const DBRequest request[] = {
     { "tracker_pitch_angle",    &fTrackerPitchAngle, kDouble,  0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
-    //{ "optics_nparam",     &nparams,      kUInt,   0, 1, 1},
+    { "optics_nelem",     &n_elem,      kUInt,   0, 1, 0},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "do_pid",    &fPID, kUInt,  0, 1, 1},
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 1, 0},
@@ -136,21 +136,28 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   }//if we do not find any non tracking detectors, we force fPID to be false.
   if(!nontrackdet)fPID = false;
 
-  if(fOpticsOrder>-1){
+  if(fOpticsOrder>=0){
     int nparams = 0;
+    if(n_elem<0){
+      std::cerr << "number of elements per optics parameter lines not supplied" 
+		<< std::endl;
+      return kInitError;
+    }
     for(int k = 0; k<=fOpticsOrder; k++){
       int n = 5+k-1;
       nparams+= TMath::Factorial(n)/TMath::Factorial(n-k)/TMath::Factorial(k);
     }
     cout << nparams << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
     
-    int n_elem = TMath::FloorNint(optics_param.size()/9);
+    //int n_elem = TMath::FloorNint(optics_param.size()/nparam);
     
-    if(n_elem!=nparams){
-      std::cerr << "Warning: mismatch between " << optics_param.size()/9
-		<< " optics parameters provided and " << nparams
-		<< " optics parameters expected!" << std::endl
-		<< " Fix database! " << endl;
+    if(n_elem*nparams!=optics_param.size()){
+      std::cerr << "Warning: mismatch between " << optics_param.size()
+		<< " optics parameters provided and " << nparams*n_elem
+		<< " optics parameters expected!" << std::endl;
+      std::cerr << " either optics parameters are missing or n_elem = " 
+		<< n_elem << " is not setup at the right value " << std::endl
+		<< " Fix database! " << std::endl;
       return kInitError;
     }
     
@@ -176,19 +183,19 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
       f_oj[i] = optics_param[n_elem*i+7];
       f_oi[i] = optics_param[n_elem*i+8];
       
-      if(f_oi[i]==0 && f_oj[i]==0 && f_ok[i]==0 && f_ol[i]==0 && f_om[i]==0)
+      if(f_om[i]==0 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==0 && f_oi[i]==0)
 	fPtheta_00000 = fb_pinv[i];
-      if(f_oi[i]==1 && f_oj[i]==0 && f_ok[i]==0 && f_ol[i]==0 && f_om[i]==0){
+      if(f_om[i]==1 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==0 && f_oi[i]==0){
 	fPtheta_10000 = fb_pinv[i];
 	fXptar_10000 = fb_xptar[i];
       }
-      if(f_oi[i]==0 && f_oj[i]==0 && f_ok[i]==1 && f_ol[i]==0 && f_om[i]==0){
+      if(f_om[i]==0 && f_ol[i]==0 && f_ok[i]==1 && f_oj[i]==0 && f_oi[i]==0){
 	fPtheta_00100 = fb_pinv[i];
 	fXptar_00100 = fb_xptar[i];
       }
-      if(f_oi[i]==0 && f_oj[i]==1 && f_ok[i]==0 && f_ol[i]==0 && f_om[i]==0)
+      if(f_om[i]==0 && f_ol[i]==1 && f_ok[i]==0 && f_oj[i]==0 && f_oi[i]==0)
 	fYtar_01000 = fb_ytar[i];
-      if(f_oi[i]==0 && f_oj[i]==0 && f_ok[i]==0 && f_ol[i]==1 && f_om[i]==0)
+      if(f_om[i]==0 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==1 && f_oi[i]==0)
 	fYtar_00010 = fb_ytar[i];
     }
   }
@@ -381,7 +388,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	z_bcp = BBTotalShower->GetShower()->GetOrigin().Z();
 	sumweights_x = 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	sumweights_y = 1.;
-	cout << BBTotalShower->GetShower()->GetECorrected() << endl;
+	//cout << BBTotalShower->GetShower()->GetECorrected() << endl;
 	for(int i = 0; i<ShowerClusters.size(); i++){
 	  Etot = ShowerClusters[i]->GetE();
 	  npts = 1;
@@ -396,8 +403,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	    x_bcp/=sumweights_x;
 	    y_bcp/=sumweights_y;
 	    
-	    double dx = (Etot*fTrackerPitchAngle -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
-	      (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
+	    double dx = (Etot*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	      (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	    
 	    z_fcp = 0;
@@ -447,19 +454,22 @@ Int_t SBSBigBite::CoarseReconstruct()
 	y_bcp/=sumweights_y;
 	//z_bcp/=npts;
 	
-	// std::cout << "Back constraint point x, y, z: " 
-	//  	      << x_bcp << ", " << y_bcp << ", "<< z_bcp 
-	//  	      << endl;
+	//std::cout << "Back constraint point x, y, z: " 
+	//	  << x_bcp << ", " << y_bcp << ", "<< z_bcp 
+	//	  << endl;
         
-	double dx = (Etot*10.*TMath::DegToRad() -fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	double dx = (Etot*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
 	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
 	//The dy equation is correct under the assumption ytarget = 0: can we refine?
+	//double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
+	//(-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
+	//double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	
-	//cout << "(x_bcp*(" << fb_xptar[1] << "*Etot-" << fb_pinv[1] << ")+" 
-	//<< 10.*TMath::DegToRad() << "*Etot-" << fb_pinv[0] << ")/" << endl 
-	//<< " (Etot*" << (fb_xptar[1]*z_bcp+1-fb_xptar[6]) << "+" << -fb_pinv[1]*z_bcp+fb_pinv[6] << ")" << endl;
-	//cout << fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]) << endl;
+	//cout << "(x_bcp*(" << fXptar_10000 << "*Etot-" << fPtheta_10000 << ")+" 
+	//     << 10.*TMath::DegToRad() << "*Etot-" << fPtheta_00000 << ")/" << endl 
+	//     << " (Etot*" << (fXptar_10000*z_bcp+1-fXptar_00100) << "+" << -fPtheta_10000*z_bcp+fPtheta_00100 << ")" << endl;
+	//cout << fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010) << endl;
 	
 	z_fcp = 0;
 	x_fcp = x_bcp+dx*(z_fcp-z_bcp);
