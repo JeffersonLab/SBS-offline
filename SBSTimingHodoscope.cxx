@@ -264,9 +264,9 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 
     if(WithTDC()){
       if(elL->TDC()->HasData() && elR->TDC()->HasData()){
-	Int_t bar = BarInc;
+	//Int_t bar = BarInc;// why redeclare the index?
 	// don't need to add offset to tdc since all readout simultaneously
-	fGoodBarIDsTDC.push_back(bar);
+	fGoodBarIDsTDC.push_back(BarInc);
 	
 	// left hit
 	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
@@ -309,7 +309,14 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	// Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
 	Float_t HorizPos = 0.5 * (bartimediff*0.1e-9) * vScint; // position from L based on timediff and in m
 	fGoodBarTDCpos.push_back(HorizPos);
-	fGoodBarTDCpos.push_back(elR->GetY());
+	fGoodBarTDCvpos.push_back(elR->GetY());
+	
+	bar->SetMeanTime(barmeantime);
+	bar->SetTimeDiff(bartimediff);
+	bar->SetHitPos(HorizPos);
+	bar->SetElementPos(elR->GetY());
+	bar->SetLeftHit(hitL);
+	bar->SetRightHit(hitR);
 	
       }// tdc hit on both pmts
     }// with tdc
@@ -355,7 +362,21 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   // Do more detailed processing here.  Parent class does nothing, so no need
   // to call it.
   // We can prepare more detailed output if we want.
+  /*
+  // Clustering here?
+  //std::vector<bool> InCluster;
+  double MinClusVpos;
+  double MaxClusVpos;
+  for(int i = 0; i<fGoodBarIDsTDC.size(); i++){
+    if(MinClusVpos-fGoodBarTDCvpos[i]<SizeCol()*1.5){
+      MinClusVpos = fGoodBarTDCvpos[i];
+    }
+    if(fGoodBarTDCvpos[i]-MaxClusVpos<SizeCol()*1.5){
+      MaxClusVpos = fGoodBarTDCvpos[i];
+    } 
 
+  }
+  */
   fFineProcessed = 1;
   return 0;
 }

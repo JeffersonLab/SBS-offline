@@ -16,7 +16,7 @@ public:
 
     SBSTimingHodoscopeCluster();
     SBSTimingHodoscopeCluster(Int_t nmaxblk);
-    //SBSTimingHodoscopeCluster(Int_t nmaxblk, SBSTimingHodoscopeBar* bar);
+    SBSTimingHodoscopeCluster(Int_t nmaxblk, SBSTimingHodoscopeBar* bar);
     virtual ~SBSTimingHodoscopeCluster();
 
     Float_t GetXmean() const {return fXmean;}

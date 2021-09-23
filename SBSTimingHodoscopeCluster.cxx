@@ -14,20 +14,18 @@ ClassImp(SBSTimingHodoscopeCluster)   // Generic shower cluster class
 using namespace std;
 
 
-/*
 //_____________________________________________________________
-SBSTimingHodoscopeCluster::SBSTimingHodoscopeCluster(Int_t nmaxblk, SBSTimingHodoscope* bar) 
-: fNMaxElements(nmaxblk), fMaxElement(0)
+SBSTimingHodoscopeCluster::SBSTimingHodoscopeCluster(Int_t nmaxblk, SBSTimingHodoscopeBar* bar) 
+: fNMaxElements(nmaxblk)
 {
    fElements.clear();
    fElements.reserve(fNMaxElements);
    fElements.push_back(bar);
-   fXmean = bar->GetX();
-   fYmean = bar->GetY();
-   fTmean = bar->GetT();
+   fXmean = bar->GetElementPos();
+   fYmean = bar->GetHitPos();
+   fTmean = bar->GetMeanTime();
    fMult = 1;
 }
-*/
 
 //_____________________________________________________________
 SBSTimingHodoscopeCluster::SBSTimingHodoscopeCluster(Int_t nmaxblk) 
@@ -60,23 +58,9 @@ void SBSTimingHodoscopeCluster::AddElement(SBSTimingHodoscopeBar* bar) {
   if (fMult<fNMaxElements) {
     fElements.push_back(bar);
     fMult = fElements.size();
-    /*
-    block->SetStat(1);
-    fX = (fX*fE + block->GetX()*block->GetE()) / (fE+block->GetE());
-    fY = (fY*fE + block->GetY()*block->GetE()) / (fE+block->GetE());
-    fE += block->GetE();
-        if(block->GetE() > fEblk) {
-          fEblk = block->GetE();
-          fRow = block->GetRow();
-          fCol = block->GetCol();
-        }
-        // Keep a pointer to the element with the highest energy
-        if(!fMaxElement) {
-          fMaxElement = block;
-        } else if ( block->GetE() > fMaxElement->GetE() ) {
-          fMaxElement = block;
-        }
-    */
+    fXmean = (fXmean*(fMult-1)+bar->GetElementPos())/fMult;
+    fYmean = (fYmean*(fMult-1)+bar->GetHitPos())/fMult;
+    fTmean = (fTmean*(fMult-1)+bar->GetMeanTime())/fMult;
   }
 }
 
