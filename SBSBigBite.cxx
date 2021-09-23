@@ -92,7 +92,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     return kFileError;
   }
   
-  Int_t n_elem = -1;
+  Int_t n_elem = 9;//number of elements per line of the optics table. Default value.
   std::vector<Double_t> optics_param;
   std::vector<Double_t> pssh_pidproba;
   std::vector<Double_t> pcal_pidproba;
