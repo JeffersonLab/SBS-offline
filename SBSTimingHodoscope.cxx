@@ -236,6 +236,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   fGoodBarTDCmean.clear();
   fGoodBarTDCdiff.clear();
   fGoodBarTDCpos.clear();
+  fGoodBarTDCvpos.clear();
   fGoodBarTDCLle.clear();
   fGoodBarTDCLleW.clear();
   fGoodBarTDCLte.clear();
@@ -324,7 +325,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	// Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
 	Float_t HorizPos = 0.5 * (bartimediff*0.1e-9) * vScint; // position from L based on timediff and in m
 	fGoodBarTDCpos.push_back(HorizPos);
-	fGoodBarTDCvpos.push_back(elL->GetY());
+	fGoodBarTDCvpos.push_back(elR->GetY());
 	
 	bar->SetMeanTime(barmeantime);
 	bar->SetMeanToT( ((hitL.te.val-hitL.le.val)+(hitR.te.val-hitR.le.val))/2. );

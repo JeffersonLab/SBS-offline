@@ -31,6 +31,25 @@ public:
   // new functions
   Int_t   ConstructHodoscope();
   Float_t TimeWalk(Float_t time, Float_t tot, Float_t timewalk0, Float_t timewalk1);
+
+  Int_t GetGoodBarsSize() {return fGoodBarIDsTDC.size();};
+  std::vector<Int_t> GetGoodBarsIDs() {return fGoodBarIDsTDC;};
+  std::vector<Float_t> GetGoodBarsMeanTimes() {return fGoodBarTDCmean;};
+  // time diff pos is hit pos along the bar length from time diff
+  std::vector<Float_t> GetGoodBarsTimeDiffPos() {return fGoodBarTDCpos;};
+  std::vector<Float_t> GetGoodBarsVPos() {return fGoodBarTDCvpos;};
+  Float_t GetGoodBarVPosElement(Int_t i) {
+    if(i<fGoodBarTDCvpos.size())
+      return fGoodBarTDCvpos[i];
+    else return -999.0;};
+  Float_t GetGoodBarHPosElement(Int_t i) {
+    if(i<fGoodBarTDCpos.size())
+      return fGoodBarTDCpos[i];
+    else return -999.0;};
+  Float_t GetGoodBarMeanTimeElement(Int_t i) {
+    if(i<fGoodBarTDCmean.size())
+      return fGoodBarTDCmean[i];
+    else return -999.0;};
   
   Int_t GetNClusters() {return fClusters.size();};
   SBSTimingHodoscopeCluster* GetCluster(int i);
