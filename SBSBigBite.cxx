@@ -738,12 +738,20 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
       SBSTimingHodoscope* TH = reinterpret_cast<SBSTimingHodoscope*>(theNonTrackDetector);
       
       //x, y of track at z = Z_hodoscope
-      double x_track = the_track->GetX()+
-	the_track->GetTheta()*TH->GetOrigin().Z();
-      double y_track = the_track->GetY()+
-	the_track->GetPhi()*TH->GetOrigin().Z();
+      double x_track = the_track->GetX(TH->GetOrigin().Z());
+      double y_track = the_track->GetY(TH->GetOrigin().Z());
+      //cout << x_track << " " << y_track << endl;
       // Not sure what to use for the hodoscope. 
       // Perhaps we'd have to complete the class with a cluster
+      
+      for(int i=0; i<TH->GetNClusters(); i++){
+	SBSTimingHodoscopeCluster* clus = TH->GetCluster(i);
+	if(clus->GetXmean()-clus->GetSize()*TH->SizeCol()/2<x_track && 
+	   x_track<clus->GetXmean()+clus->GetSize()*TH->SizeCol()/2){
+	  //std::cout << clus->GetSize() << " " << clus->GetTmean() << " " << clus->GetXmean() << " " << clus->GetYmean() << " " << clus->GetToTmean() << std::endl;
+	  the_track->SetTime(clus->GetTmean());
+	}  
+      }
     }
   }
   

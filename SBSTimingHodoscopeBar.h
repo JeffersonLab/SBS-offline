@@ -45,6 +45,7 @@ public:
 	
 	double GetMeanTime(){return fMeanTime;};
 	double GetTimeDiff(){return fTimeDiff;};
+	double GetMeanToT(){return fMeanToT;};
 	double GetHitPos(){return fHitPos;};
 	double GetElementPos(){return fElementPos;};
 	SBSData::TDCHit GetLeftHit(){return fLeftHit;};
@@ -52,6 +53,7 @@ public:
 
 	void SetMeanTime(double val){fMeanTime = val;};
 	void SetTimeDiff(double val){fTimeDiff = val;};
+	void SetMeanToT(double val){fMeanToT = val;};
 	void SetHitPos(double val){fHitPos = val;};
 	void SetElementPos(double val){fElementPos = val;};
 	void SetLeftHit(SBSData::TDCHit hit){fLeftHit = hit;};
@@ -65,6 +67,7 @@ protected:
 	
 	double fMeanTime;
 	double fTimeDiff;
+	double fMeanToT;
 	double fHitPos;
 	double fElementPos;
 	SBSData::TDCHit fLeftHit;

@@ -61,6 +61,21 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   if(err)
     return err;
 
+  std::vector<Float_t> ypos;//position of element
+  std::vector<DBRequest> vr;
+  vr.push_back({ "ypos", &ypos,    kFloatV, 0, 1 });
+  vr.push_back({0});
+  err = LoadDB( file, date, vr.data(), fPrefix );
+  if (ypos.size()>0) {
+    if (ypos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+	SBSElement* blk= fElements[ne];
+	fElements[ne]->SetY(ypos[ne]);
+      }
+    } else {
+      std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
   // std::cout << "fNelem " << fNelem << std::endl;
   // std::cout << "timewalkpar0.size() " << timewalkpar0.size() << std::endl;
   // std::cout << "timewalkpar1.size() " << timewalkpar1.size() << std::endl;
@@ -309,15 +324,15 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	// Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
 	Float_t HorizPos = 0.5 * (bartimediff*0.1e-9) * vScint; // position from L based on timediff and in m
 	fGoodBarTDCpos.push_back(HorizPos);
-	fGoodBarTDCvpos.push_back(elR->GetY());
+	fGoodBarTDCvpos.push_back(elL->GetY());
 	
 	bar->SetMeanTime(barmeantime);
+	bar->SetMeanToT( ((hitL.te.val-hitL.le.val)+(hitR.te.val-hitR.le.val))/2. );
 	bar->SetTimeDiff(bartimediff);
 	bar->SetHitPos(HorizPos);
 	bar->SetElementPos(elR->GetY());
 	bar->SetLeftHit(hitL);
 	bar->SetRightHit(hitR);
-	
       }// tdc hit on both pmts
     }// with tdc
     // adc events
@@ -355,28 +370,32 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 
 Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
 {
-
   if(fFineProcessed)
     return 0;
 
   // Do more detailed processing here.  Parent class does nothing, so no need
   // to call it.
   // We can prepare more detailed output if we want.
-  /*
-  // Clustering here?
-  //std::vector<bool> InCluster;
-  double MinClusVpos;
-  double MaxClusVpos;
+  // Clustering here? 
+  // Wait, if I understand the code, 
+  // the way the information is stored in the vectors is by increasing index always.
+  int prev_baridx = -10;
   for(int i = 0; i<fGoodBarIDsTDC.size(); i++){
-    if(MinClusVpos-fGoodBarTDCvpos[i]<SizeCol()*1.5){
-      MinClusVpos = fGoodBarTDCvpos[i];
+    int baridx = fGoodBarIDsTDC[i];
+    SBSTimingHodoscopeBar* Bar = fBars[baridx];
+    // this below takes advantage of the fact that the bars are already sorted by ID/geometry i.e. two "good" adjacent bars are guaranteed to be stored back-to-back.
+    if(baridx-prev_baridx==1 && fClusters.size()>0){
+      if(!fClusters[fClusters.size()-1]->AddElement(Bar)){
+	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(10, Bar);
+	fClusters.push_back(clus);
+      }
+    }else{
+      SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(10, Bar);
+      fClusters.push_back(clus);
     }
-    if(fGoodBarTDCvpos[i]-MaxClusVpos<SizeCol()*1.5){
-      MaxClusVpos = fGoodBarTDCvpos[i];
-    } 
-
+    prev_baridx = baridx;
   }
-  */
+  
   fFineProcessed = 1;
   return 0;
 }
@@ -518,7 +537,9 @@ void SBSTimingHodoscope::ClearEvent()
   fGoodBarADCRa.clear();
   fGoodBarADCRap.clear();
   fGoodBarADCRac.clear();
-
+  
+  fClusters.clear();
+  
   // Make sure to call parent class's ClearEvent() also!
   SBSGenericDetector::ClearEvent();
 }
