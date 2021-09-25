@@ -333,16 +333,16 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     
     message.Form("# copy the contents of this file into (location TBD) to update CODA thresholds for detector %s.%s", specname.Data(), detname.Data() );
     
-    fpedfile_daq << sdate << std::endl;
-    fpedfile_daq <<  message << std::endl;
-    fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
-		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
+    // fpedfile_daq << sdate << std::endl;
+    // fpedfile_daq <<  message << std::endl;
+    // fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
+    // 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
 
     message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
     
-    fpedfile_cmr << sdate << std::endl;
-    fpedfile_cmr << message << std::endl;
-    fpedfile_cmr << "# format = crate     slot      mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
+    // fpedfile_cmr << sdate << std::endl;
+    // fpedfile_cmr << message << std::endl;
+    // fpedfile_cmr << "# format = crate     slot      mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
   }
   
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
