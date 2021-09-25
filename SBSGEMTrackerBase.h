@@ -118,6 +118,8 @@ protected:
   void AddNewTrack( const std::map<int,int> &hitcombo, const std::vector<double> &BestTrack, double chi2ndf, const std::vector<double> &uresid, const std::vector<double> &vresid );
 
   void PurgeHits(int itrack);
+
+  void SetPedestalMode( bool pm=true ){ fPedestalMode = pm; fPedMode_DBoverride = true; }
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
@@ -128,6 +130,7 @@ protected:
   //bool fZeroSuppress;
   //double fZeroSuppressRMS;
 
+  bool fPedMode_DBoverride; 
   bool fPedestalMode;
   // bool fPedestalsInitialized;
   

@@ -24,7 +24,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fIsMC = false;//by default!
   //fCrateMap = 0;
   fPedestalMode = false;
-
+  fPedMode_DBoverride = false; //Only if the user script invokes the SetPedestalMode method do we override the database value:
+  
   fIsSpectrometerTracker = true; //used by tracker base
   fUseOpticsConstraint = false;
   
@@ -134,7 +135,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fclose(file);
 
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
-  fPedestalMode = ( pedestalmode_flag != 0 );
+  if( !fPedMode_DBoverride ) fPedestalMode = ( pedestalmode_flag != 0 );
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 

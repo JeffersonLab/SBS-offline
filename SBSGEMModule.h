@@ -165,7 +165,7 @@ class SBSGEMModule : public THaSubDetector {
   double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
   
   bool fIsDecoded;
-
+  
   //UShort_t GetLayer() const { return fLayer; }
 
   //std::vector<sbsgemhit_t> GetHitList() { return fHits; }
