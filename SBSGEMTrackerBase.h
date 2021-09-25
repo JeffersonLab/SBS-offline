@@ -55,6 +55,8 @@ public:
   void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
+
+  void SetPedestalMode( bool pm=true ){ fPedestalMode = pm; fPedMode_DBoverride = true; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -119,7 +121,7 @@ protected:
 
   void PurgeHits(int itrack);
 
-  void SetPedestalMode( bool pm=true ){ fPedestalMode = pm; fPedMode_DBoverride = true; }
+  
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
