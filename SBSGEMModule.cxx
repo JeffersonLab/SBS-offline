@@ -2263,6 +2263,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
     double cm_rms = (axis == SBSGEM::kUaxis ) ? commonmode_rmsU[ pos ] : commonmode_rmsV[ pos ];
     
     double cm_min = cm_mean - fZeroSuppressRMS * cm_rms;
+    cm_min = 0.0;
     double cm_max = cm_mean + fZeroSuppressRMS * cm_rms;
 
     
