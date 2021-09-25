@@ -200,9 +200,9 @@ class SBSGEMModule : public THaSubDetector {
   // For time stamp info, we basically want to store one per APV card, although many of
   // these will be redundant with each other:
   //
-  std::vector<Long64_t> fT0_by_APV; //T0 for each APV card (really for each MPD)
-  Long64_t fTref_coarse;      //T0 of the "reference" channel (time stamp coarse - T0 of the "reference" APV)
-  std::vector<Long64_t> fTcoarse_by_APV; //Time stamp coarse - T0 of this channel - Tref for each channel
+  std::vector<double> fT0_by_APV; //T0 for each APV card (really for each MPD)
+  double fTref_coarse;      //T0 of the "reference" channel (time stamp coarse - T0 of the "reference" APV)
+  std::vector<double> fTcoarse_by_APV; //Time stamp coarse - T0 of this channel - Tref for each channel
   std::vector<UInt_t> fTfine_by_APV; //"Fine time stamp" by APV:
   std::vector<UInt_t> fEventCount_by_APV; //MPD event counter by APV:
   std::vector<double> fTimeStamp_ns_by_APV; //Coarse time stamp - T0 + fine time stamp % 6
