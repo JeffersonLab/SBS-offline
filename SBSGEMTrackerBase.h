@@ -305,13 +305,27 @@ protected:
   std::vector<double> fHitVADCmaxstrip; //ADC sum on max V strip
   std::vector<double> fHitUADCmaxsample; //max ADC sample on max U strip
   std::vector<double> fHitVADCmaxsample; //max ADC sample on max V strip
+  std::vector<double> fHitUADCmaxclustsample;
+  std::vector<double> fHitVADCmaxclustsample;
   std::vector<double> fHitADCasym; // (ADCU-ADCV)/(ADCU + ADCV)
   std::vector<double> fHitUTime; // cluster-mean time, U strips
   std::vector<double> fHitVTime; // cluster-mean time, V strips
+  std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
+  std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
   std::vector<double> fHitDeltaT; // TU - TV;
+  std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
+  std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips
+  std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster
+  std::vector<double> fHitIsampMaxVstrip; //same but for max strip in cluster
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
   std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC. 
   //And I THINK that's all we need to get started!
+  std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
+  std::vector<UInt_t> fHitU_CM_OR;
+  std::vector<UInt_t> fHitU_BUILD_ALL_SAMPLES;
+  std::vector<UInt_t> fHitV_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
+  std::vector<UInt_t> fHitV_CM_OR;
+  std::vector<UInt_t> fHitV_BUILD_ALL_SAMPLES; 
 
   //number of layers fired per event
   int fNlayers_hit; //number of layers with ANY strip fired in this layer (U or V)

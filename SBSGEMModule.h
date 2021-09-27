@@ -85,6 +85,7 @@ struct sbsgemcluster_t {  //1D clusters;
   UInt_t istriplo;
   UInt_t istriphi;
   UInt_t istripmax;
+  UInt_t isampmax; //time sample in which the cluster-summed ADC samples peaks:
   std::vector<Double_t> ADCsamples; //cluster-summed ADC samples (accounting for split fraction)
   Double_t hitpos_mean;  //ADC-weighted mean coordinate along the direction measured by the strip
   Double_t hitpos_sigma; //ADC-weighted RMS coordinate deviation from the mean along the direction measured by the strip
@@ -285,12 +286,21 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fStripADCavg;
   std::vector<UInt_t> fStripIsU; // is this a U strip? 0/1
   std::vector<UInt_t> fStripIsV; // is this a V strip? 0/1
+  std::vector<UInt_t> fStripOnTrack; //Is this strip on any track?
+  std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<bool> fKeepStrip; //keep this strip?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
+  std::vector<UInt_t> fStrip_ENABLE_CM; //Flag to indicate whether CM was done online or offline for this strip
+  std::vector<UInt_t> fStrip_CM_OR; //Flag to indicate whether online CM failed
+  std::vector<UInt_t> fStrip_BUILD_ALL_SAMPLES; //Flag to indicate whether online zero suppression was enabled 
+
+  //because the cut definition machinery sucks, let's define some more booleans:
+  std::vector<UInt_t> fStripUonTrack;
+  std::vector<UInt_t> fStripVonTrack;
   
   ////// (1D and 2D) Clustering results (see above for definition of struct sbsgemcluster_t and struct sbsgemhit_t):
 
@@ -307,8 +317,8 @@ class SBSGEMModule : public THaSubDetector {
   //Raw strip info:
   //std::vector<UInt_t> fStripAxis; //redundant with fAxis, but more convenient for Podd global variable definition
   std::vector<Double_t> fADCsamples1D; //1D array to hold ADC samples; should end up with dimension fNstrips_hit*fN_MPD_TIME_SAMP
-  std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<Int_t> fRawADCsamples1D;
+  
   /////////////////////// End of global variables needed for ROOT Tree/Histogram output ///////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////
   //  Define some global variables for tests/cuts                                             //
