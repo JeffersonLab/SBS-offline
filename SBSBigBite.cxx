@@ -399,7 +399,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	for(int i = 0; i<ShowerClusters.size(); i++){
 	  Etot = ShowerClusters[i]->GetE();
 	  npts = 1;
-	  x_bcp = -ShowerClusters[i]->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	  x_bcp = ShowerClusters[i]->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	  y_bcp = ShowerClusters[i]->GetY();
 	  
 	  if(BBTotalShower->PSMatchClusIdx(i)<PreShowerClusters.size()){
@@ -433,7 +433,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//       we might want to check the others...
 	//y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	Etot+= BBTotalShower->GetShower()->GetECorrected();
-	x_bcp+= -BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	x_bcp+= BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	y_bcp = BBTotalShower->GetShower()->GetY();
 	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
 	npts++;
