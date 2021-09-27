@@ -390,10 +390,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
       }
 	*/
-      row = lchan%26;
-      col = (lchan-row)/26;
-      lchan = row*2+col;
-      //cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
+	row = lchan%26;
+	col = (lchan-row)/26;
+	//lchan = row*2+col;
+	row = 25-row;
+	lchan = col*26+row;
+	//cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
 	//ADC
 	ChanToROC(detname, lchan, crate, slot, chan);
 	
@@ -467,6 +469,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	*/
       row = lchan%27;
       col = (lchan-row)/27;
+      row = 26-row;
+      col = 6-col;
       lchan = row*7+col;
       //cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
 	//ADC
