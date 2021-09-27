@@ -150,23 +150,24 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   if(WithTDC()){
     RVarDef vars[] = {
       // { "tdcbaroff",    "Starting bar for TDC readout",       "fTDCBarOffset" },
-      { "tdcbarid",     "TDC Hit Bar ID",                     "fGoodBarIDsTDC"},
-      { "barmeantime",  "Bar Mean Time [ns]",                 "fGoodBarTDCmean"},
-      { "bartimediff",  "Bar Time Diff [ns]",                 "fGoodBarTDCdiff"},
-      { "bartimehitpos","Bar Time Hit pos from L [m]",        "fGoodBarTDCpos"},
-      { "barvpos",      "Bar vertical position [m]",          "fGoodBarTDCvpos"},
-      { "L.le",         "Left pmt time LE [ns]",              "fGoodBarTDCLle"},
-      { "L.leW",        "Left pmt time LE walk corr [ns]",    "fGoodBarTDCLleW"},
-      { "L.te",         "Left pmt time TE [ns]",              "fGoodBarTDCLte"},
-      { "L.teW",        "Left pmt time TE walk corr [ns]",    "fGoodBarTDCLteW"},
-      { "L.tot",        "Left pmt tot [ns]",                  "fGoodBarTDCLtot"},
-      { "L.totW",       "Left pmt tot walk corr [ns]",        "fGoodBarTDCLtotW"},
-      { "R.le",         "Right pmt time LE [ns]",             "fGoodBarTDCRle"},
-      { "R.leW",        "Right pmt time LE walk corr [ns]",   "fGoodBarTDCRleW"},
-      { "R.te",         "Right pmt time TE [ns]",             "fGoodBarTDCRte"},
-      { "R.teW",        "Right pmt time TE walk corr [ns[",   "fGoodBarTDCRteW"},
-      { "R.tot",        "Right pmt tot [ns[",                 "fGoodBarTDCRtot"},
-      { "R.totW",       "Right pmt tot walk corr [ns]",       "fGoodBarTDCRtotW"},
+      { "bar.ngoodbars",    "Number of good bars",             "GetGoodBarSize()"},
+      { "bar.tdc.id",    "TDC Hit Bar ID",                     "fGoodBarIDsTDC"},
+      { "bar.tdc.meantime",  "Bar Mean Time [ns]",                 "fGoodBarTDCmean"},
+      { "bar.tdc.timediff",  "Bar Time Diff [ns]",                 "fGoodBarTDCdiff"},
+      { "bar.tdc.timehitpos","Bar Time Hit pos from L [m]",        "fGoodBarTDCpos"},
+      { "bar.tdc.vpos",      "Bar vertical position [m]",          "fGoodBarTDCvpos"},
+      { "bar.tdc.L.le",         "Left pmt time LE [ns]",              "fGoodBarTDCLle"},
+      { "bar.tdc.L.leW",        "Left pmt time LE walk corr [ns]",    "fGoodBarTDCLleW"},
+      { "bar.tdc.L.te",         "Left pmt time TE [ns]",              "fGoodBarTDCLte"},
+      { "bar.tdc.L.teW",        "Left pmt time TE walk corr [ns]",    "fGoodBarTDCLteW"},
+      { "bar.tdc.L.tot",        "Left pmt tot [ns]",                  "fGoodBarTDCLtot"},
+      { "bar.tdc.L.totW",       "Left pmt tot walk corr [ns]",        "fGoodBarTDCLtotW"},
+      { "bar.tdc.R.le",         "Right pmt time LE [ns]",             "fGoodBarTDCRle"},
+      { "bar.tdc.R.leW",        "Right pmt time LE walk corr [ns]",   "fGoodBarTDCRleW"},
+      { "bar.tdc.R.te",         "Right pmt time TE [ns]",             "fGoodBarTDCRte"},
+      { "bar.tdc.R.teW",        "Right pmt time TE walk corr [ns[",   "fGoodBarTDCRteW"},
+      { "bar.tdc.R.tot",        "Right pmt tot [ns[",                 "fGoodBarTDCRtot"},
+      { "bar.tdc.R.totW",       "Right pmt tot walk corr [ns]",       "fGoodBarTDCRtotW"},
       { 0 }
     };
     err = DefineVarsFromList( vars, mode );
@@ -176,21 +177,34 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   if(WithADC()){
     RVarDef vars[] = {
       // { "adcbaroff",    "Starting bar for ADC readout",       "fADCBarOffset" },
-      { "adcbarid",     "ADC Hit Bar ID",                     "fGoodBarIDsADC"},
-      { "adcmean",      "ADC Hit Bar Mean [bins]",            "fGoodBarADCmean"},
-      { "L.a",          "Left ADC [bins]",                    "fGoodBarADCLa"},
-      { "L.ap",         "Left ADC ped corr [bins]",           "fGoodBarADCLap"},
-      { "L.ac",         "Left ADC ped corr [GeV]",            "fGoodBarADCLac"},
-      { "R.a",          "Right ADC [bins]",                   "fGoodBarADCRa"},
-      { "R.ap",         "Right ADC ped corr [bins]",          "fGoodBarADCRap"},
-      { "R.ac",         "Right ADC ped corr [GeV]",           "fGoodBarADCRac"},
+      { "bar.adc.id",     "ADC Hit Bar ID",                     "fGoodBarIDsADC"},
+      { "bar.adc.mean",    "ADC Hit Bar Mean [bins]",            "fGoodBarADCmean"},
+      { "bar.adc.L.a",          "Left ADC [bins]",                    "fGoodBarADCLa"},
+      { "bar.adc.L.ap",         "Left ADC ped corr [bins]",           "fGoodBarADCLap"},
+      { "bar.adc.L.ac",         "Left ADC ped corr [GeV]",            "fGoodBarADCLac"},
+      { "bar.adc.R.a",          "Right ADC [bins]",                   "fGoodBarADCRa"},
+      { "bar.adc.R.ap",         "Right ADC ped corr [bins]",          "fGoodBarADCRap"},
+      { "bar.adc.R.ac",         "Right ADC ped corr [GeV]",           "fGoodBarADCRac"},
       { 0 }
     };
     err = DefineVarsFromList( vars, mode );
     if(err)
       return err;
   }// adc mode
-
+  
+  RVarDef vars[] = {
+    { "nclus",      "number of clusters",   "GetNClusters()"},
+    { "clus.size",  "cluster size",           "fClusterMult"},
+    { "clus.xmean", "cluster mean X",        "fClusterXmean"},
+    { "clus.ymean", "cluster mean Y",        "fClusterYmean"},
+    { "clus.tmean", "cluster mean T",        "fClusterTmean"},
+    { "clus.totmean", "cluster mean ToT",    "fClusterTotmean"},
+    { 0 }
+  };
+  err = DefineVarsFromList( vars, mode );
+  if(err)
+    return err;
+  
   // Finally go back
   return err;
 }
@@ -397,6 +411,15 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
     prev_baridx = baridx;
   }
   
+  //fill output here:
+  for(int i = 0; i<GetNClusters(); i++){
+    fClusterMult.push_back(GetCluster(i)->GetSize());
+    fClusterXmean.push_back(GetCluster(i)->GetXmean());
+    fClusterYmean.push_back(GetCluster(i)->GetYmean());
+    fClusterTmean.push_back(GetCluster(i)->GetTmean());
+    fClusterToTmean.push_back(GetCluster(i)->GetToTmean());
+  }
+  
   fFineProcessed = 1;
   return 0;
 }
@@ -540,6 +563,13 @@ void SBSTimingHodoscope::ClearEvent()
   fGoodBarADCRac.clear();
   
   fClusters.clear();
+  
+  fClusterMult.clear();
+  fClusterXmean.clear();
+  fClusterYmean.clear();
+  fClusterTmean.clear();
+  fClusterToTmean.clear();
+
   
   // Make sure to call parent class's ClearEvent() also!
   SBSGenericDetector::ClearEvent();

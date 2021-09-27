@@ -96,7 +96,14 @@ public:
   std::vector<Float_t> fGoodBarADCRa;
   std::vector<Float_t> fGoodBarADCRap;
   std::vector<Float_t> fGoodBarADCRac;
-
+  
+  //cluster output only:
+  std::vector<Int_t> fClusterMult;
+  std::vector<Float_t> fClusterXmean;
+  std::vector<Float_t> fClusterYmean;
+  std::vector<Float_t> fClusterTmean;
+  std::vector<Float_t> fClusterToTmean;
+  
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
   // maps of time walk parameters - in row, col, lay
