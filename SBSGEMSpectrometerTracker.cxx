@@ -24,7 +24,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fIsMC = false;//by default!
   //fCrateMap = 0;
   fPedestalMode = false;
-
+  fPedMode_DBoverride = false; //Only if the user script invokes the SetPedestalMode method do we override the database value:
+  
   fIsSpectrometerTracker = true; //used by tracker base
   fUseOpticsConstraint = false;
   
@@ -134,7 +135,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fclose(file);
 
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
-  fPedestalMode = ( pedestalmode_flag != 0 );
+  if( !fPedMode_DBoverride ) fPedestalMode = ( pedestalmode_flag != 0 );
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 
@@ -332,16 +333,16 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     
     message.Form("# copy the contents of this file into (location TBD) to update CODA thresholds for detector %s.%s", specname.Data(), detname.Data() );
     
-    fpedfile_daq << sdate << std::endl;
-    fpedfile_daq <<  message << std::endl;
-    fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
-		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
+    // fpedfile_daq << sdate << std::endl;
+    // fpedfile_daq <<  message << std::endl;
+    // fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
+    // 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
 
     message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
     
-    fpedfile_cmr << sdate << std::endl;
-    fpedfile_cmr << message << std::endl;
-    fpedfile_cmr << "# format = crate     slot      mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
+    // fpedfile_cmr << sdate << std::endl;
+    // fpedfile_cmr << message << std::endl;
+    // fpedfile_cmr << "# format = crate     slot      mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
   }
   
   for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
@@ -464,12 +465,26 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.ADCmaxstripV", "ADC sum of max V strip", "fHitVADCmaxstrip" },
     { "hit.ADCmaxsampU", "max sample of max U strip", "fHitUADCmaxsample" },
     { "hit.ADCmaxsampV", "max sample of max V strip", "fHitVADCmaxsample" },
+    { "hit.ADCmaxsampUclust", "max U cluster-summed ADC time sample", "fHitUADCmaxclustsample" },
+    { "hit.ADCmaxsampVclust", "max V cluster-summed ADC time sample", "fHitVADCmaxclustsample" },
     { "hit.ADCasym", "Hit ADC asymmetry: (ADCU - ADCV)/(ADCU + ADCV)", "fHitADCasym" },
     { "hit.Utime", "cluster timing based on U strips", "fHitUTime" },
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
+    { "hit.UtimeMaxStrip", "cluster timing based on U strips", "fHitUTimeMaxStrip" },
+    { "hit.VtimeMaxStrip", "cluster timing based on V strips", "fHitVTimeMaxStrip" },
     { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
+    { "hit.isampmaxUclust", "peak time sample in cluster-summed U ADC samples", "fHitIsampMaxUclust" },
+    { "hit.isampmaxVclust", "peak time sample in cluster-summed V ADC samples", "fHitIsampMaxVclust" },
+    { "hit.isampmaxUstrip", "peak time sample in max U strip", "fHitIsampMaxUstrip" },
+    { "hit.isampmaxVstrip", "peak time sample in max V strip", "fHitIsampMaxVstrip" },
     { "hit.ccor_clust", "correlation coefficient between cluster-summed U and V samples", "fHitCorrCoeffClust" },
     { "hit.ccor_strip", "correlation coefficient between U and V samples on strips with max ADC", "fHitCorrCoeffMaxStrip" },
+    { "hit.ENABLE_CM_U", "Enable CM flag for max U strip in this hit", "fHitU_ENABLE_CM" },
+    { "hit.ENABLE_CM_V", "Enable CM flag for max V strip in this hit", "fHitV_ENABLE_CM" },
+    { "hit.CM_OR_U", "Enable CM flag for max U strip in this hit", "fHitU_CM_OR" },
+    { "hit.CM_OR_V", "Enable CM flag for max V strip in this hit", "fHitV_CM_OR" },
+    { "hit.BUILD_ALL_SAMPLES_U", "Enable CM flag for max U strip in this hit", "fHitU_BUILD_ALL_SAMPLES" },
+    { "hit.BUILD_ALL_SAMPLES_V", "Enable CM flag for max V strip in this hit", "fHitV_BUILD_ALL_SAMPLES" },
     { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
     { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
     { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },

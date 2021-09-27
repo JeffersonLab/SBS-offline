@@ -143,14 +143,33 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitVADCmaxstrip.clear();
   fHitUADCmaxsample.clear();
   fHitVADCmaxsample.clear();
+  fHitUADCmaxclustsample.clear();
+  fHitVADCmaxclustsample.clear();
 
   
   fHitADCasym.clear();
   fHitUTime.clear();
   fHitVTime.clear();
+  fHitUTimeMaxStrip.clear();
+  fHitVTimeMaxStrip.clear();
   fHitDeltaT.clear();
+
+  fHitIsampMaxUclust.clear();
+  fHitIsampMaxVclust.clear();
+  fHitIsampMaxUstrip.clear();
+  fHitIsampMaxVstrip.clear();
+  
   fHitCorrCoeffClust.clear();
   fHitCorrCoeffMaxStrip.clear();
+
+  fHitU_ENABLE_CM.clear();
+  fHitU_CM_OR.clear();
+  fHitU_BUILD_ALL_SAMPLES.clear();
+
+  fHitV_ENABLE_CM.clear();
+  fHitV_CM_OR.clear();
+  fHitV_BUILD_ALL_SAMPLES.clear();
+  
   
   fclustering_done = false;
   ftracking_done = false;
@@ -1305,6 +1324,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       //Also set the "trackindex" variable for all strips on this track:
       for( int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
 	fModules[module]->fStripTrackIndex[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = itrack;
+	fModules[module]->fStripOnTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
+	fModules[module]->fStripUonTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
       }
       
       //
@@ -1317,6 +1338,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       //Also set the "trackindex" variable for all strips on this track:
       for( int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
 	fModules[module]->fStripTrackIndex[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = itrack;
+	fModules[module]->fStripOnTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
+	fModules[module]->fStripVonTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
       }
       
       fHitUlocal.push_back( hitinfo->uhit );
@@ -1337,16 +1360,40 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitUADC.push_back( uclustinfo->clusterADCsum );
       fHitVADC.push_back( vclustinfo->clusterADCsum );
 
-      fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo]] );
-      fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo]] );
-
-      fHitUADCmaxsample.push_back( fModules[module]->fADCmax[uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo]] );
-      fHitVADCmaxsample.push_back( fModules[module]->fADCmax[vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo]] );
+      fHitUADCmaxclustsample.push_back( uclustinfo->ADCsamples[uclustinfo->isampmax] );
+      fHitVADCmaxclustsample.push_back( vclustinfo->ADCsamples[vclustinfo->isampmax] );
       
+      UInt_t hitidx_umax = uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo];
+      UInt_t hitidx_vmax = vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo];
+      
+      fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_umax] );
+      fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_vmax] );
+
+      fHitUADCmaxsample.push_back( fModules[module]->fADCmax[hitidx_umax] );
+      fHitVADCmaxsample.push_back( fModules[module]->fADCmax[hitidx_vmax] );
+
+      fHitU_ENABLE_CM.push_back( fModules[module]->fStrip_ENABLE_CM[hitidx_umax] );
+      fHitU_CM_OR.push_back( fModules[module]->fStrip_CM_OR[hitidx_umax] );
+      fHitU_BUILD_ALL_SAMPLES.push_back( fModules[module]->fStrip_BUILD_ALL_SAMPLES[hitidx_umax] );
+							    
+      fHitV_ENABLE_CM.push_back( fModules[module]->fStrip_ENABLE_CM[hitidx_vmax] );
+      fHitV_CM_OR.push_back( fModules[module]->fStrip_CM_OR[hitidx_vmax] );
+      fHitV_BUILD_ALL_SAMPLES.push_back( fModules[module]->fStrip_BUILD_ALL_SAMPLES[hitidx_vmax] );
+      
+      //Need to fill some other new variables:
+      
+      fHitIsampMaxUstrip.push_back( fModules[module]->fMaxSamp[hitidx_umax] );
+      fHitIsampMaxVstrip.push_back( fModules[module]->fMaxSamp[hitidx_vmax] );
+      fHitIsampMaxUclust.push_back( uclustinfo->isampmax );
+      fHitIsampMaxVclust.push_back( vclustinfo->isampmax );
       
       fHitADCasym.push_back( hitinfo->ADCasym );
       fHitUTime.push_back( uclustinfo->t_mean );
       fHitVTime.push_back( vclustinfo->t_mean );
+
+      fHitUTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_umax] );
+      fHitVTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_vmax] );
+      
       fHitDeltaT.push_back( hitinfo->tdiff );
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );
       fHitCorrCoeffMaxStrip.push_back( hitinfo->corrcoeff_strip );

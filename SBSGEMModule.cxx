@@ -311,9 +311,12 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     
     fMPDmap.push_back(thisdata);
 
+    fEventCount_by_APV.push_back( 0 );
+
     fT0_by_APV.push_back( 0 );
     fTcoarse_by_APV.push_back( 0 );
     fTfine_by_APV.push_back( 0 );
+    fTimeStamp_ns_by_APV.push_back( 0 );
   }
 
   //if a different number of decode map entries is counted than the expectation based on the number of strips, 
@@ -334,10 +337,6 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   // fCommonModeRMSV.resize( fNAPVs_V );
   
   std::cout << fName << " mapped to " << nentry << " APV25 chips" << std::endl;
-
-  // fT0_by_APV.resize( nentry );
-  // fTcoarse_by_APV.resize( nentry );
-  // fTfine_by_APV.resize( nentry );
   
   //Geometry info is required to be present in the database for each module:
   Int_t err = ReadGeometry( file, date, true );
@@ -426,17 +425,26 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fStripADCavg.resize( nstripsmax );
   fStripIsU.resize( nstripsmax );
   fStripIsV.resize( nstripsmax );
+  fStripOnTrack.resize( nstripsmax );
+  fStripTrackIndex.resize( nstripsmax );
   fKeepStrip.resize( nstripsmax );
   fMaxSamp.resize( nstripsmax );
   fADCmax.resize( nstripsmax );
   fTmean.resize( nstripsmax );
   fTsigma.resize( nstripsmax );
   fTcorr.resize( nstripsmax );
+  //Storing these by individual strip is redundant but convenient:
+  fStrip_ENABLE_CM.resize( nstripsmax );
+  fStrip_CM_OR.resize( nstripsmax );
+  fStrip_BUILD_ALL_SAMPLES.resize( nstripsmax );
+
+  fStripUonTrack.resize( nstripsmax );
+  fStripVonTrack.resize( nstripsmax );
 
   fADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
   fRawADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
-  fStripTrackIndex.resize( nstripsmax );
-  
+ 
+ 
   
   //default all common-mode mean and RMS values to 0 and 10 respectively if they were
   // NOT loaded from the DB and/or they are loaded with the wrong size:
@@ -639,7 +647,13 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.Tsigma", "ADC-weighted rms strip time", kDouble, 0, &(fTsigma[0]), &fNstrips_hit },
     { "strip.Tcorr", "Corrected strip time", kDouble, 0, &(fTcorr[0]), &fNstrips_hit },
     { "strip.itrack", "Index of track containing this strip (-1 if not on any track)", kInt, 0, &(fStripTrackIndex[0]), &fNstrips_hit },
+    { "strip.ontrack", "Is this strip on any track (0/1)?", kUInt, 0, &(fStripOnTrack[0]), &fNstrips_hit },
     { "strip.ADCavg", "average of ADC samples on a strip", kDouble, 0, &(fStripADCavg[0]), &fNstrips_hit },
+    { "strip.ENABLE_CM", "online common-mode enabled?", kUInt, 0, &(fStrip_ENABLE_CM[0]), &fNstrips_hit },
+    { "strip.CM_OR", "common-mode out of range? (online failed)", kUInt, 0, &(fStrip_CM_OR[0]), &fNstrips_hit },
+    { "strip.BUILD_ALL_SAMPLES", "online or offline zero suppression", kUInt, 0, &(fStrip_BUILD_ALL_SAMPLES[0]), &fNstrips_hit },
+    { "strip.ontrackU", "U strip on track", kUInt, 0, &(fStripUonTrack[0]), &fNstrips_hit },
+    { "strip.ontrackV", "V strip on track", kUInt, 0, &(fStripVonTrack[0]), &fNstrips_hit },
     { nullptr },
   };
   
@@ -836,6 +850,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     UInt_t nhits_timestamp_high = evdata.GetNumHits( it->crate, it->slot, fChan_TimeStamp_high );
     UInt_t nhits_event_count = evdata.GetNumHits( it->crate, it->slot, fChan_MPD_EventCount );
 
+    //std::cout << "nhits_timestamp_low = " << nhits_timestamp_low << std::endl;
+    
     if( nhits_timestamp_low > 0 && nhits_timestamp_high == nhits_timestamp_low && nhits_event_count == nhits_timestamp_low ){
       for( int ihit=0; ihit<nhits_timestamp_low; ihit++ ){
 	int fiber = evdata.GetRawData( it->crate, it->slot, fChan_TimeStamp_low, ihit );
@@ -844,25 +860,38 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  UInt_t Thigh = evdata.GetData( it->crate, it->slot, fChan_TimeStamp_high, ihit );
 	  UInt_t EvCnt = evdata.GetData( it->crate, it->slot, fChan_MPD_EventCount, ihit );
 
+	  //std::cout << "Tlow, Thigh, EvCnt = " << Tlow << ", " << Thigh << ", " << EvCnt << std::endl;
+											    
 	  fEventCount_by_APV[apvcounter] = EvCnt;
+											    
 	  
+										    
 	  // Fine time stamp is in the first 8 bits of Tlow;
 	  fTfine_by_APV[apvcounter] = Tlow & 0x000000FF;
-
-	  Long64_t Tcoarse = Thigh << 16 | ( Tlow << 8 ); 
-	  if( EvCnt == 0 ) fT0_by_APV[apvcounter] = Tcoarse;
+										    
+										    
+										    
+	  Long64_t Tcoarse = Thigh << 16 | ( Tlow << 8 );
+	  double Tc = double(Tcoarse);
+	  
+	  if( EvCnt == 0 ) fT0_by_APV[apvcounter] = Tc;
 
 	  //T ref is the coarse time stamp of the reference APV (the first one, in this case)
-	  if( apvcounter == 0 ) fTref_coarse = Tcoarse - fT0_by_APV[apvcounter];
+	  if( apvcounter == 0 ) fTref_coarse = Tc - fT0_by_APV[apvcounter];
 
 	  //This SHOULD make fTcoarse_by_APV the Tcoarse RELATIVE to the
 	  // "reference" APV
-	  fTcoarse_by_APV[apvcounter] = Tcoarse - fT0_by_APV[apvcounter] - fTref_coarse;
+	  fTcoarse_by_APV[apvcounter] = Tc - fT0_by_APV[apvcounter] - fTref_coarse;
 
 	  //We probably don't want to hard-code 24 ns and 4 ns here for the units of
 	  //Tcoarse and Tfine, but this should be fine for initial checkout of decoding:
 	  fTimeStamp_ns_by_APV[apvcounter] = 24.0 * fTcoarse_by_APV[apvcounter] + 4.0 * (fTfine_by_APV[apvcounter] % 6);
-	  
+
+	  // std::cout << "fiber, apvcounter, EvCnt, Tcoarse, Tfine, time stamp ns = " << fiber << ", " <<  apvcounter << ", "
+	  // 	    << fEventCount_by_APV[apvcounter] << ", " 
+	  // 	    << Tcoarse << ", " << fTfine_by_APV[apvcounter] << ", "
+	  // 	    << fTimeStamp_ns_by_APV[apvcounter] << std::endl;
+							   
 	  break;
 	}	
       }
@@ -1263,6 +1292,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  }
 	  //fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
 	  fStripTrackIndex[fNstrips_hit] = -1;
+	  fStripOnTrack[fNstrips_hit] = 0;
 	  
 	  //	  fKeepStrip.push_back( true ); //keep all strips by default
 	  fKeepStrip[fNstrips_hit] = true;
@@ -1279,6 +1309,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fTsigma[fNstrips_hit] = sqrt( T2sum/ADCsum_temp - pow( fTmean[fNstrips_hit], 2 ) );
 	  //fTcorr.push_back( fTmean.back() ); //don't apply any corrections for now
 	  fTcorr[fNstrips_hit] = fTmean[fNstrips_hit];
+
+	  fStrip_ENABLE_CM[fNstrips_hit] = CM_ENABLED;
+	  fStrip_CM_OR[fNstrips_hit] = CM_OUT_OF_RANGE;
+	  fStrip_BUILD_ALL_SAMPLES[fNstrips_hit] = BUILD_ALL_SAMPLES;
 	  
 	  if( !fPedestalMode ) ADCsum_temp /= gaintemp;
 
@@ -1295,6 +1329,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fStripIsU[fNstrips_hit] = isU;
 	  fStripIsV[fNstrips_hit] = isV;
 
+	  fStripUonTrack[fNstrips_hit] = 0;
+	  fStripVonTrack[fNstrips_hit] = 0;
+	  
 	  fNstrips_hitU += isU;
 	  fNstrips_hitV += isV;
 	  
@@ -1682,6 +1719,15 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 	} 
       }
 
+      clusttemp.isampmax = 0; //figure out time sample in which peak of cluster-summed ADC values occurs:
+      double maxADC = 0.0;
+      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	if( isamp == 0 || clusttemp.ADCsamples[isamp] > maxADC ){
+	  maxADC = clusttemp.ADCsamples[isamp];
+	  clusttemp.isampmax = isamp;
+	}
+      }
+      
       clusttemp.hitpos_mean = sumx / sumwx;
       clusttemp.hitpos_sigma = sqrt( sumx2/sumwx - pow(clusttemp.hitpos_mean,2) );
       clusttemp.clusterADCsum = sumADC;
@@ -2249,6 +2295,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
     double cm_rms = (axis == SBSGEM::kUaxis ) ? commonmode_rmsU[ pos ] : commonmode_rmsV[ pos ];
     
     double cm_min = cm_mean - fZeroSuppressRMS * cm_rms;
+    cm_min = 0.0;
     double cm_max = cm_mean + fZeroSuppressRMS * cm_rms;
 
     
