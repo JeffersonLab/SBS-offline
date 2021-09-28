@@ -48,7 +48,7 @@ namespace Decoder {
     //virtual void Clear(const Option_t *opt);
     virtual Int_t Decode(const UInt_t *p); // { return 0; };
     
-    virtual Int_t LoadSlot(THaSlotData *sldat,  const UInt_t *evbuffer, Int_t pos, Int_t len);
+    virtual UInt_t LoadSlot(THaSlotData *sldat,  const UInt_t *evbuffer, UInt_t pos, UInt_t len);
 //#endif
 
   private:
