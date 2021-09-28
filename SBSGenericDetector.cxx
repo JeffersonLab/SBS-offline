@@ -1234,7 +1234,11 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
           fRefGood.a.push_back(hit.integral.raw);
           fRefGood.a_mult.push_back(blk->ADC()->GetNHits());
-          fRefGood.a_p.push_back(hit.integral.raw-ped);
+          if (fModeADC == SBSModeADC::kADCSimple) fRefGood.a_p.push_back(hit.integral.raw-ped);
+	  if (fModeADC == SBSModeADC::kADC) {
+	    Double_t conv=blk->ADC()->GetGain();
+	      fRefGood.a_p.push_back(hit.integral.val/conv); // ped subtracted with Gain factor
+	  }
           fRefGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
             fRefGood.a_amp.push_back(hit.amplitude.raw);
@@ -1385,7 +1389,11 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
           fGood.a.push_back(hit.integral.raw);
           fGood.a_mult.push_back(blk->ADC()->GetNHits());
-          fGood.a_p.push_back(hit.integral.raw-ped);
+          if (fModeADC == SBSModeADC::kADCSimple) fGood.a_p.push_back(hit.integral.raw-ped);
+	  if (fModeADC == SBSModeADC::kADC) {
+	    Double_t conv=blk->ADC()->GetGain();
+	      fGood.a_p.push_back(hit.integral.val/conv); // ped subtracted with Gain factor
+	  }
           fGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
             fGood.a_amp.push_back(hit.amplitude.raw);
