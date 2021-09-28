@@ -29,7 +29,7 @@ namespace SBSData {
     //fADC.push_back({ped,fGlobalCal,val,val-ped,(val-ped)*fGlobalCal});
     // convert to pC, assume tcal is in ns, and 50ohm resistance
     Float_t pC_Conv = fADC.tcal/50.;
-    Float_t PedVal = ped/GetNPedBin()*GetChanTomV();
+    Float_t PedVal = ped*GetChanTomV();
     Float_t TimeVal= time*fADC.tcal/64.;
     Float_t IntRaw=  integral*GetChanTomV()*pC_Conv;
     Float_t IntVal=  (IntRaw-PedVal*(GetNSA()+GetNSB()+1)*pC_Conv)*GetGain();
