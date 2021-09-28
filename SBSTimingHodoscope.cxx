@@ -150,7 +150,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   if(WithTDC()){
     RVarDef vars[] = {
       // { "tdcbaroff",    "Starting bar for TDC readout",       "fTDCBarOffset" },
-      { "bar.ngoodbars",    "Number of good bars",             "GetGoodBarSize()"},
+      { "bar.ngoodbars",    "Number of good bars",             "GetGoodBarsSize()"},
       { "bar.tdc.id",    "TDC Hit Bar ID",                     "fGoodBarIDsTDC"},
       { "bar.tdc.meantime",  "Bar Mean Time [ns]",                 "fGoodBarTDCmean"},
       { "bar.tdc.timediff",  "Bar Time Diff [ns]",                 "fGoodBarTDCdiff"},
@@ -198,7 +198,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     { "clus.xmean", "cluster mean X",        "fClusterXmean"},
     { "clus.ymean", "cluster mean Y",        "fClusterYmean"},
     { "clus.tmean", "cluster mean T",        "fClusterTmean"},
-    { "clus.totmean", "cluster mean ToT",    "fClusterTotmean"},
+    { "clus.totmean", "cluster mean ToT",    "fClusterToTmean"},
     { 0 }
   };
   err = DefineVarsFromList( vars, mode );
