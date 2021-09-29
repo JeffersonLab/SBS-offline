@@ -1402,7 +1402,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );
       fHitCorrCoeffMaxStrip.push_back( hitinfo->corrcoeff_strip );
 
-      if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 ){
+      if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 && itrack == 0 ){
 	//fill "did hit" efficiency histos (numerator for efficiency determination):
 	double sdummy;
 	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
@@ -1453,7 +1453,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	  
 	  fModules[module]->fTrackPassedThrough = 1;
 	  
-	  if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= minhits ){
+	  if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= minhits && itrack == 0 ){
 	    if( fModules[module]->fhshouldhitx  != NULL ) fModules[module]->fhshouldhitx->Fill( LocalCoord.X() );
 	    if( fModules[module]->fhshouldhity  != NULL ) fModules[module]->fhshouldhity->Fill( LocalCoord.Y() );
 	    if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
