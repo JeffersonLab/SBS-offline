@@ -634,11 +634,11 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   
   
   VarDef varstrip[] = {
-    {"strip.nstripsfired", "Number of strips fired", kUInt, 0, &fNstrips_hit },
-    {"strip.istrip", "strip index", kUInt, 0, &(fStrip[0]), &fNstrips_hit },
-    {"strip.IsU", "U strip?", kUInt, 0, &(fStripIsU[0]), &fNstrips_hit },
-    {"strip.IsV", "V strip?", kUInt, 0, &(fStripIsV[0]), &fNstrips_hit },
-    {"strip.ADCsamples", "ADC samples (index = isamp+Nsamples*istrip)", kDouble, 0, &(fADCsamples1D[0]), &fNdecoded_ADCsamples },
+    { "strip.nstripsfired", "Number of strips fired", kUInt, 0, &fNstrips_hit },
+    { "strip.istrip", "strip index", kUInt, 0, &(fStrip[0]), &fNstrips_hit },
+    { "strip.IsU", "U strip?", kUInt, 0, &(fStripIsU[0]), &fNstrips_hit },
+    { "strip.IsV", "V strip?", kUInt, 0, &(fStripIsV[0]), &fNstrips_hit },
+    { "strip.ADCsamples", "ADC samples (index = isamp+Nsamples*istrip)", kDouble, 0, &(fADCsamples1D[0]), &fNdecoded_ADCsamples },
     { "strip.rawADCsamples", "raw ADC samples (no baseline subtraction)", kInt, 0, &(fRawADCsamples1D[0]), &fNdecoded_ADCsamples },
     { "strip.ADCsum", "Sum of ADC samples on a strip", kDouble, 0, &(fADCsums[0]), &fNstrips_hit },
     { "strip.isampmax", "sample in which max ADC occurred on a strip", kUInt, 0, &(fMaxSamp[0]), &fNstrips_hit },
@@ -714,6 +714,7 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "hit.hitTavg",   "average time of 2D hit", "fHits.thitcorr" },
     { "hit.hit_iuclust", "index in u cluster array", "fHits.iuclust" },
     { "hit.hit_ivclust", "index in v cluster array", "fHits.ivclust" },
+    { "hit.ontrack", "hit is on track", "fHits.ontrack" },
     { nullptr },
   };
 
@@ -729,7 +730,13 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { nullptr },
   };
 
+  RVarDef varmisc[] = {
+    {"ontrack", "Track passed through this module", "fTrackPassedThrough" },
+    { nullptr },
+  };
+
   ret = DefineVarsFromList( vartiming, mode );
+  ret = DefineVarsFromList( varmisc, mode );
   
   if( ret != kOK )
     return ret;
@@ -747,6 +754,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fNdecoded_ADCsamples = 0;
   fIsDecoded = false;
 
+  fTrackPassedThrough = 0;
+  
   fNclustU = 0;
   fNclustV = 0;
   //later we may need to check whether this is a performance bottleneck:

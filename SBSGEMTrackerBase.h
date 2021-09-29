@@ -308,11 +308,13 @@ protected:
   std::vector<double> fHitUADCmaxclustsample;
   std::vector<double> fHitVADCmaxclustsample;
   std::vector<double> fHitADCasym; // (ADCU-ADCV)/(ADCU + ADCV)
+  std::vector<double> fHitADCavg; //(ADCU+ADCV)/2
   std::vector<double> fHitUTime; // cluster-mean time, U strips
   std::vector<double> fHitVTime; // cluster-mean time, V strips
   std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
   std::vector<double> fHitDeltaT; // TU - TV;
+  std::vector<double> fHitTavg; //(TU+TV)/2
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
   std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster

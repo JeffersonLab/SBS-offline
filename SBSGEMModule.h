@@ -270,6 +270,8 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fNdecoded_ADCsamples; //= fNstrips_hit * fN_MPD_TIME_SAMP
   UInt_t fNstrips_hitU; //total number of U strips fired
   UInt_t fNstrips_hitV; //total number of V strips fired
+
+  UInt_t fTrackPassedThrough; //flag to indicate track passed through module:
   
   //Map strip indices in this array:
   //key = U or V  strip number, mapped value is position of that strip's information in the "decoded strip" arrays below:

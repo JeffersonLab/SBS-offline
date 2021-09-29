@@ -148,12 +148,14 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
 
   
   fHitADCasym.clear();
+  fHitADCavg.clear();
   fHitUTime.clear();
   fHitVTime.clear();
   fHitUTimeMaxStrip.clear();
   fHitVTimeMaxStrip.clear();
   fHitDeltaT.clear();
-
+  fHitTavg.clear();
+  
   fHitIsampMaxUclust.clear();
   fHitIsampMaxVclust.clear();
   fHitIsampMaxUstrip.clear();
@@ -1307,7 +1309,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       int module = fModListTrack[itrack][ihit];
       int layer = fModules[module]->fLayer;
       int iclust = fHitListTrack[itrack][ihit];
-
+      
       //Grab pointers to the  2D hit info and 1D cluster info so we don't make redundant copies of the information in memory:
       sbsgemhit_t *hitinfo = &(fModules[module]->fHits[iclust]);
       sbsgemcluster_t *uclustinfo = &(fModules[module]->fUclusters[hitinfo->iuclust]);
@@ -1359,6 +1361,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitEResidV.push_back( feresidv_hits[itrack][ihit] );
       fHitUADC.push_back( uclustinfo->clusterADCsum );
       fHitVADC.push_back( vclustinfo->clusterADCsum );
+      fHitADCavg.push_back( 0.5*( fHitUADC.back() + fHitVADC.back() ) );
 
       fHitUADCmaxclustsample.push_back( uclustinfo->ADCsamples[uclustinfo->isampmax] );
       fHitVADCmaxclustsample.push_back( vclustinfo->ADCsamples[vclustinfo->isampmax] );
@@ -1390,6 +1393,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitADCasym.push_back( hitinfo->ADCasym );
       fHitUTime.push_back( uclustinfo->t_mean );
       fHitVTime.push_back( vclustinfo->t_mean );
+      fHitTavg.push_back( 0.5*( fHitUTime.back() + fHitVTime.back() ) );
 
       fHitUTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_umax] );
       fHitVTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_vmax] );
@@ -1398,21 +1402,21 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );
       fHitCorrCoeffMaxStrip.push_back( hitinfo->corrcoeff_strip );
 
-      if( fMakeEfficiencyPlots ){
-	if( fNhitsOnTrack[itrack] >= 4 ){ //fill "did hit" efficiency histos (numerator for efficiency determination):
-	  double sdummy;
-	  TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
-       
-	  TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
-
-	  if( fModules[module]->fhdidhitx != NULL ) fModules[module]->fhdidhitx->Fill( LocalCoord.X() );
-	  if( fModules[module]->fhdidhity != NULL ) fModules[module]->fhdidhity->Fill( LocalCoord.Y() );
-	  if( fModules[module]->fhdidhitxy != NULL ) fModules[module]->fhdidhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
-
-	  ( (TH1D*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
-	  ( (TH1D*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
-	  ( (TH2D*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
-	}
+      if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 ){
+	//fill "did hit" efficiency histos (numerator for efficiency determination):
+	double sdummy;
+	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
+	
+	TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
+	
+	if( fModules[module]->fhdidhitx != NULL ) fModules[module]->fhdidhitx->Fill( LocalCoord.X() );
+	if( fModules[module]->fhdidhity != NULL ) fModules[module]->fhdidhity->Fill( LocalCoord.Y() );
+	if( fModules[module]->fhdidhitxy != NULL ) fModules[module]->fhdidhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
+	
+	( (TH1D*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
+	( (TH1D*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
+	( (TH2D*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
+	
       }
       
       layersontrack.insert( layer );
@@ -1421,43 +1425,48 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fNgoodhits++;
     }
 
-    if( fMakeEfficiencyPlots ){
-      //Now loop on all layers and fill the "should hit" histograms (denominator for track-based efficiency calculation): 
-      for( int ilayer = 0; ilayer < fNlayers; ilayer++ ){
-	int minhits=3; //need to loop over all layers/modules:
-	int moduleontrack = -1;
-	if( layersontrack.find( ilayer ) != layersontrack.end() ){ //reduce bias in efficiency determination by requiring hits in at least three layers OTHER than the one in question if this layer is on the track:
-	  minhits=4;
-	  moduleontrack = modulesontrack_by_layer[ilayer]; 
-	}
+    //if( fMakeEfficiencyPlots ){
+    //Now loop on all layers and fill the "should hit" histograms (denominator for track-based efficiency calculation): 
+    for( int ilayer = 0; ilayer < fNlayers; ilayer++ ){
+      int minhits=3; //need to loop over all layers/modules:
+      int moduleontrack = -1;
+      if( layersontrack.find( ilayer ) != layersontrack.end() ){ //reduce bias in efficiency determination by requiring hits in at least three layers OTHER than the one in question if this layer is on the track:
+	minhits=4;
+	moduleontrack = modulesontrack_by_layer[ilayer]; 
+      }
 
-	if( fNhitsOnTrack[itrack] >= minhits ){
-	  // Check ALL modules in the layer:
-	  for( auto imod=fModuleListByLayer[ilayer].begin(); imod != fModuleListByLayer[ilayer].end(); ++imod ){
-	    int module = *imod; 
-	    double sdummy;
-	    TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
+     
+      // Check ALL modules in the layer:
+      for( auto imod=fModuleListByLayer[ilayer].begin(); imod != fModuleListByLayer[ilayer].end(); ++imod ){
+	int module = *imod; 
+	double sdummy;
+	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
+
+	bool inactivearea = fModules[module]->IsInActiveArea( Intersect );
+	// If the projected track passes through the active area of the module AND/OR the module contains a hit on the track,
+	// fill "should hit" histogram for the module (denominator for efficiency determination).
+	// The latter condition is required to ensure that the "denominator" histogram is always filled for the modules
+	// containing hits on the track, so you don't have the possibility for apparent efficiencies exceeding 100%:
+	//if( fNhitsOnTrack[itrack] >= minhits ){
+	if( inactivearea || module == moduleontrack ){
+	  TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
 	  
-	    // If the projected track passes through the active area of the module AND/OR the module contains a hit on the track,
-	    // fill "should hit" histogram for the module (denominator for efficiency determination).
-	    // The latter condition is required to ensure that the "denominator" histogram is always filled for the modules
-	    // containing hits on the track, so you don't have the possibility for apparent efficiencies exceeding 100%:
-	    if( fModules[module]->IsInActiveArea( Intersect ) || module == moduleontrack ){
-	      TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
+	  fModules[module]->fTrackPassedThrough = 1;
+	  
+	  if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= minhits ){
+	    if( fModules[module]->fhshouldhitx  != NULL ) fModules[module]->fhshouldhitx->Fill( LocalCoord.X() );
+	    if( fModules[module]->fhshouldhity  != NULL ) fModules[module]->fhshouldhity->Fill( LocalCoord.Y() );
+	    if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
 	    
-	      if( fModules[module]->fhshouldhitx  != NULL ) fModules[module]->fhshouldhitx->Fill( LocalCoord.X() );
-	      if( fModules[module]->fhshouldhity  != NULL ) fModules[module]->fhshouldhity->Fill( LocalCoord.Y() );
-	      if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
-
-	      //For the layer coordinates, we should use the global X and Y coordinates:
-	      ( (TH1D*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
-	      ( (TH1D*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
-	      ( (TH2D*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
-	    }
-	  } //end loop over list of modules in this tracking layer
-	} //if number of hits on track >= minhits
-      } //end loop over all layers
-    } //if( make efficiency plots )
+	    //For the layer coordinates, we should use the global X and Y coordinates:
+	    ( (TH1D*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
+	    ( (TH1D*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
+	    ( (TH2D*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
+	  }
+	} // if is in active area or module on track
+      } //end loop over list of modules in this tracking layer
+    } //end loop over all layers
+ 
   } //end loop over tracks
   
 }
