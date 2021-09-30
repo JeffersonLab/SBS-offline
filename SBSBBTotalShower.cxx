@@ -235,11 +235,14 @@ Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
   DBRequest config_request[] = {
     { "components",   &components_names,   kString, 0, 1},
     { "pssh_matchmap_x",   &pssh_matchmap_x,   kIntV, 0, 1},
+    { "MaxDx",   &fMaxDx,   kFloat, 0, 1},
+    { "MaxDy",   &fMaxDy,   kFloat, 0, 1},
     { "pssh_matchmap_y",   &pssh_matchmap_y,   kIntV, 0, 1},
     { 0 }
   };
   
   Int_t err = LoadDB( file, date, config_request, fPrefix );
+
 
   if( err ) {
     return kInitError;
@@ -299,7 +302,7 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 	SBSElement* psblk = fPreShower->GetElement(PreShowerBlockSet[nps].id);
 	     Float_t xps =  PreShowerBlockSet[nps].x;
 	     Float_t yps =  PreShowerBlockSet[nps].y;
-      Bool_t MatchCriterion = abs(xsh-xps) < fMaxDx;
+      Bool_t MatchCriterion = abs(xsh-xps) < fMaxDx && abs(ysh-yps) < fMaxDy;
       if (MatchCriterion) {
 	PreShowerBlockSet[nps].InCluster = kTRUE;
 	if (!AddToPreShowerCluster) {
