@@ -94,6 +94,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kFloat, 0, true }, ///< const from gain correction 
     { "slope", &fSlope, kFloat, 0, true }, ///< slope for gain correction 
+    { "Rmax_dis", &fRmax_dis, kFloat, 0, true }, ///< slope for gain correction 
     { "acc_charge", &fAccCharge, kFloat, 0, true }, ///< accumulated charge
     { 0 } ///< Request must end in a NULL
   };
