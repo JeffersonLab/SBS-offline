@@ -1014,7 +1014,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 
 	  // If pedestal subtraction was done online, don't do it again:
-	  if( fPedSubFlag != 0 ) ped = 0.0;
+	  // In pedestal mode, the DAQ should NOT have subtracted the pedestals,
+	  // but even if it did, it shouldn't affect the pedestal analysis to first order whether we subtract the pedestals or not:
+	  if( fPedSubFlag != 0 && !fPedestalMode ) ped = 0.0;
 	
 	  rawADC[iraw] = ADC;
 	  pedsubADC[iraw] = double(ADC) - ped;
