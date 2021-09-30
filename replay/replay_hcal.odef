@@ -1,0 +1,26 @@
+# Sample output definition file
+
+#HCal Branches to root file
+block sbs.hcal.a*
+block sbs.hcal.ped
+block sbs.hcal.t*
+block sbs.hcal.ped
+block sbs.hcal.*samps*
+block sbs.hcal.ledbit
+block sbs.hcal.ledcount
+block sbs.hcal.*Ref*
+block sbs.*trig*
+block sbs.*clus*
+#block sbs.hcal.*
+block sbs.*
+
+#Histograms
+
+#cut vert 
+
+#th2f hNEV 'Number of events vs module' sbs.hcal.nblk sbs.hcal.nhits 288 0 288 200 0 600
+
+
+
+
+
