@@ -102,7 +102,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fAPVmapping = SBSGEM::kUVA_XY; //default to UVA X/Y style APV mapping, but require this in the database::
 
   InitAPVMAP();
-  
+
+  fModuleGain = 1.0;
   //  std::cout << "SBSGEMModule constructor invoked, name = " << name << std::endl;
   
   return;
@@ -186,6 +187,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "vpitch",         &fVStripPitch,  kDouble, 0, 0, 1}, //mandatory: Pitch of V strips
     { "ugain",          &fUgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of U strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
     { "vgain",          &fVgain,        kDoubleV, 0, 1, 0}, //(optional): Gain of V strips by APV card (ordered by strip position, NOT by order of appearance in decode map)
+    { "modulegain",     &fModuleGain,   kDouble, 0, 1, 1},
     { "threshold_sample",  &fThresholdSample, kDouble, 0, 1, 1}, //(optional): threshold on max. ADC sample to keep strip (baseline-subtracted)
     { "threshold_stripsum", &fThresholdStripSum, kDouble, 0, 1, 1}, //(optional): threshold on sum of ADC samples on a strip (baseline-subtracted)
     { "threshold_clustersum", &fThresholdClusterSum, kDouble, 0, 1, 1}, //(optional): threshold on sum of all ADCs over all strips in a cluster (baseline-subtracted)
@@ -336,7 +338,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   // fCommonModeRMSU.resize( fNAPVs_U );
   // fCommonModeRMSV.resize( fNAPVs_V );
   
-  std::cout << fName << " mapped to " << nentry << " APV25 chips" << std::endl;
+  std::cout << fName << " mapped to " << nentry << " APV25 chips, module gain = " << fModuleGain << std::endl;
   
   //Geometry info is required to be present in the database for each module:
   Int_t err = ReadGeometry( file, date, true );
@@ -487,11 +489,21 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     }
   }
 
+  //Multiply in Module gain:
+  for( int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
+    fUgain[iAPV] *= fModuleGain;
+  }
+  
+
   if( fVgain.size() != fNAPVs_V ){
     fVgain.resize(fNAPVs_V);
     for( int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
       fVgain[iAPV] = 1.0;
     }
+  }
+
+  for( int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
+    fVgain[iAPV] *= fModuleGain;
   }
 
   if( fPedestalMode ){
@@ -1138,7 +1150,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
 	double gaintemp = ( axis == SBSGEM::kUaxis ) ? fUgain[strip/fN_APV25_CHAN] : fVgain[strip/fN_APV25_CHAN]; //should probably not hard-code 128 here
-	
+
 	// std::cout << "pedestal temp, rms temp, nsigma cut, threshold, zero suppress, pedestal mode = " << pedtemp << ", " << rmstemp << ", " << fZeroSuppressRMS
 	//   	  << ", " << fZeroSuppressRMS * rmstemp << ", " << fZeroSuppress << ", " << fPedestalMode << std::endl;
 	
