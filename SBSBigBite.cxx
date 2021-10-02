@@ -649,7 +649,6 @@ Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
   // Reconstruct target coordinates for all tracks found.
   Int_t n_trk = tracks.GetLast()+1;
   for( Int_t t = 0; t < n_trk; t++ ) {
-    cout << "track " << t << endl;
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
     CalcOpticsCoords(theTrack);
 
@@ -761,7 +760,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   xp_fp = track->GetTheta();
   yp_fp = track->GetPhi();
   //}
-  cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
+  //cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
 
   double vx, vy, vz, px, py, pz;
   double p_fit, xptar_fit, yptar_fit, ytar_fit, xtar;
