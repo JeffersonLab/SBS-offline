@@ -106,7 +106,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "tracker_pitch_angle",    &fTrackerPitchAngle, kDouble,  0, 1, 1},
     { "tracker_yaw_angle",    &fDetectorStackYaw, kDouble,  0, 1, 1},
     { "tracker_roll_angle",    &fDetectorStackRoll, kDouble,  0, 1, 1},
-    { "firstgemoffset_xyz",    &firstgem_offset, kDouble,  0, 1, 1},
+    { "firstgemoffset_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "do_pid",    &pidflag, kInt,  0, 1, 1},
@@ -153,12 +153,16 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 
   // Compute the rotation from TRANSPORT to lab and vice versa.
   Double_t norm = TMath::Sqrt(ct*ct + st*st*cp*cp);
-  TVector3 nx( st*st*sp*cp/norm, -norm, st*ct*sp/norm );
-  TVector3 ny( ct/norm,          0.0,   -st*cp/norm   );
-  TVector3 nz( st*cp,            st*sp, ct            );
+  //TVector3 nx( st*st*sp*cp/norm, -norm, st*ct*sp/norm );
+  //TVector3 ny( ct/norm,          0.0,   -st*cp/norm   );
+  //TVector3 nz( st*cp,            st*sp, ct            );
+  TVector3 nx( norm,   st*st*sp*cp/norm, st*ct*sp/norm );
+  TVector3 ny( -0.0,   ct/norm,          -st*cp/norm   );
+  TVector3 nz( -st*sp, st*cp,            ct            );
   fDet2OptRot.SetToIdentity().RotateAxes( nx, ny, nz );
   fOpt2DetRot = fDet2OptRot.Inverse();
   
+  cout << firstgem_offset.size() << endl;
   if(firstgem_offset.size()==3){
     fFirstGEMLayerOffset = TVector3(firstgem_offset[0],
 				    firstgem_offset[1],
@@ -504,7 +508,11 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//std::cout << "Back constraint point x, y, z: " 
 	//	  << x_bcp << ", " << y_bcp << ", "<< z_bcp 
 	//	  << endl;
-        
+	
+        // to account for the angle and position offsets of the detector stack: 
+	// x_bcp = x_fcp+fFirstGEMLayerOffset.X()+z_bcp*(dx-fDetectorStackPitch)
+	// y_bcp = y_fcp+fFirstGEMLayerOffset.Y()+z_bcp*(dy-fDetectorStackYaw)
+	
 	double dx = (Etot*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
 	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
@@ -609,6 +617,7 @@ Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
   // Reconstruct target coordinates for all tracks found.
   Int_t n_trk = tracks.GetLast()+1;
   for( Int_t t = 0; t < n_trk; t++ ) {
+    cout << "track " << t << endl;
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
     CalcOpticsCoords(theTrack);
 
@@ -656,13 +665,20 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
   Double_t x_fp, y_fp, xp_fp, yp_fp;
   Double_t px, py, pz;// NB: not the actual momentum!
   
-  x_fp = track->GetX()+fFirstGEMLayerOffset.X();
-  y_fp = track->GetY()+fFirstGEMLayerOffset.Y();
+  x_fp = track->GetX();//+fFirstGEMLayerOffset.X();
+  y_fp = track->GetY();//+fFirstGEMLayerOffset.Y();
   xp_fp = track->GetTheta();
   yp_fp = track->GetPhi();
   
+  cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
+  
+  x_fp = track->GetX()+fFirstGEMLayerOffset.X();
+  y_fp = track->GetY()+fFirstGEMLayerOffset.Y();
+  
+  cout << x_fp << " " << y_fp << " " 
+       << xp_fp-fDetectorStackPitch << " " << yp_fp+fDetectorStackYaw << endl;
   // provided involved angles are small maybe we could almost do 
-  // xp_fp+= fDetectorStackPitch
+  // xp_fp+= -fDetectorStackPitch
   // yp_fp+= fDetectorStackYaw
   // and forgo transformation calculation altogether? 
   // defo should use that as a sanity check
@@ -676,7 +692,10 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
   xp_fp = p_trk.X()/p_trk.Z();
   yp_fp = p_trk.Y()/p_trk.Z();
   
+  cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
+  
   track->Set(x_fp, y_fp, xp_fp, yp_fp);
+  
   
 }
 
@@ -710,6 +729,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   xp_fp = track->GetTheta();
   yp_fp = track->GetPhi();
   //}
+  cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
 
   double vx, vy, vz, px, py, pz;
   double p_fit, xptar_fit, yptar_fit, ytar_fit, xtar;
