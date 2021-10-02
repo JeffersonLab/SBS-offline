@@ -348,9 +348,11 @@ class SBSGEMModule : public THaSubDetector {
   //UInt_t fNTimeSamplesADC; //Number of ADC time samples (this could be variable in principle, but should be the same for all strips within a module within a run) redundant with fN_MPD_TIME_SAMP
 
   // Should we define the parameters controlling cluster-finding in the Module class? Why not:
-  std::vector<Double_t> fUgain; // "gain match" coefficients for U strips by APV card;
-  std::vector<Double_t> fVgain; // "gain match" coefficients for V strips by APV card;
+  std::vector<Double_t> fUgain; // Internal "gain match" coefficients for U strips by APV card;
+  std::vector<Double_t> fVgain; // Internal "gain match" coefficients for V strips by APV card;
 
+  Double_t fModuleGain; // Module gain relative to some "Target" ADC value:
+  
   //Optional database parameters for monitoring common-mode fluctuations in pedestal runs and/or full readout events:
   std::vector<Double_t> fCommonModeMeanU; 
   std::vector<Double_t> fCommonModeMeanV;
