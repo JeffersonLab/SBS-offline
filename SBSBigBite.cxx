@@ -151,16 +151,28 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   Double_t sp = TMath::Sin(fDetectorStackPhSph);
   Double_t cp = TMath::Cos(fDetectorStackPhSph);
 
-  // Compute the rotation from TRANSPORT to lab and vice versa.
+  // Compute the rotation from Optics (ideal) to Detector (actual) and vice versa.
+  // If the pitch is positive i.e. the actual tracker pitch angle is larger than 
+  // the nominal 10deg, the transformation from the detector coordinates 
+  // to the optics coordinate should transfomr the track dx into a more negative dx
+  // The transformation effectively does that if 
+  // fDetectorStackPitch>0 when fTrackerPitchAngle>10.
+  // But, for consistency reasons, I would like 
+  // fDetectorStackPitch<0 when fTrackerPitchAngle>10.
+  // Since I'm too dumb (and lack time) to rewrite the transformation, 
+  // I prefer to evaluate the transformation with fDetectorStackPitch>0 
+  // and *then* transform fDetectorStackPitch into -fDetectorStackPitch...
   Double_t norm = TMath::Sqrt(ct*ct + st*st*cp*cp);
   //TVector3 nx( st*st*sp*cp/norm, -norm, st*ct*sp/norm );
   //TVector3 ny( ct/norm,          0.0,   -st*cp/norm   );
   //TVector3 nz( st*cp,            st*sp, ct            );
   TVector3 nx( norm,   st*st*sp*cp/norm, st*ct*sp/norm );
-  TVector3 ny( -0.0,   ct/norm,          -st*cp/norm   );
+  TVector3 ny( 0.0,    ct/norm,          -st*cp/norm   );
   TVector3 nz( -st*sp, st*cp,            ct            );
   fDet2OptRot.SetToIdentity().RotateAxes( nx, ny, nz );
   fOpt2DetRot = fDet2OptRot.Inverse();
+  
+  fDetectorStackPitch = -fDetectorStackPitch;
   
   cout << firstgem_offset.size() << endl;
   if(firstgem_offset.size()==3){
@@ -510,13 +522,30 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//	  << endl;
 	
         // to account for the angle and position offsets of the detector stack: 
-	// x_bcp = x_fcp+fFirstGEMLayerOffset.X()+z_bcp*(dx-fDetectorStackPitch)
-	// y_bcp = y_fcp+fFirstGEMLayerOffset.Y()+z_bcp*(dy-fDetectorStackYaw)
+	// simplest approximate way to do it: 
+	// we have x_bcp^det 
+	// x_bcp^opt ~ x_bcp^det+fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp
+	// => calculate dx^opt(x_bcp^opt)
+	// => calculate x_fcp^opt(dx^opt)
+	// => x_fcp^det = x_fcp^opt+fFirstGEMLayerOffset.X()
+	// similarly with y_bcp^det 
+	// y_bcp^opt ~ y_bcp^det+fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp
+	// => calculate dy^opt(y_bcp^opt)
+	// => calculate x_fcp^opt(dy^opt)
+	// => y_fcp^det = y_fcp^opt-fFirstGEMLayerOffset.Y()
+	// Of course all of the above would hold only for angles less than a few degrees.
 	
-	double dx = (Etot*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	//transformation in optics coordinate
+	x_bcp+=fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp;
+	y_bcp+=fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp;
+	
+	// Use 10.0 degrees instead of fTrackerPitchAngle 
+	// because we are now in the "ideal" system.
+	double dx = (Etot*10.*TMath::RadToDeg() - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
 	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
 	//The dy equation is correct under the assumption ytarget = 0: can we refine?
+	
 	//double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
 	//(-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
 	//double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
@@ -529,6 +558,9 @@ Int_t SBSBigBite::CoarseReconstruct()
 	z_fcp = 0;
 	x_fcp = x_bcp+dx*(z_fcp-z_bcp);
 	y_fcp = y_bcp+dy*(z_fcp-z_bcp);
+	
+	x_bcp+=-fFirstGEMLayerOffset.X();
+	y_bcp+=-fFirstGEMLayerOffset.Y();
 	
 	//cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
 	/*
@@ -665,18 +697,18 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
   Double_t x_fp, y_fp, xp_fp, yp_fp;
   Double_t px, py, pz;// NB: not the actual momentum!
   
-  x_fp = track->GetX();//+fFirstGEMLayerOffset.X();
-  y_fp = track->GetY();//+fFirstGEMLayerOffset.Y();
+  x_fp = track->GetX()+fFirstGEMLayerOffset.X();
+  y_fp = track->GetY()+fFirstGEMLayerOffset.Y();
   xp_fp = track->GetTheta();
   yp_fp = track->GetPhi();
   
-  cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
+  // cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
   
-  x_fp = track->GetX()+fFirstGEMLayerOffset.X();
-  y_fp = track->GetY()+fFirstGEMLayerOffset.Y();
+  // x_fp = track->GetX()+fFirstGEMLayerOffset.X();
+  // y_fp = track->GetY()+fFirstGEMLayerOffset.Y();
   
-  cout << x_fp << " " << y_fp << " " 
-       << xp_fp-fDetectorStackPitch << " " << yp_fp+fDetectorStackYaw << endl;
+  // cout << x_fp << " " << y_fp << " " 
+  //  << xp_fp+fDetectorStackPitch << " " << yp_fp+fDetectorStackYaw << endl;
   // provided involved angles are small maybe we could almost do 
   // xp_fp+= -fDetectorStackPitch
   // yp_fp+= fDetectorStackYaw
@@ -692,7 +724,7 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
   xp_fp = p_trk.X()/p_trk.Z();
   yp_fp = p_trk.Y()/p_trk.Z();
   
-  cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
+  // cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
   
   track->Set(x_fp, y_fp, xp_fp, yp_fp);
   
