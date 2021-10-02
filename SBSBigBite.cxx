@@ -536,8 +536,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	// Of course all of the above would hold only for angles less than a few degrees.
 	
 	//transformation in optics coordinate
-	//x_bcp+=fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp;
-	//y_bcp+=fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp;
+	x_bcp+=fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp;
+	y_bcp+=fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp;
 	
 	// Use 10.0 degrees instead of fTrackerPitchAngle 
 	// because we are now in the "ideal" system.
@@ -559,8 +559,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	x_fcp = x_bcp+dx*(z_fcp-z_bcp);
 	y_fcp = y_bcp+dy*(z_fcp-z_bcp);
 	
-	//x_bcp+=-fFirstGEMLayerOffset.X();
-	//y_bcp+=-fFirstGEMLayerOffset.Y();
+	x_bcp+=-fFirstGEMLayerOffset.X();
+	y_bcp+=-fFirstGEMLayerOffset.Y();
 	
 	//cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
 	/*
