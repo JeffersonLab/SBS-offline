@@ -536,12 +536,12 @@ Int_t SBSBigBite::CoarseReconstruct()
 	// Of course all of the above would hold only for angles less than a few degrees.
 	
 	//transformation in optics coordinate
-	x_bcp+=fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp;
-	y_bcp+=fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp;
+	//x_bcp+=fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp;
+	//y_bcp+=fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp;
 	
 	// Use 10.0 degrees instead of fTrackerPitchAngle 
 	// because we are now in the "ideal" system.
-	double dx = (Etot*10.*TMath::RadToDeg() - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	double dx = (Etot*10.*TMath::DegToRad() - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
 	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
 	//The dy equation is correct under the assumption ytarget = 0: can we refine?
@@ -559,8 +559,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	x_fcp = x_bcp+dx*(z_fcp-z_bcp);
 	y_fcp = y_bcp+dy*(z_fcp-z_bcp);
 	
-	x_bcp+=-fFirstGEMLayerOffset.X();
-	y_bcp+=-fFirstGEMLayerOffset.Y();
+	//x_bcp+=-fFirstGEMLayerOffset.X();
+	//y_bcp+=-fFirstGEMLayerOffset.Y();
 	
 	//cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
 	/*
