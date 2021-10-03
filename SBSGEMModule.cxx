@@ -1146,7 +1146,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//"pedtemp" is only used to fill pedestal histograms as of now:
 	double pedtemp = ( axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
 
-	if( fPedSubFlag != 0 && !fIsMC ) pedtemp = 0.0;
+	if( fPedSubFlag != 0 && !fIsMC && !fPedestalMode ) pedtemp = 0.0;
 
 	double rmstemp = ( axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
 	double gaintemp = ( axis == SBSGEM::kUaxis ) ? fUgain[strip/fN_APV25_CHAN] : fVgain[strip/fN_APV25_CHAN]; //should probably not hard-code 128 here
