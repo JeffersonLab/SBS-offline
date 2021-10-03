@@ -38,7 +38,8 @@ class SBSBigBite : public THaSpectrometer {
     virtual Int_t ReadDatabase( const TDatime& date );
     virtual Int_t DefineVariables( EMode mode = kDefine );
     
-    void CalcTargetCoords( THaTrack* the_track );
+    void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
+    void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords
     void CalcTrackTiming( THaTrack* the_track );
     void CalcTrackPID( THaTrack* the_track );
     
@@ -49,6 +50,19 @@ class SBSBigBite : public THaSpectrometer {
     Int_t proba_grinch(Int_t npmt, Double_t p, 
 		       Double_t& proba_e, Double_t& proba_pi);
     
+    // My current understanding is that fPointingOffset designates the point 
+    // towards the beamline that the "mouth" of the spectrometer is pointing to...
+    // which we might also need to define. 
+    // Hence, we might want to define an additional set of parameters:
+    // detector stack pitch, yaw, roll + actual position of first GEM tracker?
+    // These angles are wrt the "ideal" central ray
+    double fDetectorStackPitch;
+    double fDetectorStackYaw;
+    double fDetectorStackRoll;
+    TVector3 fFirstGEMLayerOffset;
+    TRotation fOpt2DetRot;// transformation from optics (ideal) to detector (actual)
+    TRotation fDet2OptRot;// transformation from detector (actual) to optics (ideal)
+   
     int fOpticsOrder;
     std::vector<double> fb_xptar;
     std::vector<double> fb_yptar;
