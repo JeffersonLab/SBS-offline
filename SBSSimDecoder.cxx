@@ -624,6 +624,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   
   if(strcmp(detname.c_str(), "bb.gem")==0){
+    //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
     samps.clear();  
     strips.clear();  
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBGEM_dighit_nstrips << endl;

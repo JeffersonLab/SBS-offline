@@ -736,7 +736,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   
   //const double //make it configurable
   const double th_bb = GetThetaGeo();//retrieve the actual angle
- 
+  
   TVector3 BB_zaxis( sin(th_bb), 0, cos(th_bb) );
   TVector3 BB_xaxis(0,-1,0);
   TVector3 BB_yaxis = (BB_zaxis.Cross(BB_xaxis)).Unit();
@@ -818,12 +818,22 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1) );
   px = xptar_fit * pz;
   py = yptar_fit * pz;
+
+  TVector3 pvect_BB = TVector3(px, py, pz);
+  
+  px = +pvect_BB.Z()*sin(th_bb)+pvect_BB.Y()*cos(th_bb);
+  py = -pvect_BB.X();
+  pz = pvect_BB.Z()*cos(th_bb)-pvect_BB.Y()*sin(th_bb);
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
   track->SetPvect(TVector3(px, py, pz));
   track->SetVertex(TVector3(0, 0, vz_fit));
 
+  //cout << px << " " << py << " " << pz << "   " << vz_fit << endl;
+  //cout << track->GetLabPx() << " " << track->GetLabPy() << " " << track->GetLabPz() 
+  //   << "   " << track->GetVertexZ() << endl;
+  
   //std::cout << "Done." << std::endl;
 }
 
