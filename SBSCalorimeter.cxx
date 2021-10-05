@@ -138,10 +138,12 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
         SBSData::Waveform *wave = blk->Waveform();
 	Float_t gain = wave->GetGain();
 	wave->SetGain(gain*trigtoFADCratio[ne]);
+	wave->SetTrigCal(trigtoFADCratio[ne]);
 	}
 	if (WithADC() && fModeADC == SBSModeADC::kADC) {
 	Double_t gain=blk->ADC()->GetGain();
 	blk->ADC()->SetGain(gain*trigtoFADCratio[ne]);
+	blk->ADC()->SetTrigCal(trigtoFADCratio[ne]);
 	}
       }
     } else {
