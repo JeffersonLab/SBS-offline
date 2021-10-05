@@ -1297,8 +1297,11 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
 	 
         fRefGood.ped.push_back(wave->GetPed());
+	fRefGood.a_mult.push_back(0);
+        if (wave->GetTime().val>0) fRefGood.a_mult.push_back(1);
         fRefGood.a.push_back(wave->GetIntegral().raw);
-        fRefGood.a_p.push_back(wave->GetIntegral().val);
+        Float_t gain= wave->GetGain();
+        fRefGood.a_p.push_back(wave->GetIntegral().val/gain);
         fRefGood.a_c.push_back(wave->GetIntegral().val);
         fRefGood.a_amp.push_back(wave->GetAmplitude().raw);
         fRefGood.a_amp_p.push_back(wave->GetAmplitude().val);
@@ -1308,6 +1311,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
              fRefGood.ADCcol.push_back(blk->GetCol());
              fRefGood.ADClayer.push_back(blk->GetLayer());
              fRefGood.ADCelemID.push_back(blk->GetID());
+        fRefGood.a_mult.push_back(0);
         fRefGood.ped.push_back(wave->GetPed());
         fRefGood.a.push_back(wave->GetIntegral().raw);
         fRefGood.a_p.push_back(wave->GetIntegral().val);
@@ -1452,8 +1456,11 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
 	 
         fGood.ped.push_back(wave->GetPed());
+	fGood.a_mult.push_back(0);
+        if (wave->GetTime().val>0) fGood.a_mult.push_back(1);
         fGood.a.push_back(wave->GetIntegral().raw);
-        fGood.a_p.push_back(wave->GetIntegral().val);
+        Float_t gain= wave->GetGain();
+        fGood.a_p.push_back(wave->GetIntegral().val/gain);
         fGood.a_c.push_back(wave->GetIntegral().val);
         fGood.a_amp.push_back(wave->GetAmplitude().raw);
         fGood.a_amp_p.push_back(wave->GetAmplitude().val);
@@ -1463,6 +1470,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
              fGood.ADCcol.push_back(blk->GetCol());
              fGood.ADClayer.push_back(blk->GetLayer());
              fGood.ADCelemID.push_back(blk->GetID());
+        fGood.a_mult.push_back(0);
         fGood.ped.push_back(wave->GetPed());
         fGood.a.push_back(wave->GetIntegral().raw);
         fGood.a_p.push_back(wave->GetIntegral().val);
