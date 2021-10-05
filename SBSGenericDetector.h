@@ -66,6 +66,9 @@ struct SBSGenericOutputData {
   std::vector<Float_t> a_c;         //< [] (ADC integral -pedestal)*calib
   std::vector<Float_t> a_amp;     //< [] ADC pulse amplitude
   std::vector<Float_t> a_amp_p;     //< [] ADC pulse amplitude -pedestal
+  std::vector<Float_t> a_amp_c;     //< [] ADC pulse amplitude -pedestal
+  std::vector<Float_t> a_amptrig_p;     //< [] ADC pulse amplitude -pedestal
+  std::vector<Float_t> a_amptrig_c;     //< [] ADC pulse amplitude -pedestal
   std::vector<Float_t> a_time;    //< [] ADC pulse time
   // TDC variables
   std::vector<Int_t> t_mult;         //< [] TDC # of hits per channel
@@ -95,6 +98,9 @@ struct SBSGenericOutputData {
     a_c.clear();
     a_amp.clear();
     a_amp_p.clear();
+    a_amp_c.clear();
+    a_amptrig_p.clear();
+    a_amptrig_c.clear();
     a_time.clear();
     t.clear();
     t_mult.clear();
