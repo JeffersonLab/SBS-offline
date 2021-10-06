@@ -29,6 +29,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 
   fPedestalMode = kFALSE;
   fPedHistosInitialized = kFALSE;
+
+  fSubtractPedBeforeCommonMode = false; //only affects the pedestal-mode analysis 
   
   //Default online zero suppression to FALSE: actually I wonder if it would be better to use this in 
   // Moved this to MPDModule, since this should be done during the decoding of the raw APV data:
@@ -930,7 +932,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     UInt_t nhits_cm_flag=evdata.GetNumHits( it->crate, it->slot, fChan_CM_flags );
     
     bool cm_flags_found = false;
-											       
+      
     if( nhits_cm_flag > 0 ){
       
       // If applicable, find the common-mode/zero-suppression settings loaded from the raw data for this APV:
@@ -992,6 +994,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
       //if( chan != effChan ) continue; // 
 
+    if( fIsMC ) {
+      CM_ENABLED = true;
+      BUILD_ALL_SAMPLES = false;
+    }
+    
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
 
     
@@ -1041,7 +1048,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
 	    //values
 	    int isamp = iraw%fN_MPD_TIME_SAMP;
-	    commonMode[isamp] += pedsubADC[iraw]/double(fN_APV25_CHAN);
+	    
+	    if( fSubtractPedBeforeCommonMode ){
+	      commonMode[isamp] += pedsubADC[iraw]/double(fN_APV25_CHAN);
+	    } else {
+	      commonMode[isamp] += rawADC[iraw]/double(fN_APV25_CHAN);
+	    }
 	  }
 	}
 	
@@ -1107,7 +1119,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       //Int_t ihit = 0;
             
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
-	if( CM_ENABLED ){
+	if( CM_ENABLED ){ //unless fIsMC is true, then both CM and pedestals were subtracted online:
 	  //then we skipped the first loop over the data; need to grab the actual data:
 	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	    int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
@@ -1118,7 +1130,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    //no need to grab pedestal if CM_ENABLED is true:
 	    
 	    double ped = 0;
-	    if(fIsMC)ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+	    if(fIsMC) ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 	    
 	    rawADC[iraw] = Int_t(ADC);
 	    pedsubADC[iraw] = double(ADC) - ped;
@@ -1161,8 +1173,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  int iraw = adc_samp + fN_MPD_TIME_SAMP * istrip;
 
 	  //If applicable, subtract common-mode here:
-	  //if( (fPedestalMode || !fOnlineZeroSuppression) && nstrips == fN_APV25_CHAN ){
-	  //We need to subtract the common-mode if it was calculated:
+	  
+	  //We need to subtract the common-mode if it was calculated offline:
 	  if( !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN ){
 	    
 	    // std::cout << "isamp, commonMode = " << adc_samp << ", " << commonMode[adc_samp]
@@ -1180,7 +1192,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //cout << adc_samp << " " << istrip << " " << rawADC << " ";// << endl;
 	  
 	  //rawADCtemp.push_back( RawADC );
-	  rawADCtemp[adc_samp] = RawADC;
+	  rawADCtemp[adc_samp] = RawADC; //raw only
 	  
 	  //The following value already has pedestal and common-mode subtracted (if applicable):
 	  double ADCvalue = commonModeSubtractedADC[iraw]; //zero-suppress BEFORE we apply gain correction
@@ -1190,7 +1202,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  // }
 	  //pedestal-subtracted ADC values:
 	  //ADCtemp.push_back( ADCvalue );
-	  ADCtemp[adc_samp] = ADCvalue;
+	  ADCtemp[adc_samp] = ADCvalue; //common-mode AND pedestal subtracted
 	  // fadc[adc_samp][fNch] =  evdata.GetData(it->crate, it->slot,
 	  // 					 chan, isamp++) - fPedestal[strip];
 

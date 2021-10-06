@@ -16,6 +16,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   Clear();
 
   fPedestalMode = false;
+  fSubtractPedBeforeCommonMode = false; //only applies to pedestal-mode analysis; default to false
   
   fIsMC = false;
   fNmodules = 0;
@@ -197,6 +198,11 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     fModules[imod]->fIsMC = fIsMC;
     fModules[imod]->fMakeEfficiencyPlots = fMakeEfficiencyPlots;
     fModules[imod]->fPedestalMode = fPedestalMode;
+    fModules[imod]->fSubtractPedBeforeCommonMode = fSubtractPedBeforeCommonMode;
+
+    // std::cout << "Module " << fModules[imod]->GetName() << ": pedestalmode = " << fPedestalMode
+    // 	      << ", Subtract ped. before common mode = " << fSubtractPedBeforeCommonMode << std::endl;
+    
     //fModules[imod]->fZeroSuppress = !fPedestalMode;
     //moved "zero suppress" flag to GEMModule
     fModules[imod]->fBinSize_efficiency1D = fBinSize_efficiency1D;

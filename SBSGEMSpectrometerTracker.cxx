@@ -24,6 +24,7 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fIsMC = false;//by default!
   //fCrateMap = 0;
   fPedestalMode = false;
+  fSubtractPedBeforeCommonMode = false;
   fPedMode_DBoverride = false; //Only if the user script invokes the SetPedestalMode method do we override the database value:
   
   fIsSpectrometerTracker = true; //used by tracker base
@@ -94,15 +95,18 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //   const char*      descript; // (opt) Key description (if 0, same as name)
   // };
   //std::string pedfilename = ""; //Optional: load pedestals from separate file
+
+  // std::cout << "before LoadDB, pedestalmode = " << fPedestalMode << ", fSubtractPedBeforeCommonMode = " << fSubtractPedBeforeCommonMode << " fPedModeDBoverride = "
+  // 	    << fPedMode_DBoverride << std::endl;
   
-  int pedestalmode_flag = fPedestalMode ? 1 : 0;
+  int pedestalmode_flag = fPedestalMode ? pow(-1,fSubtractPedBeforeCommonMode) : 0;
   int doefficiency_flag = fMakeEfficiencyPlots ? 1 : 0;
   //int onlinezerosuppressflag = fOnlineZeroSuppression ? 1 : 0;
   int useconstraintflag = fUseConstraint ? 1 : 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
   int mc_flag = fIsMC ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
-
+  
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
@@ -135,11 +139,17 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fclose(file);
 
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
-  if( !fPedMode_DBoverride ) fPedestalMode = ( pedestalmode_flag != 0 );
+  if( !fPedMode_DBoverride ) {
+    //std::cout << "pedestalmode_flag = " << pedestalmode_flag << std::endl;
+    
+    fPedestalMode = ( pedestalmode_flag != 0 );
+    fSubtractPedBeforeCommonMode = ( pedestalmode_flag < 0 );
+  }
+  
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 
-  std::cout << "pedestal file name = " << fpedfilename << std::endl;
+  //std::cout << "pedestal file name = " << fpedfilename << std::endl;
   
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;

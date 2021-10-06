@@ -56,7 +56,7 @@ public:
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
 
-  void SetPedestalMode( bool pm=true ){ fPedestalMode = pm; fPedMode_DBoverride = true; }
+  void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -134,6 +134,9 @@ protected:
 
   bool fPedMode_DBoverride; 
   bool fPedestalMode;
+
+  bool fSubtractPedBeforeCommonMode; //flag only applies to pedestal-mode analysis
+  
   // bool fPedestalsInitialized;
   
   bool fIsMC;
