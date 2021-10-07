@@ -107,12 +107,15 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   cout << "Read SBSSimDecoder variables " << endl;
   
   RVarDef vars[] = {
-    {"mc_px",   "MC track momentum x",   "fPx"},
-    {"mc_py",   "MC track momentum y",   "fPy"},
-    {"mc_pz",   "MC track momentum z",   "fPz"},
-    {"mc_vx",   "MC track vertex x",   "fVx"},
-    {"mc_vy",   "MC track vertex y",   "fVy"},
-    {"mc_vz",   "MC track vertex z",   "fVz"},
+    {"mc_epx",   "MC electron momentum x",   "fEPx"},
+    {"mc_epy",   "MC electron momentum y",   "fEPy"},
+    {"mc_epz",   "MC electron momentum z",   "fEPz"},
+    {"mc_npx",   "MC nucleon momentum x",   "fNPx"},
+    {"mc_npy",   "MC nucleon momentum y",   "fNPy"},
+    {"mc_npz",   "MC nucleon momentum z",   "fNPz"},
+    {"mc_vx",   "MC vertex x",   "fVx"},
+    {"mc_vy",   "MC vertex y",   "fVy"},
+    {"mc_vz",   "MC vertex z",   "fVz"},
     {"nbbtracks",   "number of BB MC tracks",   "fNBBtracks"},
     {"bbtrack_nhits",   "BB MC track hit mult",   "fBBtrack_Nhits"},
     {"bbtrack_tid",   "BB MC track TID",   "fBBtrack_TID"},
@@ -205,9 +208,12 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
   
-  fPx = simEvent->Tgmn->ev_epx;
-  fPy = simEvent->Tgmn->ev_epy;
-  fPz = simEvent->Tgmn->ev_epz;
+  fEPx = simEvent->Tgmn->ev_epx;
+  fEPy = simEvent->Tgmn->ev_epy;
+  fEPz = simEvent->Tgmn->ev_epz;
+  fNPx = simEvent->Tgmn->ev_npx;
+  fNPy = simEvent->Tgmn->ev_npy;
+  fNPz = simEvent->Tgmn->ev_npz;
   fVx = simEvent->Tgmn->ev_vx;
   fVy = simEvent->Tgmn->ev_vy;
   fVz = simEvent->Tgmn->ev_vz;

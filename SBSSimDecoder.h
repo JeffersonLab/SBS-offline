@@ -145,9 +145,12 @@ protected:
 	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
-  Double_t fPx;
-  Double_t fPy;
-  Double_t fPz;
+  Double_t fEPx;
+  Double_t fEPy;
+  Double_t fEPz;
+  Double_t fNPx;
+  Double_t fNPy;
+  Double_t fNPz;
   Double_t fVx;
   Double_t fVy;
   Double_t fVz;
