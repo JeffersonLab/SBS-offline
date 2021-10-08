@@ -28,6 +28,7 @@ namespace SBSData {
     Float_t cal; //< Calibration constant for ADC integral
     Float_t tcal; //< Calibration constant for TDC value
     Float_t acal; //< Calibration constant for ADC amplitude (peak)
+    Float_t trigcal; //< ratio Trig amp to FADC amp
     UInt_t NSB; //< Programmed # of samples before threshold in FADC
     UInt_t NSA; //< Programmed # of samples after threshold in FADC
     Int_t NPedBin; //< Programmed # of samples used in pedestal average in FADC
@@ -47,6 +48,7 @@ namespace SBSData {
     Float_t ChanTomV; //< Conversion of ADC channel to milliVolt.
     Float_t tcal; //< Calibration constant for TDC value
     Float_t acal; //< Calibration constant for ADC amplitude (peak)
+    Float_t trigcal; //< ratio Trig amp to FADC amp
     UInt_t FixThresBin; //<Fixed Threshold Bin when no peak found
     UInt_t NSB; //<Number of bins before Threshold Bin integrate when Threshold Bin found
     UInt_t NSA; //<Number of bins after Threshold Bin integrate when Threshold Bin found
@@ -91,6 +93,7 @@ namespace SBSData {
       Float_t GetTimeCal()                 const { return fADC.tcal; }
       Float_t GetGoodTimeCut()              const { return fADC.GoodTimeCut;}
       Float_t GetAmpCal()                  const { return fADC.acal; }
+      Float_t GetTrigCal()                  const { return fADC.trigcal; }
       UInt_t GetNSA()                      const { return fADC.NSA; }
       UInt_t GetNSB()                      const { return fADC.NSB; }
       Int_t GetNPedBin()                      const { return fADC.NPedBin; }
@@ -116,6 +119,7 @@ namespace SBSData {
       void SetTimeCal(Float_t var) { fADC.tcal = var; }
       void SetGoodTimeCut(Float_t var) { fADC.GoodTimeCut = var; }
       void SetAmpCal(Float_t var) { fADC.acal = var; }
+      void SetTrigCal(Float_t var) { fADC.trigcal = var; }
       void SetGoodHit(Int_t i) { fADC.good_hit = i; }
       void SetChanTomV(Float_t var) { fADC.ChanTomV = var; }
       void SetADCParam(Float_t i1,Int_t i2,Int_t i3, Int_t i4,Float_t i5) { fADC.ChanTomV=i1;fADC.NSB=i2;fADC.NSA=i3;fADC.NPedBin=i4;fADC.GoodTimeCut=i5;}
@@ -195,6 +199,8 @@ namespace SBSData {
       Float_t GetGain() const { return fSamples.cal; }
       Float_t GetThres() const { return fSamples.thres; }
       Float_t GetChanTomV() const { return fSamples.ChanTomV; }
+      Float_t GetAmpCal() const { return fSamples.acal; }
+      Float_t GetTrigCal() const { return fSamples.trigcal; }
       UInt_t GetFixThresBin() const { return fSamples.FixThresBin; }
       UInt_t GetNSB() const { return fSamples.NSB; }
       UInt_t GetNSA() const { return fSamples.NSA; }
@@ -217,6 +223,7 @@ namespace SBSData {
       void SetTimeCal(Float_t var) { fSamples.tcal = var; }
       void SetGoodTimeCut(Float_t var) { fSamples.GoodTimeCut = var; }
       void SetAmpCal(Float_t var) { fSamples.acal = var; }
+      void SetTrigCal(Float_t var) { fSamples.trigcal = var; }
       void SetGoodHit(Int_t i) { fSamples.good_hit = i; }
       void SetWaveformParam(Float_t var,Int_t i1,Int_t i2,Int_t i3, Int_t i4) { fSamples.thres = var;fSamples.FixThresBin=i1;fSamples.NSB=i2;fSamples.NSA=i3;fSamples.NPedBin=i4;}
       // Process data sets raw value, ped-subtracted and calibrated data

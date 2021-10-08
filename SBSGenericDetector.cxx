@@ -391,6 +391,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // ADC and TDC reference time parameters
   std::vector<Float_t> reftdc_offset, reftdc_cal, reftdc_GoodTimeCut;
   std::vector<Float_t> refadc_ped, refadc_gain, refadc_conv, refadc_thres, refadc_GoodTimeCut;
+  std::vector<Float_t> refadc_AmpToIntRatio;
   std::vector<Int_t> refadc_FixThresBin,refadc_NSB,refadc_NSA,refadc_NPedBin;
 
   // Read calibration parameters
@@ -398,6 +399,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // (should be organized by logical channel number, according to channel map)
   std::vector<Float_t>  tdc_offset, tdc_cal, tdc_GoodTimeCut;
   std::vector<Float_t> adc_ped, adc_gain, adc_conv, adc_thres, adc_GoodTimeCut;
+  std::vector<Float_t> adc_AmpToIntRatio;
   std::vector<Int_t> adc_FixThresBin,adc_NSB,adc_NSA,adc_NPedBin;
   std::vector<DBRequest> vr;
   if(WithADC()) {
@@ -405,6 +407,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     vr.push_back({ "adc.gain",     &adc_gain,   kFloatV, 0, 1 });
     vr.push_back({ "adc.conv",     &adc_conv,   kFloatV, 0, 1 });
     vr.push_back({ "adc.thres",     &adc_thres,   kFloatV, 0, 1 });
+    vr.push_back({ "adc.AmpToIntRatio",     &adc_AmpToIntRatio,   kFloatV, 0, 1 });
     vr.push_back({ "adc.FixThresBin",     &adc_FixThresBin,   kIntV, 0, 1 });
     vr.push_back({ "adc.NSB",     &adc_NSB,   kIntV, 0, 1 });
     vr.push_back({ "adc.NSA",     &adc_NSA,   kIntV, 0, 1 });
@@ -415,6 +418,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     vr.push_back({ "refadc.gain",     &refadc_gain,   kFloatV, 0, 1 });
     vr.push_back({ "refadc.conv",     &refadc_conv,   kFloatV, 0, 1 });
     vr.push_back({ "refadc.thres",     &refadc_thres,   kFloatV, 0, 1 });
+    vr.push_back({ "refadc.AmpToIntRatio",     &refadc_AmpToIntRatio,   kFloatV, 0, 1 });
     vr.push_back({ "refadc.FixThresBin",     &refadc_FixThresBin,   kIntV, 0, 1 });
     vr.push_back({ "refadc.NSB",     &refadc_NSB,   kIntV, 0, 1 });
     vr.push_back({ "refadc.NSA",     &refadc_NSA,   kIntV, 0, 1 });
@@ -530,6 +534,18 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
+  if(refadc_AmpToIntRatio.size() == 0) { // expand vector to specify calibration for all elements
+    ResetVector(refadc_AmpToIntRatio,Float_t(1.0),NRefADCElem);    
+  } else if(refadc_AmpToIntRatio.size() == 1) { // expand vector to specify calibration for all elements
+    Float_t temp=refadc_AmpToIntRatio[0];
+    ResetVector(refadc_AmpToIntRatio,temp,NRefADCElem);    
+    std::cout << "set all elements  AmpToIntRatio = " << refadc_AmpToIntRatio[0] << std::endl;
+  } else if ( refadc_AmpToIntRatio.size() != NRefADCElem ) {
+    Error( Here(here), "Inconsistent number of refadc.AmpToIntRatio specified. Expected "
+        "%d but got %d",int(refadc_AmpToIntRatio.size()),NRefADCElem);
+    return kInitError;
+  }
+
   if(refadc_NSB.size() == 0) { // expand vector to specify calibration for all elements
     ResetVector(refadc_NSB,3,NRefADCElem);    
   } else if(refadc_NSB.size() == 1) { // expand vector to specify calibration for all elements
@@ -605,11 +621,15 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
               el->SetWaveform(refadc_ped[nr],refadc_gain[nr],refadc_conv[nr],refadc_GoodTimeCut[nr]);
 	      SBSData::Waveform *wave = el->Waveform();
               wave->SetWaveformParam(refadc_thres[nr],refadc_FixThresBin[nr],refadc_NSB[nr],refadc_NSA[nr],refadc_NPedBin[nr]);
+	      wave->SetAmpCal(refadc_AmpToIntRatio[nr]*refadc_gain[nr]);
+	      wave->SetTrigCal(1.);
             } else {
               el->SetADC(refadc_ped[nr],refadc_gain[nr]);
 	      if( fModeADC == SBSModeADC::kADC ) {
 		SBSData::ADC *fadc=el->ADC();
 		fadc->SetADCParam(refadc_conv[nr],refadc_NSB[nr],refadc_NSA[nr],refadc_NPedBin[nr],refadc_GoodTimeCut[nr]);
+		fadc->SetAmpCal(refadc_AmpToIntRatio[nr]*refadc_gain[nr]);
+	        fadc->SetTrigCal(1.);
 	      }
             }
       }
@@ -693,6 +713,19 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if ( adc_conv.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.conv specified. Expected "
         "%d but got %d",int(adc_conv.size()),fNelem);
+    return kInitError;
+  }
+
+
+  if(adc_AmpToIntRatio.size() == 0) { // expand vector to specify calibration for all elements
+    ResetVector(adc_AmpToIntRatio,Float_t(1.0),fNelem);    
+  } else if(adc_AmpToIntRatio.size() == 1) { // expand vector to specify calibration for all elements
+    Float_t temp=adc_AmpToIntRatio[0];
+    ResetVector(adc_AmpToIntRatio,temp,fNelem);    
+    std::cout << "set all elements  AmpToIntRatio = " << adc_AmpToIntRatio[0] << std::endl;
+  } else if ( adc_AmpToIntRatio.size() != fNelem ) {
+    Error( Here(here), "Inconsistent number of adc.AmpToIntRatio specified. Expected "
+        "%d but got %d",int(adc_AmpToIntRatio.size()),fNelem);
     return kInitError;
   }
 
@@ -789,11 +822,15 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
               e->SetWaveform(adc_ped[k],adc_gain[k],adc_conv[k],adc_GoodTimeCut[k]);
 	      SBSData::Waveform *wave = e->Waveform();
               wave->SetWaveformParam(adc_thres[k],adc_FixThresBin[k],adc_NSB[k],adc_NSA[k],adc_NPedBin[k]);
+	      wave->SetAmpCal(adc_AmpToIntRatio[k]*adc_gain[k]);
+	      wave->SetTrigCal(1.);
             } else {
               e->SetADC(adc_ped[k],adc_gain[k]);
 	      if( fModeADC == SBSModeADC::kADC ) {
 		SBSData::ADC *fadc=e->ADC();
 		fadc->SetADCParam(adc_conv[k],adc_NSB[k],adc_NSA[k],adc_NPedBin[k],adc_GoodTimeCut[k]);
+	        fadc->SetAmpCal(adc_AmpToIntRatio[k]*adc_gain[k]);
+	      fadc->SetTrigCal(1.);
 	      }
             }
           }
@@ -875,6 +912,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     if(fModeADC != SBSModeADC::kADCSimple) {
       ve.push_back( {"Ref.a_amp","Ref ADC pulse amplitude", "fRefGood.a_amp"} );
       ve.push_back( {"Ref.a_amp_p","Ref ADC pulse amplitude -ped", "fRefGood.a_amp_p"} );
+      ve.push_back( {"Ref.a_amp_c","(Ref ADC pulse amplitude -ped)*gain*AmpToIntRatio", "fRefGood.a_amp_c"} );
       ve.push_back( {"Ref.a_time","REf ADC pulse time", "fRefGood.a_time"} );
     }
     if(fStoreRawHits) {
@@ -899,6 +937,9 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     if(fModeADC != SBSModeADC::kADCSimple) {
       ve.push_back( {"a_amp","ADC pulse amplitude", "fGood.a_amp"} );
       ve.push_back( {"a_amp_p","ADC pulse amplitude -ped", "fGood.a_amp_p"} );
+      ve.push_back( {"a_amp_c","(ADC pulse amplitude -ped)*gain*AmpToIntRatio", "fGood.a_amp_p"} );
+      ve.push_back( {"a_amptrig_p","(ADC pulse amplitude -ped)*AmpToIntRatio", "fGood.a_amp_p"} );
+      ve.push_back( {"a_amptrig_c","(ADC pulse amplitude -ped)*gain*AmpToIntRatio", "fGood.a_amp_p"} );
       ve.push_back( {"a_time","ADC pulse time", "fGood.a_time"} );
     }
     if(fStoreRawHits) {
@@ -1236,13 +1277,18 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fRefGood.a_mult.push_back(blk->ADC()->GetNHits());
           if (fModeADC == SBSModeADC::kADCSimple) fRefGood.a_p.push_back(hit.integral.raw-ped);
 	  if (fModeADC == SBSModeADC::kADC) {
-	    Double_t conv=blk->ADC()->GetGain();
-	      fRefGood.a_p.push_back(hit.integral.val/conv); // ped subtracted with Gain factor
+	    Double_t gain=blk->ADC()->GetGain();
+	      fRefGood.a_p.push_back(hit.integral.val/gain); // ped subtracted with Gain factor
 	  }
           fRefGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
             fRefGood.a_amp.push_back(hit.amplitude.raw);
-            fRefGood.a_amp_p.push_back(hit.amplitude.val);
+	    Double_t again=blk->ADC()->GetAmpCal();	      
+	    Double_t trigcal=blk->ADC()->GetTrigCal();	      
+	    fRefGood.a_amp_p.push_back(hit.integral.val/again); // ped subtracted with Gain factor
+            fRefGood.a_amp_c.push_back(hit.amplitude.val);
+	    fRefGood.a_amptrig_p.push_back(hit.integral.val/again*trigcal); // ped subtracted with Gain factor
+            fRefGood.a_amptrig_c.push_back(hit.amplitude.val*trigcal);
             fRefGood.a_time.push_back(hit.time.val);
           }
 	  } else if ( fStoreEmptyElements ) {
@@ -1258,6 +1304,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
             fRefGood.a_amp.push_back(0.);
             fRefGood.a_amp_p.push_back(0.);
+            fRefGood.a_amp_c.push_back(0.);
+            fRefGood.a_amptrig_p.push_back(0.);
+            fRefGood.a_amptrig_c.push_back(0.);
             fRefGood.a_time.push_back(0.);
           }
  	    
@@ -1297,23 +1346,36 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
 	 
         fRefGood.ped.push_back(wave->GetPed());
+	fRefGood.a_mult.push_back(0);
+        if (wave->GetTime().val>0) fRefGood.a_mult.push_back(1);
         fRefGood.a.push_back(wave->GetIntegral().raw);
-        fRefGood.a_p.push_back(wave->GetIntegral().val);
+        Float_t gain= wave->GetGain();
+        fRefGood.a_p.push_back(wave->GetIntegral().val/gain);
         fRefGood.a_c.push_back(wave->GetIntegral().val);
         fRefGood.a_amp.push_back(wave->GetAmplitude().raw);
-        fRefGood.a_amp_p.push_back(wave->GetAmplitude().val);
+	    Double_t again=wave->GetAmpCal();	      
+	    Double_t trigcal=wave->GetTrigCal();	      
+        fRefGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
+        fRefGood.a_amp_c.push_back(wave->GetAmplitude().val);
+        fRefGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
+        fRefGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
         fRefGood.a_time.push_back(wave->GetTime().val);
 	  } else if (fStoreEmptyElements) {
              fRefGood.ADCrow.push_back(blk->GetRow());
              fRefGood.ADCcol.push_back(blk->GetCol());
              fRefGood.ADClayer.push_back(blk->GetLayer());
              fRefGood.ADCelemID.push_back(blk->GetID());
+        fRefGood.a_mult.push_back(0);
         fRefGood.ped.push_back(wave->GetPed());
         fRefGood.a.push_back(wave->GetIntegral().raw);
-        fRefGood.a_p.push_back(wave->GetIntegral().val);
+        Float_t gain= wave->GetGain();
+        fRefGood.a_p.push_back(wave->GetIntegral().val/gain);
         fRefGood.a_c.push_back(wave->GetIntegral().val);
             fRefGood.a_amp.push_back(0.0);
             fRefGood.a_amp_p.push_back(0.0);
+            fRefGood.a_amp_c.push_back(0.0);
+            fRefGood.a_amptrig_p.push_back(0.0);
+            fRefGood.a_amptrig_c.push_back(0.0);
             fRefGood.a_time.push_back(0.0);
 	  }
 	}
@@ -1391,13 +1453,18 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fGood.a_mult.push_back(blk->ADC()->GetNHits());
           if (fModeADC == SBSModeADC::kADCSimple) fGood.a_p.push_back(hit.integral.raw-ped);
 	  if (fModeADC == SBSModeADC::kADC) {
-	    Double_t conv=blk->ADC()->GetGain();
-	      fGood.a_p.push_back(hit.integral.val/conv); // ped subtracted with Gain factor
+	    Double_t gain=blk->ADC()->GetGain();
+	      fGood.a_p.push_back(hit.integral.val/gain); // ped subtracted with Gain factor
 	  }
           fGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
             fGood.a_amp.push_back(hit.amplitude.raw);
-            fGood.a_amp_p.push_back(hit.amplitude.val);
+	    Double_t again=blk->ADC()->GetAmpCal();	      
+	    Double_t trigcal=blk->ADC()->GetTrigCal();	      
+            fGood.a_amp_p.push_back(hit.amplitude.val/again);
+            fGood.a_amp_c.push_back(hit.amplitude.val);
+            fGood.a_amptrig_p.push_back(hit.amplitude.val/again*trigcal);
+            fGood.a_amptrig_c.push_back(hit.amplitude.val*trigcal);
             fGood.a_time.push_back(hit.time.val);
           }
 	  } else if ( fStoreEmptyElements ) {
@@ -1413,6 +1480,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
             fGood.a_amp.push_back(0.);
             fGood.a_amp_p.push_back(0.);
+            fGood.a_amp_c.push_back(0.);
+            fGood.a_amptrig_p.push_back(0.);
+            fGood.a_amptrig_c.push_back(0.);
             fGood.a_time.push_back(0.);
           }
  	    
@@ -1452,23 +1522,36 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
 	 
         fGood.ped.push_back(wave->GetPed());
+	fGood.a_mult.push_back(0);
+        if (wave->GetTime().val>0) fGood.a_mult.push_back(1);
         fGood.a.push_back(wave->GetIntegral().raw);
-        fGood.a_p.push_back(wave->GetIntegral().val);
+        Float_t gain= wave->GetGain();
+        fGood.a_p.push_back(wave->GetIntegral().val/gain);
         fGood.a_c.push_back(wave->GetIntegral().val);
         fGood.a_amp.push_back(wave->GetAmplitude().raw);
-        fGood.a_amp_p.push_back(wave->GetAmplitude().val);
+	    Double_t again=wave->GetAmpCal();	      
+	    Double_t trigcal=wave->GetTrigCal();	      
+        fGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
+        fGood.a_amp_c.push_back(wave->GetAmplitude().val);
+        fGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
+        fGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
         fGood.a_time.push_back(wave->GetTime().val);
 	  } else if (fStoreEmptyElements) {
              fGood.ADCrow.push_back(blk->GetRow());
              fGood.ADCcol.push_back(blk->GetCol());
              fGood.ADClayer.push_back(blk->GetLayer());
              fGood.ADCelemID.push_back(blk->GetID());
+        fGood.a_mult.push_back(0);
         fGood.ped.push_back(wave->GetPed());
         fGood.a.push_back(wave->GetIntegral().raw);
-        fGood.a_p.push_back(wave->GetIntegral().val);
+        Float_t gain= wave->GetGain();
+        fGood.a_p.push_back(wave->GetIntegral().val/gain);
         fGood.a_c.push_back(wave->GetIntegral().val);
             fGood.a_amp.push_back(0.0);
             fGood.a_amp_p.push_back(0.0);
+            fGood.a_amp_c.push_back(0.0);
+            fGood.a_amptrig_p.push_back(0.0);
+            fGood.a_amptrig_c.push_back(0.0);
             fGood.a_time.push_back(0.0);
 	}
 	}

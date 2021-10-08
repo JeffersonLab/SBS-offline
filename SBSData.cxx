@@ -34,7 +34,7 @@ namespace SBSData {
     Float_t IntRaw=  integral*GetChanTomV()*pC_Conv;
     Float_t IntVal=  (IntRaw-PedVal*(GetNSA()+GetNSB()+1)*pC_Conv)*GetGain();
     Float_t AmpRaw=  amp*GetChanTomV();
-    Float_t AmpVal=  (AmpRaw-PedVal)*GetGain();
+    Float_t AmpVal=  (AmpRaw-PedVal)*GetAmpCal();
     SingleData t_integral = { IntRaw, IntVal   };
     SingleData t_time     = { time, TimeVal };
     SingleData t_amp     = { AmpRaw, AmpVal };
@@ -216,7 +216,7 @@ namespace SBSData {
     fSamples.pulse.time.raw = FineTime;
     fSamples.pulse.time.val = (FineTime)*fSamples.tcal;
     fSamples.pulse.amplitude.raw = max;
-    fSamples.pulse.amplitude.val = (max-fSamples.ped)*fSamples.cal;
+    fSamples.pulse.amplitude.val = (max-fSamples.ped)*fSamples.acal;
     if (max==0) fSamples.pulse.amplitude.val=max;
     //
     fHasData = (vals.size() > 0);

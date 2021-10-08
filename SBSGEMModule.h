@@ -212,6 +212,8 @@ class SBSGEMModule : public THaSubDetector {
   
   Bool_t fPedestalMode;
   //Bool_t fPedestalsInitialized;
+
+  Bool_t fSubtractPedBeforeCommonMode;
   
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
@@ -222,6 +224,8 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 
                      // 1 = pedestal subtraction WAS done online, even for full readout events, only subtract the common-mode
 
+  
+  
   //Number of strips on low and high side to reject for common-mode calculation:
   Int_t fCommonModeNstripRejectHigh; //default = 28;
   Int_t fCommonModeNstripRejectLow; //default = 28;
