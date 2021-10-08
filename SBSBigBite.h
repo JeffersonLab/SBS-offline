@@ -96,6 +96,7 @@ class SBSBigBite : public THaSpectrometer {
     
     std::vector<double> fEpsEtotRatio;
     std::vector<double> fEtot;
+    std::vector<double> fEtotPratio;
     
     double fTrackGrinchClusCorr_0;
     double fTrackGrinchClusCorr_1;

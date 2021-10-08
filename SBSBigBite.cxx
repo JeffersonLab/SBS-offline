@@ -340,6 +340,8 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   DefineVarsFromList( constraintvars, mode );
   
   RVarDef pidvars[] = {
+    { "eps_over_etot", "electron probability", "fEpsEtotRatio" },
+    { "etot_over_p", "electron probability", "fEtotPratio" },
     { "prob_e", "electron probability", "fProbaE" },
     { "prob_pi", "pion probability", "fProbaPi" },
     { nullptr }
@@ -930,6 +932,7 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       if(i_match<0)continue;
       
       double pr1, pr2;
+      fEtotPratio.push_back(fEtot[i_match]/the_track->GetP());
       proba_pssh(fEpsEtotRatio[i_match], eproba, piproba);
       proba_pcal(fEtot[i_match]/the_track->GetP(), pr1, pr2);
       eproba*=pr1;
