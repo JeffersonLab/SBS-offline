@@ -410,7 +410,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
       for(UInt_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
         fMainclusblk.e.push_back(blk->GetE());
-        fMainclusblk.e.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));
+        fMainclusblk.e_c.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));
         fMainclusblk.x.push_back(blk->GetX());
         fMainclusblk.y.push_back(blk->GetY());
         fMainclusblk.row.push_back(blk->GetRow());
