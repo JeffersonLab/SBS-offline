@@ -108,6 +108,9 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 
   fModuleGain = 1.0;
   //  std::cout << "SBSGEMModule constructor invoked, name = " << name << std::endl;
+
+  //Number of sigmas for defining common-mode max for online zero suppression
+  fCommonModeRange_nsigma = 5.0;
   
   return;
 }
@@ -218,6 +221,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_nstriphi", &fCommonModeNstripRejectHigh, kInt, 0, 1, 1}, //optional, search:
     { "commonmode_niter", &fCommonModeNumIterations, kInt, 0, 1, 1},
     { "commonmode_minstrips", &fCommonModeMinStripsInRange, kInt, 0, 1, 1},
+    { "commonmode_range_nsigma", &fCommonModeRange_nsigma, kDouble, 0, 1, 1},
     { "plot_common_mode", &cmplots_flag, kInt, 0, 1, 1},
     { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
     { "chan_timestamp_low", &fChan_TimeStamp_low, kUInt, 0, 1, 1},
@@ -2329,10 +2333,12 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
 
     double cm_mean = (axis == SBSGEM::kUaxis ) ? commonmode_meanU[ pos ] : commonmode_meanV[ pos ];
     double cm_rms = (axis == SBSGEM::kUaxis ) ? commonmode_rmsU[ pos ] : commonmode_rmsV[ pos ];
+
+    //std::cout << "module " << GetName() << ", common-mode range number of sigmas = " << fCommonModeRange_nsigma  << std::endl;
     
-    double cm_min = cm_mean - fZeroSuppressRMS * cm_rms;
+    double cm_min = cm_mean - fCommonModeRange_nsigma * cm_rms;
     cm_min = 0.0;
-    double cm_max = cm_mean + fZeroSuppressRMS * cm_rms;
+    double cm_max = cm_mean + fCommonModeRange_nsigma * cm_rms;
 
     
     daqfile_cmr << std::setw(12) << crate 

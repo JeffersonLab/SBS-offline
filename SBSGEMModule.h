@@ -362,6 +362,8 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeMeanV;
   std::vector<Double_t> fCommonModeRMSU;
   std::vector<Double_t> fCommonModeRMSV;
+
+  double fCommonModeRange_nsigma; //default = 5
   
   ///////////////////////////////////////////////////////////////////////////////////////////////////
   //     CLUSTERING PARAMETERS (to be read from database and/or given sensible default values)        //
