@@ -26,6 +26,7 @@ public:
     Int_t   GetMult() const {return fMult;}
     Int_t   GetRow()  const {return fRow; }
     Int_t   GetCol()  const {return fCol; }
+    Int_t   GetElemID()  const {return fElemID; }
     SBSElement* GetMaxElement() { return fMaxElement; }
     Float_t GetMaxE() const {if(fMaxElement) return fMaxElement->GetE(); return 0; }
 
@@ -38,6 +39,7 @@ public:
     void SetMult(Int_t var) {fMult=var;}
     void SetRow(Int_t var) { fRow=var; }
     void SetCol(Int_t var) { fCol=var; }
+    void SetElemID(Int_t var) { fElemID=var; }
 
     SBSElement* GetElement(UInt_t i);
     std::vector<SBSElement*>& GetElements() {return fElements;}
@@ -57,6 +59,7 @@ private:
     Float_t fEblk;    // Energy of block with highest E
     Int_t   fRow;     // Row of block with highest E
     Int_t   fCol;     // Row of block with highest E
+    Int_t   fElemID;     // ElemID of block with highest E
 
     Int_t fMult;      // Number of blocks in the cluster
     Int_t fNMaxElements;// Max number of blocks

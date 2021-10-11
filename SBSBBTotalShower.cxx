@@ -151,6 +151,7 @@ exit:
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 {
+  ClearEvent();
   fShower->Decode(evdata);
   fPreShower->Decode(evdata);
   return 0;
