@@ -227,17 +227,17 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     }
     
     //int o_i, o_j, o_k, o_l, o_m;// shall we use those???
-    fb_xptar.resize(nparams);
-    fb_yptar.resize(nparams);
-    fb_ytar.resize(nparams);
-    fb_pinv.resize(nparams);
-    f_oi.resize(nparams);
-    f_oj.resize(nparams);
-    f_ok.resize(nparams);
-    f_ol.resize(nparams);
-    f_om.resize(nparams);
+    fb_xptar.resize(nterms);
+    fb_yptar.resize(nterms);
+    fb_ytar.resize(nterms);
+    fb_pinv.resize(nterms);
+    f_oi.resize(nterms);
+    f_oj.resize(nterms);
+    f_ok.resize(nterms);
+    f_ol.resize(nterms);
+    f_om.resize(nterms);
     
-    for(int i=0; i<nparams; i++){
+    for(int i=0; i<nterms; i++){
       fb_xptar[i] = optics_param[9*i];
       fb_yptar[i] = optics_param[9*i+1];
       fb_ytar[i] = optics_param[9*i+2];
@@ -247,9 +247,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
       f_ok[i] = int(optics_param[9*i+6]);
       f_oj[i] = int(optics_param[9*i+7]);
       f_oi[i] = int(optics_param[9*i+8]);
-      
-      if(f_om[i]==0 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==0 && f_oi[i]==0)
+      if(f_om[i]==0 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==0 && f_oi[i]==0){
 	fPtheta_00000 = fb_pinv[i];
+      }
       if(f_om[i]==1 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==0 && f_oi[i]==0){
 	fPtheta_10000 = fb_pinv[i];
 	fXptar_10000 = fb_xptar[i];
@@ -455,7 +455,14 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//cout << BBTotalShower->GetPreShower()->GetNclust() << " clusters in preshower, " << BBTotalShower->GetShower()->GetNclust() << " clusters in shower, kill here" << endl;
 	return 0;
       }
-      
+      //cout << "shower cluster E " << BBTotalShower->GetShower()->GetECorrected() 
+      //   << " X = " << BBTotalShower->GetShower()->GetX() 
+      //   << " Y = " << BBTotalShower->GetShower()->GetY()
+      //   << endl;
+      //cout << "preshower cluster E " << BBTotalShower->GetPreShower()->GetECorrected() 
+      //   << " X = " << BBTotalShower->GetPreShower()->GetX() 
+      //   << " Y = " << BBTotalShower->GetPreShower()->GetY()
+      //   << endl;
       if(GetMultiTracks()){
 	std::vector<SBSCalorimeterCluster*> ShowerClusters = BBTotalShower->GetShower()->GetClusters();
 	std::vector<SBSCalorimeterCluster*> PreShowerClusters = BBTotalShower->GetPreShower()->GetClusters();
@@ -556,14 +563,13 @@ Int_t SBSBigBite::CoarseReconstruct()
 	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
 	//The dy equation is correct under the assumption ytarget = 0: can we refine?
-	
 	//double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
 	//(-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
 	//double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	
 	//cout << "(x_bcp*(" << fXptar_10000 << "*Etot-" << fPtheta_10000 << ")+" 
-	//     << 10.*TMath::DegToRad() << "*Etot-" << fPtheta_00000 << ")/" << endl 
-	//     << " (Etot*" << (fXptar_10000*z_bcp+1-fXptar_00100) << "+" << -fPtheta_10000*z_bcp+fPtheta_00100 << ")" << endl;
+	//   << 10.*TMath::DegToRad() << "*Etot-" << fPtheta_00000 << ")/" << endl 
+	//   << " (Etot*" << (fXptar_10000*z_bcp+1-fXptar_00100) << "+" << -fPtheta_10000*z_bcp+fPtheta_00100 << ")" << endl;
 	//cout << fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010) << endl;
 	
 	z_fcp = 0;
