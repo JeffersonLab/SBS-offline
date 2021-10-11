@@ -28,6 +28,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block)
     fMult = 1;
     fRow  = block->GetRow();
     fCol  = block->GetCol();
+    fElemID  = block->GetID();
 }
 
 
@@ -44,6 +45,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk)
     fMult = 0;
     fRow  = -1;
     fCol  = -1;
+    fElemID  = -1;
     fMaxElement = 0;
 }
 
@@ -57,6 +59,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster() {
     fMult = 0;
     fRow  = -1;
     fCol  = -1;
+    fElemID  = -1;
 }
 
 //_____________________________________________________________
@@ -77,6 +80,7 @@ void SBSCalorimeterCluster::AddElement(SBSElement* block) {
           fEblk = block->GetE();
           fRow = block->GetRow();
           fCol = block->GetCol();
+          fElemID = block->GetID();
         }
         // Keep a pointer to the element with the highest energy
         if(!fMaxElement) {

@@ -381,11 +381,7 @@ Int_t SBSCalorimeter::FindClusters()
     fMainclus.n.push_back(clus->GetMult());
     fMainclus.blk_e.push_back(clus->GetEblk());
     fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
-    if(clus->GetMaxElement()){
-      fMainclus.id.push_back(clus->GetMaxElement()->GetID());
-    }else{
-      fMainclus.id.push_back(-1);
-    }
+    fMainclus.id.push_back(clus->GetElemID());
     fMainclus.row.push_back(clus->GetRow());
     fMainclus.col.push_back(clus->GetCol());
   }
@@ -447,11 +443,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
         fOutclus.blk_e_c.push_back(cluster->GetEblk()*(fConst + fSlope*fAccCharge));
         fOutclus.row.push_back(cluster->GetRow());
         fOutclus.col.push_back(cluster->GetCol());
-	if(cluster->GetMaxElement()){
-	  fOutclus.id.push_back(cluster->GetMaxElement()->GetID());
-	}else{
-	  fOutclus.id.push_back(-1);
-	}
+        fOutclus.id.push_back(cluster->GetElemID());
       }
       nclus++;
     }
