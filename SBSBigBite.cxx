@@ -14,6 +14,7 @@
 #include "SBSTimingHodoscope.h"
 #include "SBSGRINCH.h"
 #include "SBSGEMSpectrometerTracker.h"
+#include "SBSRasteredBeam.h"
 #include "THaTrackingDetector.h"
 #include "TH2D.h"
 
@@ -69,6 +70,7 @@ SBSBigBite::~SBSBigBite()
 void SBSBigBite::Clear( Option_t *opt )
 {
   THaSpectrometer::Clear(opt);
+  f_xtg_exp.clear();
   fEpsEtotRatio.clear();
   fEtot.clear();
   fFrontConstraintX.clear();
@@ -330,6 +332,13 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
+  
+  RVarDef beamtrackvars[] = {
+    { "tr.tg_x", "track constraint y", "f_xtg_exp" },
+    { nullptr }
+  };
+  DefineVarsFromList( beamtrackvars, mode );
+  
   RVarDef constraintvars[] = {
     { "x_fcp", "front track constraint x", "fFrontConstraintX" },
     { "y_fcp", "front track constraint y", "fFrontConstraintY" },
@@ -826,6 +835,21 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   px = +pvect_BB.Z()*sin(th_bb)+pvect_BB.Y()*cos(th_bb);
   py = -pvect_BB.X();
   pz = pvect_BB.Z()*cos(th_bb)-pvect_BB.Y()*sin(th_bb);
+  
+  //retrieve beam position, if available, to calculate xtar.
+  TIter aiter(gHaApps);
+  THaApparatus* app = 0;
+  while( (app=(THaApparatus*)aiter()) ){
+    if(app->InheritsFrom("SBSRasteredBeam")){
+      SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
+      //double xbeam = RasterBeam->GetPosition().X();
+      double ybeam = RasterBeam->GetPosition().Y();
+      
+      xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
+    }
+    //cout << var->GetName() << endl;
+  }
+  f_xtg_exp.push_back(xtar);
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
