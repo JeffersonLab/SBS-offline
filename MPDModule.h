@@ -123,6 +123,7 @@ namespace Decoder {
     UInt_t fChan_TimeStamp_low; //default = 513
     UInt_t fChan_TimeStamp_high; //default = 514
     UInt_t fChan_MPD_EventCount; //default = 515
+    UInt_t fChan_MPD_Debug; //default = 516
     
     // TODO: add trigger time stuff and MPD debug header, etc: 
     //UInt_t fChan_Trigger_Time; //default "reference channel" for 

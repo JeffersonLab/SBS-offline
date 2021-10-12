@@ -1936,15 +1936,15 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     int nbinsx2D = int( round( 1.02*GetXSize() /fBinSize_efficiency2D ) );
     int nbinsy2D = int( round( 1.02*GetYSize() /fBinSize_efficiency2D ) );
     
-    fhdidhitx = new TH1D( histname.Format( "hdidhitx_%s", detname.Data() ), "local x coordinate of hits on good tracks (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
-    fhdidhity = new TH1D( histname.Format( "hdidhity_%s", detname.Data() ), "local y coordinate of hits on good tracks (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
-    fhdidhitxy = new TH2D( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks (m)",
+    fhdidhitx = new TH1D( histname.Format( "hdidhitx_%s", detname.Data() ), "Local x of hits on good tracks;  x (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhdidhity = new TH1D( histname.Format( "hdidhity_%s", detname.Data() ), "Local y of hits on good tracks;  y (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
+    fhdidhitxy = new TH2D( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks; y (m); x (m)",
 			   nbinsy2D, -0.51*GetYSize(), 0.51*GetYSize(),
 			   nbinsx2D, -0.51*GetXSize(), 0.51*GetXSize() );
 
-    fhshouldhitx = new TH1D( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
-    fhshouldhity = new TH1D( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
-    fhshouldhitxy = new TH2D( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m)",
+    fhshouldhitx = new TH1D( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m); x (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhshouldhity = new TH1D( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m); y (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
+    fhshouldhitxy = new TH2D( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m); y(m); x(m",
 			      nbinsy2D, -0.51*GetYSize(), 0.51*GetYSize(),
 			      nbinsx2D, -0.51*GetXSize(), 0.51*GetXSize() );
 
@@ -1960,16 +1960,16 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     // 3. Add "coarse" strip offsets (common-mode means) back into "common-mode subtracted" ADC 
 
     //U strips:
-    hpedrmsU_distribution = new TH1D( histname.Format( "hpedrmsU_distribution_%s", detname.Data() ), "Pedestal RMS distribution, U strips", 500, 0, 100 );
-    hpedmeanU_distribution = new TH1D( histname.Format( "hpedmeanU_distribution_%s", detname.Data() ), "Pedestal mean distribution, U strips", 500, -500, 500 );
-    hpedrmsU_by_strip = new TH1D( histname.Format( "hpedrmsU_by_strip_%s", detname.Data() ), "Pedestal rms U by strip", fNstripsU, -0.5, fNstripsU - 0.5 );
-    hpedmeanU_by_strip = new TH1D( histname.Format( "hpedmeanU_by_strip_%s", detname.Data() ), "Pedestal mean U by strip", fNstripsU, -0.5, fNstripsU - 0.5 );
+    hpedrmsU_distribution = new TH1D( histname.Format( "hpedrmsU_distribution_%s", detname.Data() ), "Pedestal RMS distribution, U strips; Ped. RMS", 500, 0, 100 );
+    hpedmeanU_distribution = new TH1D( histname.Format( "hpedmeanU_distribution_%s", detname.Data() ), "Pedestal mean distribution, U strips; Ped. mean", 500, -500, 500 );
+    hpedrmsU_by_strip = new TH1D( histname.Format( "hpedrmsU_by_strip_%s", detname.Data() ), "Pedestal rms U by strip; strip; ped. RMS", fNstripsU, -0.5, fNstripsU - 0.5 );
+    hpedmeanU_by_strip = new TH1D( histname.Format( "hpedmeanU_by_strip_%s", detname.Data() ), "Pedestal mean U by strip; strip; ped. mean", fNstripsU, -0.5, fNstripsU - 0.5 );
 
     //V strips:
-    hpedrmsV_distribution = new TH1D( histname.Format( "hpedrmsV_distribution_%s", detname.Data() ), "Pedestal RMS distribution, V strips", 500, 0, 100 );
-    hpedmeanV_distribution = new TH1D( histname.Format( "hpedmeanV_distribution_%s", detname.Data() ), "Pedestal mean distribution, V strips", 500, -500, 500 );
-    hpedrmsV_by_strip = new TH1D( histname.Format( "hpedrmsV_by_strip_%s", detname.Data() ), "Pedestal rms V by strip", fNstripsV, -0.5, fNstripsV - 0.5 );
-    hpedmeanV_by_strip = new TH1D( histname.Format( "hpedmeanV_by_strip_%s", detname.Data() ), "Pedestal mean V by strip", fNstripsV, -0.5, fNstripsV - 0.5 );
+    hpedrmsV_distribution = new TH1D( histname.Format( "hpedrmsV_distribution_%s", detname.Data() ), "Pedestal RMS distribution, V strips; Ped. RMS", 500, 0, 100 );
+    hpedmeanV_distribution = new TH1D( histname.Format( "hpedmeanV_distribution_%s", detname.Data() ), "Pedestal mean distribution, V strips; Ped. mean", 500, -500, 500 );
+    hpedrmsV_by_strip = new TH1D( histname.Format( "hpedrmsV_by_strip_%s", detname.Data() ), "Pedestal rms V by strip; strip; Ped. RMS", fNstripsV, -0.5, fNstripsV - 0.5 );
+    hpedmeanV_by_strip = new TH1D( histname.Format( "hpedmeanV_by_strip_%s", detname.Data() ), "Pedestal mean V by strip; strip; Ped. mean", fNstripsV, -0.5, fNstripsV - 0.5 );
 
     if( !fPedestalMode ){ //fill the above histograms with the pedestal info loaded from the database:
       for( int istrip = 0; istrip<fNstripsU; istrip++ ){
@@ -1989,50 +1989,50 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     }
     
     
-    hrawADCs_by_stripU = new TH2D( histname.Format( "hrawADCs_by_stripU_%s", detname.Data() ), "Raw ADCs by U strip number, no corrections",
+    hrawADCs_by_stripU = new TH2D( histname.Format( "hrawADCs_by_stripU_%s", detname.Data() ), "Raw ADCs by U strip number, no corrections; U/X strip; Raw ADC",
 				   fNstripsU, -0.5, fNstripsU-0.5,
 				   2048, -0.5, 4095.5 );
-    hrawADCs_by_stripV = new TH2D( histname.Format( "hrawADCs_by_stripV_%s", detname.Data() ), "Raw ADCs by V strip number, no corrections",
+    hrawADCs_by_stripV = new TH2D( histname.Format( "hrawADCs_by_stripV_%s", detname.Data() ), "Raw ADCs by V strip number, no corrections; V/Y strip; Raw ADC",
 				   fNstripsV, -0.5, fNstripsV-0.5,
 				   2048, -0.5, 4095.5 );
 
-    hcommonmode_subtracted_ADCs_by_stripU = new TH2D( histname.Format( "hpedestalU_%s", detname.Data() ), "ADCs by U strip number, w/common mode correction, no ped. subtraction",
+    hcommonmode_subtracted_ADCs_by_stripU = new TH2D( histname.Format( "hpedestalU_%s", detname.Data() ), "ADCs by U strip number, w/common mode correction, no ped. subtraction; U/X strip; ADC - Common-mode",
 						      fNstripsU, -0.5, fNstripsU-0.5,
 						      2500, -500.0, 4500.0 );
-    hcommonmode_subtracted_ADCs_by_stripV = new TH2D( histname.Format( "hpedestalV_%s", detname.Data() ), "ADCs by V strip number, w/common mode correction, no ped. subtraction",
+    hcommonmode_subtracted_ADCs_by_stripV = new TH2D( histname.Format( "hpedestalV_%s", detname.Data() ), "ADCs by V strip number, w/common mode correction, no ped. subtraction; V/Y strip; ADC - Common-mode",
 						      fNstripsV, -0.5, fNstripsV-0.5,
 						      2500, -500.0, 4500.0 );
 
-    hpedestal_subtracted_ADCs_by_stripU = new TH2D( histname.Format( "hADCpedsubU_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by U strip number",
+    hpedestal_subtracted_ADCs_by_stripU = new TH2D( histname.Format( "hADCpedsubU_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by U strip number; U/X strip; ADC - Common-mode - pedestal",
 						    fNstripsU, -0.5, fNstripsU-0.5,
 						    1000,-500.,500. );
-    hpedestal_subtracted_ADCs_by_stripV = new TH2D( histname.Format( "hADCpedsubV_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by V strip number",
+    hpedestal_subtracted_ADCs_by_stripV = new TH2D( histname.Format( "hADCpedsubV_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by V strip number; V/Y strip; ADC - Common-mode - pedestal",
 						    fNstripsV, -0.5, fNstripsV-0.5,
 						    1000,-500.,500. );
 
-    hpedestal_subtracted_rawADCs_by_stripU = new TH2D( histname.Format( "hrawADCpedsubU_%s", detname.Data() ), "ADCs by U strip, ped-subtracted, no common-mode correction",
+    hpedestal_subtracted_rawADCs_by_stripU = new TH2D( histname.Format( "hrawADCpedsubU_%s", detname.Data() ), "ADCs by U strip, ped-subtracted, no common-mode correction; U/X strip; ADC - pedestal",
 						       fNstripsU, -0.5, fNstripsU-0.5,
 						       2500,-500.,4500. );
-    hpedestal_subtracted_rawADCs_by_stripV = new TH2D( histname.Format( "hrawADCpedsubV_%s", detname.Data() ), "ADCs by V strip, ped-subtracted, no common-mode correction",
+    hpedestal_subtracted_rawADCs_by_stripV = new TH2D( histname.Format( "hrawADCpedsubV_%s", detname.Data() ), "ADCs by V strip, ped-subtracted, no common-mode correction; V/Y strip; ADC - pedestal",
 						       fNstripsV, -0.5, fNstripsV-0.5,
 						       2500,-500.,4500. );
 
-    hpedestal_subtracted_rawADCsU = new TH1D( histname.Format( "hrawADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/o common-mode correction",
+    hpedestal_subtracted_rawADCsU = new TH1D( histname.Format( "hrawADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/o common-mode correction; ADC - pedestal",
 					      2500, -500.,4500. );
-    hpedestal_subtracted_rawADCsV = new TH1D( histname.Format( "hrawADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/o common-mode correction",
+    hpedestal_subtracted_rawADCsV = new TH1D( histname.Format( "hrawADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/o common-mode correction; ADC - pedestal",
 					      2500, -500.,4500. );
 
-    hpedestal_subtracted_ADCsU = new TH1D( histname.Format( "hADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/common-mode correction",
+    hpedestal_subtracted_ADCsU = new TH1D( histname.Format( "hADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/common-mode correction; ADC - Common-mode - pedestal",
 					      1000, -500.,500. );
-    hpedestal_subtracted_ADCsV = new TH1D( histname.Format( "hADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/common-mode correction",
+    hpedestal_subtracted_ADCsV = new TH1D( histname.Format( "hADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/common-mode correction; ADC - Common-mode - pedestal",
 					      1000, -500.,500. );
 
     int nAPVs_U = fNstripsU/fN_APV25_CHAN;
-    hcommonmode_mean_by_APV_U = new TH2D( histname.Format( "hCommonModeMean_by_APV_U_%s", detname.Data() ), "distribution of common-mode means for U strip pedestal data",
+    hcommonmode_mean_by_APV_U = new TH2D( histname.Format( "hCommonModeMean_by_APV_U_%s", detname.Data() ), "distribution of common-mode means for U strip pedestal data; APV card; Common-mode",
 					  nAPVs_U, -0.5, nAPVs_U-0.5,  
 					  2048, -0.5, 4095.5 );
     int nAPVs_V = fNstripsV/fN_APV25_CHAN;
-    hcommonmode_mean_by_APV_V = new TH2D( histname.Format( "hCommonModeMean_by_APV_V_%s", detname.Data() ), "distribution of common-mode means for V strip pedestal data",
+    hcommonmode_mean_by_APV_V = new TH2D( histname.Format( "hCommonModeMean_by_APV_V_%s", detname.Data() ), "distribution of common-mode means for V strip pedestal data; APV card; Common-mode",
 					  nAPVs_V, -0.5, nAPVs_V-0.5,
 					  2048, -0.5, 4095.5 );
 
@@ -2080,30 +2080,30 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     //std::cout << "SBSGEMModule::Begin: making common-mode histograms for module " << GetName() << std::endl;
     //U strips:
    
-    fCommonModeDistU = new TH2D( histname.Format( "hcommonmodeU_%s", detname.Data() ), "U strips: Common mode - common-mode mean(iAPV) vs APV", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU = new TH2D( histname.Format( "hcommonmodeU_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistU_Sorting = new TH2D( histname.Format( "hcommonmodeU_sorting_%s", detname.Data() ), "U strips: Common mode - common-mode mean(iAPV) vs APV card, Sorting Method", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU_Sorting = new TH2D( histname.Format( "hcommonmodeU_sorting_%s", detname.Data() ), "U/X strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistU_Danning = new TH2D( histname.Format( "hcommonmodeU_danning_%s", detname.Data() ), "U strips: Common mode - common-mode mean(iAPV) vs APV card, Danning Method", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU_Danning = new TH2D( histname.Format( "hcommonmodeU_danning_%s", detname.Data() ), "U/X strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
    
-    fCommonModeDiffU = new TH2D( histname.Format( "hcommonmodeU_diff_%s", detname.Data() ), "U strips: Common mode (Sorting) - Common mode (Danning) vs APV card", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -25.0, 25.0 );
+    fCommonModeDiffU = new TH2D( histname.Format( "hcommonmodeU_diff_%s", detname.Data() ), "U/X strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -25.0, 25.0 );
     
 
     //V strips:
     
-    fCommonModeDistV = new TH2D( histname.Format( "hcommonmodeV_%s", detname.Data() ), "V strips: Common mode - common-mode mean(iAPV) vs APV card", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV = new TH2D( histname.Format( "hcommonmodeV_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistV_Sorting = new TH2D( histname.Format( "hcommonmodeV_sorting_%s", detname.Data() ), "V strips: Common mode - common-mode mean(iAPV) vs APV card, Sorting Method", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV_Sorting = new TH2D( histname.Format( "hcommonmodeV_sorting_%s", detname.Data() ), "V/Y strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistV_Danning = new TH2D( histname.Format( "hcommonmodeV_danning_%s", detname.Data() ), "V strips: Common mode - common-mode mean(iAPV) vs APV card, Danning Method", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV_Danning = new TH2D( histname.Format( "hcommonmodeV_danning_%s", detname.Data() ), "V/Y strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDiffV = new TH2D( histname.Format( "hcommonmodeV_diff_%s", detname.Data() ), "V strips: Common mode (Sorting) - Common mode (Danning) vs APV card", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -25.0,25.0 );
+    fCommonModeDiffV = new TH2D( histname.Format( "hcommonmodeV_diff_%s", detname.Data() ), "V/Y strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -25.0,25.0 );
     
 
     // fCommonModeDistU->Print();
@@ -2375,7 +2375,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     if( fhdidhitx != NULL && fhshouldhitx != NULL ){ //Create efficiency histograms and write to the ROOT file:
       TH1D *hefficiency_vs_x = new TH1D(*fhdidhitx);
       hefficiency_vs_x->SetName( histname.Format( "hefficiency_vs_x_%s", detname.Data() ) );
-      hefficiency_vs_x->SetTitle( histname.Format( "Track-based efficiency vs x, module %s", GetName() ) );
+      hefficiency_vs_x->SetTitle( histname.Format( "Track-based efficiency vs x, module %s; x(m) ; Efficiency", GetName() ) );
       hefficiency_vs_x->Divide( fhshouldhitx );
       hefficiency_vs_x->Write( 0, kOverwrite );
       hefficiency_vs_x->Delete();
@@ -2384,7 +2384,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     if( fhdidhity != NULL && fhshouldhity != NULL ){ //Create efficiency histograms and write to the ROOT file:
       TH1D *hefficiency_vs_y = new TH1D(*fhdidhity);
       hefficiency_vs_y->SetName( histname.Format( "hefficiency_vs_y_%s", detname.Data() ) );
-      hefficiency_vs_y->SetTitle( histname.Format( "Track-based efficiency vs y, module %s", GetName() ) );
+      hefficiency_vs_y->SetTitle( histname.Format( "Track-based efficiency vs y, module %s; y(m); Efficiency", GetName() ) );
       hefficiency_vs_y->Divide( fhshouldhity );
       hefficiency_vs_y->Write( 0, kOverwrite);
       hefficiency_vs_y->Delete();
@@ -2393,7 +2393,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     if( fhdidhitxy != NULL && fhshouldhitxy != NULL ){ //Create efficiency histograms and write to the ROOT file:
       TH2D *hefficiency_vs_xy = new TH2D(*fhdidhitxy);
       hefficiency_vs_xy->SetName( histname.Format( "hefficiency_vs_xy_%s", detname.Data() ) );
-      hefficiency_vs_xy->SetTitle( histname.Format( "Track-based efficiency vs x and y, module %s", GetName() ) );
+      hefficiency_vs_xy->SetTitle( histname.Format( "Track-based efficiency vs x and y, module %s; y(m); x(m)", GetName() ) );
       hefficiency_vs_xy->Divide( fhshouldhitxy );
       hefficiency_vs_xy->Write( 0, kOverwrite );
       hefficiency_vs_xy->Delete();

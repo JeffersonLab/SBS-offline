@@ -86,6 +86,7 @@ namespace Decoder {
     fChan_TimeStamp_low = 513;
     fChan_TimeStamp_high = 514;
     fChan_MPD_EventCount = 515;
+    fChan_MPD_Debug = 516;
     
   }
 
@@ -138,7 +139,8 @@ namespace Decoder {
     std::map<UInt_t, UInt_t> TimeStampL_vs_fiber; //least significant 24 bits of time stamp
     std::map<UInt_t, UInt_t> TimeStampH_vs_fiber; //most significant 24 bits of time stamp
     std::map<UInt_t, UInt_t> EventCount_vs_fiber; //20-bit "event count" variable:
-
+    std::map<UInt_t, std::vector<Int_t> > MPDdebugInfo_vs_chan; //TBD
+    
     UInt_t TIMESTAMP_LO = 0, TIMESTAMP_HI=0, EVENT_COUNT=0;
     UInt_t eventinfo_wordcount=0;
     
@@ -243,6 +245,10 @@ namespace Decoder {
 	  TIMESTAMP_LO = thisword & 0x00FFFFFF;
 	  
 	}
+
+	// if( type_tag == fMPDDebugHeader ){ //
+	  
+	// }
 	
       } else if( found_this_slot ){
 	//data-type continuation: behavior depends on type_tag. If the most recently found "slot" 
@@ -324,6 +330,11 @@ namespace Decoder {
 	    eventinfo_wordcount = 0;
 	  }
 	}
+
+	// if( type_tag == fMPDDebugHeader && found_MPD_header ){
+
+	// }
+	
 	
       }
       

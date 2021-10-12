@@ -405,22 +405,22 @@ void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
       int nbinsy2D = int( round( (fYmax_layer[ilayer]-fYmin_layer[ilayer] + 0.02)/fBinSize_efficiency2D ) );
       
       //TODO: don't hard-code the number of bins for these histograms:
-      new( (*hdidhit_x_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_x_%s_layer%d", detname.Data(), ilayer ), "x of hits on good tracks (m)", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hdidhit_y_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_y_%s_layer%d", detname.Data(), ilayer ), "y of hits on good tracks (m)", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      new( (*hdidhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hdidhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of hits on good tracks (m)",
+      new( (*hdidhit_x_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_x_%s_layer%d", detname.Data(), ilayer ), "x of hits on good tracks (m); x(m)", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hdidhit_y_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_y_%s_layer%d", detname.Data(), ilayer ), "y of hits on good tracks (m); y(m)", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hdidhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hdidhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of hits on good tracks (m); y(m); x(m)",
 					       nbinsy2D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
 					       nbinsx2D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
 
-      new( (*hshouldhit_x_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_x_%s_layer%d", detname.Data(), ilayer ), "x of good track crossing layer (m)", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hshouldhit_y_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_y_%s_layer%d", detname.Data(), ilayer ), "y of good track crossing layer (m)", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      new( (*hshouldhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hshouldhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of good track crossing layer (m)", 
+      new( (*hshouldhit_x_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_x_%s_layer%d", detname.Data(), ilayer ), "x of good track crossing layer (m); x(m)", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hshouldhit_y_layer)[ilayer] ) TH1D( histname.Format( "hshouldhit_y_%s_layer%d", detname.Data(), ilayer ), "y of good track crossing layer (m); y(m)", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hshouldhit_xy_layer)[ilayer] ) TH2D( histname.Format( "hshouldhit_xy_%s_layer%d", detname.Data(), ilayer ), "x vs y of good track crossing layer (m); y(m); x(m)", 
 						  nbinsy2D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
 						  nbinsx2D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
 
-      //Don't create these until the end of the run:
-      new( (*hefficiency_x_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
-      new( (*hefficiency_y_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
-      new( (*hefficiency_xy_layer)[ilayer] ) TH2D( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y", 
+      
+      new( (*hefficiency_x_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y; x(m); efficiency", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_y_layer)[ilayer] ) TH1D( histname.Format( "hefficiency_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x; y(m); efficiency", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      new( (*hefficiency_xy_layer)[ilayer] ) TH2D( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y; y(m); x(m)", 
 						   nbinsy2D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
 						   nbinsx2D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
       
