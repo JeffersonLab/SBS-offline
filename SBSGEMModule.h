@@ -301,7 +301,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
   std::vector<UInt_t> fStrip_ENABLE_CM; //Flag to indicate whether CM was done online or offline for this strip
-  std::vector<UInt_t> fStrip_CM_OR; //Flag to indicate whether online CM failed
+  std::vector<UInt_t> fStrip_CM_GOOD; //Flag to indicate whether online CM succeeded
   std::vector<UInt_t> fStrip_BUILD_ALL_SAMPLES; //Flag to indicate whether online zero suppression was enabled 
 
   //because the cut definition machinery sucks, let's define some more booleans:

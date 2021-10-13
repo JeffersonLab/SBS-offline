@@ -326,10 +326,10 @@ protected:
   std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC. 
   //And I THINK that's all we need to get started!
   std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
-  std::vector<UInt_t> fHitU_CM_OR;
+  std::vector<UInt_t> fHitU_CM_GOOD;
   std::vector<UInt_t> fHitU_BUILD_ALL_SAMPLES;
   std::vector<UInt_t> fHitV_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
-  std::vector<UInt_t> fHitV_CM_OR;
+  std::vector<UInt_t> fHitV_CM_GOOD;
   std::vector<UInt_t> fHitV_BUILD_ALL_SAMPLES; 
 
   //number of layers fired per event

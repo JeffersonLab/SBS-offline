@@ -451,7 +451,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fTcorr.resize( nstripsmax );
   //Storing these by individual strip is redundant but convenient:
   fStrip_ENABLE_CM.resize( nstripsmax );
-  fStrip_CM_OR.resize( nstripsmax );
+  fStrip_CM_GOOD.resize( nstripsmax );
   fStrip_BUILD_ALL_SAMPLES.resize( nstripsmax );
 
   fStripUonTrack.resize( nstripsmax );
@@ -676,7 +676,7 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.ontrack", "Is this strip on any track (0/1)?", kUInt, 0, &(fStripOnTrack[0]), &fNstrips_hit },
     { "strip.ADCavg", "average of ADC samples on a strip", kDouble, 0, &(fStripADCavg[0]), &fNstrips_hit },
     { "strip.ENABLE_CM", "online common-mode enabled?", kUInt, 0, &(fStrip_ENABLE_CM[0]), &fNstrips_hit },
-    { "strip.CM_OR", "common-mode out of range? (online failed)", kUInt, 0, &(fStrip_CM_OR[0]), &fNstrips_hit },
+    { "strip.CM_GOOD", "common-mode out of range? (online failed)", kUInt, 0, &(fStrip_CM_GOOD[0]), &fNstrips_hit },
     { "strip.BUILD_ALL_SAMPLES", "online or offline zero suppression", kUInt, 0, &(fStrip_BUILD_ALL_SAMPLES[0]), &fNstrips_hit },
     { "strip.ontrackU", "U strip on track", kUInt, 0, &(fStripUonTrack[0]), &fNstrips_hit },
     { "strip.ontrackV", "V strip on track", kUInt, 0, &(fStripVonTrack[0]), &fNstrips_hit },
@@ -1369,7 +1369,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fTcorr[fNstrips_hit] = fTmean[fNstrips_hit];
 
 	  fStrip_ENABLE_CM[fNstrips_hit] = CM_ENABLED;
-	  fStrip_CM_OR[fNstrips_hit] = CM_OUT_OF_RANGE;
+	  fStrip_CM_GOOD[fNstrips_hit] = !CM_OUT_OF_RANGE;
 	  fStrip_BUILD_ALL_SAMPLES[fNstrips_hit] = BUILD_ALL_SAMPLES;
 	  
 	  if( !fPedestalMode ) ADCsum_temp /= gaintemp;

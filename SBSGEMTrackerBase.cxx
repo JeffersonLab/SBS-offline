@@ -167,11 +167,11 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitCorrCoeffMaxStrip.clear();
 
   fHitU_ENABLE_CM.clear();
-  fHitU_CM_OR.clear();
+  fHitU_CM_GOOD.clear();
   fHitU_BUILD_ALL_SAMPLES.clear();
 
   fHitV_ENABLE_CM.clear();
-  fHitV_CM_OR.clear();
+  fHitV_CM_GOOD.clear();
   fHitV_BUILD_ALL_SAMPLES.clear();
   
   
@@ -1383,11 +1383,11 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitVADCmaxsample.push_back( fModules[module]->fADCmax[hitidx_vmax] );
 
       fHitU_ENABLE_CM.push_back( fModules[module]->fStrip_ENABLE_CM[hitidx_umax] );
-      fHitU_CM_OR.push_back( fModules[module]->fStrip_CM_OR[hitidx_umax] );
+      fHitU_CM_GOOD.push_back( fModules[module]->fStrip_CM_GOOD[hitidx_umax] );
       fHitU_BUILD_ALL_SAMPLES.push_back( fModules[module]->fStrip_BUILD_ALL_SAMPLES[hitidx_umax] );
 							    
       fHitV_ENABLE_CM.push_back( fModules[module]->fStrip_ENABLE_CM[hitidx_vmax] );
-      fHitV_CM_OR.push_back( fModules[module]->fStrip_CM_OR[hitidx_vmax] );
+      fHitV_CM_GOOD.push_back( fModules[module]->fStrip_CM_GOOD[hitidx_vmax] );
       fHitV_BUILD_ALL_SAMPLES.push_back( fModules[module]->fStrip_BUILD_ALL_SAMPLES[hitidx_vmax] );
       
       //Need to fill some other new variables:
