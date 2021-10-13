@@ -440,6 +440,9 @@ class SBSGEMModule : public THaSubDetector {
   bool fEfficiencyInitialized;
   bool fMakeCommonModePlots; //diagnostic plots for offline common-mode stuff: default = false;
   bool fCommonModePlotsInitialized;
+
+  bool fMakeEventInfoPlots;
+  bool fEventInfoPlotsInitialized;
   
   //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
   TH2D *fCommonModeDistU; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
@@ -491,6 +494,10 @@ class SBSGEMModule : public THaSubDetector {
   TH1D *hpedmeanV_by_strip;
 
   TClonesArray *hpedrms_by_APV;
+
+  TH1D *hMPD_EventCount_Alignment;
+  TH2D *hMPD_EventCount_Alignment_vs_Fiber;
+  TH2D *hMPD_FineTimeStamp_vs_Fiber; 
   
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;

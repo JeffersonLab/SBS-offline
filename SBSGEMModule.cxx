@@ -45,6 +45,9 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCommonModeMinStripsInRange = 10;
   fMakeCommonModePlots = false;
   fCommonModePlotsInitialized = false;
+
+  fMakeEventInfoPlots = false;
+  fEventInfoPlotsInitialized = false;
   
   fPedSubFlag = 1; //default to online ped subtraction, as that is the mode we will run in most of the time
 
@@ -173,7 +176,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   int cmplots_flag = fMakeCommonModePlots ? 1 : 0;
   int zerosuppress_flag = fZeroSuppress ? 1 : 0;
   int onlinezerosuppress_flag = fOnlineZeroSuppression ? 1 : 0;
-  
+
+  int eventinfoplots_flag = fMakeEventInfoPlots ? 1 : 0;
 
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
@@ -223,6 +227,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_minstrips", &fCommonModeMinStripsInRange, kInt, 0, 1, 1},
     { "commonmode_range_nsigma", &fCommonModeRange_nsigma, kDouble, 0, 1, 1},
     { "plot_common_mode", &cmplots_flag, kInt, 0, 1, 1},
+    { "plot_event_info", &eventinfoplots_flag, kInt, 0, 1, 1},
     { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
     { "chan_timestamp_low", &fChan_TimeStamp_low, kUInt, 0, 1, 1},
     { "chan_timestamp_high", &fChan_TimeStamp_high, kUInt, 0, 1, 1},
@@ -242,6 +247,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fZeroSuppress = zerosuppress_flag != 0;
   fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
 
+  fMakeEventInfoPlots = eventinfoplots_flag != 0;
+  
   //  std::cout << "After loadDB, fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
  
   if( fAPVmapping < SBSGEM::kINFN || fAPVmapping > SBSGEM::kMC ) {
@@ -866,6 +873,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
   //Do we need to loop on all APV cards? maybe not,
   int apvcounter=0;
+
+  bool firstevcnt = true;
+  UInt_t FirstEvCnt = 0;
   
   for (std::vector<mpdmap_t>::iterator it = fMPDmap.begin() ; it != fMPDmap.end(); ++it){
     //loop over all decode map entries associated with this module (each decode map entry is one APV card)
@@ -889,16 +899,24 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  UInt_t EvCnt = evdata.GetData( it->crate, it->slot, fChan_MPD_EventCount, ihit );
 
 	  //std::cout << "Tlow, Thigh, EvCnt = " << Tlow << ", " << Thigh << ", " << EvCnt << std::endl;
-											    
-	  fEventCount_by_APV[apvcounter] = EvCnt;
-											    
+
+	  if( firstevcnt ){
+	    FirstEvCnt = EvCnt;
+	    firstevcnt = false;
+	  }
 	  
+	  fEventCount_by_APV[apvcounter] = EvCnt;
 										    
 	  // Fine time stamp is in the first 8 bits of Tlow;
 	  fTfine_by_APV[apvcounter] = Tlow & 0x000000FF;
-										    
-										    
-										    
+
+	  if( fMakeEventInfoPlots && fEventInfoPlotsInitialized ){
+	    hMPD_EventCount_Alignment->Fill( EvCnt - FirstEvCnt );
+	    hMPD_EventCount_Alignment_vs_Fiber->Fill( fiber, EvCnt - FirstEvCnt );
+
+	    hMPD_FineTimeStamp_vs_Fiber->Fill( fiber, fTfine_by_APV[apvcounter] * 4.0 );
+	  }
+	    
 	  Long64_t Tcoarse = Thigh << 16 | ( Tlow << 8 );
 	  double Tc = double(Tcoarse);
 	  
@@ -1927,6 +1945,20 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   detname += "_";
   detname += GetName();
   
+
+  if( fMakeEventInfoPlots && !fEventInfoPlotsInitialized ){
+    fEventInfoPlotsInitialized = true;
+    
+    hMPD_EventCount_Alignment = new TH1D(histname.Format("h%s_MPD_EvCntAlign",detname.Data() ), histtitle.Format("MPD event count diffs, module %s; MPD event count offsets", detname.Data() ), 201, -100.5,100.5 );
+
+    //We should really get the range for the fibers histogram from the MPDmap but we are lazy:
+    
+    hMPD_EventCount_Alignment_vs_Fiber = new TH2D(histname.Format("h%s_MPD_EvCntAlign_vs_fiber",detname.Data() ), "; fiber ; MPD event count diff",
+						  33,-0.5,32.5, 201,-100.5,100.5);
+
+    hMPD_FineTimeStamp_vs_Fiber = new TH2D(histname.Format("h%s_MPD_FineTimeStamp_vs_fiber",detname.Data() ), "; fiber ; MPD fine time stamp (ns)",
+					   33,-0.5,32.5,256, -0.5, 1023.5);
+  }
   
   if( fMakeEfficiencyPlots && !fEfficiencyInitialized ){
     fEfficiencyInitialized = true;
@@ -2359,7 +2391,13 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
 }
 
 Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes hit maps and efficiency histograms and/or pedestal info to ROOT file:
-
+  if( fMakeEventInfoPlots && fEventInfoPlotsInitialized ){
+    hMPD_EventCount_Alignment->Write(0,kOverwrite);
+    hMPD_EventCount_Alignment_vs_Fiber->Write(0,kOverwrite);
+    hMPD_FineTimeStamp_vs_Fiber->Write(0,kOverwrite);
+  }
+  
+  
   if( fMakeEfficiencyPlots ){
     //Create the track-based efficiency histograms at the end of the run:
     TString histname;
