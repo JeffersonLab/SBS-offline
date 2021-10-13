@@ -26,7 +26,7 @@ public:
   virtual Int_t   DefineVariables( EMode mode = kDefine );
   virtual Int_t   CoarseProcess( TClonesArray& tracks );
   virtual Int_t   FineProcess( TClonesArray& tracks );
-  virtual Int_t   FindGoodHit(SBSElement *element);
+  /* virtual Int_t   FindGoodHit(SBSElement *element); */
   virtual void    ClearEvent();
   // new functions
   Int_t   ConstructHodoscope();
