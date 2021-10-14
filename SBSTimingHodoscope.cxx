@@ -212,16 +212,16 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
 /*
  * FindGoodHit()
  */
-Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *blk)
-{
-  Int_t GoodHit=0;  
+// Int_t SBSTimingHodoscope::FindGoodHit(SBSElement *blk)
+// {
+//   Int_t GoodHit=0;  
 
-  // if (blk->TDC()&& blk->HasData()) {
-  //   blk->TDC()->SetGoodHit(0);
-  //   GoodHit=1;
-  // }
-  return GoodHit;
-}
+//   // if (blk->TDC()&& blk->HasData()) {
+//   //   blk->TDC()->SetGoodHit(0);
+//   //   GoodHit=1;
+//   // }
+//   return GoodHit;
+// }
 
 Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 {
