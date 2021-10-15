@@ -74,6 +74,7 @@ void SBSBigBite::Clear( Option_t *opt )
   f_xtg_exp.clear();
   fEpsEtotRatio.clear();
   fEtot.clear();
+  fEtotPratio.clear();
   fFrontConstraintX.clear();
   fFrontConstraintY.clear();
   fBackConstraintX.clear();
@@ -337,6 +338,9 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
   
+  /*
+  // removing all that stuff since apparently I'm not able to code properly...
+
   RVarDef beamtrackvars[] = {
     { "tr.tg_x", "track constraint y", "f_xtg_exp" },
     { nullptr }
@@ -360,48 +364,7 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
     { nullptr }
   };
   DefineVarsFromList( pidvars, mode );
-  
-  /*
-  RVarDef goldenvars[] = {
-    { "gtr.x",    "Track x coordinate (m)",       "fGoldenTrack.fX" },
-    { "gtr.y",    "Track x coordinate (m)",       "fGoldenTrack.fY" },
-    { "gtr.th",   "Tangent of track theta angle", "fGoldenTrack.fTheta" },
-    { "gtr.ph",   "Tangent of track phi angle",   "fGoldenTrack.fPhi" },
-    { "gtr.p",    "Track momentum (GeV)",         "fGoldenTrack.fP" },
-    { "gtr.flag", "Track status flag",            "fGoldenTrack.fFlag" },
-    { "gtr.chi2", "Track's chi2 from hits",       "fGoldenTrack.fChi2" },
-    { "gtr.ndof", "Track's NDoF",                 "fGoldenTrack.fNDoF" },
-    { "gtr.d_x",  "Detector x coordinate (m)",    "fGoldenTrack.fDX" },
-    { "gtr.d_y",  "Detector y coordinate (m)",    "fGoldenTrack.fDY" },
-    { "gtr.d_th", "Detector tangent of theta",    "fGoldenTrack.fDTheta" },
-    { "gtr.d_ph", "Detector tangent of phi",      "fGoldenTrack.fDPhi" },
-    { "gtr.r_x",  "Rotated x coordinate (m)",     "fGoldenTrack.fRX" },
-    { "gtr.r_y",  "Rotated y coordinate (m)",     "fGoldenTrack.fRY" },
-    { "gtr.r_th", "Rotated tangent of theta",     "fGoldenTrack.fRTheta" },
-    { "gtr.r_ph", "Rotated tangent of phi",       "fGoldenTrack.fRPhi" },
-    { "gtr.tg_y", "Target y coordinate",          "fGoldenTrack.fTY"},
-    { "gtr.tg_th", "Tangent of target theta angle", "fGoldenTrack.fTTheta"},
-    { "gtr.tg_ph", "Tangent of target phi angle",   "fGoldenTrack.fTPhi"},    
-    { "gtr.tg_dp", "Target delta",                "fGoldenTrack.fDp"},
-    { "gtr.px",    "Lab momentum x (GeV)",        "fGoldenTrack.GetLabPx()"},
-    { "gtr.py",    "Lab momentum y (GeV)",        "fGoldenTrack.GetLabPy()"},
-    { "gtr.pz",    "Lab momentum z (GeV)",        "fGoldenTrack.GetLabPz()"},
-    { "gtr.vx",    "Vertex x (m)",                "fGoldenTrack.GetVertexX()"},
-    { "gtr.vy",    "Vertex y (m)",                "fGoldenTrack.GetVertexY()"},
-    { "gtr.vz",    "Vertex z (m)",                "fGoldenTrack.GetVertexZ()"},
-    { "gtr.pathl", "Pathlength from tg to fp (m)","fGoldenTrack.GetPathLen()"},
-    { "gtr.time",  "Time of golden track@Ref Plane (s)", "fGoldenTrack.GetTime()"},
-    { "gtr.dtime", "uncer of time (s)",           "fGoldenTrack.GetdTime()"},
-    { "gtr.beta",  "Beta of track",               "fGoldenTrack.GetBeta()"},
-    { "gtr.dbeta", "uncertainty of beta",         "fGoldenTrack.GetdBeta()"},
-    { "status",   "Bits of completed analysis stages", "fStagesDone" },
-    { "gtr.prob_e", "electron probability", "fGoldenTrack.GetPIDinfo()->GetCombinedProb(0)" },
-    { "gtr.prob_pi", "pion probability", "fGoldenTrack.GetPIDinfo()->GetCombinedProb(1)" },
-    { nullptr }
-  };
-  
-  DefineVarsFromList( goldenvars, mode );  
-    */
+  */
   
   return 0;
 }
@@ -563,7 +526,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	
 	// Use 10.0 degrees instead of fTrackerPitchAngle 
 	// because we are now in the "ideal" system.
-	double dx = (Etot*fECaloFudgeFactor*10.*TMath::DegToRad() - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	double dx = (Etot*fECaloFudgeFactor*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
 	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*fECaloFudgeFactor*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
 	//The dy equation is correct under the assumption ytarget = 0: can we refine?
@@ -932,6 +895,46 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
       //check that the track we consider is consistent with the calorimeter constraint 
       int i_match = -1;
       for(int i = 0; i<fEtot.size(); i++){
+	/*
+	cout << "back X: " << fBackConstraintX[i]-fBackConstraintWidthX 
+	     << " <? " << the_track->GetX(Z_cst) << " <? " 
+	     << fBackConstraintX[i]+fBackConstraintWidthX << endl;
+	cout << "back Y: " << fBackConstraintY[i]-fBackConstraintWidthY 
+	     << " <? " << the_track->GetY(Z_cst) << " <? " 
+	     << fBackConstraintY[i]+fBackConstraintWidthY << endl;
+	cout << "front X: " << fFrontConstraintX[i]-fFrontConstraintWidthX 
+	     << " <? " << the_track->GetX() << " <? " 
+	     << fFrontConstraintX[i]+fFrontConstraintWidthX << endl;
+	cout << "front Y: " << fFrontConstraintY[i]-fFrontConstraintWidthY 
+	     << " <? " << the_track->GetY() << " <? " 
+	     << fFrontConstraintY[i]+fFrontConstraintWidthY << endl;
+	*/
+	/*
+	if(fBackConstraintX[i]-fBackConstraintWidthX > the_track->GetX(Z_cst) ||
+	   the_track->GetX(Z_cst) > fBackConstraintX[i]+fBackConstraintWidthX)
+	  cout << "back X: " << fBackConstraintX[i]-fBackConstraintWidthX 
+	       << " <? " << the_track->GetX(Z_cst) << " <? " 
+	       << fBackConstraintX[i]+fBackConstraintWidthX << endl;
+	
+	if(fBackConstraintY[i]-fBackConstraintWidthY > the_track->GetY(Z_cst) ||
+	   the_track->GetY(Z_cst) > fBackConstraintY[i]+fBackConstraintWidthY)
+	  cout << "back Y: " << fBackConstraintY[i]-fBackConstraintWidthY 
+	       << " <? " << the_track->GetY(Z_cst) << " <? " 
+	       << fBackConstraintY[i]+fBackConstraintWidthY << endl;
+	
+	if(fFrontConstraintX[i]-fFrontConstraintWidthX > the_track->GetX() ||
+	   the_track->GetX() > fFrontConstraintX[i]+fFrontConstraintWidthX)
+	  cout << "front X: " << fFrontConstraintX[i]-fFrontConstraintWidthX 
+	       << " <? " << the_track->GetX(Z_cst) << " <? " 
+	       << fFrontConstraintX[i]+fFrontConstraintWidthX << endl;
+	
+	if(fFrontConstraintY[i]-fFrontConstraintWidthY > the_track->GetY() ||
+	   the_track->GetY() > fFrontConstraintY[i]+fFrontConstraintWidthY)
+	  cout << "front Y: " << fFrontConstraintY[i]-fFrontConstraintWidthY 
+	       << " <? " << the_track->GetY(Z_cst) << " <? " 
+	       << fFrontConstraintY[i]+fFrontConstraintWidthY << endl;
+	*/
+	
 	if(fBackConstraintX[i]-fBackConstraintWidthX < the_track->GetX(Z_cst) &&  
 	   the_track->GetX(Z_cst) < fBackConstraintX[i]+fBackConstraintWidthX && 
 	   fBackConstraintY[i]-fBackConstraintWidthY < the_track->GetY(Z_cst) &&  
