@@ -128,7 +128,9 @@ class SBSBigBite : public THaSpectrometer {
     TH2D* h1_y_fcpVbcp;
     TH2D* h1_dyVdx;
     */
-
+    
+    double fECaloFudgeFactor;// poor man's solution to apply the calorimeter constraint 
+    
     enum {
       kMultiTracks  = BIT(13), // Tracks are to be sorted by chi2
       kSortTracks   = BIT(14), // Tracks are to be sorted by chi2

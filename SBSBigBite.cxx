@@ -46,6 +46,7 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   fXptar_00100 = 0.0;
   fYtar_01000 = 0.0;
   fYtar_00010 = 0.0;
+  fECaloFudgeFactor = 1.0;
   // Constructor. Defines standard detectors
   //The standard BigBite detector package in the 12 GeV/SBS era will include:
   // pre-shower + shower calorimeters (inherit from THaNonTrackingDetector OR THaPidDetector)
@@ -111,6 +112,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "firstgemoffset_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
+    { "ecalo_fudgefactor", &fECaloFudgeFactor, kDouble, 0, 1, 1},
     { "do_pid",    &pidflag, kInt,  0, 1, 1},
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 1, 0},
     { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 1, 0},
@@ -125,13 +127,15 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "grinchPIDprobatable",    &grinch_pidproba, kDoubleV,  0, 1, 0},
     {0}
   };
-  
+    
   Int_t status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
   
   if( status != 0 ){
     fclose(file);
     return status;
   }
+  
+  if(fECaloFudgeFactor!=1.0)cout << "Setting the calorimeter energy fudge factor to " << fECaloFudgeFactor << endl;
   
   fPID = ( pidflag != 0 );
 
@@ -484,7 +488,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	    x_bcp/=sumweights_x;
 	    y_bcp/=sumweights_y;
 	    
-	    double dx = (Etot*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	    double dx = (Etot*fECaloFudgeFactor*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fECaloFudgeFactor*fXptar_10000-fPtheta_10000)) /
 	      (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	    
@@ -559,8 +563,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	
 	// Use 10.0 degrees instead of fTrackerPitchAngle 
 	// because we are now in the "ideal" system.
-	double dx = (Etot*10.*TMath::DegToRad() - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
-	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
+	double dx = (Etot*fECaloFudgeFactor*10.*TMath::DegToRad() - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*fECaloFudgeFactor*(fXptar_10000*z_bcp+1-fXptar_00100));
 	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
 	//The dy equation is correct under the assumption ytarget = 0: can we refine?
 	//double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
