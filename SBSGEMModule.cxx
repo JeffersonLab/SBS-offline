@@ -114,6 +114,9 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 
   //Number of sigmas for defining common-mode max for online zero suppression
   fCommonModeRange_nsigma = 5.0;
+
+  fSuppressFirstLast = true; // suppress strips peaking in first or last time sample:
+  fUseStripTimingCuts = false;
   
   return;
 }
@@ -1356,6 +1359,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fKeepStrip[fNstrips_hit] = true;
 	  //	  fMaxSamp.push_back( iSampMax );
 	  fMaxSamp[fNstrips_hit] = iSampMax;
+
+	  if( fSuppressFirstLast && (iSampMax == 0 || iSampMax+1 == fN_MPD_TIME_SAMP ) ){
+	    fKeepStrip[fNstrips_hit] = false;
+    
+	  }
 	  
 	  if( !fPedestalMode ) maxADC /= gaintemp;
 	  
