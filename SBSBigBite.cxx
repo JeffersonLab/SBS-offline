@@ -920,7 +920,27 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
 	  the_track->SetTime(clus->GetTmean());
 	}  
       }
-    }
+    }//end if inherits from hodoscope
+    
+    if(theNonTrackDetector->InheritsFrom("SBSBBTotalShower")){
+      SBSBBTotalShower* BBTotalShower = reinterpret_cast<SBSBBTotalShower*>(theNonTrackDetector);
+      double Z_cst =  BBTotalShower->GetShower()->GetOrigin().Z();
+      //check that the track we consider is consistent with the calorimeter constraint 
+      int i_match = -1;
+      for(int i = 0; i<fEtot.size(); i++){
+	if(fBackConstraintX[i]-fBackConstraintWidthX < the_track->GetX(Z_cst) &&  
+	   the_track->GetX(Z_cst) < fBackConstraintX[i]+fBackConstraintWidthX && 
+	   fBackConstraintY[i]-fBackConstraintWidthY < the_track->GetY(Z_cst) &&  
+	   the_track->GetY(Z_cst) < fBackConstraintY[i]+fBackConstraintWidthY ){
+	  i_match = i;
+	}
+      }
+      if(i_match<0)continue;
+      
+      fEtotPratio.push_back(fEtot[i_match]/the_track->GetP());
+    }//end if(inheritsfrom(SBSBBTotalShower))
+
+    
   }
   
 }
@@ -962,7 +982,7 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       if(i_match<0)continue;
       
       double pr1, pr2;
-      fEtotPratio.push_back(fEtot[i_match]/the_track->GetP());
+      //fEtotPratio.push_back(fEtot[i_match]/the_track->GetP());
       proba_pssh(fEpsEtotRatio[i_match], eproba, piproba);
       proba_pcal(fEtot[i_match]/the_track->GetP(), pr1, pr2);
       eproba*=pr1;
