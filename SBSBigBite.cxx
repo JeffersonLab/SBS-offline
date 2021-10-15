@@ -338,7 +338,7 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
   
-  /*
+  
   // removing all that stuff since apparently I'm not able to code properly...
 
   RVarDef beamtrackvars[] = {
@@ -364,7 +364,6 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
     { nullptr }
   };
   DefineVarsFromList( pidvars, mode );
-  */
   
   return 0;
 }
