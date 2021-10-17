@@ -22,6 +22,7 @@ public:
     Float_t GetX() const {return fX;}
     Float_t GetY() const {return fY;}
     Float_t GetE() const {return fE;}
+    Float_t GetAtime() const {return fAtime;}
     Float_t GetEblk() const {return fEblk;}
     Int_t   GetMult() const {return fMult;}
     Int_t   GetRow()  const {return fRow; }
@@ -35,6 +36,7 @@ public:
     void SetX(Float_t var) {fX=var;}
     void SetY(Float_t var) {fY=var;}
     void SetE(Float_t var) {fE=var;}
+    void SetAtime(Float_t var) {fAtime=var;}
     void SetEblk(Float_t var) {fEblk=var;}
     void SetMult(Int_t var) {fMult=var;}
     void SetRow(Int_t var) { fRow=var; }
@@ -56,6 +58,7 @@ private:
     Float_t fY;       // y position of the center
 
     Float_t fE;       // Energy deposit in block
+    Float_t fAtime;       // ADC time  of block with highest E
     Float_t fEblk;    // Energy of block with highest E
     Int_t   fRow;     // Row of block with highest E
     Int_t   fCol;     // Row of block with highest E
