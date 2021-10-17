@@ -55,6 +55,7 @@ struct SBSCalBlocks {
 
 struct SBSCalorimeterOutput {
   std::vector<Float_t> e;   //< []
+  std::vector<Float_t> atime;   //< []
   std::vector<Float_t> e_c;   //< []
   std::vector<Float_t> x;   //< []
   std::vector<Float_t> y;   //< []
@@ -82,6 +83,7 @@ public:
 
   // Get information from the main cluster
   Float_t GetE();             //< Main cluster energy
+  Float_t GetAtime();         //< Main cluster ADC time of max block
   Float_t GetECorrected();    //< Main cluster corrected energy
   Float_t GetX();             //< Main cluster energy average x
   Float_t GetY();             //< Main cluster energy average y
@@ -204,6 +206,10 @@ inline Int_t SBSCalorimeter::GetVVal(std::vector<Int_t> &v, UInt_t i)
 
 inline Float_t SBSCalorimeter::GetE() {
   return GetVVal(fMainclus.e);
+}
+
+inline Float_t SBSCalorimeter::GetAtime() {
+  return GetVVal(fMainclus.atime);
 }
 
 inline Float_t SBSCalorimeter::GetECorrected() {

@@ -26,6 +26,7 @@ public:
   Float_t GetY()     const { return fY; }
   Float_t GetZ()     const { return fZ; }
   Float_t GetE()     const { return fE; }
+  Float_t GetAtime()     const { return fAtime; }
   Int_t   GetRow()   const { return fRow; }
   Int_t   GetCol()   const { return fCol; }
   Int_t   GetLayer() const { return fLayer; }
@@ -40,6 +41,7 @@ public:
   void SetY(Float_t var)    { fY = var; }
   void SetZ(Float_t var)    { fZ = var; }
   void SetE(Float_t var)    { fE = var; }
+  void SetAtime(Float_t var)    { fAtime = var; }
   void SetRow(Int_t var)    { fRow = var; }
   void SetCol(Int_t var)    { fCol = var; }
   void SetLayer(Int_t var)  { fLayer = var; }
@@ -62,6 +64,7 @@ protected:
   Float_t fY;       ///< relative y position of the center
   Float_t fZ;       ///< relative z position of the center
   Float_t fE;       ///< calibrated energy of event in this block
+  Float_t fAtime;       ///< ADC time of event in this block
 
   Int_t   fRow;     ///< Row of the block
   Int_t   fCol;     ///< Column of the block
