@@ -56,6 +56,8 @@ public:
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
 
+  bool CheckConstraint( double xtr, double ytr, double xptr, double yptr );
+  
   void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
 protected:

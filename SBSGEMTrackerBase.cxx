@@ -1002,6 +1002,15 @@ void SBSGEMTrackerBase::find_tracks(){
 	      }
 
 	      if( !goodoptics ) continue; //skip this pair if we don't pass the good optics requirement:
+
+	      //If using search region constraint, ignore pairs of hits that don't give straight-line track parameters consistent with the constraint:
+	      bool constraint_check = true;
+	      if( fUseConstraint ){
+		constraint_check = CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp );
+	      }
+
+	      if( !constraint_check ) continue;
+	       
 	      
 	      //Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
 
@@ -1415,14 +1424,27 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
 	
 	TVector3 LocalCoord = fModules[module]->TrackToDetCoord( Intersect );
+
+	// if using track search region constraint, only use this track to measure the efficiency
+	// if it passes the constraint:
+
+	bool constraint_check = true;
+
+	if( fUseConstraint ){
+	  constraint_check = CheckConstraint( fXtrack[itrack], fYtrack[itrack],
+					      fXptrack[itrack], fYptrack[itrack] );
+	}
+	  
+	if( constraint_check ){
+	  
+	  if( fModules[module]->fhdidhitx != NULL ) fModules[module]->fhdidhitx->Fill( LocalCoord.X() );
+	  if( fModules[module]->fhdidhity != NULL ) fModules[module]->fhdidhity->Fill( LocalCoord.Y() );
+	  if( fModules[module]->fhdidhitxy != NULL ) fModules[module]->fhdidhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
 	
-	if( fModules[module]->fhdidhitx != NULL ) fModules[module]->fhdidhitx->Fill( LocalCoord.X() );
-	if( fModules[module]->fhdidhity != NULL ) fModules[module]->fhdidhity->Fill( LocalCoord.Y() );
-	if( fModules[module]->fhdidhitxy != NULL ) fModules[module]->fhdidhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
-	
-	( (TH1D*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
-	( (TH1D*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
-	( (TH2D*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
+	  ( (TH1D*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
+	  ( (TH1D*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
+	  ( (TH2D*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
+	}
 	
       }
       
@@ -1461,14 +1483,25 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	  fModules[module]->fTrackPassedThrough = 1;
 	  
 	  if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= minhits && itrack == 0 ){
-	    if( fModules[module]->fhshouldhitx  != NULL ) fModules[module]->fhshouldhitx->Fill( LocalCoord.X() );
-	    if( fModules[module]->fhshouldhity  != NULL ) fModules[module]->fhshouldhity->Fill( LocalCoord.Y() );
-	    if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
+
+	    bool constraint_check = true;
+
+	    if( fUseConstraint ){
+	      constraint_check = CheckConstraint( fXtrack[itrack], fYtrack[itrack],
+						  fXptrack[itrack], fYptrack[itrack] );
+	    }
+
+	    if( constraint_check ){
 	    
-	    //For the layer coordinates, we should use the global X and Y coordinates:
-	    ( (TH1D*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
-	    ( (TH1D*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
-	    ( (TH2D*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
+	      if( fModules[module]->fhshouldhitx  != NULL ) fModules[module]->fhshouldhitx->Fill( LocalCoord.X() );
+	      if( fModules[module]->fhshouldhity  != NULL ) fModules[module]->fhshouldhity->Fill( LocalCoord.Y() );
+	      if( fModules[module]->fhshouldhitxy  != NULL ) fModules[module]->fhshouldhitxy->Fill( LocalCoord.Y(), LocalCoord.X() );
+	      
+	      //For the layer coordinates, we should use the global X and Y coordinates:
+	      ( (TH1D*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
+	      ( (TH1D*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
+	      ( (TH2D*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
+	    }
 	  }
 	} // if is in active area or module on track
       } //end loop over list of modules in this tracking layer
@@ -1838,4 +1871,24 @@ void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
 bool SBSGEMTrackerBase::PassedOpticsConstraint( TVector3 TrackOrigin, TVector3 TrackDirection ){
   // for now, do nothing
   return true;
+}
+
+bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, double yptr ){
+  double xproject_bcp = xtr + xptr * fConstraintPoint_Back.Z();
+  double yproject_bcp = ytr + yptr * fConstraintPoint_Back.Z();
+
+  double xproject_fcp = xtr + xptr * fConstraintPoint_Front.Z();
+  double yproject_fcp = ytr + yptr * fConstraintPoint_Front.Z();
+
+  bool constraint_check = false;
+  
+  if( fabs( xproject_bcp - fConstraintPoint_Back.X() ) <= fConstraintWidth_Back.X() &&
+      fabs( yproject_bcp - fConstraintPoint_Back.Y() ) <= fConstraintWidth_Back.Y() &&
+      fabs( xproject_fcp - fConstraintPoint_Front.X() ) <= fConstraintWidth_Front.X() &&
+      fabs( yproject_fcp - fConstraintPoint_Front.Y() ) <= fConstraintWidth_Front.Y() ){
+    
+    constraint_check = true;
+  } 
+
+  return constraint_check;
 }

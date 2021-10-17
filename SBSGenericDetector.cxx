@@ -35,7 +35,7 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(true),fDisableRefTDC(true),
   fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
-  fStoreEmptyElements(true), fIsMC(false)
+  fStoreEmptyElements(false), fIsMC(false)
 {
   // Constructor.
   fCoarseProcessed = 0;

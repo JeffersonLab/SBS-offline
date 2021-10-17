@@ -75,6 +75,7 @@ void SBSBigBite::Clear( Option_t *opt )
   fEpsEtotRatio.clear();
   fEtot.clear();
   fEtotPratio.clear();
+  fEpsEtotRatio.clear();
   fFrontConstraintX.clear();
   fFrontConstraintY.clear();
   fBackConstraintX.clear();
@@ -473,11 +474,11 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//       we might want to check the others...
 	//y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	Etot+= BBTotalShower->GetShower()->GetECorrected();
-	x_bcp+= BBTotalShower->GetShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	x_bcp+= BBTotalShower->GetShower()->GetX()/pow(BBTotalShower->GetShower()->SizeRow()/sqrt(12.),2);
 	y_bcp = BBTotalShower->GetShower()->GetY();
 	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
 	npts++;
-	sumweights_x+=1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	sumweights_x+=1./pow(BBTotalShower->GetShower()->SizeRow()/sqrt(12),2);
 	sumweights_y+=1.;//1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	//}
 	//if(BBTotalShower->GetPreShower()->GetNclust()){
@@ -520,18 +521,38 @@ Int_t SBSBigBite::CoarseReconstruct()
 	// Of course all of the above would hold only for angles less than a few degrees.
 	
 	//transformation in optics coordinate
-	x_bcp+=fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp;
-	y_bcp+=fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp;
+	//commenting these out for now: AJRP
+	//x_bcp+=fFirstGEMLayerOffset.X()+fDetectorStackPitch*z_bcp;
+	//y_bcp+=fFirstGEMLayerOffset.Y()+fDetectorStackYaw*z_bcp;
 	
 	// Use 10.0 degrees instead of fTrackerPitchAngle 
 	// because we are now in the "ideal" system.
-	double dx = (Etot*fECaloFudgeFactor*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
-	  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*fECaloFudgeFactor*(fXptar_10000*z_bcp+1-fXptar_00100));
-	double dy = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
-	//The dy equation is correct under the assumption ytarget = 0: can we refine?
-	//double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
-	//(-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
-	//double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
+	//double xp_bcp = (Etot*fECaloFudgeFactor*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fXptar_10000-fPtheta_10000)) /
+	//  (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*fECaloFudgeFactor*(fXptar_10000*z_bcp+1-fXptar_00100));
+	double yp_bcp = y_bcp*fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010);
+
+	double Efudge = Etot * fECaloFudgeFactor;
+	
+	double xp_bcp = ( fPtheta_00000 + fPtheta_10000 * x_bcp - Efudge * ( fTrackerPitchAngle + fXptar_10000 * x_bcp ) ) /
+	  ( Efudge * (fXptar_00100 - 1.0 - fXptar_10000*z_bcp) + fPtheta_10000 * z_bcp - fPtheta_00100 );
+	
+	// The dy equation is correct under the assumption ytarget = 0: can we refine?
+	// double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
+	// (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
+	// double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
+
+	//The x' equation is:
+	// Ecalo = p
+	// ECALO*thetabend = fPtheta_00000 + fPtheta_10000 * xfp
+	// ECALO*( 10 deg. + xptar - xpfp ) = ptheta0 + pthetax * xfp
+	// xptar = xptar_0 + xptar_x * xfp + xptar_xp * xpfp
+	// xbcp = xfp + xpfp * zbcp
+	// xfp = xbcp - xpfp * zbcp
+	// ECALO * ( 10 deg. + xptar - xpfp ) = pth0 + Mpthx * (xbcp - xpfp * zbcp );
+	// ECALO * ( 10 deg. + xp0 + Mxpx * (xbcp - xpfp * zbcp) + Mxpxp * xpfp - xpfp ) = pth0 + Mpthx * (xbcp-xpfp*zbcp)
+
+	// ECAL * (10 deg. + xp0 + Mxpx * xbcp) + xpfp * ECALO * ( Mxpxp - Mxpx * zbcp - 1 ) = Mpthx * xbcp - xpfp*Mpthx*zbcp
+	// --> xpfp*[ ECALO * ( Mxpxp - Mxpx*zbcp - 1 ) - Mpthx*zbcp ] = 
 	
 	//cout << "(x_bcp*(" << fXptar_10000 << "*Etot-" << fPtheta_10000 << ")+" 
 	//   << 10.*TMath::DegToRad() << "*Etot-" << fPtheta_00000 << ")/" << endl 
@@ -539,11 +560,12 @@ Int_t SBSBigBite::CoarseReconstruct()
 	//cout << fYtar_01000/(fYtar_01000*z_bcp-fYtar_00010) << endl;
 	
 	z_fcp = 0;
-	x_fcp = x_bcp+dx*(z_fcp-z_bcp);
-	y_fcp = y_bcp+dy*(z_fcp-z_bcp);
-	
-	x_bcp+=-fFirstGEMLayerOffset.X();
-	y_bcp+=-fFirstGEMLayerOffset.Y();
+	x_fcp = x_bcp+xp_bcp*(z_fcp-z_bcp);
+	y_fcp = y_bcp+yp_bcp*(z_fcp-z_bcp);
+
+	//commenting this out for now
+	//x_bcp+=-fFirstGEMLayerOffset.X();
+	//y_bcp+=-fFirstGEMLayerOffset.Y();
 	
 	//cout << x_fcp-(x_bcp+dx_2*(z_fcp-z_bcp)) << " " << y_fcp-(y_bcp+dy_2*(z_fcp-z_bcp)) << endl;
 	/*
