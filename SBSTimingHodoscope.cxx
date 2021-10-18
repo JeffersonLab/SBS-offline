@@ -20,6 +20,8 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
   SetModeTDC(SBSModeTDC::kTDC); //  A TDC with leading & trailing edge info
   SetModeADC(SBSModeADC::kNone); // Default is No ADC, but can be re-enabled later
   // SBSGenericDetector::SetStoreRawHits(true);
+  fDataOutputLevel = 0;//default
+  fClusMaxSize = 5;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -76,6 +78,15 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
       std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
     }
   }
+  
+  DBRequest misc_request[] = {
+    { "maxclussize",    &fClusMaxSize,      kInt, 0, true }, //parameter for time walk correction
+    { 0 } ///< Request must end in a NULL
+  };
+  err = LoadDB( file, date, misc_request, fPrefix );
+  if(err)
+    return err;  
+  
   // std::cout << "fNelem " << fNelem << std::endl;
   // std::cout << "timewalkpar0.size() " << timewalkpar0.size() << std::endl;
   // std::cout << "timewalkpar1.size() " << timewalkpar1.size() << std::endl;
@@ -147,7 +158,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     return err;
   }
 
-  if(WithTDC()){
+  if(WithTDC() && fDataOutputLevel>2){
     RVarDef vars[] = {
       // { "tdcbaroff",    "Starting bar for TDC readout",       "fTDCBarOffset" },
       { "bar.ngoodbars",    "Number of good bars",             "GetGoodBarsSize()"},
@@ -174,7 +185,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     if(err)
       return err;
   }// if we're in a tdc event
-  if(WithADC()){
+  if(WithADC() && fDataOutputLevel>2){
     RVarDef vars[] = {
       // { "adcbaroff",    "Starting bar for ADC readout",       "fADCBarOffset" },
       { "bar.adc.id",     "ADC Hit Bar ID",                     "fGoodBarIDsADC"},
@@ -192,16 +203,43 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
       return err;
   }// adc mode
   
-  RVarDef vars[] = {
-    { "nclus",      "number of clusters",   "GetNClusters()"},
-    { "clus.size",  "cluster size",           "fClusterMult"},
-    { "clus.xmean", "cluster mean X",        "fClusterXmean"},
-    { "clus.ymean", "cluster mean Y",        "fClusterYmean"},
-    { "clus.tmean", "cluster mean T",        "fClusterTmean"},
-    { "clus.totmean", "cluster mean ToT",    "fClusterToTmean"},
+  if(fDataOutputLevel>1){
+    RVarDef vars_clus[] = {
+      { "allclus.size",  "cluster size",          "fOutClus.n"},
+      { "allclus.xmean", "cluster mean X",        "fOutClus.x"},
+      { "allclus.ymean", "cluster mean Y",        "fOutClus.y"},
+      { "allclus.tmean", "cluster mean T",        "fOutClus.t"},
+      { "allclus.totmean", "cluster mean ToT",    "fOutClus.tot"},
+      { 0 }
+    };
+    err = DefineVarsFromList( vars_clus, mode );
+  }
+  
+  if(fDataOutputLevel>0){
+    RVarDef vars_clushits[] = {
+      { "clus.bar.tdc.id",       "main clus TDC Hit Bar ID",     "fMainClusBars.id"},
+      { "clus.bar.tdc.meantime", "main clus Bar Mean Time [ns]", "fMainClusBars.t"},
+      { "clus.bar.tdc.meantot",  "main clus Bar Mean ToT [ns]",  "fMainClusBars.tot"},
+      { "clus.bar.tdc.timediff", "main clus Bar Time Diff [ns]", "fMainClusBars.tdiff"},
+      { "clus.bar.tdc.timehitpos", "main clus Bar Time Hit pos from L [m]",  "fMainClusBars.y"},
+      { "clus.bar.tdc.vpos",       "main clus Bar vertical position [m]",    "fMainClusBars.x"},
+      { 0 }
+    };
+    err = DefineVarsFromList( vars_clushits, mode );
+  }
+  
+  RVarDef vars_mainclus[] = {
+    { "nclus",   "number of clusters", "GetNClusters()"},
+    { "clus.id",  "cluster size",       "GetID()"},
+    { "clus.size", "cluster size",       "GetSize()"},
+    { "clus.xmean", "cluster mean X",     "GetX()"},
+    { "clus.ymean",  "cluster mean Y",     "GetY()"},
+    { "clus.tmean",   "cluster mean T",     "GetT()"},
+    { "clus.totmean",  "cluster mean ToT",   "GetToT()"},
     { 0 }
   };
-  err = DefineVarsFromList( vars, mode );
+  err = DefineVarsFromList( vars_mainclus, mode );
+  
   if(err)
     return err;
   
@@ -394,6 +432,55 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   // Clustering here? 
   // Wait, if I understand the code, 
   // the way the information is stored in the vectors is by increasing index always.
+  int nclusters = DoClustering();
+  
+  //fill output here:
+  if(fDataOutputLevel>1){
+    for(int i = 0; i<GetNClusters(); i++){
+      fOutClus.n.push_back(GetCluster(i)->GetSize());
+      fOutClus.x.push_back(GetCluster(i)->GetXmean());
+      fOutClus.y.push_back(GetCluster(i)->GetYmean());
+      fOutClus.t.push_back(GetCluster(i)->GetTmean());
+      fOutClus.tot.push_back(GetCluster(i)->GetToTmean());
+    }
+  }
+  
+  int clus_idx = -1;
+  Int_t n_trk = tracks.GetLast()+1;
+  for( Int_t t = 0; t < n_trk; t++ ) {
+    auto* theTrack = static_cast<THaTrack*>( tracks.At(t) ); 
+    clus_idx = MatchTrack(theTrack);
+    //anything to select the best track???
+  }
+  
+  if(clus_idx>=0){
+    fMainClus.id.push_back(clus_idx);
+    fMainClus.n.push_back(GetCluster(clus_idx)->GetSize());
+    fMainClus.x.push_back(GetCluster(clus_idx)->GetXmean());
+    fMainClus.y.push_back(GetCluster(clus_idx)->GetYmean());
+    fMainClus.t.push_back(GetCluster(clus_idx)->GetTmean());
+    fMainClus.tot.push_back(GetCluster(clus_idx)->GetToTmean());
+  
+    if(fDataOutputLevel>0){
+      for(int i = 0; i<GetCluster(clus_idx)->GetSize(); i++){
+	fMainClusBars.id.push_back(GetCluster(clus_idx)->GetElement(i)->GetBarNum());
+	fMainClusBars.t.push_back(GetCluster(clus_idx)->GetElement(i)->GetMeanTime());
+	fMainClusBars.tot.push_back(GetCluster(clus_idx)->GetElement(i)->GetMeanToT());
+	fMainClusBars.tdiff.push_back(GetCluster(clus_idx)->GetElement(i)->GetTimeDiff());
+	fMainClusBars.x.push_back(GetCluster(clus_idx)->GetElement(i)->GetElementPos());
+	fMainClusBars.y.push_back(GetCluster(clus_idx)->GetElement(i)->GetHitPos());
+      }
+    }
+  }
+  
+  
+
+  fFineProcessed = 1;
+  return 0;
+}
+
+Int_t SBSTimingHodoscope::DoClustering()
+{
   int prev_baridx = -10;
   for(int i = 0; i<fGoodBarIDsTDC.size(); i++){
     int baridx = fGoodBarIDsTDC[i];
@@ -401,28 +488,34 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
     // this below takes advantage of the fact that the bars are already sorted by ID/geometry i.e. two "good" adjacent bars are guaranteed to be stored back-to-back.
     if(baridx-prev_baridx==1 && fClusters.size()>0){
       if(!fClusters[fClusters.size()-1]->AddElement(Bar)){
-	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(10, Bar);
+	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
 	fClusters.push_back(clus);
       }
     }else{
-      SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(10, Bar);
+      SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
       fClusters.push_back(clus);
     }
     prev_baridx = baridx;
   }
-  
-  //fill output here:
-  for(int i = 0; i<GetNClusters(); i++){
-    fClusterMult.push_back(GetCluster(i)->GetSize());
-    fClusterXmean.push_back(GetCluster(i)->GetXmean());
-    fClusterYmean.push_back(GetCluster(i)->GetYmean());
-    fClusterTmean.push_back(GetCluster(i)->GetTmean());
-    fClusterToTmean.push_back(GetCluster(i)->GetToTmean());
-  }
-  
-  fFineProcessed = 1;
-  return 0;
+  return fClusters.size();
 }
+
+Int_t SBSTimingHodoscope::MatchTrack(THaTrack* the_track)
+{
+  double x_track = the_track->GetX(GetOrigin().Z());
+  double y_track = the_track->GetY(GetOrigin().Z());
+  
+  for(int i=0; i<GetNClusters(); i++){
+    SBSTimingHodoscopeCluster* clus = GetCluster(i);
+    if(clus->GetXmean()-clus->GetSize()*SizeCol()/2<x_track && 
+       x_track<clus->GetXmean()+clus->GetSize()*SizeCol()/2){
+      return i;
+      //the_track->SetTime(clus->GetTmean());
+    }  
+  }
+  return -1;
+}
+
 /*
  * ConstructHodoscope()
  * called in read database 
@@ -564,17 +657,32 @@ void SBSTimingHodoscope::ClearEvent()
   
   fClusters.clear();
   
+  /*
   fClusterMult.clear();
   fClusterXmean.clear();
   fClusterYmean.clear();
   fClusterTmean.clear();
   fClusterToTmean.clear();
-
+  */
+  
+  ClearHodoOutput(fMainClus);
+  ClearHodoOutput(fMainClusBars);
+  ClearHodoOutput(fOutClus);
   
   // Make sure to call parent class's ClearEvent() also!
   SBSGenericDetector::ClearEvent();
 }
 
+void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)
+{
+  out.n.clear();
+  out.id.clear();
+  out.x.clear();
+  out.y.clear();
+  out.t.clear();
+  out.tot.clear();
+  out.tdiff.clear();
+}
 
 /*
  * Generic SBSTimingHodoscope destructor

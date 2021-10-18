@@ -9,10 +9,23 @@
 #ifndef SBSTimingHodoscope_h
 #define SBSTimingHodoscope_h
 
+#include "TClonesArray.h"
+#include "THaTrack.h"
+
 #include "SBSGenericDetector.h"
 #include "SBSTimingHodoscopePMT.h"
 #include "SBSTimingHodoscopeBar.h"
 #include "SBSTimingHodoscopeCluster.h"
+
+struct SBSTimingHodoscopeOutput {
+  std::vector<Int_t>   n;   // Number of elements
+  std::vector<Int_t>   id;   // ID
+  std::vector<Float_t> x;   //< []
+  std::vector<Float_t> y;   //< []
+  std::vector<Float_t> t;   //< []
+  std::vector<Float_t> tot;   //< []
+  std::vector<Float_t> tdiff;   //< []
+};
 
 class SBSTimingHodoscope : public SBSGenericDetector {
 public:
@@ -20,7 +33,7 @@ public:
       THaApparatus* apparatus=0);
 
   virtual ~SBSTimingHodoscope();
-
+  
   // Overwritten derived functions
   virtual Int_t   ReadDatabase( const TDatime& date );
   virtual Int_t   DefineVariables( EMode mode = kDefine );
@@ -31,7 +44,7 @@ public:
   // new functions
   Int_t   ConstructHodoscope();
   Float_t TimeWalk(Float_t time, Float_t tot, Float_t timewalk0, Float_t timewalk1);
-
+  
   Int_t GetGoodBarsSize() {return fGoodBarIDsTDC.size();};
   std::vector<Int_t> GetGoodBarsIDs() {return fGoodBarIDsTDC;};
   std::vector<Float_t> GetGoodBarsMeanTimes() {return fGoodBarTDCmean;};
@@ -54,7 +67,27 @@ public:
   Int_t GetNClusters() {return fClusters.size();};
   SBSTimingHodoscopeCluster* GetCluster(int i);
   
+  Int_t GetID();
+  Int_t GetSize();
+  Float_t GetX();
+  Float_t GetY();
+  Float_t GetT();
+  Float_t GetToT();
+
+  Float_t GetVVal(std::vector<Float_t> &v, UInt_t i = 0 );
+  Int_t GetVVal(std::vector<Int_t> &v, UInt_t i = 0 );
+  
+  void SetDataOutputLevel(int var) { fDataOutputLevel = var; }
+    
  protected:
+  
+  Int_t DoClustering();
+  Int_t MatchTrack(THaTrack*);
+  
+  void ClearHodoOutput(SBSTimingHodoscopeOutput &var);
+  
+  int fClusMaxSize;
+  
   Float_t AttLength = 1.0/3.8;//380cm for ej200. units per m?
   /* speed of light in scint? what is n for ej200 */
   // n = 1.58 => n=c/v =>v=c/n
@@ -98,11 +131,13 @@ public:
   std::vector<Float_t> fGoodBarADCRac;
   
   //cluster output only:
+  /*
   std::vector<Int_t> fClusterMult;
   std::vector<Float_t> fClusterXmean;
   std::vector<Float_t> fClusterYmean;
   std::vector<Float_t> fClusterTmean;
   std::vector<Float_t> fClusterToTmean;
+  */
   
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
@@ -110,9 +145,57 @@ public:
   std::vector<std::vector<std::vector<Float_t>>> fTimeWalkPar0;
   std::vector<std::vector<std::vector<Float_t>>> fTimeWalkPar1;
   
+  SBSTimingHodoscopeOutput fMainClus;
+  SBSTimingHodoscopeOutput fMainClusBars;
+  SBSTimingHodoscopeOutput fOutClus;
   std::vector<SBSTimingHodoscopeCluster*> fClusters; 
+  
+  Int_t fDataOutputLevel;   //0 (default): only main cluster; 1: (0)+ main cluster bars; 2: (1)+all clusters; ": (2)+all bars
   
   ClassDef(SBSTimingHodoscope,5)  // Describes scintillator plane with F1TDC as a detector
 };
+
+inline Float_t SBSTimingHodoscope::GetVVal(std::vector<Float_t> &v, UInt_t i)
+{
+  if (v.size() > i) {
+    return v[i];
+  }
+  return 0.0;
+}
+
+inline Int_t SBSTimingHodoscope::GetVVal(std::vector<Int_t> &v, UInt_t i)
+{
+  if (v.size() > i) {
+    return v[i];
+  }
+  return 0.0;
+}
+
+inline Int_t SBSTimingHodoscope::GetID(){
+  return GetVVal(fMainClus.id);
+}
+
+inline Int_t SBSTimingHodoscope::GetSize(){
+  return GetVVal(fMainClus.n);
+}
+
+inline Float_t SBSTimingHodoscope::GetX(){
+  return GetVVal(fMainClus.x);
+}
+
+inline Float_t SBSTimingHodoscope::GetY(){
+  return GetVVal(fMainClus.y);
+}
+
+inline Float_t SBSTimingHodoscope::GetT(){
+  return GetVVal(fMainClus.t);
+}
+  
+inline Float_t SBSTimingHodoscope::GetToT(){
+  return GetVVal(fMainClus.tot);
+}
+
+
+
 
 #endif
