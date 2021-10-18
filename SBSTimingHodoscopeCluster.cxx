@@ -63,6 +63,8 @@ Bool_t SBSTimingHodoscopeCluster::AddElement(SBSTimingHodoscopeBar* bar) {
     fElements.push_back(bar);
     fMult = fElements.size();
     //recompute the avergae of time, positions, and time over threshold
+    //Should we use a weighted average? Perhaps not until we better understand the relation
+    //between ToT and amplitude:
     fXmean = (fXmean*(fMult-1)+bar->GetElementPos())/fMult;
     fYmean = (fYmean*(fMult-1)+bar->GetHitPos())/fMult;
     fTmean = (fTmean*(fMult-1)+bar->GetMeanTime())/fMult;

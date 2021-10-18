@@ -50,11 +50,11 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   Int_t tdcbaroff = 0;
   fADCBarOffset = 0;
   Int_t adcbaroff = 0;
-  std::vector<Float_t> timewalkpar0;
-  std::vector<Float_t> timewalkpar1;
+  std::vector<Double_t> timewalkpar0;
+  std::vector<Double_t> timewalkpar1;
   DBRequest config_request[] = {
-    { "timewalk0map",    &timewalkpar0,      kFloatV, 0, false }, //parameter for time walk correction
-    { "timewalk1map",    &timewalkpar1,      kFloatV, 0, false }, //parameter for time walk correction
+    { "timewalk0map",    &timewalkpar0,      kDoubleV, 0, false }, //parameter for time walk correction
+    { "timewalk1map",    &timewalkpar1,      kDoubleV, 0, false }, //parameter for time walk correction
     { "tdcbaroffset",    &tdcbaroff,         kInt,    0, true }, //to allow for cycling through sections
     { "adcbaroffset",    &adcbaroff,         kInt,    0, true }, //to allow for cycling through sections
     { 0 } ///< Request must end in a NULL
@@ -63,9 +63,9 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   if(err)
     return err;
 
-  std::vector<Float_t> ypos;//position of element
+  std::vector<Double_t> ypos;//position of element
   std::vector<DBRequest> vr;
-  vr.push_back({ "ypos", &ypos,    kFloatV, 0, 1 });
+  vr.push_back({ "ypos", &ypos,    kDoubleV, 0, 1 });
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
   if (ypos.size()>0) {
@@ -158,7 +158,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     return err;
   }
 
-  if(WithTDC() && fDataOutputLevel>2){
+  if(WithTDC() ){
     RVarDef vars[] = {
       // { "tdcbaroff",    "Starting bar for TDC readout",       "fTDCBarOffset" },
       { "bar.ngoodbars",    "Number of good bars",             "GetGoodBarsSize()"},
@@ -185,7 +185,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     if(err)
       return err;
   }// if we're in a tdc event
-  if(WithADC() && fDataOutputLevel>2){
+  if(WithADC() ){
     RVarDef vars[] = {
       // { "adcbaroff",    "Starting bar for ADC readout",       "fADCBarOffset" },
       { "bar.adc.id",     "ADC Hit Bar ID",                     "fGoodBarIDsADC"},
@@ -203,39 +203,47 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
       return err;
   }// adc mode
   
-  if(fDataOutputLevel>1){
-    RVarDef vars_clus[] = {
-      { "allclus.size",  "cluster size",          "fOutClus.n"},
-      { "allclus.xmean", "cluster mean X",        "fOutClus.x"},
-      { "allclus.ymean", "cluster mean Y",        "fOutClus.y"},
-      { "allclus.tmean", "cluster mean T",        "fOutClus.t"},
-      { "allclus.totmean", "cluster mean ToT",    "fOutClus.tot"},
-      { 0 }
-    };
-    err = DefineVarsFromList( vars_clus, mode );
-  }
+  //if(fDataOutputLevel>1){
+  RVarDef vars_clus[] = {
+    { "allclus.size",  "cluster size",          "fOutClus.n"},
+    { "allclus.id", "cluster max bar id",     "fOutClust.id" },
+    { "allclus.xmean", "cluster mean X",        "fOutClus.x"},
+    { "allclus.ymean", "cluster mean Y",        "fOutClus.y"},
+    { "allclus.tmean", "cluster mean T",        "fOutClus.t"},
+    { "allclus.totmean", "cluster mean ToT",    "fOutClus.tot"},
+    { "allclus.tdiff", "cluster max bar tdiff", "fOutClus.tdiff"},
+    { "allclus.itrack", "track index", "fOutClus.trackindex"},
+    { 0 }
+  };
+  err = DefineVarsFromList( vars_clus, mode );
+    //}
   
-  if(fDataOutputLevel>0){
-    RVarDef vars_clushits[] = {
-      { "clus.bar.tdc.id",       "main clus TDC Hit Bar ID",     "fMainClusBars.id"},
-      { "clus.bar.tdc.meantime", "main clus Bar Mean Time [ns]", "fMainClusBars.t"},
-      { "clus.bar.tdc.meantot",  "main clus Bar Mean ToT [ns]",  "fMainClusBars.tot"},
-      { "clus.bar.tdc.timediff", "main clus Bar Time Diff [ns]", "fMainClusBars.tdiff"},
-      { "clus.bar.tdc.timehitpos", "main clus Bar Time Hit pos from L [m]",  "fMainClusBars.y"},
-      { "clus.bar.tdc.vpos",       "main clus Bar vertical position [m]",    "fMainClusBars.x"},
-      { 0 }
-    };
-    err = DefineVarsFromList( vars_clushits, mode );
-  }
+  //if(fDataOutputLevel>0){
+  RVarDef vars_clushits[] = {
+    { "clus.bar.tdc.id",       "main clus TDC Hit Bar ID",     "fMainClusBars.id"},
+    { "clus.bar.tdc.meantime", "main clus Bar Mean Time [ns]", "fMainClusBars.t"},
+    { "clus.bar.tdc.meantot",  "main clus Bar Mean ToT [ns]",  "fMainClusBars.tot"},
+    { "clus.bar.tdc.timediff", "main clus Bar Time Diff [ns]", "fMainClusBars.tdiff"},
+    { "clus.bar.tdc.timehitpos", "main clus Bar Time Hit pos from L [m]",  "fMainClusBars.y"},
+    { "clus.bar.tdc.vpos",       "main clus Bar vertical position [m]",    "fMainClusBars.x"},
+    { "clus.bar.tdc.itrack",  "main clus Bar track index", "fMainClusBars.trackindex" },
+    { 0 }
+  };
+
+ 
+  err = DefineVarsFromList( vars_clushits, mode );
+    //}
   
   RVarDef vars_mainclus[] = {
     { "nclus",   "number of clusters", "GetNClusters()"},
-    { "clus.id",  "cluster size",       "GetID()"},
-    { "clus.size", "cluster size",       "GetSize()"},
-    { "clus.xmean", "cluster mean X",     "GetX()"},
-    { "clus.ymean",  "cluster mean Y",     "GetY()"},
-    { "clus.tmean",   "cluster mean T",     "GetT()"},
-    { "clus.totmean",  "cluster mean ToT",   "GetToT()"},
+    { "clus.id",  "cluster max bar id",       "fMainClus.id"},
+    { "clus.size", "cluster size",       "fMainClus.n"},
+    { "clus.xmean", "cluster mean X",     "fMainClus.x"},
+    { "clus.ymean",  "cluster mean Y",     "fMainClus.y"},
+    { "clus.tmean",   "cluster mean T",     "fMainClus.t"},
+    { "clus.totmean",  "cluster mean ToT",   "fMainClus.tot"},
+    { "clus.tdiff", "cluster max bar tdiff", "fMainClus.tdiff"},
+    { "clus.trackindex", "cluster track index", "fMainClus.trackindex"},
     { 0 }
   };
   err = DefineVarsFromList( vars_mainclus, mode );
@@ -325,10 +333,10 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
     SBSTimingHodoscopePMT *pmtR = bar->GetRPMT();
     SBSElement *elL = pmtL->GetPMTElement();
     SBSElement *elR = pmtR->GetPMTElement();
-    Float_t Ltwalk0 = pmtL->GetTimeWalkPar0();
-    Float_t Ltwalk1 = pmtL->GetTimeWalkPar1();
-    Float_t Rtwalk0 = pmtR->GetTimeWalkPar0();
-    Float_t Rtwalk1 = pmtR->GetTimeWalkPar1();
+    Double_t Ltwalk0 = pmtL->GetTimeWalkPar0();
+    Double_t Ltwalk1 = pmtL->GetTimeWalkPar1();
+    Double_t Rtwalk0 = pmtR->GetTimeWalkPar0();
+    Double_t Rtwalk1 = pmtR->GetTimeWalkPar1();
 
     if(WithTDC()){
       if(elL->TDC()->HasData() && elR->TDC()->HasData()){
@@ -341,12 +349,12 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarTDCLle.push_back(hitL.le.val);
 	// fGoodBarTDCLle.push_back(hitL.le.raw);
 	//.raw is tdc bin, val is corrected using offset and ns/bin
-	Float_t LleW = SBSTimingHodoscope::TimeWalk(hitL.le.val,
+	Double_t LleW = SBSTimingHodoscope::TimeWalk(hitL.le.val,
 				(hitL.te.val-hitL.le.val),
 				Ltwalk0, Ltwalk1);
 	fGoodBarTDCLleW.push_back(LleW);
 	fGoodBarTDCLte.push_back(hitL.te.val);
-	Float_t LteW = SBSTimingHodoscope::TimeWalk(hitL.te.val,
+	Double_t LteW = SBSTimingHodoscope::TimeWalk(hitL.te.val,
 				(hitL.te.val-hitL.le.val),
 				Ltwalk0, Ltwalk1);
 	fGoodBarTDCLteW.push_back(LteW);
@@ -356,12 +364,12 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	// right hit
 	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
 	fGoodBarTDCRle.push_back(hitR.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
-	Float_t RleW = SBSTimingHodoscope::TimeWalk(hitR.le.val,
+	Double_t RleW = SBSTimingHodoscope::TimeWalk(hitR.le.val,
 				(hitR.te.val-hitR.le.val),
 				Rtwalk0, Rtwalk1);
 	fGoodBarTDCRleW.push_back(RleW);
 	fGoodBarTDCRte.push_back(hitR.te.val);
-	Float_t RteW = SBSTimingHodoscope::TimeWalk(hitR.te.val,
+	Double_t RteW = SBSTimingHodoscope::TimeWalk(hitR.te.val,
 				(hitR.te.val-hitR.le.val),
 				Rtwalk0, Rtwalk1);
 	fGoodBarTDCRteW.push_back(RteW);
@@ -369,13 +377,13 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarTDCRtotW.push_back(RteW-RleW);
 	
 	// bar properties
-	Float_t barmeantime = (LleW + RleW)/2.0;
+	Double_t barmeantime = (LleW + RleW)/2.0;
 	fGoodBarTDCmean.push_back(barmeantime);
-	Float_t bartimediff = (LleW - RleW);
+	Double_t bartimediff = (LleW - RleW);
 	fGoodBarTDCdiff.push_back(bartimediff);
 	// convert to position? effective velocity times time? should we divide by 2? yes
-	// Float_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
-	Float_t HorizPos = 0.5 * (bartimediff*0.1e-9) * vScint; // position from L based on timediff and in m
+	// Double_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
+	Double_t HorizPos = 0.5 * (bartimediff*0.1e-9) * vScint; // position from L based on timediff and in m
 	fGoodBarTDCpos.push_back(HorizPos);
 	fGoodBarTDCvpos.push_back(elR->GetY());
 	
@@ -395,21 +403,21 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarIDsADC.push_back(bar);
 
 	// left hit
-	Float_t pedL=elL->ADC()->GetPed()*1.0;
+	Double_t pedL=elL->ADC()->GetPed()*1.0;
 	const SBSData::PulseADCData &hitL = elL->ADC()->GetGoodHit(); // this is assuming simple adc type should add a check
 	fGoodBarADCLa.push_back(hitL.integral.raw);
 	fGoodBarADCLap.push_back(hitL.integral.raw-pedL);
 	fGoodBarADCLac.push_back(hitL.integral.val);
 	
 	// right hit
-	Float_t pedR=elR->ADC()->GetPed()*1.0;
+	Double_t pedR=elR->ADC()->GetPed()*1.0;
 	const SBSData::PulseADCData &hitR = elR->ADC()->GetGoodHit();
 	fGoodBarADCRa.push_back(hitR.integral.raw);
 	fGoodBarADCRap.push_back(hitR.integral.raw-pedR);
 	fGoodBarADCRac.push_back(hitR.integral.val);
 	
 	// bar properties
-	Float_t barmeanadc = (hitL.integral.raw + hitR.integral.raw) / 2.0;
+	Double_t barmeanadc = (hitL.integral.raw + hitR.integral.raw) / 2.0;
 	// at moment dont use ped corrected for debug
 	fGoodBarADCmean.push_back(barmeanadc);
       }// adc hit on both pmts
@@ -435,15 +443,18 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   int nclusters = DoClustering();
   
   //fill output here:
-  if(fDataOutputLevel>1){
-    for(int i = 0; i<GetNClusters(); i++){
-      fOutClus.n.push_back(GetCluster(i)->GetSize());
-      fOutClus.x.push_back(GetCluster(i)->GetXmean());
-      fOutClus.y.push_back(GetCluster(i)->GetYmean());
-      fOutClus.t.push_back(GetCluster(i)->GetTmean());
-      fOutClus.tot.push_back(GetCluster(i)->GetToTmean());
-    }
+  //if(fDataOutputLevel>1){
+  for(int i = 0; i<GetNClusters(); i++){
+    fOutClus.id.push_back(GetCluster(i)->GetMaxBarID());
+    fOutClus.n.push_back(GetCluster(i)->GetSize());
+    fOutClus.x.push_back(GetCluster(i)->GetXmean());
+    fOutClus.y.push_back(GetCluster(i)->GetYmean());
+    fOutClus.t.push_back(GetCluster(i)->GetTmean());
+    fOutClus.tot.push_back(GetCluster(i)->GetToTmean());
+    fOutClus.tdiff.push_back(GetCluster(i)->GetTdiff());
+    fOutClus.trackindex.push_back(-1);
   }
+    //}
   
   int clus_idx = -1;
   Int_t n_trk = tracks.GetLast()+1;
@@ -451,24 +462,36 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) ); 
     clus_idx = MatchTrack(theTrack);
     //anything to select the best track???
+    if( clus_idx >= 0 ){
+      fOutClus.trackindex[clus_idx] = t;
+    }
   }
-  
-  if(clus_idx>=0){
-    fMainClus.id.push_back(clus_idx);
-    fMainClus.n.push_back(GetCluster(clus_idx)->GetSize());
-    fMainClus.x.push_back(GetCluster(clus_idx)->GetXmean());
-    fMainClus.y.push_back(GetCluster(clus_idx)->GetYmean());
-    fMainClus.t.push_back(GetCluster(clus_idx)->GetTmean());
-    fMainClus.tot.push_back(GetCluster(clus_idx)->GetToTmean());
-  
-    if(fDataOutputLevel>0){
-      for(int i = 0; i<GetCluster(clus_idx)->GetSize(); i++){
-	fMainClusBars.id.push_back(GetCluster(clus_idx)->GetElement(i)->GetBarNum());
-	fMainClusBars.t.push_back(GetCluster(clus_idx)->GetElement(i)->GetMeanTime());
-	fMainClusBars.tot.push_back(GetCluster(clus_idx)->GetElement(i)->GetMeanToT());
-	fMainClusBars.tdiff.push_back(GetCluster(clus_idx)->GetElement(i)->GetTimeDiff());
-	fMainClusBars.x.push_back(GetCluster(clus_idx)->GetElement(i)->GetElementPos());
-	fMainClusBars.y.push_back(GetCluster(clus_idx)->GetElement(i)->GetHitPos());
+
+  //clus_idx is the index in the cluster array of 
+
+  //fill main cluster variables with clusters on good tracks:
+  for( int i=0; i<GetNClusters(); i++ ){
+    if( fOutClus.trackindex[i] >= 0 ){
+      fMainClus.id.push_back(GetCluster(i)->GetMaxBarID());
+      fMainClus.n.push_back(GetCluster(i)->GetSize());
+      fMainClus.x.push_back(GetCluster(i)->GetXmean());
+      fMainClus.y.push_back(GetCluster(i)->GetYmean());
+      fMainClus.t.push_back(GetCluster(i)->GetTmean());
+      fMainClus.tot.push_back(GetCluster(i)->GetToTmean());
+      fMainClus.tdiff.push_back(GetCluster(i)->GetTdiff());
+      fMainClus.trackindex.push_back( fOutClus.trackindex[i] );
+      //AJRP: we should fill these variables regardless;
+      // output is contolled by the odef file:
+      //if(fDataOutputLevel>0){
+      for(int i = 0; i<GetCluster(i)->GetSize(); i++){
+	fMainClusBars.id.push_back(GetCluster(i)->GetElement(i)->GetBarNum());
+	fMainClusBars.n.push_back(1);
+	fMainClusBars.t.push_back(GetCluster(i)->GetElement(i)->GetMeanTime());
+	fMainClusBars.tot.push_back(GetCluster(i)->GetElement(i)->GetMeanToT());
+	fMainClusBars.tdiff.push_back(GetCluster(i)->GetElement(i)->GetTimeDiff());
+	fMainClusBars.x.push_back(GetCluster(i)->GetElement(i)->GetElementPos());
+	fMainClusBars.y.push_back(GetCluster(i)->GetElement(i)->GetHitPos());
+	fMainClusBars.trackindex.push_back( fOutClus.trackindex[i] );
       }
     }
   }
@@ -504,16 +527,31 @@ Int_t SBSTimingHodoscope::MatchTrack(THaTrack* the_track)
 {
   double x_track = the_track->GetX(GetOrigin().Z());
   double y_track = the_track->GetY(GetOrigin().Z());
+
+  int bestmatch=-1;
+
+  double minxdiff = 1.e36;
+
+  //If time resolution is ~100 ps, then position resolution should be
+  //something like 100 ps * vScint ~= 3 cm
   
   for(int i=0; i<GetNClusters(); i++){
     SBSTimingHodoscopeCluster* clus = GetCluster(i);
-    if(clus->GetXmean()-clus->GetSize()*SizeCol()/2<x_track && 
-       x_track<clus->GetXmean()+clus->GetSize()*SizeCol()/2){
-      return i;
+    if(clus->GetXmean()-clus->GetSize()*SizeCol()/2.<x_track && 
+       x_track<clus->GetXmean()+clus->GetSize()*SizeCol()/2. &&
+       fabs( clus->GetYmean() - y_track ) <= SizeRow()/2. ){
+      //later when things are calibrated we can do something like: 
+      
+      //return i;
       //the_track->SetTime(clus->GetTmean());
+      if( bestmatch < 0 || fabs( clus->GetXmean() - x_track ) < minxdiff ){
+	minxdiff = fabs(clus->GetXmean() - x_track );
+	bestmatch = i;
+      }
+      //choose the cluster with the smallest difference between 
     }  
   }
-  return -1;
+  return bestmatch;
 }
 
 /*
@@ -547,8 +585,8 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 	Int_t row = blk2->GetRow();
 	// std::cout << "row " << r << " col " << c << " l " << l  << " p " << p << std::endl;
 	// std::cout << "element column " << column << " and row " << row << std::endl;
-	Float_t tw0 = fTimeWalkPar0[r][c][l];
-	Float_t tw1 = fTimeWalkPar1[r][c][l];
+	Double_t tw0 = fTimeWalkPar0[r][c][l];
+	Double_t tw1 = fTimeWalkPar1[r][c][l];
 	if(row==0){//left// could also use r index
 	  if( WithTDC() ){
 	    SBSTimingHodoscopePMT *pmtL = new SBSTimingHodoscopePMT(fElements.at(p),
@@ -617,11 +655,11 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 /*
  * TimeWalk()
  */
-Float_t SBSTimingHodoscope::TimeWalk(Float_t time, Float_t tot, Float_t timewalk0, Float_t timewalk1){
+Double_t SBSTimingHodoscope::TimeWalk(Double_t time, Double_t tot, Double_t timewalk0, Double_t timewalk1){
   // at the moment LE versus tot is fit with straight line in calibration
   // tc = LE + tcor
   // where tcor = [0]*TOT + [1], where [0] and [1] are from database
-  Float_t tcorr = time - (timewalk0*tot + timewalk1);
+  Double_t tcorr = time - (timewalk0*tot + timewalk1);
   return tcorr;
  }
 /*
@@ -682,6 +720,7 @@ void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)
   out.t.clear();
   out.tot.clear();
   out.tdiff.clear();
+  out.trackindex.clear();
 }
 
 /*

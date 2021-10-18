@@ -20,11 +20,12 @@
 struct SBSTimingHodoscopeOutput {
   std::vector<Int_t>   n;   // Number of elements
   std::vector<Int_t>   id;   // ID
-  std::vector<Float_t> x;   //< []
-  std::vector<Float_t> y;   //< []
-  std::vector<Float_t> t;   //< []
-  std::vector<Float_t> tot;   //< []
-  std::vector<Float_t> tdiff;   //< []
+  std::vector<Double_t> x;   //< []
+  std::vector<Double_t> y;   //< []
+  std::vector<Double_t> t;   //< []
+  std::vector<Double_t> tot;   //< []
+  std::vector<Double_t> tdiff;   //< []
+  std::vector<Int_t> trackindex; 
 };
 
 class SBSTimingHodoscope : public SBSGenericDetector {
@@ -43,23 +44,23 @@ public:
   virtual void    ClearEvent();
   // new functions
   Int_t   ConstructHodoscope();
-  Float_t TimeWalk(Float_t time, Float_t tot, Float_t timewalk0, Float_t timewalk1);
+  Double_t TimeWalk(Double_t time, Double_t tot, Double_t timewalk0, Double_t timewalk1);
   
   Int_t GetGoodBarsSize() {return fGoodBarIDsTDC.size();};
   std::vector<Int_t> GetGoodBarsIDs() {return fGoodBarIDsTDC;};
-  std::vector<Float_t> GetGoodBarsMeanTimes() {return fGoodBarTDCmean;};
+  std::vector<Double_t> GetGoodBarsMeanTimes() {return fGoodBarTDCmean;};
   // time diff pos is hit pos along the bar length from time diff
-  std::vector<Float_t> GetGoodBarsTimeDiffPos() {return fGoodBarTDCpos;};
-  std::vector<Float_t> GetGoodBarsVPos() {return fGoodBarTDCvpos;};
-  Float_t GetGoodBarVPosElement(Int_t i) {
+  std::vector<Double_t> GetGoodBarsTimeDiffPos() {return fGoodBarTDCpos;};
+  std::vector<Double_t> GetGoodBarsVPos() {return fGoodBarTDCvpos;};
+  Double_t GetGoodBarVPosElement(Int_t i) {
     if(i<fGoodBarTDCvpos.size())
       return fGoodBarTDCvpos[i];
     else return -999.0;};
-  Float_t GetGoodBarHPosElement(Int_t i) {
+  Double_t GetGoodBarHPosElement(Int_t i) {
     if(i<fGoodBarTDCpos.size())
       return fGoodBarTDCpos[i];
     else return -999.0;};
-  Float_t GetGoodBarMeanTimeElement(Int_t i) {
+  Double_t GetGoodBarMeanTimeElement(Int_t i) {
     if(i<fGoodBarTDCmean.size())
       return fGoodBarTDCmean[i];
     else return -999.0;};
@@ -69,12 +70,12 @@ public:
   
   Int_t GetID();
   Int_t GetSize();
-  Float_t GetX();
-  Float_t GetY();
-  Float_t GetT();
-  Float_t GetToT();
+  Double_t GetX();
+  Double_t GetY();
+  Double_t GetT();
+  Double_t GetToT();
 
-  Float_t GetVVal(std::vector<Float_t> &v, UInt_t i = 0 );
+  Double_t GetVVal(std::vector<Double_t> &v, UInt_t i = 0 );
   Int_t GetVVal(std::vector<Int_t> &v, UInt_t i = 0 );
   
   void SetDataOutputLevel(int var) { fDataOutputLevel = var; }
@@ -88,11 +89,11 @@ public:
   
   int fClusMaxSize;
   
-  Float_t AttLength = 1.0/3.8;//380cm for ej200. units per m?
+  Double_t AttLength = 1.0/3.8;//380cm for ej200. units per m?
   /* speed of light in scint? what is n for ej200 */
   // n = 1.58 => n=c/v =>v=c/n
-  Float_t n=1.58;
-  Float_t vScint = 2.9979e8/n;
+  Double_t n=1.58;
+  Double_t vScint = 2.9979e8/n;
 
   /* std::vector<SBSTimingHodoscopePMT> fPMTMap; */
   std::vector<SBSTimingHodoscopePMT*> fPMTMapL;
@@ -104,46 +105,46 @@ public:
   Int_t fTDCRefLeR;
 
   std::vector<Int_t>   fGoodBarIDsTDC;
-  std::vector<Float_t> fGoodBarTDCmean;
-  std::vector<Float_t> fGoodBarTDCdiff;
-  std::vector<Float_t> fGoodBarTDCvpos;
-  std::vector<Float_t> fGoodBarTDCpos;
-  std::vector<Float_t> fGoodBarTDCLle;
-  std::vector<Float_t> fGoodBarTDCLleW;
-  std::vector<Float_t> fGoodBarTDCLte;
-  std::vector<Float_t> fGoodBarTDCLteW;
-  std::vector<Float_t> fGoodBarTDCLtot;
-  std::vector<Float_t> fGoodBarTDCLtotW;
-  std::vector<Float_t> fGoodBarTDCRle;
-  std::vector<Float_t> fGoodBarTDCRleW;
-  std::vector<Float_t> fGoodBarTDCRte;
-  std::vector<Float_t> fGoodBarTDCRteW;
-  std::vector<Float_t> fGoodBarTDCRtot;
-  std::vector<Float_t> fGoodBarTDCRtotW;
+  std::vector<Double_t> fGoodBarTDCmean;
+  std::vector<Double_t> fGoodBarTDCdiff;
+  std::vector<Double_t> fGoodBarTDCvpos;
+  std::vector<Double_t> fGoodBarTDCpos;
+  std::vector<Double_t> fGoodBarTDCLle;
+  std::vector<Double_t> fGoodBarTDCLleW;
+  std::vector<Double_t> fGoodBarTDCLte;
+  std::vector<Double_t> fGoodBarTDCLteW;
+  std::vector<Double_t> fGoodBarTDCLtot;
+  std::vector<Double_t> fGoodBarTDCLtotW;
+  std::vector<Double_t> fGoodBarTDCRle;
+  std::vector<Double_t> fGoodBarTDCRleW;
+  std::vector<Double_t> fGoodBarTDCRte;
+  std::vector<Double_t> fGoodBarTDCRteW;
+  std::vector<Double_t> fGoodBarTDCRtot;
+  std::vector<Double_t> fGoodBarTDCRtotW;
 
   std::vector<Int_t>   fGoodBarIDsADC;
-  std::vector<Float_t> fGoodBarADCmean;
-  std::vector<Float_t> fGoodBarADCLa;
-  std::vector<Float_t> fGoodBarADCLap;
-  std::vector<Float_t> fGoodBarADCLac;
-  std::vector<Float_t> fGoodBarADCRa;
-  std::vector<Float_t> fGoodBarADCRap;
-  std::vector<Float_t> fGoodBarADCRac;
+  std::vector<Double_t> fGoodBarADCmean;
+  std::vector<Double_t> fGoodBarADCLa;
+  std::vector<Double_t> fGoodBarADCLap;
+  std::vector<Double_t> fGoodBarADCLac;
+  std::vector<Double_t> fGoodBarADCRa;
+  std::vector<Double_t> fGoodBarADCRap;
+  std::vector<Double_t> fGoodBarADCRac;
   
   //cluster output only:
   /*
   std::vector<Int_t> fClusterMult;
-  std::vector<Float_t> fClusterXmean;
-  std::vector<Float_t> fClusterYmean;
-  std::vector<Float_t> fClusterTmean;
-  std::vector<Float_t> fClusterToTmean;
+  std::vector<Double_t> fClusterXmean;
+  std::vector<Double_t> fClusterYmean;
+  std::vector<Double_t> fClusterTmean;
+  std::vector<Double_t> fClusterToTmean;
   */
   
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
   // maps of time walk parameters - in row, col, lay
-  std::vector<std::vector<std::vector<Float_t>>> fTimeWalkPar0;
-  std::vector<std::vector<std::vector<Float_t>>> fTimeWalkPar1;
+  std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar0;
+  std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar1;
   
   SBSTimingHodoscopeOutput fMainClus;
   SBSTimingHodoscopeOutput fMainClusBars;
@@ -155,7 +156,7 @@ public:
   ClassDef(SBSTimingHodoscope,5)  // Describes scintillator plane with F1TDC as a detector
 };
 
-inline Float_t SBSTimingHodoscope::GetVVal(std::vector<Float_t> &v, UInt_t i)
+inline Double_t SBSTimingHodoscope::GetVVal(std::vector<Double_t> &v, UInt_t i)
 {
   if (v.size() > i) {
     return v[i];
@@ -179,19 +180,19 @@ inline Int_t SBSTimingHodoscope::GetSize(){
   return GetVVal(fMainClus.n);
 }
 
-inline Float_t SBSTimingHodoscope::GetX(){
+inline Double_t SBSTimingHodoscope::GetX(){
   return GetVVal(fMainClus.x);
 }
 
-inline Float_t SBSTimingHodoscope::GetY(){
+inline Double_t SBSTimingHodoscope::GetY(){
   return GetVVal(fMainClus.y);
 }
 
-inline Float_t SBSTimingHodoscope::GetT(){
+inline Double_t SBSTimingHodoscope::GetT(){
   return GetVVal(fMainClus.t);
 }
   
-inline Float_t SBSTimingHodoscope::GetToT(){
+inline Double_t SBSTimingHodoscope::GetToT(){
   return GetVVal(fMainClus.tot);
 }
 

@@ -19,17 +19,19 @@ public:
     SBSTimingHodoscopeCluster(Int_t nmaxblk, SBSTimingHodoscopeBar* bar);
     virtual ~SBSTimingHodoscopeCluster();
 
-    Float_t GetXmean() const {return fXmean;}
-    Float_t GetYmean() const {return fYmean;}
-    Float_t GetTmean() const {return fTmean;}
-    Float_t GetToTmean() const {return fToTmean;}
+    Double_t GetXmean() const {return fXmean;}
+    Double_t GetYmean() const {return fYmean;}
+    Double_t GetTmean() const {return fTmean;}
+    Double_t GetToTmean() const {return fToTmean;}
+    Double_t GetTdiff() const {return fMaxElement->GetTimeDiff(); }
     
     Int_t GetNMaxElements() const {return fNMaxElements;}
-
-    void SetXmean(Float_t var) {fXmean=var;}
-    void SetYmean(Float_t var) {fYmean=var;}
-    void SetTmean(Float_t var) {fTmean=var;}
-    void SetToTmean(Float_t var) {fToTmean=var;}
+    Int_t GetMaxBarID() const { return fMaxElement->GetBarNum(); }
+    
+    void SetXmean(Double_t var) {fXmean=var;}
+    void SetYmean(Double_t var) {fYmean=var;}
+    void SetTmean(Double_t var) {fTmean=var;}
+    void SetToTmean(Double_t var) {fToTmean=var;}
     
     SBSTimingHodoscopeBar* GetElement(UInt_t i);
     std::vector<SBSTimingHodoscopeBar*>& GetElements() {return fElements;}
@@ -42,10 +44,10 @@ public:
 
 private:
 
-    Float_t fXmean;       // x position of the center
-    Float_t fYmean;       // y position of the center
-    Float_t fTmean;       // Energy deposit in block
-    Float_t fToTmean;       // Energy deposit in block
+    Double_t fXmean;       // x position of the center
+    Double_t fYmean;       // y position of the center
+    Double_t fTmean;       // Energy deposit in block
+    Double_t fToTmean;       // Energy deposit in block
     
     Int_t fMult;      // Number of bars in the cluster
     Int_t fNMaxElements;// Max number of blocks
