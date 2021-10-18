@@ -1225,7 +1225,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
   for(Int_t k = 0; k < fNRefElem; k++) {
     blk = fRefElements[k];
     if(!blk) continue;
-    if(WithTDC() && !fDisableRefTDC ) {
+    if(WithTDC() ) {
       if ( blk->TDC()->HasData()) {
     fRefGood.TDCrow.push_back(blk->GetRow());
     fRefGood.TDCcol.push_back(blk->GetCol());
@@ -1263,8 +1263,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	}
     }
     //
-    if(WithADC() && !fDisableRefADC ) {
-      if (fModeADC == SBSModeADC::kADC) {
+    //   if(WithADC() && !fDisableRefADC ) {
+    if( WithADC() && blk->HasADCData() ){
+      if (fModeADC == SBSModeADC::kADC && blk->ADC()->HasData() ) {
           if(blk->ADC()->HasData() && blk->ADC()->GetGoodHitIndex() >=0){
              fRefGood.ADCrow.push_back(blk->GetRow());
              fRefGood.ADCcol.push_back(blk->GetCol());
@@ -1321,7 +1322,8 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
               fRefRaw.a_time.push_back(hit.time.val);
              }
           }
-    } else if  (fModeADC == SBSModeADC::kWaveform ){ // Waveform mode
+	  //    } else if  (fModeADC == SBSModeADC::kWaveform ){ // Waveform mode
+      } else if( fModeADC == SBSModeADC::kWaveform && blk->Waveform()->HasData()){
         SBSData::Waveform *wave = blk->Waveform();
 	if(wave->HasData()) {		
           if(fStoreRawHits) {
