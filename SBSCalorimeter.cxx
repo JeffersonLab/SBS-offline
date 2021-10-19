@@ -84,18 +84,18 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   if( !file ) return kFileError;
 
   // Some temporary variables which we'll use to read in the database
-  //Float_t angle = 0.0;
+  //Double_t angle = 0.0;
   std::vector<Int_t> cluster_dim; // Default is 3x3 if none specified
 
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
-    { "emin",         &fEmin,   kFloat, 0, false }, ///< minimum energy threshold
+    { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
-    { "const", &fConst, kFloat, 0, true }, ///< const from gain correction 
-    { "slope", &fSlope, kFloat, 0, true }, ///< slope for gain correction 
-    { "Rmax_dis", &fRmax_dis, kFloat, 0, true }, ///< slope for gain correction 
-    { "acc_charge", &fAccCharge, kFloat, 0, true }, ///< accumulated charge
+    { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
+    { "slope", &fSlope, kDouble, 0, true }, ///< slope for gain correction 
+    { "Rmax_dis", &fRmax_dis, kDouble, 0, true }, ///< slope for gain correction 
+    { "acc_charge", &fAccCharge, kDouble, 0, true }, ///< accumulated charge
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
@@ -121,12 +121,12 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   }
 
   //
-  std::vector<Float_t> xpos,ypos;
-  std::vector<Float_t> trigtoFADCratio;
+  std::vector<Double_t> xpos,ypos;
+  std::vector<Double_t> trigtoFADCratio;
   std::vector<DBRequest> vr;
-    vr.push_back({ "xpos", &xpos,    kFloatV, 0, 1 });
-    vr.push_back({ "ypos", &ypos,    kFloatV, 0, 1 });
-    vr.push_back({ "trigtoFADCratio", &trigtoFADCratio,    kFloatV, 0, 1 });
+    vr.push_back({ "xpos", &xpos,    kDoubleV, 0, 1 });
+    vr.push_back({ "ypos", &ypos,    kDoubleV, 0, 1 });
+    vr.push_back({ "trigtoFADCratio", &trigtoFADCratio,    kDoubleV, 0, 1 });
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
   //
@@ -136,7 +136,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
 	SBSElement* blk= fElements[ne];
 	if (WithADC() && fModeADC == SBSModeADC::kWaveform) {
         SBSData::Waveform *wave = blk->Waveform();
-	Float_t gain = wave->GetGain();
+	Double_t gain = wave->GetGain();
 	wave->SetGain(gain*trigtoFADCratio[ne]);
 	wave->SetTrigCal(trigtoFADCratio[ne]);
 	}
@@ -358,7 +358,7 @@ Int_t SBSCalorimeter::FindClusters()
 	    while (!IsNeighbor && (it2 < fBlockSet.end())) {
 	      SBSElement *blk= fElements[(*it2).id-fChanMapStart]  ; 
 	      Int_t Index = fClusters.size()-1;
-	      Float_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
+	      Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
  	      IsNeighbor =( Rad<fRmax_dis );
      	      if (IsNeighbor) {
                fClusters[Index]->AddElement(blk);
