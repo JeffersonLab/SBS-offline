@@ -235,6 +235,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       { "clus_blk.x", "x-position of block in main cluster", "fMainclusblk.x"},
       { "clus_blk.y", "y-position of block in main cluster", "fMainclusblk.y"},
       { "clus_blk.row","block row in main cluster",    "fMainclusblk.row" },
+      { "clus_blk.atime","block ADC time in main cluster",    "fMainclusblk.atime" },
       { "clus_blk.col","block col in main cluster",    "fMainclusblk.col" },
       { "clus_blk.id","block number in main cluster",    "fMainclusblk.id" },
       { 0 }
@@ -248,6 +249,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     // Store every cluster
     RVarDef vars_raw[] = {
       { "clus.e", "Energy of cluster", "fOutclus.e"},
+      { "clus.atime", "ADC time of cluster", "fOutclus.atime"},
       { "clus.e_c","Energy calibrated of cluster", "fOutclus.e_c"},
       { "clus.x", "x-position of cluster", "fOutclus.x"},
       { "clus.y", "y-position of cluster", "fOutclus.y"},
@@ -475,6 +477,7 @@ void SBSCalorimeter::ClearCaloOutput(SBSCalorimeterOutput &out)
 {
   out.e.clear();
   out.e_c.clear();
+  out.atime.clear();
   out.x.clear();
   out.y.clear();
   out.row.clear();
