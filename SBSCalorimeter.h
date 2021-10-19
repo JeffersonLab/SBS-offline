@@ -21,25 +21,25 @@
 #include "THaDetMap.h"
 
 struct SBSBlockSet {
-  Float_t e;
-  Float_t x;
-  Float_t y;
+  Double_t e;
+  Double_t x;
+  Double_t y;
   Int_t row;
   Int_t col;
   Int_t id;
-  Float_t TDCTime;
-  Float_t ADCTime;
+  Double_t TDCTime;
+  Double_t ADCTime;
   Bool_t InCluster;
 };
 
 struct SBSCalBlocks {
-  std::vector<Float_t> e;   //< []
-  std::vector<Float_t> TDCTime;   //< [] 
-  std::vector<Float_t> ADCTime;   //< [] 
+  std::vector<Double_t> e;   //< []
+  std::vector<Double_t> TDCTime;   //< [] 
+  std::vector<Double_t> ADCTime;   //< [] 
   std::vector<Int_t> row; //< []
   std::vector<Int_t> col; //< []
-  std::vector<Float_t> x; //< []
-  std::vector<Float_t> y; //< []
+  std::vector<Double_t> x; //< []
+  std::vector<Double_t> y; //< []
   std::vector<Int_t>   id;      // []
   void clear() {
     e.clear();
@@ -54,16 +54,16 @@ struct SBSCalBlocks {
 };
 
 struct SBSCalorimeterOutput {
-  std::vector<Float_t> e;   //< []
-  std::vector<Float_t> atime;   //< []
-  std::vector<Float_t> e_c;   //< []
-  std::vector<Float_t> x;   //< []
-  std::vector<Float_t> y;   //< []
-  std::vector<Float_t> row; //< []
-  std::vector<Float_t> col; //< []
+  std::vector<Double_t> e;   //< []
+  std::vector<Double_t> atime;   //< []
+  std::vector<Double_t> e_c;   //< []
+  std::vector<Double_t> x;   //< []
+  std::vector<Double_t> y;   //< []
+  std::vector<Double_t> row; //< []
+  std::vector<Double_t> col; //< []
   std::vector<Int_t>   n;   // Number of elements
-  std::vector<Float_t> blk_e;   // block energy of max energy block
-  std::vector<Float_t> blk_e_c; // block corrected energy of max energy block
+  std::vector<Double_t> blk_e;   // block energy of max energy block
+  std::vector<Double_t> blk_e_c; // block corrected energy of max energy block
   std::vector<Int_t>   id;      // block id of max energy block
 };
    
@@ -82,13 +82,13 @@ public:
   virtual Int_t FindClusters();
 
   // Get information from the main cluster
-  Float_t GetE();             //< Main cluster energy
-  Float_t GetAtime();         //< Main cluster ADC time of max block
-  Float_t GetECorrected();    //< Main cluster corrected energy
-  Float_t GetX();             //< Main cluster energy average x
-  Float_t GetY();             //< Main cluster energy average y
-  Float_t GetEBlk();          //< Main cluster energy of max block in cluster
-  Float_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster
+  Double_t GetE();             //< Main cluster energy
+  Double_t GetAtime();         //< Main cluster ADC time of max block
+  Double_t GetECorrected();    //< Main cluster corrected energy
+  Double_t GetX();             //< Main cluster energy average x
+  Double_t GetY();             //< Main cluster energy average y
+  Double_t GetEBlk();          //< Main cluster energy of max block in cluster
+  Double_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster
   Int_t GetNblk();            //< Number of blocks in main cluster
   Int_t GetBlkID();           //< ID/block number of max energy block in cluster
   Int_t GetRow();             //< Main cluster row of max block
@@ -132,28 +132,28 @@ protected:
 
   // Clusters for this event
   std::vector<SBSCalorimeterCluster*> fClusters; // Cluster
-  Float_t    fEmin;         //< Minimum energy for a cluster center
-  Float_t    fXmax_dis;         //< maximum X distance from a cluster center
-  Float_t    fYmax_dis;         //< maximum Y distance from a cluster center
-  Float_t    fRmax_dis;         //< maximum radius from a cluster center
+  Double_t    fEmin;         //< Minimum energy for a cluster center
+  Double_t    fXmax_dis;         //< maximum X distance from a cluster center
+  Double_t    fYmax_dis;         //< maximum Y distance from a cluster center
+  Double_t    fRmax_dis;         //< maximum radius from a cluster center
   Int_t fMaxNclus;          //< Maximum number of clusters to store
   Bool_t fCoarseProcessed;  //< Was CourseProcessed already called?
   Bool_t fFineProcessed;    //< Was fine processed already called
 
   //Gain correction 
-  Float_t   fConst;     // const from gain correction 
-  Float_t   fSlope;     // slope for gain correction
-  Float_t   fAccCharge; // accumulated charge
+  Double_t   fConst;     // const from gain correction 
+  Double_t   fSlope;     // slope for gain correction
+  Double_t   fAccCharge; // accumulated charge
 
   // ROOTFile output level
   Int_t fDataOutputLevel;   //  0: default only main cluster info, 1: include also blocks in main cluster, 2: all clusters,  3: all blocks regardless if they are in a cluster or not
 
-  Float_t GetVVal(std::vector<Float_t> &v, UInt_t i = 0 );
+  Double_t GetVVal(std::vector<Double_t> &v, UInt_t i = 0 );
   Int_t GetVVal(std::vector<Int_t> &v, UInt_t i = 0 );
 
 private:
   // Simple and quick routine to init and clear most vectors
-  // (of integers, floats, doubles, etc...)
+  // (of integers, doubles, doubles, etc...)
   // Reset/Init 1D vector
   template<class T>
   void InitVector(std::vector<T> &vec, T val = 0, size_t n = 0) {
@@ -188,7 +188,7 @@ private:
   ClassDef(SBSCalorimeter,0)     //Generic shower detector class
 };
 
-inline Float_t SBSCalorimeter::GetVVal(std::vector<Float_t> &v, UInt_t i)
+inline Double_t SBSCalorimeter::GetVVal(std::vector<Double_t> &v, UInt_t i)
 {
   if (v.size() > i) {
     return v[i];
@@ -204,31 +204,31 @@ inline Int_t SBSCalorimeter::GetVVal(std::vector<Int_t> &v, UInt_t i)
   return 0.0;
 }
 
-inline Float_t SBSCalorimeter::GetE() {
+inline Double_t SBSCalorimeter::GetE() {
   return GetVVal(fMainclus.e);
 }
 
-inline Float_t SBSCalorimeter::GetAtime() {
+inline Double_t SBSCalorimeter::GetAtime() {
   return GetVVal(fMainclus.atime);
 }
 
-inline Float_t SBSCalorimeter::GetECorrected() {
+inline Double_t SBSCalorimeter::GetECorrected() {
   return GetVVal(fMainclus.e_c);
 }
 
-inline Float_t SBSCalorimeter::GetEBlk() {
+inline Double_t SBSCalorimeter::GetEBlk() {
   return GetVVal(fMainclus.blk_e);
 }
 
-inline Float_t SBSCalorimeter::GetEBlkCorrected() {
+inline Double_t SBSCalorimeter::GetEBlkCorrected() {
   return GetVVal(fMainclus.blk_e_c);
 }
 
-inline Float_t SBSCalorimeter::GetX() {
+inline Double_t SBSCalorimeter::GetX() {
   return GetVVal(fMainclus.x);
 }
 
-inline Float_t SBSCalorimeter::GetY() {
+inline Double_t SBSCalorimeter::GetY() {
   return GetVVal(fMainclus.y);
 }
 

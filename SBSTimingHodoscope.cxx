@@ -22,6 +22,12 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
   // SBSGenericDetector::SetStoreRawHits(true);
   fDataOutputLevel = 0;//default
   fClusMaxSize = 5;
+  fvScint = 0.454*0.299792458; //m/ns
+  //Defaults for track match cuts:
+  ftDiff0 = -1.35;  //ns
+  
+  fTrackMatchCutX = 0.05;
+  fTrackMatchCutY = 0.15;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -57,6 +63,10 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     { "timewalk1map",    &timewalkpar1,      kDoubleV, 0, false }, //parameter for time walk correction
     { "tdcbaroffset",    &tdcbaroff,         kInt,    0, true }, //to allow for cycling through sections
     { "adcbaroffset",    &adcbaroff,         kInt,    0, true }, //to allow for cycling through sections
+    { "vscint",          &fvScint, kDouble, 0, 1, 1},
+    { "tdiffoffset",     &ftDiff0, kDouble, 0, 1, 1},
+    { "trackmatchcutX",  &fTrackMatchCutX, kDouble, 0, 1, 1},
+    { "trackmatchcutY",  &fTrackMatchCutY, kDouble, 0, 1, 1},
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
@@ -206,7 +216,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   //if(fDataOutputLevel>1){
   RVarDef vars_clus[] = {
     { "allclus.size",  "cluster size",          "fOutClus.n"},
-    { "allclus.id", "cluster max bar id",     "fOutClust.id" },
+    { "allclus.id", "cluster max bar id",     "fOutClus.id" },
     { "allclus.xmean", "cluster mean X",        "fOutClus.x"},
     { "allclus.ymean", "cluster mean Y",        "fOutClus.y"},
     { "allclus.tmean", "cluster mean T",        "fOutClus.t"},
@@ -383,7 +393,14 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarTDCdiff.push_back(bartimediff);
 	// convert to position? effective velocity times time? should we divide by 2? yes
 	// Double_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
-	Double_t HorizPos = 0.5 * (bartimediff*0.1e-9) * vScint; // position from L based on timediff and in m
+	//Assuming bartimediff is in ns, then horizontal position is
+
+	//AJRP: the -sign is added because the time difference as defined here has
+	// a negative correlation with the y of transport coordinates
+	// The offset aligns this quantity with the GEM track projection to the hodoscope
+	// fvScint ~= 0.454c is the average effective propagation speed as
+	// measured by the GEM-TH correlation.
+	Double_t HorizPos = -0.5 * (bartimediff-ftDiff0) * fvScint; // position from L based on timediff and in m. 
 	fGoodBarTDCpos.push_back(HorizPos);
 	fGoodBarTDCvpos.push_back(elR->GetY());
 	
@@ -537,18 +554,21 @@ Int_t SBSTimingHodoscope::MatchTrack(THaTrack* the_track)
   
   for(int i=0; i<GetNClusters(); i++){
     SBSTimingHodoscopeCluster* clus = GetCluster(i);
-    if(clus->GetXmean()-clus->GetSize()*SizeCol()/2.<x_track && 
-       x_track<clus->GetXmean()+clus->GetSize()*SizeCol()/2. &&
-       fabs( clus->GetYmean() - y_track ) <= SizeRow()/2. ){
+    // if(clus->GetXmean()-clus->GetSize()*SizeCol()/2.<x_track && 
+    //    x_track<clus->GetXmean()+clus->GetSize()*SizeCol()/2. &&
+    //    fabs( clus->GetYmean() - y_track ) <= SizeRow()/2. ){
+    // this is more idiot-proof:
+    if( fabs( clus->GetXmean()-x_track ) <= fTrackMatchCutX &&
+	fabs( clus->GetYmean()-y_track ) <= fTrackMatchCutY ){
+    
       //later when things are calibrated we can do something like: 
-      
-      //return i;
       //the_track->SetTime(clus->GetTmean());
       if( bestmatch < 0 || fabs( clus->GetXmean() - x_track ) < minxdiff ){
 	minxdiff = fabs(clus->GetXmean() - x_track );
 	bestmatch = i;
       }
-      //choose the cluster with the smallest difference between 
+      //choose the cluster with the smallest difference between the cluster and track
+      // X (vertical) positions
     }  
   }
   return bestmatch;

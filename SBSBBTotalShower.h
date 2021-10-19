@@ -65,14 +65,14 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   
 
   // Parameters
-  Float_t    fMaxDx;       // Maximum dx between shower and preshower centers
-  Float_t    fMaxDy;       // Maximum dx between shower and preshower centers
+  Double_t    fMaxDx;       // Maximum dx between shower and preshower centers
+  Double_t    fMaxDy;       // Maximum dx between shower and preshower centers
   /*
   // Per event data
   Int_t       fNclust;      // Number of clusters
-  Float_t*    fE;           //[fNClust] Total shower energy
-  Float_t*    fX;           //[fNClust] Total shower X
-  Float_t*    fY;           //[fNClust] Total shower Y
+  Double_t*    fE;           //[fNClust] Total shower energy
+  Double_t*    fX;           //[fNClust] Total shower X
+  Double_t*    fY;           //[fNClust] Total shower Y
   Int_t*      fID;          //[fNClust] ID of Presh and Shower coincidence
   */
   

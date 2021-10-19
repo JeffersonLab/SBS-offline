@@ -236,8 +236,8 @@ Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
   DBRequest config_request[] = {
     { "components",   &components_names,   kString, 0, 1},
     { "pssh_matchmap_x",   &pssh_matchmap_x,   kIntV, 0, 1},
-    { "MaxDx",   &fMaxDx,   kFloat, 0, 1},
-    { "MaxDy",   &fMaxDy,   kFloat, 0, 1},
+    { "MaxDx",   &fMaxDx,   kDouble, 0, 1},
+    { "MaxDy",   &fMaxDy,   kDouble, 0, 1},
     { "pssh_matchmap_y",   &pssh_matchmap_y,   kIntV, 0, 1},
     { 0 }
   };
@@ -295,14 +295,14 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
   std::vector<SBSBlockSet> PreShowerBlockSet = fPreShower->GetBlockSet();
   Int_t PreShower_Nclus= 0;
   for (Int_t nc=0;nc<ShowerClusters.size();nc++) {
-    Float_t xsh = ShowerClusters[nc]->GetX();
-    Float_t ysh = ShowerClusters[nc]->GetY();
+    Double_t xsh = ShowerClusters[nc]->GetX();
+    Double_t ysh = ShowerClusters[nc]->GetY();
     Bool_t AddToPreShowerCluster = kFALSE;
     for (Int_t nps=0;nps<PreShowerBlockSet.size();nps++) {
       if (!PreShowerBlockSet[nps].InCluster) {
 	SBSElement* psblk = fPreShower->GetElement(PreShowerBlockSet[nps].id);
-	     Float_t xps =  PreShowerBlockSet[nps].x;
-	     Float_t yps =  PreShowerBlockSet[nps].y;
+	     Double_t xps =  PreShowerBlockSet[nps].x;
+	     Double_t yps =  PreShowerBlockSet[nps].y;
       Bool_t MatchCriterion = abs(xsh-xps) < fMaxDx && abs(ysh-yps) < fMaxDy;
       if (MatchCriterion) {
 	PreShowerBlockSet[nps].InCluster = kTRUE;
@@ -358,7 +358,7 @@ void SBSBBTotalShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
     ClearEvent();
     /*
   fNclust = 0;
-    fE = float(E);
+    fE = double(E);
     fX = x;
     fY = y;
     fNclust++;

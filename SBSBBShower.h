@@ -32,13 +32,13 @@ public:
   Int_t GetColMax() {return GetCol();}
 
   
-  Float_t EresMax() {return fEres;}
-  Float_t XresMax() {return fXres;}
-  Float_t YresMax() {return fYres;}
+  Double_t EresMax() {return fEres;}
+  Double_t XresMax() {return fXres;}
+  Double_t YresMax() {return fYres;}
   
-  Float_t Eres(int i) {return fE_cl_res[i];}
-  Float_t Xres(int i) {return fX_cl_res[i];}
-  Float_t Yres(int i) {return fY_cl_res[i];}
+  Double_t Eres(int i) {return fE_cl_res[i];}
+  Double_t Xres(int i) {return fX_cl_res[i];}
+  Double_t Yres(int i) {return fY_cl_res[i];}
 
     SBSElement* GetElement(UInt_t i);
     
@@ -57,18 +57,18 @@ protected:
   bool fMCdata;// easy way to enable/disable the use of MC data.
 
   // Cluster parameters Other parameters
-  Float_t fClusRadius; // radius for cluster search around the max 
+  Double_t fClusRadius; // radius for cluster search around the max 
   Int_t fClusBlockRadX;
   Int_t fClusBlockRadY;
 
-  Float_t   fEres;        // [fNclus] Energy resolution of main cluster
-  Float_t   fXres;        // [fNclus] x position (m) of main cluster
-  Float_t   fYres;        // [fNclus] y position (m) of main cluster
+  Double_t   fEres;        // [fNclus] Energy resolution of main cluster
+  Double_t   fXres;        // [fNclus] x position (m) of main cluster
+  Double_t   fYres;        // [fNclus] y position (m) of main cluster
 
-  std::vector<Float_t>   fE_cl_res;        // [fNclus] Energy resolution of clusters
-  std::vector<Float_t>   fX_cl_res;        // [fNclus] x position (m) of clusters
-  std::vector<Float_t>   fY_cl_res;        // [fNclus] y position (m) of clusters 
-  Float_t**  fEblk_cl;     // [fNclublk] Block energies composing main cluster
+  std::vector<Double_t>   fE_cl_res;        // [fNclus] Energy resolution of clusters
+  std::vector<Double_t>   fX_cl_res;        // [fNclus] x position (m) of clusters
+  std::vector<Double_t>   fY_cl_res;        // [fNclus] y position (m) of clusters 
+  Double_t**  fEblk_cl;     // [fNclublk] Block energies composing main cluster
 
   // Useful derived quantities for internal usage.
   Double_t fThrADC;
