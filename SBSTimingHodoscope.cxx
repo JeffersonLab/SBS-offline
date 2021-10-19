@@ -206,7 +206,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   //if(fDataOutputLevel>1){
   RVarDef vars_clus[] = {
     { "allclus.size",  "cluster size",          "fOutClus.n"},
-    { "allclus.id", "cluster max bar id",     "fOutClust.id" },
+    { "allclus.id", "cluster max bar id",     "fOutClus.id" },
     { "allclus.xmean", "cluster mean X",        "fOutClus.x"},
     { "allclus.ymean", "cluster mean Y",        "fOutClus.y"},
     { "allclus.tmean", "cluster mean T",        "fOutClus.t"},
