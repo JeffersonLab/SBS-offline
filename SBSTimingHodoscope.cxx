@@ -500,14 +500,14 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
       //AJRP: we should fill these variables regardless;
       // output is contolled by the odef file:
       //if(fDataOutputLevel>0){
-      for(int i = 0; i<GetCluster(i)->GetSize(); i++){
-	fMainClusBars.id.push_back(GetCluster(i)->GetElement(i)->GetBarNum());
+      for(int j = 0; j<GetCluster(i)->GetSize(); j++){
+	fMainClusBars.id.push_back(GetCluster(i)->GetElement(j)->GetBarNum());
 	fMainClusBars.n.push_back(1);
-	fMainClusBars.t.push_back(GetCluster(i)->GetElement(i)->GetMeanTime());
-	fMainClusBars.tot.push_back(GetCluster(i)->GetElement(i)->GetMeanToT());
-	fMainClusBars.tdiff.push_back(GetCluster(i)->GetElement(i)->GetTimeDiff());
-	fMainClusBars.x.push_back(GetCluster(i)->GetElement(i)->GetElementPos());
-	fMainClusBars.y.push_back(GetCluster(i)->GetElement(i)->GetHitPos());
+	fMainClusBars.t.push_back(GetCluster(i)->GetElement(j)->GetMeanTime());
+	fMainClusBars.tot.push_back(GetCluster(i)->GetElement(j)->GetMeanToT());
+	fMainClusBars.tdiff.push_back(GetCluster(i)->GetElement(j)->GetTimeDiff());
+	fMainClusBars.x.push_back(GetCluster(i)->GetElement(j)->GetElementPos());
+	fMainClusBars.y.push_back(GetCluster(i)->GetElement(j)->GetHitPos());
 	fMainClusBars.trackindex.push_back( fOutClus.trackindex[i] );
       }
     }
