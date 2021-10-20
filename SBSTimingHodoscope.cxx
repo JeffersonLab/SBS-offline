@@ -63,16 +63,22 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     { "timewalk1map",    &timewalkpar1,      kDoubleV, 0, false }, //parameter for time walk correction
     { "tdcbaroffset",    &tdcbaroff,         kInt,    0, true }, //to allow for cycling through sections
     { "adcbaroffset",    &adcbaroff,         kInt,    0, true }, //to allow for cycling through sections
-    { "vscint",          &fvScint, kDouble, 0, 1, 1},
-    { "tdiffoffset",     &ftDiff0, kDouble, 0, 1, 1},
-    { "trackmatchcutX",  &fTrackMatchCutX, kDouble, 0, 1, 1},
-    { "trackmatchcutY",  &fTrackMatchCutY, kDouble, 0, 1, 1},
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
   if(err)
     return err;
 
+  DBRequest trackmatch_params[] = {
+    { "vscint",          &fvScint, kDouble, 0, 1, 1},
+    { "tdiffoffset",     &ftDiff0, kDouble, 0, 1, 1},
+    { "trackmatchcutX",  &fTrackMatchCutX, kDouble, 0, 1, 1},
+    { "trackmatchcutY",  &fTrackMatchCutY, kDouble, 0, 1, 1},
+    { 0 }
+  };
+
+  err = LoadDB( file, date, trackmatch_params, fPrefix );
+  
   std::vector<Double_t> ypos;//position of element
   std::vector<DBRequest> vr;
   vr.push_back({ "ypos", &ypos,    kDoubleV, 0, 1 });
