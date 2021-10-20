@@ -44,7 +44,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   // Readout components needed by BBShower
   DBRequest config_request[] = {
     { "thr_adc",      &fThrADC,     kDouble,  0, true },
-    { "clus_rad",     &fClusRadius, kFloat,   0, true },
+    { "clus_rad",     &fClusRadius, kDouble,   0, true },
     { "mc_data",      &fMCdata,     kInt,     0, true },// flag for MC data
     { "dxdydz",         &dxyz,         kDoubleV, 3 },  // dx and dy block spacings
     { 0 } ///< Request must end in a NULL
