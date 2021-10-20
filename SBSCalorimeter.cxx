@@ -195,6 +195,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     { "nclus", "Number of clusters meeting threshold", "fNclus" },
     { "e",      "Energy (MeV) of largest cluster",    "GetE()" },
     { "e_c",    "Corrected Energy (MeV) of largest cluster",    "GetECorrected()" },
+    { "atimeblk", "ADC time of highest energy block in the largest cluster", "GetAtime()" },
     { "eblk",   "Energy (MeV) of highest energy block in the largest cluster",    "GetEBlk()" },
     { "eblk_c", "Corrected Energy (MeV) of highest energy block in the largest cluster",    "GetEBlkCorrected()" },
     { "rowblk", "Row of block with highest energy in the largest cluster",    "GetRow()" },
@@ -305,11 +306,13 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	 if(fModeADC != SBSModeADC::kWaveform) {
 	   const SBSData::PulseADCData &ahit = blk->ADC()->GetGoodHit();
 	   blk->SetE(ahit.integral.val);
+	   blk->SetAtime(ahit.time.val);
 	   fGoodBlocks.e.push_back(ahit.integral.val);
             fGoodBlocks.ADCTime.push_back(ahit.time.val);
 	 } else {
            SBSData::Waveform *wave = blk->Waveform();
 	   blk->SetE(wave->GetIntegral().val);
+	   blk->SetAtime(wave->GetTime().val);
 	   fGoodBlocks.e.push_back(wave->GetIntegral().val);
            fGoodBlocks.ADCTime.push_back(wave->GetTime().val);
 	 }
@@ -378,6 +381,7 @@ Int_t SBSCalorimeter::FindClusters()
     SBSCalorimeterCluster *clus = fClusters[0];
     fMainclus.e.push_back(clus->GetE());
     fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    fMainclus.atime.push_back(clus->GetAtime());
     fMainclus.x.push_back(clus->GetX());
     fMainclus.y.push_back(clus->GetY());
     fMainclus.n.push_back(clus->GetMult());
@@ -409,6 +413,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
 	SBSElement *blk= clus->GetElement(nc);
         fMainclusblk.e.push_back(blk->GetE());
         fMainclusblk.e_c.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));
+        fMainclusblk.atime.push_back(blk->GetAtime());        
         fMainclusblk.x.push_back(blk->GetX());
         fMainclusblk.y.push_back(blk->GetY());
         fMainclusblk.row.push_back(blk->GetRow());
@@ -424,6 +429,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     Int_t nres = TMath::Min(Int_t(fMaxNclus),Int_t(fClusters.size()));
     fOutclus.e.reserve(nres);
     fOutclus.e_c.reserve(nres);
+    fOutclus.atime.reserve(nres);
     fOutclus.x.reserve(nres);
     fOutclus.y.reserve(nres);
     fOutclus.n.reserve(nres);
@@ -438,6 +444,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
       if(nclus < fMaxNclus) { // Keep adding them until we reach fMaxNclus
         fOutclus.e.push_back(cluster->GetE());
         fOutclus.e_c.push_back(cluster->GetE()*(fConst + fSlope*fAccCharge));
+        fOutclus.atime.push_back(cluster->GetAtime());
         fOutclus.x.push_back(cluster->GetX());
         fOutclus.y.push_back(cluster->GetY());
         fOutclus.n.push_back(cluster->GetMult());
