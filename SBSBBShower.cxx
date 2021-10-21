@@ -50,6 +50,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
+  fclose(file);
   if(err) {
     return err;
   }

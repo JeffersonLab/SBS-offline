@@ -134,9 +134,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   
   
-  Int_t status = kInitError;
-  LoadDB( file, date, request, fPrefix );
+  Int_t err = LoadDB( file, date, request, fPrefix );
   fclose(file);
+  if( err )
+    return err;
 
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
   if( !fPedMode_DBoverride ) {
@@ -241,10 +242,6 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //     return err;
   // }
     
-  status = kOK;
-
-  if( status != kOK )
-    return status;
 
   fIsInit = kTRUE;
     
