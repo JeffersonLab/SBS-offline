@@ -130,6 +130,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
+  if(err) {
+    fclose(file);
+    return err;
+  }
 
   if(is_mc){// if this is simulated data, we do not care about the reference channel
     fIsMC = true;
@@ -144,6 +148,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
         || nlayers <= 0) ) {
     Error( Here(here), "Illegal number of rows, columns and/or layers: %d %d %d"
         ". Must be > 0. Please fix the database.", nrows, int(ncols.size()), nlayers);
+    fclose(file);
     return kInitError;
   }
   // Padd the ncols vector with a repeating pattern if not enough entries were
@@ -152,6 +157,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   for(Int_t r = ntemp, i = 0; r < nrows; r++,i++) {
     if(ncols[i%ntemp]<=0) {
       Error( Here(here), "ncols cannot have negative entries!");
+      fclose(file);
       return kInitError;
     }
     ncols.push_back(ncols[i%ntemp]);
@@ -163,6 +169,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       Error( Here(here), "Inconsistent number of entries in row_offset_pattern "
           " specified.  Expected 3*nrows = %d but got %d",3*nrows,
           int(row_offset_pattern.size()));
+      fclose(file);
       return kInitError;
     }
 
@@ -203,6 +210,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
           if(fNcols[r] != ncols[r]) {
             Error( Here(here), "Cannot re-initalize with different number of "
                 " columns ( %d != %d ) for row %d.",fNcols[r],ncols[r], r);
+            fclose(file);
             return kInitError;
           }
         }
@@ -219,8 +227,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fNlayers = nlayers;
   }
 
-  if(err)
+  if(err) {
+    fclose(file);
     return err;
+  }
 
   // Find out how many channels got skipped:
   int nskipped = 0;
@@ -256,8 +266,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     }
   }
 
-  if(err)
+  if(err) {
+    fclose(file);
     return err;
+  }
 
   if( !chanmap.empty() ) {
     // If a map is found in the database, ensure it has the correct size
@@ -385,8 +397,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   }
   // At this point, if an error has been encountered, don't bother continuing,
   // complain and return the error now.
-  if(err)
+  if(err) {
+    fclose(file);
     return err;
+  }
   //
   // ADC and TDC reference time parameters
   std::vector<Double_t> reftdc_offset, reftdc_cal, reftdc_GoodTimeCut;
@@ -438,7 +452,6 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   };
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
-
 
   // We are done reading from the file, so we can safely close it now
   fclose(file);

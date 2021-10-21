@@ -173,6 +173,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   //
   // At this point, if an error has been encountered, don't bother continuing,
   // complain and return the error now.
+  fclose(file);
   if(err)
     return err;
 

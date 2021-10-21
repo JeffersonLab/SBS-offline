@@ -131,9 +131,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   };
     
   Int_t status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
-  
+  fclose(file);
   if( status != 0 ){
-    fclose(file);
     return status;
   }
   

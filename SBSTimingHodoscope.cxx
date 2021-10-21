@@ -66,8 +66,10 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
-  if(err)
+  if(err) {
+    fclose(file);
     return err;
+  }
 
   DBRequest trackmatch_params[] = {
     { "vscint",          &fvScint, kDouble, 0, 1, 1},
@@ -78,12 +80,20 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   };
 
   err = LoadDB( file, date, trackmatch_params, fPrefix );
-  
+  if(err) {
+    fclose(file);
+    return err;
+  }
+
   std::vector<Double_t> ypos;//position of element
   std::vector<DBRequest> vr;
   vr.push_back({ "ypos", &ypos,    kDoubleV, 0, 1 });
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
+  if(err) {
+    fclose(file);
+    return err;
+  }
   if (ypos.size()>0) {
     if (ypos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
@@ -100,9 +110,12 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, misc_request, fPrefix );
-  if(err)
-    return err;  
-  
+  if(err) {
+    fclose(file);
+    return err;
+  }
+  fclose(file);
+
   // std::cout << "fNelem " << fNelem << std::endl;
   // std::cout << "timewalkpar0.size() " << timewalkpar0.size() << std::endl;
   // std::cout << "timewalkpar1.size() " << timewalkpar1.size() << std::endl;
@@ -157,10 +170,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
 
   // Make sure to call parent class so that the generic variables can be read
   // return SBSGenericDetector::ReadDatabase(date);
-  if(err)
-    return err;
-  
-  
+
   // All is well that ends well
   return kOK;
 }

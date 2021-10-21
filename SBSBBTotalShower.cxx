@@ -244,7 +244,7 @@ Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
   
   Int_t err = LoadDB( file, date, config_request, fPrefix );
 
-
+  fclose(file);
   if( err ) {
     return kInitError;
   }
