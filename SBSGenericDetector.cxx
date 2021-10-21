@@ -466,7 +466,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // Check that there were either only 1 calibratoin value specified per key
   // or fNelements
     if (!fDisableRefTDC) {
-       if(reftdc_offset.size() == 0) { // set all offset to zero
+       if(reftdc_offset.empty()) { // set all offset to zero
          ResetVector(reftdc_offset,Double_t(0.0),NRefTDCElem);
   } else if(reftdc_offset.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=reftdc_offset[0];
@@ -477,7 +477,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
        //
-       if(reftdc_GoodTimeCut.size() == 0) { // set all GoodTimeCut to zero
+       if(reftdc_GoodTimeCut.empty()) { // set all GoodTimeCut to zero
          ResetVector(reftdc_GoodTimeCut,Double_t(0.0),NRefTDCElem);
   } else if(reftdc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=reftdc_GoodTimeCut[0];
@@ -488,7 +488,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
        //
-       if(reftdc_cal.size() == 0) { // set all cal to 0.1
+       if(reftdc_cal.empty()) { // set all cal to 0.1
          ResetVector(reftdc_cal,Double_t(0.1),NRefTDCElem);
   } else if(reftdc_cal.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=reftdc_cal[0];
@@ -501,7 +501,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     }
     //
     if (!fDisableRefADC) {
-  if(refadc_ped.size() == 0) { // set all ped to zero
+  if(refadc_ped.empty()) { // set all ped to zero
     ResetVector(refadc_ped,Double_t(0.0),NRefADCElem);
   } else if(refadc_ped.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_ped[0];
@@ -512,7 +512,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_gain.size() == 0) { // set all gain to 1
+  if(refadc_gain.empty()) { // set all gain to 1
      ResetVector(refadc_gain,Double_t(1.0),NRefADCElem);
   } else if(refadc_gain.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_gain[0];
@@ -523,7 +523,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_thres.size() == 0) { // expand vector to specify calibration for all elements
+  if(refadc_thres.empty()) { // expand vector to specify calibration for all elements
     ResetVector(refadc_thres,Double_t(1.0),NRefADCElem);    
   } else if(refadc_thres.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_thres[0];
@@ -535,7 +535,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_conv.size() == 0) { // expand vector to specify calibration for all elements
+  if(refadc_conv.empty()) { // expand vector to specify calibration for all elements
     ResetVector(refadc_conv,Double_t(1.0),NRefADCElem);    
   } else if(refadc_conv.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_conv[0];
@@ -547,7 +547,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_AmpToIntRatio.size() == 0) { // expand vector to specify calibration for all elements
+  if(refadc_AmpToIntRatio.empty()) { // expand vector to specify calibration for all elements
     ResetVector(refadc_AmpToIntRatio,Double_t(1.0),NRefADCElem);    
   } else if(refadc_AmpToIntRatio.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_AmpToIntRatio[0];
@@ -559,7 +559,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_NSB.size() == 0) { // expand vector to specify calibration for all elements
+  if(refadc_NSB.empty()) { // expand vector to specify calibration for all elements
     ResetVector(refadc_NSB,3,NRefADCElem);    
   } else if(refadc_NSB.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=refadc_NSB[0];
@@ -571,7 +571,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_NSA.size() == 0) { // expand vector to specify calibration for all elements
+  if(refadc_NSA.empty()) { // expand vector to specify calibration for all elements
     ResetVector(refadc_NSA,10,NRefADCElem);    
   } else if(refadc_NSA.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=refadc_NSA[0];
@@ -583,7 +583,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_NPedBin.size() == 0) { // expand vector to specify calibration for all elements
+  if(refadc_NPedBin.empty()) { // expand vector to specify calibration for all elements
     ResetVector(refadc_NPedBin,4,NRefADCElem);    
   } else if(refadc_NPedBin.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=refadc_NPedBin[0];
@@ -595,7 +595,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(refadc_FixThresBin.size() == 0) { // expand vector to specify calibration for all elements
+  if(refadc_FixThresBin.empty()) { // expand vector to specify calibration for all elements
     ResetVector(refadc_FixThresBin,10,NRefADCElem);    
   } else if(refadc_FixThresBin.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=refadc_FixThresBin[0];
@@ -608,7 +608,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   }
     }
 
-  if(refadc_GoodTimeCut.size() == 0) { // 
+  if(refadc_GoodTimeCut.empty()) { //
     ResetVector(refadc_GoodTimeCut,Double_t(0.0),fNelem);
   } else if(refadc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_GoodTimeCut[0];
@@ -622,7 +622,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     //
     fNRefElem = NRefADCElem + NRefTDCElem;
     // Set the reference time elements
-    if (RefMode.size() > 0) {
+    if (!RefMode.empty()) {
     fRefElements.clear();
     fRefElements.resize(fNRefElem);
     for (Int_t nr=0;nr<fNRefElem;nr++) {
@@ -650,7 +650,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     }
     }
     //
-  if(tdc_offset.size() == 0) { // set all ped to zero
+  if(tdc_offset.empty()) { // set all ped to zero
     ResetVector(tdc_offset,Double_t(0.0),fNelem);
   } else if(tdc_offset.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=tdc_offset[0];
@@ -661,7 +661,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(tdc_GoodTimeCut.size() == 0) { // 
+  if(tdc_GoodTimeCut.empty()) { //
     ResetVector(tdc_GoodTimeCut,Double_t(0.0),fNelem);
   } else if(tdc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=tdc_GoodTimeCut[0];
@@ -672,7 +672,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(tdc_cal.size() == 0) { // 
+  if(tdc_cal.empty()) { //
     ResetVector(tdc_cal,Double_t(0.1),fNelem);
   } else if(tdc_cal.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=tdc_cal[0];
@@ -683,7 +683,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_ped.size() == 0) { // set all ped to zero
+  if(adc_ped.empty()) { // set all ped to zero
     ResetVector(adc_ped,Double_t(0.0),fNelem);
   } else if(adc_ped.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_ped[0];
@@ -694,7 +694,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_gain.size() == 0) { // set all gain to 1
+  if(adc_gain.empty()) { // set all gain to 1
      ResetVector(adc_gain,Double_t(1.0),fNelem);
   } else if(adc_gain.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_gain[0];
@@ -705,7 +705,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_thres.size() == 0) { // expand vector to specify calibration for all elements
+  if(adc_thres.empty()) { // expand vector to specify calibration for all elements
     ResetVector(adc_thres,Double_t(1.0),fNelem);    
   } else if(adc_thres.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_thres[0];
@@ -717,7 +717,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_conv.size() == 0) { // expand vector to specify calibration for all elements
+  if(adc_conv.empty()) { // expand vector to specify calibration for all elements
     ResetVector(adc_conv,Double_t(1.0),fNelem);    
   } else if(adc_conv.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_conv[0];
@@ -730,7 +730,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   }
 
 
-  if(adc_AmpToIntRatio.size() == 0) { // expand vector to specify calibration for all elements
+  if(adc_AmpToIntRatio.empty()) { // expand vector to specify calibration for all elements
     ResetVector(adc_AmpToIntRatio,Double_t(1.0),fNelem);    
   } else if(adc_AmpToIntRatio.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_AmpToIntRatio[0];
@@ -742,7 +742,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_NSB.size() == 0) { // expand vector to specify calibration for all elements
+  if(adc_NSB.empty()) { // expand vector to specify calibration for all elements
     ResetVector(adc_NSB,3,fNelem);    
   } else if(adc_NSB.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=adc_NSB[0];
@@ -754,7 +754,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_NSA.size() == 0) { // expand vector to specify calibration for all elements
+  if(adc_NSA.empty()) { // expand vector to specify calibration for all elements
     ResetVector(adc_NSA,10,fNelem);    
   } else if(adc_NSA.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=adc_NSA[0];
@@ -766,7 +766,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_NPedBin.size() == 0) { // expand vector to specify calibration for all elements
+  if(adc_NPedBin.empty()) { // expand vector to specify calibration for all elements
     ResetVector(adc_NPedBin,4,fNelem);    
   } else if(adc_NPedBin.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=adc_NPedBin[0];
@@ -778,7 +778,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-  if(adc_FixThresBin.size() == 0) { // expand vector to specify calibration for all elements
+  if(adc_FixThresBin.empty()) { // expand vector to specify calibration for all elements
     ResetVector(adc_FixThresBin,10,fNelem);    
   } else if(adc_FixThresBin.size() == 1) { // expand vector to specify calibration for all elements
     Int_t temp=adc_FixThresBin[0];
@@ -791,7 +791,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   }
 
 
-  if(adc_GoodTimeCut.size() == 0) { // 
+  if(adc_GoodTimeCut.empty()) { //
     ResetVector(adc_GoodTimeCut,Double_t(0.0),fNelem);
   } else if(adc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_GoodTimeCut[0];
