@@ -275,7 +275,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_PSSH_table.clear();
   fProba_pi_PSSH_table.clear();
   
-  if(pssh_pidproba.size()){
+  if(!pssh_pidproba.empty()){
     int npts = pssh_pidproba.size()/3;
     fEpsEtotRatio_table.resize(npts);
     fProba_e_PSSH_table.resize(npts);
@@ -293,7 +293,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_PCAL_table.clear();
   fProba_pi_PCAL_table.clear();
   
-  if(pcal_pidproba.size()){
+  if(!pcal_pidproba.empty()){
     int npts = pcal_pidproba.size()/3;
     fEtotPratio_table.resize(npts);
     fProba_e_PCAL_table.resize(npts);
@@ -310,7 +310,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_GRINCH_table.clear();
   fProba_pi_GRINCH_table.clear();
   
-  if(grinch_pidproba.size() && fP_table.size()){
+  if(!grinch_pidproba.empty() && fP_table.size()){
     int n_ppts = 2+fP_table.size();
     int npts = grinch_pidproba.size()/(n_ppts);
     fNGRINCHPMTs_table.resize(npts);

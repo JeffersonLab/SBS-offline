@@ -386,7 +386,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
       fPedestalU[istrip] = rawpedu[istrip];
     }else if( rawpedu.size() == fNstripsU/128 ){
       fPedestalU[istrip] = rawpedu[istrip/128];
-    }else if(rawpedu.size()){ 
+    }else if(!rawpedu.empty()){
       fPedestalU[istrip] = rawpedu[0];
     }
 
@@ -394,7 +394,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
       fPedRMSU[istrip] = rawrmsu[istrip];
     }else if( rawrmsu.size() == fNstripsU/128 ){
       fPedRMSU[istrip] = rawrmsu[istrip/128];
-    }else if(rawrmsu.size()){ 
+    }else if(!rawrmsu.empty()){
       fPedRMSU[istrip] = rawrmsu[0];
     }
  
@@ -415,7 +415,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
       fPedestalV[istrip] = rawpedv[istrip];
     }else if( rawpedv.size() == fNstripsV/128 ){
       fPedestalV[istrip] = rawpedv[istrip/128];
-    }else if(rawpedv.size()){ 
+    }else if(!rawpedv.empty()){
       fPedestalV[istrip] = rawpedv[0];
     }
 
@@ -423,7 +423,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
       fPedRMSV[istrip] = rawrmsv[istrip];
     }else if( rawrmsv.size() == fNstripsV/128 ){
       fPedRMSV[istrip] = rawrmsv[istrip/128];
-    }else if(rawrmsv.size()){ 
+    }else if(!rawrmsv.empty()){
       fPedRMSV[istrip] = rawrmsv[0];
     } 
   }

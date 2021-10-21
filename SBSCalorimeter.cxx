@@ -130,7 +130,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
   //
-  if (trigtoFADCratio.size()>0) {
+  if (!trigtoFADCratio.empty()) {
     if (trigtoFADCratio.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	SBSElement* blk= fElements[ne];
@@ -151,7 +151,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     }
   }
   //
-  if (xpos.size()>0) {
+  if (!xpos.empty()) {
     if (xpos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	fElements[ne]->SetX(xpos[ne]);
@@ -161,7 +161,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     }
   }
   //
-  if (ypos.size()>0) {
+  if (!ypos.empty()) {
     if (ypos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	fElements[ne]->SetY(ypos[ne]);
