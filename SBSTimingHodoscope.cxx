@@ -170,7 +170,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
 
   // Make sure to call parent class so that the generic variables can be read
   // return SBSGenericDetector::ReadDatabase(date);
-
+  
   // All is well that ends well
   return kOK;
 }
@@ -597,7 +597,7 @@ Int_t SBSTimingHodoscope::MatchTrack(THaTrack* the_track)
 Int_t SBSTimingHodoscope::ConstructHodoscope()
 {
   Int_t nElements = fElements.size();
-  // std::cout << "n elements " << nElements << std::endl;
+  std::cout << "n elements " << nElements << std::endl;
   if( nElements%2!=0 ) {
     Error( Here("ConstructHodoscope"),
 	   "N elements for hodoscope is not even, need an even number for a 2 sided detector analysis.");
@@ -619,8 +619,10 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 	SBSElement *blk2 = fElementGrid[r][c][l];
 	Int_t column = blk2->GetCol();
 	Int_t row = blk2->GetRow();
-	// std::cout << "row " << r << " col " << c << " l " << l  << " p " << p << std::endl;
-	// std::cout << "element column " << column << " and row " << row << std::endl;
+	if(p>=fElements.size()){
+	  std::cout << "row " << r << " col " << c << " l " << l  << " p " << p << "/" << fElements.size() << std::endl;
+	  std::cout << "element column " << column << " and row " << row << std::endl;
+	}
 	Double_t tw0 = fTimeWalkPar0[r][c][l];
 	Double_t tw1 = fTimeWalkPar1[r][c][l];
 	if(row==0){//left// could also use r index
@@ -660,21 +662,26 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
       }//lay
     }//col
   }//row ie side of hodo
-  // std::cout << "n elements in left pmt array " << fPMTMapL.size() << std::endl;
-  // std::cout << "n elements in right pmt array " << fPMTMapR.size() << std::endl;
-  // std::cout << "n elements " << nElements << std::endl;
+
+  const int nbars = nElements/2;
+  std::cout << "n elements in left pmt array " << fPMTMapL.size() << std::endl;
+  std::cout << "n elements in right pmt array " << fPMTMapR.size() << std::endl;
+  std::cout << "n elements " << nElements << ", nbars " << nbars << std::endl;
   
   // now we have the arrays of left and right pmts, we need to make the bars
-  if( fPMTMapL.size()!=fPMTMapR.size() || fPMTMapL.size()!=(nElements/2) || fPMTMapR.size()!=(nElements/2) ) {
+  if( fPMTMapL.size()!=fPMTMapR.size() || fPMTMapL.size()!=nbars || fPMTMapR.size()!=nbars) {
     Error( Here("ConstructHodoscope"),
 	   "PMT arrays for constructing hodoscope bars not of correct length");
     return kInitError;
   }
   fBars.clear();
-  for(Int_t BarInc=0; BarInc<(Int_t)(nElements/2); BarInc++){
+  //I think until here everything is fine... right?
+  
+  for(Int_t BarInc=0; BarInc<nbars; BarInc++){
+    //std::cout << BarInc << " " << nbars << std::endl;
     // bar constructor is barid, pmt left, pmt right, bar offset mostly for adc sections
     if( WithTDC() ){
-      // std::cout << fPMTMapL.at(BarInc)->GetTdcFlag() << std::endl;
+      //std::cout << fPMTMapL.at(BarInc)->GetTdcFlag() << std::endl;
       SBSTimingHodoscopeBar *bar = new SBSTimingHodoscopeBar(BarInc, fPMTMapL.at(BarInc),
 							     fPMTMapR.at(BarInc), fTDCBarOffset);
       fBars.push_back(bar);
@@ -685,8 +692,10 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
       fBars.push_back(bar);
     }//adc
   }//bar loop
-  // std::cout << "We have filled " << fBars.size() << " bars" << std::endl;
 
+  //std::cout << "We have filled " << fBars.size() << " bars" << std::endl;
+  
+  return kOK;
 }// construct hodo
 /*
  * TimeWalk()
