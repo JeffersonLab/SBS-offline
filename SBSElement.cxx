@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include "SBSElement.h"
+#include "DataType.h"
 
 ClassImp(SBSElement);
 
@@ -14,8 +15,8 @@ ClassImp(SBSElement);
 // Constructor for generic Element (no-data)
 SBSElement::SBSElement(Double_t x, Double_t y,
     Double_t z, Int_t row, Int_t col, Int_t layer, Int_t id) :
-  fX(x), fY(y), fZ(z), fRow(row), fCol(col), fLayer(layer), fStat(0), fID(id),
-  fADC(0), fTDC(0), fWaveform(0)
+  fX(x), fY(y), fZ(z), fE(0), fAtime(kBig), fRow(row), fCol(col), fLayer(layer),
+  fStat(0), fID(id), fADC(nullptr), fTDC(nullptr), fWaveform(nullptr)
 {
 }
 
@@ -53,6 +54,7 @@ void SBSElement::ClearEvent()
     fTDC->Clear();
   if(fWaveform)
     fWaveform->Clear();
+  fAtime = kBig;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

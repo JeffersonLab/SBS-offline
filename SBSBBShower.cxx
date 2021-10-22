@@ -178,8 +178,7 @@ void SBSBBShower::MakeCluster(Int_t nblk_size)
 
 void SBSBBShower::AddToCluster(Int_t nc,SBSElement* blk) 
 {
-  if (fClusters.size()>0) fClusters[nc]->AddElement(blk);
-  return;
+  if (nc < fClusters.size()) fClusters[nc]->AddElement(blk);
 }
 
 void SBSBBShower::MakeMainCluster() 
