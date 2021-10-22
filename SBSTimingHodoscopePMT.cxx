@@ -21,7 +21,6 @@ SBSTimingHodoscopePMT::~SBSTimingHodoscopePMT() {
 //_____________________________________________________________
 void SBSTimingHodoscopePMT::ClearEvent() {
   // fPMTElement = 0;
-  delete fPMTElement;
   fTimeWalkParameter0 = 0.0;
   fTimeWalkParameter1 = 0.0;
   fBarNum = 0;

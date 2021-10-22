@@ -5,6 +5,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "SBSTimingHodoscope.h"
+#include "Helper.h"
 
 ClassImp(SBSTimingHodoscope);
 
@@ -601,13 +602,16 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
     return kInitError;
   }
   // make the pmt objects
-  fPMTMapL.clear();
-  fPMTMapR.clear();
   if( fNrows!=2 ) {
     Error( Here("ConstructHodoscope"),
 	   "fNrows for hodoscope is not 2, which we need for left and right.");
     return kInitError;
   }
+  const int nbars = nElements/2;
+  DeleteContainer(fPMTMapL);
+  DeleteContainer(fPMTMapR);
+  fPMTMapL.reserve(nbars);
+  fPMTMapR.reserve(nbars);
   int p=0;
   for(int r = 0; r < fNrows; r++) {
     for(int c = 0; c < fNcols[r]; c++) {
@@ -660,7 +664,6 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
     }//col
   }//row ie side of hodo
 
-  const int nbars = nElements/2;
   std::cout << "n elements in left pmt array " << fPMTMapL.size() << std::endl;
   std::cout << "n elements in right pmt array " << fPMTMapR.size() << std::endl;
   std::cout << "n elements " << nElements << ", nbars " << nbars << std::endl;
@@ -671,9 +674,9 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 	   "PMT arrays for constructing hodoscope bars not of correct length");
     return kInitError;
   }
-  fBars.clear();
-  //I think until here everything is fine... right?
-  
+  DeleteContainer(fBars);
+  fBars.reserve(nbars);
+
   for(Int_t BarInc=0; BarInc<nbars; BarInc++){
     //std::cout << BarInc << " " << nbars << std::endl;
     // bar constructor is barid, pmt left, pmt right, bar offset mostly for adc sections
@@ -771,7 +774,9 @@ void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)
 SBSTimingHodoscope::~SBSTimingHodoscope()
 {
   // Delete any new objects/instances created here
-  ClearEvent();
+  DeleteContainer(fBars);
+  DeleteContainer(fPMTMapL);
+  DeleteContainer(fPMTMapR);
 }
 
 SBSTimingHodoscopeCluster* SBSTimingHodoscope::GetCluster(int i)

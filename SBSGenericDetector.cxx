@@ -17,6 +17,7 @@
 #include "TMath.h"
 #include "SBSManager.h"
 #include "THaCrateMap.h"
+#include "Helper.h"
 
 #include <cstring>
 #include <iostream>
@@ -49,14 +50,10 @@ SBSGenericDetector::~SBSGenericDetector()
 
   if( fIsSetup )
     RemoveVariables();
-  if( fIsInit ) {
-    // What should be cleaned?
-    for(Int_t i = 0; i < fNelem; i++) {
-      delete fElements[i];
-    }
-  }
 
-  ClearEvent();
+  fElementGrid.clear();
+  DeleteContainer(fElements);
+  DeleteContainer(fRefElements);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -614,7 +611,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fNRefElem = NRefADCElem + NRefTDCElem;
     // Set the reference time elements
     if (!RefMode.empty()) {
-    fRefElements.clear();
+    DeleteContainer(fRefElements);
     fRefElements.resize(fNRefElem);
     for (Int_t nr=0;nr<fNRefElem;nr++) {
       SBSElement *el = MakeElement(0,0,0,nr,0,0,nr);
@@ -796,7 +793,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // Before finishing, prepare vectors that will hold variable output data
   if( !fIsInit ) {
-    fElements.clear();
+    DeleteContainer(fElements);
     fElements.resize(fNelem);
     Double_t x = 0;
     Double_t y = 0;

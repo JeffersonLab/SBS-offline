@@ -275,7 +275,7 @@ void SBSCalorimeter::ClearEvent()
 {
   SBSGenericDetector::ClearEvent();
   ClearOutputVariables();
-  fClusters.clear();
+  DeleteContainer(fClusters);
   fGoodBlocks.clear();
   fBlockSet.clear();
 }
@@ -344,7 +344,7 @@ Int_t SBSCalorimeter::FindClusters()
 {
   // fBlockSet is initially ordered by energy in MakeGoodblocks
   fNclus = 0;
-  fClusters.clear();
+  DeleteContainer(fClusters);
  	//
 	Int_t NSize = fBlockSet.size();
         while ( NSize != 0 )  {

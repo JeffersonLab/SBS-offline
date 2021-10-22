@@ -12,6 +12,7 @@
 #include "SBSGEMModule.h"
 #include "THaTrack.h"
 #include "TClonesArray.h"
+#include "Helper.h"
 
 using namespace Podd;
 
@@ -181,7 +182,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   if( fModulesInitialized ){
     //first check if the size changed:
     if( fModules.size() != modules.size() ) { //If the size of the configuration changed, we know that we have to re-initialize everything!
-      fModules.clear();
+      DeleteContainer(fModules);
       fModules.resize( modules.size() );
       fModulesInitialized = false;
     } else { //size stayed the same, but we need to check if any of the names changed:
@@ -190,14 +191,14 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 	if( fModules[modcounter] ){
 
 	  std::string modname = fModules[modcounter]->GetName();
-	  if( modname.compare( *it ) != 0 ){ //name of one or more modules changed, assume we need to re-init everything:
-	    fModules.clear();
+	  if( modname != *it ){ //name of one or more modules changed, assume we need to re-init everything:
+            DeleteContainer(fModules);
 	    fModules.resize( modules.size() );
 	    fModulesInitialized = false;
 	    break;
 	  }
 	} else { //one or more modules not allocated, re-init everything:
-	  fModules.clear();
+          DeleteContainer(fModules);
 	  fModules.resize( modules.size() );
 	  fModulesInitialized = false;
 	  break;

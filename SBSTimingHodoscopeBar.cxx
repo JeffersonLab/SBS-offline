@@ -26,8 +26,6 @@ SBSTimingHodoscopeBar::~SBSTimingHodoscopeBar() {
 //_____________________________________________________________
 void SBSTimingHodoscopeBar::ClearEvent() {
   fBarNum = 0;
-  delete fLPMT;
-  delete fRPMT;
   fBarOff = 0;
 }
 //____________________________________________________________________
