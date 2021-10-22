@@ -118,55 +118,56 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     fNclubr = TMath::Min( cluster_dim[0], fNrows);
     fNclubc = TMath::Min( cluster_dim[1], fNcols[0] );
     fNclublk = fNclubr*fNclubc;
-
-  //
-  std::vector<Double_t> xpos,ypos;
-  std::vector<Double_t> trigtoFADCratio;
-  std::vector<DBRequest> vr;
+    
+    //
+    std::vector<Double_t> xpos,ypos;
+    std::vector<Double_t> trigtoFADCratio;
+    std::vector<DBRequest> vr;
     vr.push_back({ "xpos", &xpos,    kDoubleV, 0, 1 });
     vr.push_back({ "ypos", &ypos,    kDoubleV, 0, 1 });
     vr.push_back({ "trigtoFADCratio", &trigtoFADCratio,    kDoubleV, 0, 1 });
-  vr.push_back({0});
-  err = LoadDB( file, date, vr.data(), fPrefix );
-  //
-  if (!trigtoFADCratio.empty()) {
-    if (trigtoFADCratio.size() == fNelem) {
-      for (Int_t ne=0;ne<fNelem;ne++) {
-	SBSElement* blk= fElements[ne];
-	if (WithADC() && fModeADC == SBSModeADC::kWaveform) {
-        SBSData::Waveform *wave = blk->Waveform();
-	Double_t gain = wave->GetGain();
-	wave->SetGain(gain*trigtoFADCratio[ne]);
-	wave->SetTrigCal(trigtoFADCratio[ne]);
+    vr.push_back({0});
+    err = LoadDB( file, date, vr.data(), fPrefix );
+    //
+    if (!trigtoFADCratio.empty()) {
+      if (trigtoFADCratio.size() == fNelem) {
+	for (Int_t ne=0;ne<fNelem;ne++) {
+	  SBSElement* blk= fElements[ne];
+	  if (WithADC() && fModeADC == SBSModeADC::kWaveform) {
+	    SBSData::Waveform *wave = blk->Waveform();
+	    Double_t gain = wave->GetGain();
+	    wave->SetGain(gain*trigtoFADCratio[ne]);
+	    wave->SetTrigCal(trigtoFADCratio[ne]);
+	  }
+	  if (WithADC() && fModeADC == SBSModeADC::kADC) {
+	    Double_t gain=blk->ADC()->GetGain();
+	    blk->ADC()->SetGain(gain*trigtoFADCratio[ne]);
+	    blk->ADC()->SetTrigCal(trigtoFADCratio[ne]);
+	  }
 	}
-	if (WithADC() && fModeADC == SBSModeADC::kADC) {
-	Double_t gain=blk->ADC()->GetGain();
-	blk->ADC()->SetGain(gain*trigtoFADCratio[ne]);
-	blk->ADC()->SetTrigCal(trigtoFADCratio[ne]);
+      } else {
+	std::cout << " trigtoFADCratio vector too small " << trigtoFADCratio.size() << " # of elements =" << fNelem << std::endl;
+      }
+    }
+    //
+    if (!xpos.empty()) {
+      if (xpos.size() == fNelem) {
+	for (Int_t ne=0;ne<fNelem;ne++) {
+	  fElements[ne]->SetX(xpos[ne]);
 	}
+      } else {
+	std::cout << "  vector too small " << xpos.size() << " # of elements =" << fNelem << std::endl;
       }
-    } else {
-      std::cout << " trigtoFADCratio vector too small " << trigtoFADCratio.size() << " # of elements =" << fNelem << std::endl;
     }
-  }
-  //
-  if (!xpos.empty()) {
-    if (xpos.size() == fNelem) {
-      for (Int_t ne=0;ne<fNelem;ne++) {
-	fElements[ne]->SetX(xpos[ne]);
+    //
+    if (!ypos.empty()) {
+      if (ypos.size() == fNelem) {
+	for (Int_t ne=0;ne<fNelem;ne++) {
+	  fElements[ne]->SetY(ypos[ne]);
+	}
+      } else {
+	std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
       }
-    } else {
-      std::cout << "  vector too small " << xpos.size() << " # of elements =" << fNelem << std::endl;
-    }
-  }
-  //
-  if (!ypos.empty()) {
-    if (ypos.size() == fNelem) {
-      for (Int_t ne=0;ne<fNelem;ne++) {
-	fElements[ne]->SetY(ypos[ne]);
-      }
-    } else {
-      std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
     }
   }
   //
@@ -175,13 +176,13 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   fclose(file);
   if(err)
     return err;
-
+  
   // All is well that ends well
   fIsInit = true;
   return kOK;
 }
-
-//_____________________________________________________________________________
+  
+  //_____________________________________________________________________________
 Int_t SBSCalorimeter::DefineVariables( EMode mode )
 {
   if( mode == kDefine && fIsSetup ) return kOK;
