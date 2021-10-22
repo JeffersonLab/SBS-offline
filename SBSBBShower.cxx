@@ -168,14 +168,12 @@ void SBSBBShower::MakeCluster(Int_t nblk_size, SBSElement* blk)
 {
 	     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(nblk_size,blk);
 	     fClusters.push_back(cluster);
-	     return;
 }
 
 void SBSBBShower::MakeCluster(Int_t nblk_size) 
 {
 	     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(nblk_size);
 	     fClusters.push_back(cluster);
-	     return;
 }
 
 void SBSBBShower::AddToCluster(Int_t nc,SBSElement* blk) 
@@ -186,7 +184,7 @@ void SBSBBShower::AddToCluster(Int_t nc,SBSElement* blk)
 
 void SBSBBShower::MakeMainCluster() 
 {
-  if(fClusters.size()>0) {
+  if(!fClusters.empty()) {
     SBSCalorimeterCluster *clus = fClusters[0];
     fMainclus.e.push_back(clus->GetE());
     fMainclus.atime.push_back(clus->GetAtime());
@@ -202,11 +200,10 @@ void SBSBBShower::MakeMainCluster()
   }
   //
   fNclus=0;
-    for (Int_t nc=0;nc<fClusters.size();nc++) {
-      if (fClusters[nc]->GetMult()>0) fNclus++;
+  for( const auto& cluster: fClusters ) {
+    if( cluster->GetMult() > 0 ) fNclus++;
     }
   //
-  return;
 }
 
 void SBSBBShower::SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax)
@@ -235,7 +232,7 @@ void SBSBBShower::ClearEvent()
 //_____________________________________________________________
 SBSElement* SBSBBShower::GetElement(UInt_t i)
 {
-  SBSElement* blk=0;
+  SBSElement* blk=nullptr;
   if(i < fElements.size()) blk = fElements[i];
   return blk;
 }

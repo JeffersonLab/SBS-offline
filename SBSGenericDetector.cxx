@@ -1187,11 +1187,11 @@ void SBSGenericDetector::ClearEvent()
   fNGoodADChits = 0;
   fCoarseProcessed = 0;
   fFineProcessed = 0;
-  for(size_t k = 0; k < fElements.size(); k++) {
-    fElements[k]->ClearEvent();
+  for( auto& element: fElements ) {
+    element->ClearEvent();
   }
-  for(size_t k = 0; k < fRefElements.size(); k++) {
-    fRefElements[k]->ClearEvent();
+  for( auto& refElement: fRefElements ) {
+    refElement->ClearEvent();
   }
 }
 
@@ -1204,13 +1204,13 @@ void SBSGenericDetector::Clear(Option_t* opt)
   fNRefhits = 0;
   fNGoodTDChits = 0;
   fNGoodADChits = 0;
-  fCoarseProcessed = 0;
-  fFineProcessed = 0;
-  for(size_t k = 0; k < fElements.size(); k++) {
-    fElements[k]->ClearEvent();
+  fCoarseProcessed = false;
+  fFineProcessed = false;
+  for( auto& element: fElements ) {
+    element->ClearEvent();
   }
-  for(size_t k = 0; k < fRefElements.size(); k++) {
-    fRefElements[k]->ClearEvent();
+  for( auto& refElement: fRefElements ) {
+    refElement->ClearEvent();
   }
 }
 

@@ -104,7 +104,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   if( !err ) {
     // Compute the max possible cluster size (which at most should be
     // cluster_dim x cluster_dim)
-    if(cluster_dim.size() == 0) {
+    if(cluster_dim.empty()) {
       cluster_dim.push_back(3);
       cluster_dim.push_back(3);
     } else if (cluster_dim.size() < 2) {
@@ -118,7 +118,6 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     fNclubr = TMath::Min( cluster_dim[0], fNrows);
     fNclubc = TMath::Min( cluster_dim[1], fNcols[0] );
     fNclublk = fNclubr*fNclubc;
-  }
 
   //
   std::vector<Double_t> xpos,ypos;
@@ -348,7 +347,7 @@ Int_t SBSCalorimeter::FindClusters()
  	//
 	Int_t NSize = fBlockSet.size();
         while ( NSize != 0 )  {
-             if (fBlockSet.size() !=0)  std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
+             std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
 	     Bool_t AddingBlocksToCluster = kTRUE;
 	     fBlockSetIterator it = fBlockSet.begin();
 	     SBSElement *blk= fElements[(*it).id-fChanMapStart] ; 
@@ -379,7 +378,7 @@ Int_t SBSCalorimeter::FindClusters()
 	}
 	}
 	//
-  if(fClusters.size()>0) {
+  if(!fClusters.empty()) {
     SBSCalorimeterCluster *clus = fClusters[0];
     fMainclus.e.push_back(clus->GetE());
     fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
@@ -407,7 +406,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     return err;
   // Get information on the cluster with highest energy (useful even if
   // fMaxNclus is zero, i.e., storing no vector of clusters)
-  if(fClusters.size()>0) {
+  if(!fClusters.empty()) {
     SBSCalorimeterCluster *clus = fClusters[0];
  
     if(fDataOutputLevel > 0 ) {
@@ -442,7 +441,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     fOutclus.id.reserve(nres);
 
     int nclus = 0;
-    for(SBSCalorimeterCluster *cluster : fClusters) {
+    for( const auto* cluster: fClusters ) {
       if(nclus < fMaxNclus) { // Keep adding them until we reach fMaxNclus
         fOutclus.e.push_back(cluster->GetE());
         fOutclus.e_c.push_back(cluster->GetE()*(fConst + fSlope*fAccCharge));

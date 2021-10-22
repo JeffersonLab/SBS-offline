@@ -59,8 +59,7 @@ void SBSElement::ClearEvent()
 // Create a single-valued ADC data structure
 void SBSElement::SetADC(Double_t ped, Double_t gain)
 {
-  if(fADC)
-    delete fADC;
+  delete fADC;
   fADC = new SBSData::ADC(ped,gain);
 }
 
@@ -68,8 +67,7 @@ void SBSElement::SetADC(Double_t ped, Double_t gain)
 // Create a TDC data structure
 void SBSElement::SetTDC(Double_t offset, Double_t cal, Double_t GoodTimeCut)
 {
-  if(fTDC)
-    delete fTDC;
+  delete fTDC;
   fTDC = new SBSData::TDC(offset,cal,GoodTimeCut);
 }
 
@@ -77,8 +75,7 @@ void SBSElement::SetTDC(Double_t offset, Double_t cal, Double_t GoodTimeCut)
 // Create a multi-valued ADC data structure
 void SBSElement::SetWaveform(Double_t ped, Double_t gain, Double_t ChanToMv, Double_t adc_timecut)
 {
-  if(fWaveform)
-    delete fWaveform;
+  delete fWaveform;
   fWaveform = new SBSData::Waveform(ped,gain,ChanToMv,adc_timecut);
 }
 
