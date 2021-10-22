@@ -850,6 +850,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   
    
   // All is well that ends well
+  fIsInit = true;
   return kOK;
 }
 

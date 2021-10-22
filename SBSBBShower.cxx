@@ -36,6 +36,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
   if(err) {
     return err;
   }
+  fIsInit = false;
 
   FILE* file = OpenFile( date );
   if( !file ) return kFileError;
@@ -60,6 +61,7 @@ Int_t SBSBBShower::ReadDatabase( const TDatime& date )
 
   if(fMaxNclus>1)fMultClus = true;
 
+  fIsInit = true;
   return 0;
 }
 

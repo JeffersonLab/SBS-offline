@@ -70,7 +70,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   Int_t err = SBSGenericDetector::ReadDatabase(date);
   if(err)
     return err;
-
+  fIsInit = false;
 
   // Read this detector's parameters from the database file 'fi'.
   // This function is called by THaDetectorBase::Init() once at the
@@ -178,6 +178,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     return err;
 
   // All is well that ends well
+  fIsInit = true;
   return kOK;
 }
 

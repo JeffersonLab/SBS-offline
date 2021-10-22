@@ -41,6 +41,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   Int_t err = SBSGenericDetector::ReadDatabase(date);
   if(err)
     return err;
+  fIsInit = false;
 
   // If we want to add any new variables, uncomment the following and add
   // the new variables we want to read from the database
@@ -167,6 +168,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   // return SBSGenericDetector::ReadDatabase(date);
   
   // All is well that ends well
+  fIsInit = true;
   return kOK;
 }
 
