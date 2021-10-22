@@ -16,10 +16,10 @@
 class SBSElement : public TObject {
 
 public:
-  SBSElement() : fADC(0), fTDC(0), fWaveform(0) {};
+  SBSElement() : fADC(nullptr), fTDC(nullptr), fWaveform(nullptr) {};
   SBSElement(Double_t x, Double_t y, Double_t z,
       Int_t row, Int_t col, Int_t layer, Int_t id = 0);
-  virtual ~SBSElement() {}
+  virtual ~SBSElement();
 
   // Getters
   Double_t GetX()     const { return fX; }

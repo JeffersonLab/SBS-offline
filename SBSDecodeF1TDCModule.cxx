@@ -43,18 +43,11 @@ namespace Decoder {
   Module::TypeIter_t SBSDecodeF1TDCLowResModule::fgThisType =
     DoRegister( ModuleType( "Decoder::SBSDecodeF1TDCLowResModule" , 6401 ));
 
-SBSDecodeF1TDCModule::SBSDecodeF1TDCModule(Int_t crate, Int_t slot) : VmeModule(crate, slot), IsInit(0) {
-  fDebugFile=0;
-  Init();
+SBSDecodeF1TDCModule::SBSDecodeF1TDCModule(Int_t crate, Int_t slot) : VmeModule(crate, slot), IsInit(false) {
+  fDebugFile = nullptr;
 }
 
-SBSDecodeF1TDCModule::~SBSDecodeF1TDCModule() {
-  //if (fTdcData) delete [] fTdcData;
-  //if (fNumHits) delete [] fNumHits;
-  if (fTdcData.size()>0) fTdcData.clear();
-  if (fNumHits.size()>0) fNumHits.clear();
-  if(F1slots.size()>0) F1slots.clear();
-}
+SBSDecodeF1TDCModule::~SBSDecodeF1TDCModule() = default;
 
 void SBSDecodeF1TDCModule::CommonInit() {
   //fTdcData = new Int_t[NTDCCHAN*MAXHIT];
@@ -278,13 +271,13 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 SBSDecodeF1TDCLowResModule::SBSDecodeF1TDCLowResModule(Int_t crate, Int_t slot) :
   SBSDecodeF1TDCModule(crate,slot)
 {
-  Init();
+  SBSDecodeF1TDCLowResModule::Init();
 }
 
 SBSDecodeF1TDCHighResModule::SBSDecodeF1TDCHighResModule(Int_t crate, Int_t slot) :
   SBSDecodeF1TDCModule(crate,slot)
 {
-  Init();
+  SBSDecodeF1TDCHighResModule::Init();
 }
 
 

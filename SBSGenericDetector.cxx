@@ -17,6 +17,7 @@
 #include "TMath.h"
 #include "SBSManager.h"
 #include "THaCrateMap.h"
+#include "Helper.h"
 
 #include <cstring>
 #include <iostream>
@@ -34,12 +35,11 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   THaNonTrackingDetector(name,description,apparatus), fNrows(0),fNcolsMax(0),
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(true),fDisableRefTDC(true),
-  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
-  fStoreEmptyElements(false), fIsMC(false)
+  fStoreEmptyElements(false), fIsMC(false), fChanMapStart(0),
+  fCoarseProcessed(false), fFineProcessed(false),
+  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false)
 {
   // Constructor.
-  fCoarseProcessed = 0;
-  fFineProcessed = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,14 +50,10 @@ SBSGenericDetector::~SBSGenericDetector()
 
   if( fIsSetup )
     RemoveVariables();
-  if( fIsInit ) {
-    // What should be cleaned?
-    for(Int_t i = 0; i < fNelem; i++) {
-      delete fElements[i];
-    }
-  }
 
-  ClearEvent();
+  fElementGrid.clear();
+  DeleteContainer(fElements);
+  DeleteContainer(fRefElements);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -122,7 +118,6 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "nrows",        &nrows,   kInt, 1, true }, ///< [Optional] Number of rows in detector
     { "ncols",        &ncols,   kIntV, 0, false }, ///< Number of columns in detector
     { "nlayers",       &nlayers,  kInt, 1, true }, ///< [Optional] Number of layers/divisions in each element of the detector
-    { "angle",        &angle,   kDouble,  0, true },
     { "xyz",           &xyz,      kDoubleV, 3 },  ///< If only 3 values specified, then assume as stating point for fist block and distribute according to dxyz
     { "dxdydz",         &dxyz,     kDoubleV, 3},  ///< element spacing (dx,dy,dz)
     { "row_offset_pattern",        &row_offset_pattern,   kDoubleV, 0, true }, ///< [Optional] conflicts with ncols
@@ -144,8 +139,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   fSizeCol = dxyz[1];// in transport coordinates, col # varies with y axis
   
   // Sanity checks (make sure there were no inconsistent values entered.
-  if( !err && (nrows <= 0 || ncols.size() <= 0 || int(ncols.size()) > nrows 
-        || nlayers <= 0) ) {
+  if( !err && (nrows <= 0 || ncols.empty() || int(ncols.size()) > nrows || nlayers <= 0) ) {
     Error( Here(here), "Illegal number of rows, columns and/or layers: %d %d %d"
         ". Must be > 0. Please fix the database.", nrows, int(ncols.size()), nlayers);
     fclose(file);
@@ -164,7 +158,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   }
 
   // Padd the row_offset_pattern if not enough rows were specified.
-  if(row_offset_pattern.size() > 0) {
+  if(!row_offset_pattern.empty()) {
     if(int(row_offset_pattern.size()) > 3*nrows || row_offset_pattern.size()%3 != 0) {
       Error( Here(here), "Inconsistent number of entries in row_offset_pattern "
           " specified.  Expected 3*nrows = %d but got %d",3*nrows,
@@ -181,15 +175,9 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     }
   }
 
-  std::vector< std::vector<int> > vnelems;
-  vnelems.resize(nrows);
   Int_t nelem = 0;
   for(int r = 0; r < nrows; r++) {
-    vnelems[r].resize(ncols[r]);
-    for(int c = 0; c < ncols[r]; c++) {
-      vnelems[r][c] = nlayers;
-      nelem+=nlayers;
-    }
+    nelem += ncols[r]*nlayers;
   }
   // Safety check, make sure we didn't somehow change number of entries
   assert(int(ncols.size()) == nrows);
@@ -204,7 +192,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
             " nlayers(%d vs %d). Detector not re-initialized.",
             fNelem, nelem, fNrows, nrows, int(fNcols.size()), int(ncols.size()),
             fNlayers, nlayers);
-        err = kInitError;
+        fclose(file);
+        return kInitError;
       } else {
         for(int r = 0; r < nrows; r++) {
           if(fNcols[r] != ncols[r]) {
@@ -219,6 +208,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fNelem   = nelem;
     fNrows   = nrows;
     fNcols.clear();
+    fNcols.reserve(nrows);
     for(int r = 0; r < nrows; r++) {
       fNcols.push_back(ncols[r]);
       if(ncols[r]>fNcolsMax)
@@ -460,8 +450,6 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   if( err )
     return err;
 
-  // What does this do again?!?!
-  DefineAxes( angle*TMath::DegToRad() );
   std::cout << " Nreftdc = " << NRefTDCElem<< " Nrefadc = " << NRefADCElem << std::endl;
   // Check that there were either only 1 calibratoin value specified per key
   // or fNelements
@@ -623,7 +611,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fNRefElem = NRefADCElem + NRefTDCElem;
     // Set the reference time elements
     if (!RefMode.empty()) {
-    fRefElements.clear();
+    DeleteContainer(fRefElements);
     fRefElements.resize(fNRefElem);
     for (Int_t nr=0;nr<fNRefElem;nr++) {
       SBSElement *el = MakeElement(0,0,0,nr,0,0,nr);
@@ -805,7 +793,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // Before finishing, prepare vectors that will hold variable output data
   if( !fIsInit ) {
-    fElements.clear();
+    DeleteContainer(fElements);
     fElements.resize(fNelem);
     Double_t x = 0;
     Double_t y = 0;
@@ -859,6 +847,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   
    
   // All is well that ends well
+  fIsInit = true;
   return kOK;
 }
 
@@ -1198,11 +1187,11 @@ void SBSGenericDetector::ClearEvent()
   fNGoodADChits = 0;
   fCoarseProcessed = 0;
   fFineProcessed = 0;
-  for(size_t k = 0; k < fElements.size(); k++) {
-    fElements[k]->ClearEvent();
+  for( auto& element: fElements ) {
+    element->ClearEvent();
   }
-  for(size_t k = 0; k < fRefElements.size(); k++) {
-    fRefElements[k]->ClearEvent();
+  for( auto& refElement: fRefElements ) {
+    refElement->ClearEvent();
   }
 }
 
@@ -1215,13 +1204,13 @@ void SBSGenericDetector::Clear(Option_t* opt)
   fNRefhits = 0;
   fNGoodTDChits = 0;
   fNGoodADChits = 0;
-  fCoarseProcessed = 0;
-  fFineProcessed = 0;
-  for(size_t k = 0; k < fElements.size(); k++) {
-    fElements[k]->ClearEvent();
+  fCoarseProcessed = false;
+  fFineProcessed = false;
+  for( auto& element: fElements ) {
+    element->ClearEvent();
   }
-  for(size_t k = 0; k < fRefElements.size(); k++) {
-    fRefElements[k]->ClearEvent();
+  for( auto& refElement: fRefElements ) {
+    refElement->ClearEvent();
   }
 }
 

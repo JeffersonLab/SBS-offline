@@ -14,7 +14,7 @@ SBSTimingHodoscopeBar::SBSTimingHodoscopeBar( Int_t barnum,
 					      SBSTimingHodoscopePMT* leftpmt,
 					      SBSTimingHodoscopePMT* rightpmt,
 					      Int_t baroff) :
-fBarNum(barnum),fLPMT(leftpmt),fRPMT(rightpmt), fBarOff(baroff)
+fBarNum(barnum),fBarOff(baroff),fLPMT(leftpmt), fRPMT(rightpmt)
 {
 }
 
@@ -26,8 +26,6 @@ SBSTimingHodoscopeBar::~SBSTimingHodoscopeBar() {
 //_____________________________________________________________
 void SBSTimingHodoscopeBar::ClearEvent() {
   fBarNum = 0;
-  delete fLPMT;
-  delete fRPMT;
   fBarOff = 0;
 }
 //____________________________________________________________________

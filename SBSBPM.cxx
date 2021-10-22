@@ -79,7 +79,7 @@ Int_t SBSBPM::ReadDatabase( const TDatime& date )
   fRot2HCSPos(1,0) = rotations[2];
   fRot2HCSPos(1,1) = rotations[3];
 
-  printf(Form("OFFSETS for BPMs in file %d: %f, %f\n",date.GetDate(),offsets[0],offsets[1]));
+  printf("OFFSETS for BPMs in file %d: %f, %f\n",date.GetDate(),offsets[0],offsets[1]);
   return kOK;
 }
 //_____________________________________________________________________________
