@@ -78,7 +78,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
 string(REGEX REPLACE .cxx .h headers "${sources}")
 ## Append a few extra header files in the repository.  (But do not append the
 ## sbs_LinkDef.h header here, that is further down this cmake config.
-list(APPEND headers "DebugDef.h")
+list(APPEND headers "DebugDef.h" "Helper.h")
 
 ## Setup default variables (copied from Makefile)
 #FIXME: should be configure'd:

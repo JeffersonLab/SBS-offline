@@ -1272,14 +1272,3 @@ Int_t SBSSimDecoder::ChanFromROC( Int_t crate, Int_t slot, Int_t chan ) const
   return found->second;
 }
 */
-
-//-----------------------------------------------------------------------------
-//static inline Int_t NumberOfSetBits( UInt_t v )
-//{
-//  // Count number of bits set in 32-bit integer. From
-//  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-//
-//  v = v - ((v >> 1) & 0x55555555);
-//  v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-//  return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-//}
