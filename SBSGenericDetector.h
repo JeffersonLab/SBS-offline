@@ -25,6 +25,7 @@
 #include "TVector3.h"
 #include "THaDetMap.h"
 #include "SBSElement.h"
+#include "Helper.h"
 
 namespace SBSModeADC {
   enum Mode{
@@ -213,41 +214,6 @@ protected:
 
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
-
-private:
-  // Simple and quick routine to init and clear most vectors
-  // (of integers, doubles, doubles, etc...)
-  // Reset/Init 1D vector
-  template<class T>
-  void InitVector(std::vector<T> &vec, T val = 0, size_t n = 0) {
-    vec.resize(n);
-    ResetVector(vec,val);
-  }
-
-  template<class T>
-  void ResetVector(std::vector<T> &vec, T val = 0, size_t n = 0) {
-    if(n > 0) {
-      vec.clear();
-      vec.resize(n);
-    }
-    for(size_t i = 0; i < vec.size(); i++) {
-      vec[i] = val;
-    }
-  }
-
-  // Reset 2D vector
-  template<class T>
-  void ResetVector(std::vector<std::vector<T> > &vec, T val = 0,
-      size_t nr = 0, size_t nc = 0) {
-    if(nr > 0) {
-      vec.clear();
-      vec.resize(nr);
-    }
-    for(size_t i = 0; i < vec.size(); i++) {
-      ResetVector(vec[i],val,nc);
-    }
-  }
-
 
   ClassDef(SBSGenericDetector,0)     //Generic shower detector class
 };

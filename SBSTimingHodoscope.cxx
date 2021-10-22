@@ -5,6 +5,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "SBSTimingHodoscope.h"
+#include "Helper.h"
 
 ClassImp(SBSTimingHodoscope);
 
@@ -41,6 +42,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   Int_t err = SBSGenericDetector::ReadDatabase(date);
   if(err)
     return err;
+  fIsInit = false;
 
   // If we want to add any new variables, uncomment the following and add
   // the new variables we want to read from the database
@@ -51,7 +53,6 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
 
   // get time walk or other parameters from database file
   // Read mapping/geometry/configuration parameters
-  fChanMapStart = 0;
   fTDCBarOffset = 0;
   Int_t tdcbaroff = 0;
   fADCBarOffset = 0;
@@ -139,25 +140,19 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
       // std::cout << "fNRefElem " << fNRefElem << std::endl;
       fTimeWalkPar0.resize(fNrows);
       fTimeWalkPar1.resize(fNrows);
-      int rr=0;
-      int cc=0;
-      int ll=0;
       int k=0;
       for(int r = 0; r < fNrows; r++) {
-	rr = r+fChanMapStart;
 	// std::cout << "On row " << r << " fNcols " << fNcols[r] << std::endl;
 	fTimeWalkPar0[r].resize(fNcols[r]);
 	fTimeWalkPar1[r].resize(fNcols[r]);
 	for(int c = 0; c < fNcols[r]; c++) {
-	  cc = c+fChanMapStart;
+          fTimeWalkPar0[r][c].resize(fNlayers);
+          fTimeWalkPar1[r][c].resize(fNlayers);
 	  for(int l = 0; l < fNlayers; l++, k++) {
 	    // std::cout << "On col " << c << " fNlayers " << fNlayers << std::endl;
 	    // std::cout << "k " << k << std::endl;
-	    fTimeWalkPar0[r][c].resize(fNlayers);
-	    fTimeWalkPar1[r][c].resize(fNlayers);
-	    ll = l+fChanMapStart;
-	    fTimeWalkPar0[rr][cc][ll] = timewalkpar0[k];
-	    fTimeWalkPar1[rr][cc][ll] = timewalkpar1[k];
+	    fTimeWalkPar0[r][c][l] = timewalkpar0[k];
+	    fTimeWalkPar1[r][c][l] = timewalkpar1[k];
 	    // std::cout << "timewalkpar0[k] " << timewalkpar0[k] << " timewalkpar1[k] " << timewalkpar1[k] << std::endl;
 	  }//lay
 	}//col
@@ -166,12 +161,15 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   }// if tdc then get time walk into a grid if needed
 
   // call the function to build the bars
-  SBSTimingHodoscope::ConstructHodoscope();
+  err = SBSTimingHodoscope::ConstructHodoscope();
+  if(err)
+    return err;
 
   // Make sure to call parent class so that the generic variables can be read
   // return SBSGenericDetector::ReadDatabase(date);
   
   // All is well that ends well
+  fIsInit = true;
   return kOK;
 }
 
@@ -604,13 +602,16 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
     return kInitError;
   }
   // make the pmt objects
-  fPMTMapL.clear();
-  fPMTMapR.clear();
   if( fNrows!=2 ) {
     Error( Here("ConstructHodoscope"),
 	   "fNrows for hodoscope is not 2, which we need for left and right.");
     return kInitError;
   }
+  const int nbars = nElements/2;
+  DeleteContainer(fPMTMapL);
+  DeleteContainer(fPMTMapR);
+  fPMTMapL.reserve(nbars);
+  fPMTMapR.reserve(nbars);
   int p=0;
   for(int r = 0; r < fNrows; r++) {
     for(int c = 0; c < fNcols[r]; c++) {
@@ -663,7 +664,6 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
     }//col
   }//row ie side of hodo
 
-  const int nbars = nElements/2;
   std::cout << "n elements in left pmt array " << fPMTMapL.size() << std::endl;
   std::cout << "n elements in right pmt array " << fPMTMapR.size() << std::endl;
   std::cout << "n elements " << nElements << ", nbars " << nbars << std::endl;
@@ -674,9 +674,9 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 	   "PMT arrays for constructing hodoscope bars not of correct length");
     return kInitError;
   }
-  fBars.clear();
-  //I think until here everything is fine... right?
-  
+  DeleteContainer(fBars);
+  fBars.reserve(nbars);
+
   for(Int_t BarInc=0; BarInc<nbars; BarInc++){
     //std::cout << BarInc << " " << nbars << std::endl;
     // bar constructor is barid, pmt left, pmt right, bar offset mostly for adc sections
@@ -774,7 +774,9 @@ void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)
 SBSTimingHodoscope::~SBSTimingHodoscope()
 {
   // Delete any new objects/instances created here
-  ClearEvent();
+  DeleteContainer(fBars);
+  DeleteContainer(fPMTMapL);
+  DeleteContainer(fPMTMapR);
 }
 
 SBSTimingHodoscopeCluster* SBSTimingHodoscope::GetCluster(int i)

@@ -144,7 +144,6 @@ public:
   */
   
   // Mapping (see also fDetMap)
-  UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
   // maps of time walk parameters - in row, col, lay
   std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar0;
   std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar1;
