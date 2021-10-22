@@ -1003,7 +1003,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
       {"modules", &modules, kString, 0, false}, //
       { 0 }
     };
-    err+= THaAnalysisObject::LoadDB(file, date, req_modules, prefix.c_str());
+    err = THaAnalysisObject::LoadDB(file, date, req_modules, prefix.c_str());
     
     
     //cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
@@ -1196,7 +1196,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 
 //-----------------------------------------------------------------------------
 //static inline
-void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
+void SBSSimDecoder::ChanToROC(const std::string& detname, Int_t h_chan,
 			       Int_t& crate, Int_t& slot, UShort_t& chan )const 
 {
   // Convert location parameters (row, col, chan) of the given Channel
@@ -1232,7 +1232,7 @@ void SBSSimDecoder::ChanToROC(const std::string detname, Int_t h_chan,
   
 }
 
-int SBSSimDecoder::APVnum(const std::string detname, Int_t mod, Int_t h_chan, 
+int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
 			  Int_t &crate, Int_t &slot, UShort_t &chan) const
 {
   chan = h_chan%128;
@@ -1274,12 +1274,12 @@ Int_t SBSSimDecoder::ChanFromROC( Int_t crate, Int_t slot, Int_t chan ) const
 */
 
 //-----------------------------------------------------------------------------
-static inline Int_t NumberOfSetBits( UInt_t v )
-{
-  // Count number of bits set in 32-bit integer. From
-  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-
-  v = v - ((v >> 1) & 0x55555555);
-  v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-  return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-}
+//static inline Int_t NumberOfSetBits( UInt_t v )
+//{
+//  // Count number of bits set in 32-bit integer. From
+//  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+//
+//  v = v - ((v >> 1) & 0x55555555);
+//  v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+//  return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+//}

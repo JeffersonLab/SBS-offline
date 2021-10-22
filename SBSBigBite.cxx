@@ -878,7 +878,7 @@ Int_t SBSBigBite::CalcPID()
     auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
     CalcTrackPID(theTrack);
   }
-  
+  return 0;
 }
 
 //_____________________________________________________________________________
