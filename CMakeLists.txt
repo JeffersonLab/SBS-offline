@@ -151,17 +151,8 @@ if(VERBOSE)
 endif()
 
 
-if(DEFINED ENV{EVIO_INCDIR})
-  set(EVIO_INCLUDE_DIR $ENV{EVIO_INCDIR})
-  message(STATUS "Found EVIO at ${EVIO_INCLUDE_DIR}")
-else() # assuming that if the user has not specified EVIO_INCDIR, then user is using Podd's self-built EVIO installation:
-  set(EVIO_INCLUDE_DIR $ENV{ANALYZER}/include)
-  message(WARNING "No EVIO directory found. Defaulting to $ENV{ANALYZER}/include, assuming use of Podd's built-in EVIO verison...")
-endif()
 
-
-
-include_directories(${ROOT_INCLUDE_DIR} ${Podd_INCLUDE_DIR} ${EVIO_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
+include_directories(${ROOT_INCLUDE_DIR} ${Podd_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ROOT_CXX_FLAGS}")
 
 ## Generate the ROOT dictionary
