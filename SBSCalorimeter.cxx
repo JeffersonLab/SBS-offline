@@ -118,7 +118,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     fNclubr = TMath::Min( cluster_dim[0], fNrows);
     fNclubc = TMath::Min( cluster_dim[1], fNcols[0] );
     fNclublk = fNclubr*fNclubc;
-
+  }//EPAF: this bracket was removed, which induced a compiling error.. I guess the purpose was to move it but where? to l.172???
   //
   std::vector<Double_t> xpos,ypos;
   std::vector<Double_t> trigtoFADCratio;
@@ -169,6 +169,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
       std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
     }
   }
+  
   //
   // At this point, if an error has been encountered, don't bother continuing,
   // complain and return the error now.
