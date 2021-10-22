@@ -106,7 +106,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // the pattern will repeat to fill up nrows entries
   std::vector<Int_t> ncols;
   
-  bool is_mc;
+  Int_t is_mc = 0;
   
   // Read mapping/geometry/configuration parameters
   fChanMapStart = 0;

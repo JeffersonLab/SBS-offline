@@ -99,9 +99,11 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
-  
-  // Reinitialization only possible for same basic configuration
-  if( !err ) {
+  if(err) {
+    fclose(file);
+    return err;
+  }
+
     // Compute the max possible cluster size (which at most should be
     // cluster_dim x cluster_dim)
     if(cluster_dim.empty()) {
@@ -118,7 +120,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     fNclubr = TMath::Min( cluster_dim[0], fNrows);
     fNclubc = TMath::Min( cluster_dim[1], fNcols[0] );
     fNclublk = fNclubr*fNclubc;
-  }//EPAF: this bracket was removed, which induced a compiling error.. I guess the purpose was to move it but where? to l.172???
+
   //
   std::vector<Double_t> xpos,ypos;
   std::vector<Double_t> trigtoFADCratio;
@@ -128,7 +130,10 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     vr.push_back({ "trigtoFADCratio", &trigtoFADCratio,    kDoubleV, 0, 1 });
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
-  //
+  fclose(file);
+  if(err)
+    return err;
+
   if (!trigtoFADCratio.empty()) {
     if (trigtoFADCratio.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
@@ -169,13 +174,6 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
       std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
     }
   }
-  
-  //
-  // At this point, if an error has been encountered, don't bother continuing,
-  // complain and return the error now.
-  fclose(file);
-  if(err)
-    return err;
 
   // All is well that ends well
   fIsInit = true;
