@@ -34,12 +34,11 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   THaNonTrackingDetector(name,description,apparatus), fNrows(0),fNcolsMax(0),
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(true),fDisableRefTDC(true),
-  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false),
-  fStoreEmptyElements(false), fIsMC(false)
+  fStoreEmptyElements(false), fIsMC(false), fChanMapStart(0),
+  fCoarseProcessed(false), fFineProcessed(false),
+  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false)
 {
   // Constructor.
-  fCoarseProcessed = 0;
-  fFineProcessed = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -144,8 +143,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   fSizeCol = dxyz[1];// in transport coordinates, col # varies with y axis
   
   // Sanity checks (make sure there were no inconsistent values entered.
-  if( !err && (nrows <= 0 || ncols.size() <= 0 || int(ncols.size()) > nrows 
-        || nlayers <= 0) ) {
+  if( !err && (nrows <= 0 || ncols.empty() || int(ncols.size()) > nrows || nlayers <= 0) ) {
     Error( Here(here), "Illegal number of rows, columns and/or layers: %d %d %d"
         ". Must be > 0. Please fix the database.", nrows, int(ncols.size()), nlayers);
     fclose(file);
@@ -164,7 +162,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   }
 
   // Padd the row_offset_pattern if not enough rows were specified.
-  if(row_offset_pattern.size() > 0) {
+  if(!row_offset_pattern.empty()) {
     if(int(row_offset_pattern.size()) > 3*nrows || row_offset_pattern.size()%3 != 0) {
       Error( Here(here), "Inconsistent number of entries in row_offset_pattern "
           " specified.  Expected 3*nrows = %d but got %d",3*nrows,
@@ -181,15 +179,9 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     }
   }
 
-  std::vector< std::vector<int> > vnelems;
-  vnelems.resize(nrows);
   Int_t nelem = 0;
   for(int r = 0; r < nrows; r++) {
-    vnelems[r].resize(ncols[r]);
-    for(int c = 0; c < ncols[r]; c++) {
-      vnelems[r][c] = nlayers;
-      nelem+=nlayers;
-    }
+    nelem += ncols[r]*nlayers;
   }
   // Safety check, make sure we didn't somehow change number of entries
   assert(int(ncols.size()) == nrows);
@@ -204,7 +196,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
             " nlayers(%d vs %d). Detector not re-initialized.",
             fNelem, nelem, fNrows, nrows, int(fNcols.size()), int(ncols.size()),
             fNlayers, nlayers);
-        err = kInitError;
+        fclose(file);
+        return kInitError;
       } else {
         for(int r = 0; r < nrows; r++) {
           if(fNcols[r] != ncols[r]) {
@@ -219,6 +212,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fNelem   = nelem;
     fNrows   = nrows;
     fNcols.clear();
+    fNcols.reserve(nrows);
     for(int r = 0; r < nrows; r++) {
       fNcols.push_back(ncols[r]);
       if(ncols[r]>fNcolsMax)
