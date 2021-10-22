@@ -51,7 +51,6 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
 
   // get time walk or other parameters from database file
   // Read mapping/geometry/configuration parameters
-  fChanMapStart = 0;
   fTDCBarOffset = 0;
   Int_t tdcbaroff = 0;
   fADCBarOffset = 0;
@@ -139,25 +138,19 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
       // std::cout << "fNRefElem " << fNRefElem << std::endl;
       fTimeWalkPar0.resize(fNrows);
       fTimeWalkPar1.resize(fNrows);
-      int rr=0;
-      int cc=0;
-      int ll=0;
       int k=0;
       for(int r = 0; r < fNrows; r++) {
-	rr = r+fChanMapStart;
 	// std::cout << "On row " << r << " fNcols " << fNcols[r] << std::endl;
 	fTimeWalkPar0[r].resize(fNcols[r]);
 	fTimeWalkPar1[r].resize(fNcols[r]);
 	for(int c = 0; c < fNcols[r]; c++) {
-	  cc = c+fChanMapStart;
+          fTimeWalkPar0[r][c].resize(fNlayers);
+          fTimeWalkPar1[r][c].resize(fNlayers);
 	  for(int l = 0; l < fNlayers; l++, k++) {
 	    // std::cout << "On col " << c << " fNlayers " << fNlayers << std::endl;
 	    // std::cout << "k " << k << std::endl;
-	    fTimeWalkPar0[r][c].resize(fNlayers);
-	    fTimeWalkPar1[r][c].resize(fNlayers);
-	    ll = l+fChanMapStart;
-	    fTimeWalkPar0[rr][cc][ll] = timewalkpar0[k];
-	    fTimeWalkPar1[rr][cc][ll] = timewalkpar1[k];
+	    fTimeWalkPar0[r][c][l] = timewalkpar0[k];
+	    fTimeWalkPar1[r][c][l] = timewalkpar1[k];
 	    // std::cout << "timewalkpar0[k] " << timewalkpar0[k] << " timewalkpar1[k] " << timewalkpar1[k] << std::endl;
 	  }//lay
 	}//col
@@ -166,7 +159,9 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   }// if tdc then get time walk into a grid if needed
 
   // call the function to build the bars
-  SBSTimingHodoscope::ConstructHodoscope();
+  err = SBSTimingHodoscope::ConstructHodoscope();
+  if(err)
+    return err;
 
   // Make sure to call parent class so that the generic variables can be read
   // return SBSGenericDetector::ReadDatabase(date);
