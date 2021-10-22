@@ -121,7 +121,6 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "nrows",        &nrows,   kInt, 1, true }, ///< [Optional] Number of rows in detector
     { "ncols",        &ncols,   kIntV, 0, false }, ///< Number of columns in detector
     { "nlayers",       &nlayers,  kInt, 1, true }, ///< [Optional] Number of layers/divisions in each element of the detector
-    { "angle",        &angle,   kDouble,  0, true },
     { "xyz",           &xyz,      kDoubleV, 3 },  ///< If only 3 values specified, then assume as stating point for fist block and distribute according to dxyz
     { "dxdydz",         &dxyz,     kDoubleV, 3},  ///< element spacing (dx,dy,dz)
     { "row_offset_pattern",        &row_offset_pattern,   kDoubleV, 0, true }, ///< [Optional] conflicts with ncols
@@ -454,8 +453,6 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   if( err )
     return err;
 
-  // What does this do again?!?!
-  DefineAxes( angle*TMath::DegToRad() );
   std::cout << " Nreftdc = " << NRefTDCElem<< " Nrefadc = " << NRefADCElem << std::endl;
   // Check that there were either only 1 calibratoin value specified per key
   // or fNelements
