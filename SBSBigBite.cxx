@@ -36,6 +36,8 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   fFrontConstraintWidthY = 1.5;
   fBackConstraintWidthX = 1.5;
   fBackConstraintWidthY = 1.5;
+  fFrontConstraintX0 = 0.0;
+  fFrontConstraintY0 = 0.0;
   fTrackGrinchClusCorr_0 = 0.0;
   fTrackGrinchClusCorr_1 = 0.0;
   fTrackGrinchClusCorr_Sigma = 1.5;
@@ -120,6 +122,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 1, 0},
     { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 1, 0},
     { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 1, 0},
+    { "frontconstraint_x0", &fFrontConstraintX0, kDouble, 0, 1, 0},
+    { "frontconstraint_y0", &fFrontConstraintY0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_const", &fTrackGrinchClusCorr_0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_slope", &fTrackGrinchClusCorr_1, kDouble, 0, 1, 0},
     { "trackgrinchcorr_sigma", &fTrackGrinchClusCorr_Sigma, kDouble, 0, 1, 0},
@@ -575,8 +579,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	  h1_dyVdx->Fill(dx, dy);
 	*/
 	
-	fFrontConstraintX.push_back(x_fcp);
-	fFrontConstraintY.push_back(y_fcp);
+	fFrontConstraintX.push_back(x_fcp + fFrontConstraintX0);
+	fFrontConstraintY.push_back(y_fcp + fFrontConstraintY0);
 	fBackConstraintX.push_back(x_bcp);
 	fBackConstraintY.push_back(y_bcp);
 	
@@ -590,7 +594,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	  if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
 	    SBSGEMSpectrometerTracker* BBGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
 	    //std::cout << "setting constraints for tracks" << std::endl;
-	    BBGEM->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
+	    BBGEM->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
 	    BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
 	    BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
 					   fFrontConstraintWidthY);

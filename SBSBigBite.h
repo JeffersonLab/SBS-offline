@@ -89,7 +89,13 @@ class SBSBigBite : public THaSpectrometer {
     Double_t fFrontConstraintWidthY;
     Double_t fBackConstraintWidthX;
     Double_t fBackConstraintWidthY;
+    //Let's add some handy-dandy offsets for the front point only,
+    //so we can center the peaks at zero, tighten up the windows, 
+    //and get tracking to run faster until things are better calibrated:
+    Double_t fFrontConstraintX0;
+    Double_t fFrontConstraintY0; 
 
+    
     //for output only... Vectors instead?
     std::vector<double> fFrontConstraintX;
     std::vector<double> fFrontConstraintY;
