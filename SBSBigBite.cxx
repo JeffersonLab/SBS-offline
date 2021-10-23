@@ -735,7 +735,7 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
 
   TVector3 TrackPosLocal_GEM( x_fp, y_fp, 0.0 );
 
-  TVector3 TrackPosGlobal_GEM = TrackPosLocal_GEM.X() * fGEMxaxis_global + TrackPosLocal_GEM.Y() * fGEMyaxis_global + TrackPosLocal_GEM.Z() * fGEMzaxis_global;
+  TVector3 TrackPosGlobal_GEM = fGEMorigin + fTrackPosLocal_GEM.X() * fGEMxaxis_global + TrackPosLocal_GEM.Y() * fGEMyaxis_global + TrackPosLocal_GEM.Z() * fGEMzaxis_global;
   
   TVector3 TrackDirLocal_GEM( xp_fp, yp_fp, 1.0 );
   TrackDirLocal_GEM = TrackDirLocal_GEM.Unit();
