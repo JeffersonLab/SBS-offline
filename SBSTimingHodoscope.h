@@ -53,15 +53,15 @@ public:
   std::vector<Double_t> GetGoodBarsTimeDiffPos() {return fGoodBarTDCpos;};
   std::vector<Double_t> GetGoodBarsVPos() {return fGoodBarTDCvpos;};
   Double_t GetGoodBarVPosElement(Int_t i) {
-    if(i<fGoodBarTDCvpos.size())
+    if((Double_t)i<fGoodBarTDCvpos.size())
       return fGoodBarTDCvpos[i];
     else return -999.0;};
   Double_t GetGoodBarHPosElement(Int_t i) {
-    if(i<fGoodBarTDCpos.size())
+    if((Double_t)i<fGoodBarTDCpos.size())
       return fGoodBarTDCpos[i];
     else return -999.0;};
   Double_t GetGoodBarMeanTimeElement(Int_t i) {
-    if(i<fGoodBarTDCmean.size())
+    if((Double_t)i<fGoodBarTDCmean.size())
       return fGoodBarTDCmean[i];
     else return -999.0;};
   
@@ -106,7 +106,9 @@ public:
   Int_t fADCBarOffset;
   Int_t fTDCRefLeL;
   Int_t fTDCRefLeR;
-
+  Double_t fTDCWinMin;
+  Double_t fTDCWinMax;
+  
   std::vector<Int_t>   fGoodBarIDsTDC;
   std::vector<Double_t> fGoodBarTDCmean;
   std::vector<Double_t> fGoodBarTDCdiff;
