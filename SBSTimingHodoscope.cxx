@@ -439,7 +439,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	bar->SetElementPos(elR->GetY());
 	bar->SetLeftHit(hitL);
 	bar->SetRightHit(hitR);
-	}else ;
+	}
       }// tdc hit on both pmts
     }// with tdc
     // adc events
