@@ -87,7 +87,13 @@ public:
   
   void ClearHodoOutput(SBSTimingHodoscopeOutput &var);
   
+  Double_t fHorizPosBarCut;
+  Double_t fTimeRef;//? really useful?
+  Double_t fTimeBarCut;
+  
   int fClusMaxSize;
+  Double_t fMaxYposDiffCluster;// maximum Y pos difference to incorporate a new bar in a cluster 
+  Double_t fMaxTimeDiffCluster;// maximum time difference to incorporate a new bar in a cluster 
   
   Double_t AttLength = 1.0/3.8;//380cm for ej200. units per m?
   /* speed of light in scint? what is n for ej200 */
@@ -96,7 +102,7 @@ public:
   Double_t fvScint; //default to 0.454c, later we might want to define separately for different bars?
   Double_t ftDiff0; //offset of time difference to align horizontal position from time difference with horizontal projection of tracks
   Double_t fTrackMatchCutX;
-  Double_t fTrackMatchCutY; 
+  Double_t fTrackMatchCutY;
   
   /* std::vector<SBSTimingHodoscopePMT> fPMTMap; */
   std::vector<SBSTimingHodoscopePMT*> fPMTMapL;

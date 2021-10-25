@@ -22,13 +22,25 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
   SetModeADC(SBSModeADC::kNone); // Default is No ADC, but can be re-enabled later
   // SBSGenericDetector::SetStoreRawHits(true);
   fDataOutputLevel = 0;//default
+  
+  //default values for bar quality
+  fHorizPosBarCut = 0.3;//m most sensible default value
+  fTimeRef = 80.0;// ?
+  fTimeBarCut = 10.0;//
+  
+  //default values for clustering parameters:
   fClusMaxSize = 5;
+  fMaxYposDiffCluster = 0.15;//m
+  fMaxTimeDiffCluster = 10.0;//ns
+
   fvScint = 0.454*0.299792458; //m/ns
   //Defaults for track match cuts:
   ftDiff0 = -1.35;  //ns
   
   fTrackMatchCutX = 0.05;
   fTrackMatchCutY = 0.15;
+
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -71,7 +83,33 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     fclose(file);
     return err;
   }
+  
+  DBRequest barquality_params[] = {
+    { "horizposbarcut", &fHorizPosBarCut, kDouble, 0, true }, //parameter for bar horizontal position selection
+    { "timeref",      &fTimeRef,      kDouble, 0, true }, //parameter for time reference
+    { "timebarcut", &fTimeBarCut, kDouble, 0, true }, //parameter for time bar selection
+    { 0 } ///< Request must end in a NULL
+  };
 
+  err = LoadDB( file, date, barquality_params, fPrefix );
+  if(err) {
+    fclose(file);
+    return err;
+  }
+  
+  DBRequest clustering_params[] = {
+    { "maxclussize",      &fClusMaxSize,        kInt, 0, true }, //parameter for max cluster size
+    { "maxyposdiff_clus", &fMaxYposDiffCluster, kDouble, 0, true }, //parameter for max position difference for bar to be incorporated into a cluster
+    { "maxtimediff_clus", &fMaxTimeDiffCluster, kDouble, 0, true }, //parameter for max time difference for bar to be incorporated into a cluster
+    { 0 } ///< Request must end in a NULL
+  };
+
+  err = LoadDB( file, date, clustering_params, fPrefix );
+  if(err) {
+    fclose(file);
+    return err;
+  }
+  
   DBRequest trackmatch_params[] = {
     { "vscint",          &fvScint, kDouble, 0, 1, 1},
     { "tdiffoffset",     &ftDiff0, kDouble, 0, 1, 1},
@@ -106,15 +144,6 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     }
   }
   
-  DBRequest misc_request[] = {
-    { "maxclussize",    &fClusMaxSize,      kInt, 0, true }, //parameter for time walk correction
-    { 0 } ///< Request must end in a NULL
-  };
-  err = LoadDB( file, date, misc_request, fPrefix );
-  if(err) {
-    fclose(file);
-    return err;
-  }
   fclose(file);
 
   // std::cout << "fNelem " << fNelem << std::endl;
@@ -366,45 +395,30 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
       if(elL->TDC()->HasData() && elR->TDC()->HasData()){
 	//Int_t bar = BarInc;// why redeclare the index?
 	// don't need to add offset to tdc since all readout simultaneously
-	fGoodBarIDsTDC.push_back(BarInc);
 	
 	// left hit
 	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
-	fGoodBarTDCLle.push_back(hitL.le.val);
 	// fGoodBarTDCLle.push_back(hitL.le.raw);
 	//.raw is tdc bin, val is corrected using offset and ns/bin
 	Double_t LleW = SBSTimingHodoscope::TimeWalk(hitL.le.val,
 				(hitL.te.val-hitL.le.val),
 				Ltwalk0, Ltwalk1);
-	fGoodBarTDCLleW.push_back(LleW);
-	fGoodBarTDCLte.push_back(hitL.te.val);
 	Double_t LteW = SBSTimingHodoscope::TimeWalk(hitL.te.val,
 				(hitL.te.val-hitL.le.val),
 				Ltwalk0, Ltwalk1);
-	fGoodBarTDCLteW.push_back(LteW);
-	fGoodBarTDCLtot.push_back(hitL.te.val-hitL.le.val);
-	fGoodBarTDCLtotW.push_back(LteW-LleW);
 	
 	// right hit
 	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
-	fGoodBarTDCRle.push_back(hitR.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
 	Double_t RleW = SBSTimingHodoscope::TimeWalk(hitR.le.val,
 				(hitR.te.val-hitR.le.val),
 				Rtwalk0, Rtwalk1);
-	fGoodBarTDCRleW.push_back(RleW);
-	fGoodBarTDCRte.push_back(hitR.te.val);
 	Double_t RteW = SBSTimingHodoscope::TimeWalk(hitR.te.val,
 				(hitR.te.val-hitR.le.val),
 				Rtwalk0, Rtwalk1);
-	fGoodBarTDCRteW.push_back(RteW);
-	fGoodBarTDCRtot.push_back(hitR.te.val-hitR.le.val);
-	fGoodBarTDCRtotW.push_back(RteW-RleW);
 	
 	// bar properties
 	Double_t barmeantime = (LleW + RleW)/2.0;
-	fGoodBarTDCmean.push_back(barmeantime);
 	Double_t bartimediff = (LleW - RleW);
-	fGoodBarTDCdiff.push_back(bartimediff);
 	// convert to position? effective velocity times time? should we divide by 2? yes
 	// Double_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
 	//Assuming bartimediff is in ns, then horizontal position is
@@ -415,8 +429,35 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	// fvScint ~= 0.454c is the average effective propagation speed as
 	// measured by the GEM-TH correlation.
 	Double_t HorizPos = -0.5 * (bartimediff-ftDiff0) * fvScint; // position from L based on timediff and in m. 
+	
+	// check basic quality before pushing
+	if(fabs(HorizPos)>fHorizPosBarCut)continue;
+	if(fabs(barmeantime-fTimeRef)>fTimeBarCut)continue;
+	
+	fGoodBarIDsTDC.push_back(BarInc);
+	
+	fGoodBarTDCLle.push_back(hitL.le.val);
+	fGoodBarTDCLleW.push_back(LleW);
+	fGoodBarTDCLte.push_back(hitL.te.val);
+	fGoodBarTDCLteW.push_back(LteW);
+	fGoodBarTDCLtot.push_back(hitL.te.val-hitL.le.val);
+	fGoodBarTDCLtotW.push_back(LteW-LleW);
+
+	fGoodBarTDCRle.push_back(hitR.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
+	fGoodBarTDCRleW.push_back(RleW);
+	fGoodBarTDCRte.push_back(hitR.te.val);
+	fGoodBarTDCRteW.push_back(RteW);
+	fGoodBarTDCRtot.push_back(hitR.te.val-hitR.le.val);
+	fGoodBarTDCRtotW.push_back(RteW-RleW);
+	
+	fGoodBarTDCmean.push_back(barmeantime);
+	fGoodBarTDCdiff.push_back(bartimediff);
+	
 	fGoodBarTDCpos.push_back(HorizPos);
 	fGoodBarTDCvpos.push_back(elR->GetY());
+	
+	//std::cout << ((hitL.te.val-hitL.le.val)+(hitR.te.val-hitR.le.val))/2. << " " 
+	//	  << ((LteW-LleW)+(RteW-RleW))/2. << std::endl;
 	
 	bar->SetMeanTime(barmeantime);
 	bar->SetMeanToT( ((hitL.te.val-hitL.le.val)+(hitR.te.val-hitR.le.val))/2. );
@@ -535,22 +576,117 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
 
 Int_t SBSTimingHodoscope::DoClustering()
 {
-  int prev_baridx = -10;
+  //int prev_baridx = -10;
+  int halfclussize = fClusMaxSize/2;
+  
+  //vector for local maxima?
+  std::vector<int> localmax_idx;
+  localmax_idx.clear();
+  
   for(int i = 0; i<fGoodBarIDsTDC.size(); i++){
     int baridx = fGoodBarIDsTDC[i];
     SBSTimingHodoscopeBar* Bar = fBars[baridx];
-    // this below takes advantage of the fact that the bars are already sorted by ID/geometry i.e. two "good" adjacent bars are guaranteed to be stored back-to-back.
-    if(baridx-prev_baridx==1 && fClusters.size()>0){
-      if(!fClusters[fClusters.size()-1]->AddElement(Bar)){
+    //std::cout << "id: " << baridx << " mean ToT: " 
+    //<< fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i] << std::endl;
+    //find local maximum first:
+    // check for the "middle" elements
+    if(0<i && i<fGoodBarIDsTDC.size()-1){
+      // if the considered element has larger Time over Threshold than both its direct neighbors, it is considered a local maximum
+      if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) && (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) ){
+	//std::cout << " case 1 " << std::endl;
+	localmax_idx.push_back(i);
+	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
+	fClusters.push_back(clus);
+      }else if( fGoodBarIDsTDC[i+1]-baridx>1 && (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) ){
+	// if the considered element has no direct neighbor on one side, it only has to have a larger ToT than it's other neighbor to be considered a local maximum
+	//std::cout << " case 2 " << std::endl;
+	localmax_idx.push_back(i);
+	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
+	fClusters.push_back(clus);
+      }else if( baridx-fGoodBarIDsTDC[i-1]>1 && (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) ){
+	//std::cout << " case 3 " << std::endl;
+	localmax_idx.push_back(i);
+	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
+	fClusters.push_back(clus);
+      }else if(baridx-fGoodBarIDsTDC[i-1]>1 &&  fGoodBarIDsTDC[i+1]-baridx>1){
+	// if the element had no direct neighbors, it is a local maximum
+	//std::cout << " case 4 " << std::endl;
+	localmax_idx.push_back(i);
 	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
 	fClusters.push_back(clus);
       }
-    }else{
-      SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
-      fClusters.push_back(clus);
+    }else if(i==0){
+      if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) || fGoodBarIDsTDC[i+1]-baridx>1 ){
+	//check for first element
+	//std::cout << " case 5 " << std::endl;
+	localmax_idx.push_back(i);
+	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
+	fClusters.push_back(clus);
+      }
+    }else if(i==fGoodBarIDsTDC.size()-1){
+      if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) || baridx-fGoodBarIDsTDC[i-1]>1 ){
+	//check for last element
+	//std::cout << " case 6 " << std::endl;
+	localmax_idx.push_back(i);
+	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
+	fClusters.push_back(clus);
+      }
     }
-    prev_baridx = baridx;
   }
+  
+  //localmax_idx and cluster idx should be the same...
+  for(size_t i = 0; i<localmax_idx.size(); i++){
+    // setting min and max for the subindex that we will loop on 
+    // to aggregate elements around the localmax 
+    int jmin = std::max(localmax_idx[i]-halfclussize, 0);
+    int jmax = std::min(localmax_idx[i]+halfclussize, int(fGoodBarIDsTDC.size()-1));
+    //std::cout << localmax_idx[i] << " " << fGoodBarIDsTDC[localmax_idx[i]]
+    //<< " " << jmin << " " << jmax << std::endl; 
+    for(int j = jmin; j<jmax; j++){
+      if(j==localmax_idx[i])continue;//local maximum: bar is already included
+      // if the following condition is not met, 
+      // it means that there is a non-"good" bar between the local max
+      // and the considered bar.
+      //std::cout << fGoodBarIDsTDC[j]-fGoodBarIDsTDC[localmax_idx[i]] 
+      //<< " " << j-localmax_idx[i] << std::endl;
+      if(fGoodBarIDsTDC[j]-fGoodBarIDsTDC[localmax_idx[i]]!=j-localmax_idx[i])continue;
+      // check that the new element to be added is compatible with the local maximum in terms of y position and time 
+      if(fGoodBarTDCpos[j]-fGoodBarTDCpos[localmax_idx[i]]<fMaxYposDiffCluster &&
+	 fGoodBarTDCmean[j]-fGoodBarTDCmean[localmax_idx[i]]<fMaxTimeDiffCluster){
+	
+	SBSTimingHodoscopeBar* Bar = fBars[fGoodBarIDsTDC[j]];
+	fClusters[i]->AddElement(Bar);
+      }
+
+    }
+  }
+  
+  /*
+  for(size_t i = 0; i<fClusters.size(); i++){
+    std::cout << " cluster " << i 
+	      << ", size " << fClusters[i]->GetSize() 
+	      << " time " << fClusters[i]->GetTmean() 
+	      << " position " << fClusters[i]->GetYmean() 
+	      << std::endl;
+    for(int j = 0; j<fClusters[i]->GetSize(); j++){
+      std::cout << " bar id " << fClusters[i]->GetElement(j)->GetBarNum() 
+		<< " time " << fClusters[i]->GetElement(j)->GetMeanTime() 
+		<< " position " << fClusters[i]->GetElement(j)->GetHitPos()
+		<< std::endl;
+    }
+    std::cout << std::endl;
+  }
+  */
+  //   // this below takes advantage of the fact that the bars are already sorted by ID/geometry i.e. two "good" adjacent bars are guaranteed to be stored back-to-back.
+  //   if(baridx-prev_baridx==1 && fClusters.size()>0){
+  //     if(!fClusters[fClusters.size()-1]->AddElement(Bar)){
+  // 	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
+  // 	fClusters.push_back(clus);
+  //     }
+  //   }else{
+  //   }
+  //   prev_baridx = baridx;
+  // }
   return fClusters.size();
 }
 
