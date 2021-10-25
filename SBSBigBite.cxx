@@ -735,30 +735,58 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
 
   TVector3 TrackPosLocal_GEM( x_fp, y_fp, 0.0 );
 
-  TVector3 TrackPosGlobal_GEM = fGEMorigin + fTrackPosLocal_GEM.X() * fGEMxaxis_global + TrackPosLocal_GEM.Y() * fGEMyaxis_global + TrackPosLocal_GEM.Z() * fGEMzaxis_global;
+  //std::cout << "calculating optics coordinates: (xfp,yfp,xpfp,ypfp)=(" << x_fp << ", " << y_fp << ", " << xp_fp << ", " << yp_fp << ")" << std::endl;
+
+  TVector3 TrackPosGlobal_GEM = fGEMorigin + TrackPosLocal_GEM.X() * fGEMxaxis_global + TrackPosLocal_GEM.Y() * fGEMyaxis_global + TrackPosLocal_GEM.Z() * fGEMzaxis_global;
   
+  //std::cout << "Track pos global = " << endl;
+  //TrackPosGlobal_GEM.Print(); 
+
   TVector3 TrackDirLocal_GEM( xp_fp, yp_fp, 1.0 );
   TrackDirLocal_GEM = TrackDirLocal_GEM.Unit();
+
+  //  std::cout << "Track direction local = " << endl;
+
+  // TrackDirLocal_GEM.Print();
 
   TVector3 TrackDirGlobal_GEM = TrackDirLocal_GEM.X() * fGEMxaxis_global + TrackDirLocal_GEM.Y() * fGEMyaxis_global + TrackDirLocal_GEM.Z() * fGEMzaxis_global;
   TrackDirGlobal_GEM = TrackDirGlobal_GEM.Unit(); //Likely unnecessary, but safer (I guess)
   
+  //  std::cout << "Track direction global = " << endl;
+  //TrackDirGlobal_GEM.Print();
+
   //Now project track to the z = 0 plane of the ideal optics system:
   // recall the formula to intersect a ray with a plane:
   // (x + s * trackdir - x0) dot planedir = 0.0
 
   double sintersect = (fOpticsOrigin - TrackPosGlobal_GEM).Dot(fOpticsZaxis_global)/ (TrackDirGlobal_GEM.Dot( fOpticsZaxis_global ) );
 
-  TVector3 TrackIntersect_global = TrackPosGlobal_GEM + sintersect * TrackDirGlobal_GEM - fOpticsOrigin;
+  TVector3 TrackIntersect_global = TrackPosGlobal_GEM + sintersect * TrackDirGlobal_GEM;
   
+  //  std::cout << "Track intersection point, global = " << endl;
+  //TrackIntersect_global.Print();
+
   //rather than modifying the x, y, theta, phi directly, let's use the RX, RY, RTheta, and RPhi coordinates:
   //TVector3 TrackIntersect_ = TrackIntersect_global - fOpticsOrigin;
 
-  double xoptics = TrackIntersect_global.Dot( fOpticsXaxis_global );
-  double yoptics = TrackIntersect_global.Dot( fOpticsYaxis_global );
+  double xoptics = (TrackIntersect_global - fOpticsOrigin).Dot( fOpticsXaxis_global );
+  double yoptics = (TrackIntersect_global - fOpticsOrigin).Dot( fOpticsYaxis_global );
 
   double xpoptics = TrackDirGlobal_GEM.Dot( fOpticsXaxis_global )/TrackDirGlobal_GEM.Dot( fOpticsZaxis_global );
   double ypoptics = TrackDirGlobal_GEM.Dot( fOpticsYaxis_global )/TrackDirGlobal_GEM.Dot( fOpticsZaxis_global );
+
+  //std::cout << "GEM origin = " << std::endl;
+  //fGEMorigin.Print();
+  //std::cout << "Optics origin = " << std::endl;
+  //fOpticsOrigin.Print();
+
+  //std::cout << "GEM z axis global = " << std::endl;
+  //fGEMzaxis_global.Print();
+  //std::cout << "Optics z axis global = " << std::endl;
+  //fOpticsZaxis_global.Print();
+  
+  //std::cout << "GEM (x,y,xp,yp) = " << x_fp << ", " << y_fp << ", " << xp_fp << ", " << yp_fp << std::endl;
+  // std::cout << "Optics (x,y,xp,yp) = " << xoptics << ", " << yoptics << ", " << xpoptics << ", " << ypoptics << endl;
   
   track->SetR( xoptics, yoptics, xpoptics, ypoptics );
   
@@ -795,11 +823,13 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //if( fCoordType == kTransport ) {
 
   if( track->HasRot() ){
+    //    std::cout << "using rotated track coordinates for optics: " << endl;
     x_fp = track->GetRX();
     y_fp = track->GetRY();
     xp_fp = track->GetRTheta();
     yp_fp = track->GetRPhi();
   } else {
+    //std::cout << "using non-rotated track coordinates for optics: " << endl;
     x_fp = track->GetX();
     y_fp = track->GetY();
     xp_fp = track->GetTheta();
@@ -842,21 +872,33 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     }
   }
 
+  //Let's simplify the bend angle reconstruction to avoid double-counting, even though 
+  //this calculation is almost certainly correct:
+
   TVector3 phat_tgt_fit(xptar_fit, yptar_fit, 1.0 );
   phat_tgt_fit = phat_tgt_fit.Unit();
+
+  TVector3 phat_fp(xp_fp, yp_fp, 1.0 );
+  phat_fp = phat_fp.Unit();
+
+  TVector3 phat_fp_rot = phat_fp.X() * fOpticsXaxis_global + 
+    phat_fp.Y() * fOpticsYaxis_global + 
+    phat_fp.Z() * fOpticsZaxis_global; 
   
-  TVector3 phat_tgt_fit_global = phat_tgt_fit.X() * spec_xaxis_tgt +
-    phat_tgt_fit.Y() * spec_yaxis_tgt +
-    phat_tgt_fit.Z() * spec_zaxis_tgt;
+  thetabend_fit = acos( phat_fp_rot.Dot( phat_tgt_fit ) );
+
+  // TVector3 phat_tgt_fit_global = phat_tgt_fit.X() * spec_xaxis_tgt +
+  //   phat_tgt_fit.Y() * spec_yaxis_tgt +
+  //   phat_tgt_fit.Z() * spec_zaxis_tgt;
   
-  TVector3 phat_fp_fit(xp_fp, yp_fp, 1.0 );
-  phat_fp_fit = phat_fp_fit.Unit();
+  // TVector3 phat_fp_fit(xp_fp, yp_fp, 1.0 );
+  // phat_fp_fit = phat_fp_fit.Unit();
   
-  TVector3 phat_fp_fit_global = phat_fp_fit.X() * spec_xaxis_fp +
-    phat_fp_fit.Y() * spec_yaxis_fp +
-    phat_fp_fit.Z() * spec_zaxis_fp;
+  // TVector3 phat_fp_fit_global = phat_fp_fit.X() * spec_xaxis_fp +
+  //   phat_fp_fit.Y() * spec_yaxis_fp +
+  //   phat_fp_fit.Z() * spec_zaxis_fp;
   
-  thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
+  //thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
   
   p_fit = pthetabend_fit/thetabend_fit;
   vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
