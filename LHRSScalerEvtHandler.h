@@ -1,9 +1,9 @@
-#ifndef SBSScalerEvtHandler_H
-#define SBSScalerEvtHandler_H
+#ifndef LHRSScalerEvtHandler_H
+#define LHRSScalerEvtHandler_H
 
 ///////////////////////////////////////////////////////////////////
 //
-//   SBSScalerEvtHandler
+//   LHRSScalerEvtHandler
 //   Class to handle Hall A scaler events (type 140)
 //   Adapted by David Flay (flay@jlab.org), based on code from:  
 //   - THaEvtHandler (author Robert Michaels, rom@jlab.org )
@@ -20,7 +20,7 @@
 #include "TTree.h"
 #include "TString.h"  
 
-class ScalerVar { // Utility class used by SBSScalerEvtHandler
+class ScalerVar { // Utility class used by LHRSScalerEvtHandler
 public:
 	ScalerVar(TString nm, TString desc, Int_t idx, Int_t sl, Int_t ich, Int_t iki) :
 		name(nm), description(desc), index(idx), islot(sl), ichan(ich), ikind(iki) { };
@@ -30,12 +30,12 @@ public:
 	Bool_t found;
 };
 
-class SBSScalerEvtHandler : public THaEvtTypeHandler {
+class LHRSScalerEvtHandler : public THaEvtTypeHandler {
 
 public:
 
-   SBSScalerEvtHandler(const char* name, const char* description);
-   virtual ~SBSScalerEvtHandler();
+   LHRSScalerEvtHandler(const char* name, const char* description);
+   virtual ~LHRSScalerEvtHandler();
 
    virtual Int_t Analyze(THaEvData *evdata);
    virtual EStatus Init( const TDatime& run_time);
@@ -55,10 +55,10 @@ private:
    Double_t *dvars;
    TTree *fScalerTree;
 
-   SBSScalerEvtHandler(const SBSScalerEvtHandler& fh);
-   SBSScalerEvtHandler& operator=(const SBSScalerEvtHandler& fh);
+   LHRSScalerEvtHandler(const LHRSScalerEvtHandler& fh);
+   LHRSScalerEvtHandler& operator=(const LHRSScalerEvtHandler& fh);
 
-   ClassDef(SBSScalerEvtHandler,0)  // Scaler Event handler
+   ClassDef(LHRSScalerEvtHandler,0)  // Scaler Event handler
 
 };
 

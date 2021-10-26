@@ -24,17 +24,17 @@
 //      there will be no variable output to the Trees.
 //
 //   To use in the analyzer, your setup script needs something like this
-//       gHaEvtHandlers->Add (new SBSScalerEvtHandler("Left","HA scaler event type 140"));
+//       gHaEvtHandlers->Add (new LHRSScalerEvtHandler("Left","HA scaler event type 140"));
 //
 //   To enable debugging you may try this in the setup script
 // 
-//     SBSScalerEvtHandler *lscaler = new SBSScalerEvtHandler("Left","HA scaler event type 140");
+//     LHRSScalerEvtHandler *lscaler = new LHRSScalerEvtHandler("Left","HA scaler event type 140");
 //     lscaler->SetDebugFile("LeftScaler.txt");
 //     gHaEvtHandlers->Add (lscaler);
 //
 /////////////////////////////////////////////////////////////////////
 
-#include "SBSScalerEvtHandler.h"
+#include "LHRSScalerEvtHandler.h"
 
 #include "THaAnalysisObject.h"
 #include "THaEvtTypeHandler.h"
@@ -72,14 +72,14 @@ static const UInt_t MAXCHAN   = 32;
 static const UInt_t MAXTEVT   = 5000;
 static const UInt_t defaultDT = 4;
 
-SBSScalerEvtHandler::SBSScalerEvtHandler(const char *name, const char* description)
+LHRSScalerEvtHandler::LHRSScalerEvtHandler(const char *name, const char* description)
   : THaEvtTypeHandler(name,description), evcount(0), fNormIdx(-1), fNormSlot(-1),
     dvars(0), fScalerTree(0)
 {
   rdata = new UInt_t[MAXTEVT];
 }
 //______________________________________________________________________________
-SBSScalerEvtHandler::~SBSScalerEvtHandler()
+LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
 {
   delete [] rdata;
   if (fScalerTree) {
@@ -87,13 +87,13 @@ SBSScalerEvtHandler::~SBSScalerEvtHandler()
   }
 }
 //______________________________________________________________________________
-Int_t SBSScalerEvtHandler::End( THaRunBase* r)
+Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
 {
   if (fScalerTree) fScalerTree->Write();
   return 0;
 }
 //______________________________________________________________________________
-Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
+Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
 {
   Int_t lfirst=1;
 
@@ -101,7 +101,7 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
 
   if (fDebugFile) {
     *fDebugFile << endl << "---------------------------------- "<<endl<<endl;
-    *fDebugFile << "\nEnter SBSScalerEvtHandler  for fName = "<<fName<<endl;
+    *fDebugFile << "\nEnter LHRSScalerEvtHandler  for fName = "<<fName<<endl;
     EvDump(evdata);
   }
 
@@ -139,48 +139,57 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
 
   Int_t ndata = evdata->GetEvLength();
   if (ndata >= static_cast<Int_t>(MAXTEVT)) {
-	  cout << "SBSScalerEvtHandler:: ERROR: Event length crazy "<<endl;
+	  cout << "LHRSScalerEvtHandler:: ERROR: Event length crazy "<<endl;
 	  ndata = MAXTEVT-1;
   }
 
-  if (fDebugFile) *fDebugFile<<"\n\nSBSScalerEvtHandler :: Debugging event type "<<dec<<evdata->GetEvType()<<endl<<endl;
+  if (fDebugFile) *fDebugFile<<"\n\nLHRSScalerEvtHandler :: Debugging event type "<<dec<<evdata->GetEvType()<<endl<<endl;
 
   // local copy of data
-
+  // FIXME: event is ASCII, not 32-bit binary! We need to convert ASCII to 32-bit binary  
   for (Int_t i=0; i<ndata; i++) rdata[i] = evdata->GetRawData(i);
 
   Int_t nskip=0;
   UInt_t *p = rdata;
   UInt_t *pstop = rdata+ndata;
-  int j=0;
+  int k=0;
 
-  Int_t ifound = 0;
+  Int_t ifound=0;
+  Int_t itimeout=0;
+  UInt_t NScalers=0;
 
-  while (p < pstop && j < ndata) {
+  while (p < pstop && k < ndata) {
     if (fDebugFile) {
-      *fDebugFile << "p  and  pstop  "<<j++<<"   "<<p<<"   "<<pstop<<"   "<<hex<<*p<<"   "<<dec<<endl;
+      // *fDebugFile << "p  and  pstop  "<< k++ << "   " << p << "   " << pstop << "   data = " << hex << *p << "   " << dec << endl;
+      *fDebugFile << "k++ = " << k++ << " p  = " << p << " pstop = " << pstop << " data = " << hex << *p << endl;
     }
     nskip = 1;
-    Int_t itimeout=0;
-    for (UInt_t j=0; j<scalers.size(); j++) {
+    itimeout=0;
+    NScalers = scalers.size();
+    *fDebugFile << "**** NUM SCALERS = " << NScalers << std::endl;
+    for (UInt_t j=0; j<NScalers; j++) {
+       if(fDebugFile) *fDebugFile << "**** DEBUG PRINT j = " << j << " ****" << std::endl;
+       // if(fDebugFile) scalers[j]->DebugPrint(fDebugFile);
        // bump pointer until scaler found, and don't decode if already found for this event.
        if (scalerloc[j]->found) continue;
-       if (fDebugFile) *fDebugFile << "Slot "<<j<<"   "<<scalers[j]->GetSlot()<<endl;
+       if (fDebugFile) *fDebugFile << "Slot " << scalers[j]->GetSlot() << endl;
        while (p < pstop) {
           if (scalers[j]->IsSlot(*p) == kTRUE) {
                   scalerloc[j]->found=kTRUE;
                   ifound = 1;
                   goto found1;
+          }else{
+		  *fDebugFile << " ==> DID NOT FIND DATA" << std::endl;
           }
           p++;
           if (itimeout++ > 5000) { // avoid infinite loop
-                  std::cout << "SBSScalerEvtHandler:: cannot find a slot "<< std::endl;
+                  std::cout << "LHRSScalerEvtHandler:: cannot find a slot "<< std::endl;
                   goto giveup1;
           }
        }
        found1:
 	    if(p==pstop && ifound==0) break;
-            *fDebugFile << "\n[SBSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
+            *fDebugFile << "\n[LHRSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
 	    nskip = scalers[j]->Decode(p);
 	    if (fDebugFile && nskip > 1) {
 		    *fDebugFile << "\n===== Scaler # "<<j<<"     fName = "<<fName<<"   nskip = "<<nskip<<endl;
@@ -188,52 +197,53 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
 	    }
 	    if (nskip > 1) goto continue1;
        }
-      continue1:
+       continue1:
           p = p + nskip;
-        }
+       k++; 
+  }
       
-      giveup1:
-        if (fDebugFile) {
-          *fDebugFile << "Finished with decoding.  "<<endl;
-          *fDebugFile << "   Found flag   =  "<<ifound<<endl;
-        }
+  giveup1:
+    if (fDebugFile) {
+      *fDebugFile << "Finished with decoding.  "<<endl;
+      *fDebugFile << "   Found flag   =  "<<ifound<<endl;
+    }
 
-	// L-HRS has headers which are different from R-HRS, but both are
-	// event type 140 and come here.  If you found no headers, it was
-	// the other arms event type.  (The arm is fName).
-	if (!ifound) return 0;
+  // L-HRS has headers which are different from R-HRS, but both are
+  // event type 140 and come here.  If you found no headers, it was
+  // the other arms event type.  (The arm is fName).
+  if (!ifound) return 0;
 
-	// The correspondance between dvars and the scaler and the channel
-	// will be driven by a scaler.map file, or could be hard-coded.
-	for (size_t i = 0; i < scalerloc.size(); i++) {
-		size_t ivar  = scalerloc[i]->ivar;
-		size_t idx   = scalerloc[i]->index;
-		size_t ichan = scalerloc[i]->ichan;
-		if (fDebugFile) *fDebugFile << "Debug dvars "<<i<<"   "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
-		if( ivar < scalerloc.size() && idx < scalers.size() && ichan < MAXCHAN ) {
-			if (scalerloc[ivar]->ikind == ICOUNT) dvars[ivar] = scalers[idx]->GetData(ichan);
-			if (scalerloc[ivar]->ikind == IRATE)  dvars[ivar] = scalers[idx]->GetRate(ichan);
-			if (fDebugFile) *fDebugFile << "   dvars  "<<scalerloc[ivar]->ikind<<"  "<<dvars[ivar]<<endl;
-		} else {
-			cout << "SBSScalerEvtHandler:: ERROR:: incorrect index "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
-		}
-	}
+  // The correspondance between dvars and the scaler and the channel
+  // will be driven by a scaler.map file, or could be hard-coded.
+  for (size_t i = 0; i < scalerloc.size(); i++) {
+  	size_t ivar  = scalerloc[i]->ivar;
+  	size_t idx   = scalerloc[i]->index;
+  	size_t ichan = scalerloc[i]->ichan;
+  	if (fDebugFile) *fDebugFile << "Debug dvars "<<i<<"   "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
+  	if( ivar < scalerloc.size() && idx < scalers.size() && ichan < MAXCHAN ) {
+  		if (scalerloc[ivar]->ikind == ICOUNT) dvars[ivar] = scalers[idx]->GetData(ichan);
+  		if (scalerloc[ivar]->ikind == IRATE)  dvars[ivar] = scalers[idx]->GetRate(ichan);
+  		if (fDebugFile) *fDebugFile << "   dvars  "<<scalerloc[ivar]->ikind<<"  "<<dvars[ivar]<<endl;
+  	} else {
+  		cout << "LHRSScalerEvtHandler:: ERROR:: incorrect index "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
+  	}
+  }
 
-	evcount = evcount + 1.0;
-
-	for (size_t j=0; j<scalers.size(); j++) {
-		scalers[j]->Clear("");
-		scalerloc[j]->found=kFALSE;
-	}
-
-	if (fDebugFile) *fDebugFile << "scaler tree ptr  "<<fScalerTree<<endl;
-
-	if (fScalerTree) fScalerTree->Fill();
-
-	return 1;
+  evcount = evcount + 1.0;
+  
+  for (size_t j=0; j<scalers.size(); j++) {
+  	scalers[j]->Clear("");
+  	scalerloc[j]->found=kFALSE;
+  }
+  
+  if (fDebugFile) *fDebugFile << "scaler tree ptr  "<<fScalerTree<<endl;
+  
+  if (fScalerTree) fScalerTree->Fill();
+  
+  return 1;
 }
 //______________________________________________________________________________
-THaAnalysisObject::EStatus SBSScalerEvtHandler::Init(const TDatime& date)
+THaAnalysisObject::EStatus LHRSScalerEvtHandler::Init(const TDatime& date)
 {
   const int LEN = 200;
   char cbuf[LEN];
@@ -241,7 +251,7 @@ THaAnalysisObject::EStatus SBSScalerEvtHandler::Init(const TDatime& date)
   fStatus = kOK;
   fNormIdx = -1;
 
-  std::cout << "[SBSScalerEventHandler::Init]: Initializing " << fName << "..." << std::endl;
+  std::cout << "[LHRSScalerEventHandler::Init]: Initializing " << fName << "..." << std::endl;
 
   eventtypes.push_back(140);  // what events to look for
 
@@ -292,7 +302,7 @@ THaAnalysisObject::EStatus SBSScalerEvtHandler::Init(const TDatime& date)
            	  UInt_t header, mask;
            	  char cdum[20];
            	  sscanf(sinput.c_str(),"%s %d %d %d %x %x %d \n",cdum,&imodel,&icrate,&islot, &header, &mask, &inorm);
-           	  if (fNormSlot >= 0 && fNormSlot != inorm) cout << "SBSScalerEvtHandler:: WARN: contradictory norm slot "<<inorm<<endl;
+           	  if (fNormSlot >= 0 && fNormSlot != inorm) cout << "LHRSScalerEvtHandler:: WARN: contradictory norm slot "<<inorm<<endl;
            	  fNormSlot = inorm;  // slot number used for normalization.  This variable is not used but is checked.
            	  Int_t clkchan = -1;
            	  Double_t clkfreq = 1;
@@ -318,7 +328,7 @@ THaAnalysisObject::EStatus SBSScalerEvtHandler::Init(const TDatime& date)
            			  scalers.push_back(new Scaler3801(icrate, islot));
            			  break;
            		  default: 
-           			  std::cout << "SBSScalerEvtHandler:: ERROR: Invalid model " << imodel << std::endl;
+           			  std::cout << "LHRSScalerEvtHandler:: ERROR: Invalid model " << imodel << std::endl;
            	  }
            	  if (scalers.size() > 0) {
            		  UInt_t idx = scalers.size()-1;
@@ -329,7 +339,7 @@ THaAnalysisObject::EStatus SBSScalerEvtHandler::Init(const TDatime& date)
            		  if (clkchan >= 0) {  
            			  scalers[idx]->SetClock(defaultDT, clkchan, clkfreq);
            			  fNormIdx = idx;
-           			  if (islot != fNormSlot) cout << "SBSScalerEvtHandler:: WARN: contradictory norm slot ! "<<islot<<endl;  
+           			  if (islot != fNormSlot) cout << "LHRSScalerEvtHandler:: WARN: contradictory norm slot ! "<<islot<<endl;  
            			  if (fDebugFile) *fDebugFile <<"Setting scaler clock ... channel = "<<clkchan<<" ... freq = "<<clkfreq<<"   fNormIdx = "<<fNormIdx<<"  fNormSlot = "<<fNormSlot<<"  slot = "<<islot<<endl;
            		  }
            	  }
@@ -398,7 +408,7 @@ DefVars();
    for (UInt_t i1=0; i1 < scalers.size()-1; i1++) {
       for (UInt_t i2=i1+1; i2 < scalers.size(); i2++) {
          if (scalers[i1]->GetSlot()==scalers[i2]->GetSlot())
-              cout << "SBSScalerEvtHandler:: WARN:  same slot defined twice"<<endl;
+              cout << "LHRSScalerEvtHandler:: WARN:  same slot defined twice"<<endl;
       }
    }
    // Identify indices of scalers[] vector to variables.
@@ -410,7 +420,7 @@ DefVars();
    }
 
    if(fDebugFile) {
-      *fDebugFile << "SBSScalerEvtHandler:: Name of scaler bank "<<fName<<endl;
+      *fDebugFile << "LHRSScalerEvtHandler:: Name of scaler bank "<<fName<<endl;
       for (UInt_t i=0; i<scalers.size(); i++) {
          *fDebugFile << "Scaler  #  "<<i<<endl;
          scalers[i]->SetDebugFile(fDebugFile);
@@ -425,7 +435,7 @@ DefVars();
    return kOK;
 }
 //______________________________________________________________________________
-void SBSScalerEvtHandler::AddVars(TString name, TString desc, Int_t islot,
+void LHRSScalerEvtHandler::AddVars(TString name, TString desc, Int_t islot,
 				  Int_t ichan, Int_t ikind)
 {
   // need to add fName here to make it a unique variable.  (Left vs Right HRS, for example)
@@ -439,7 +449,7 @@ void SBSScalerEvtHandler::AddVars(TString name, TString desc, Int_t islot,
   scalerloc.push_back(loc);
 }
 //______________________________________________________________________________
-void SBSScalerEvtHandler::DefVars()
+void LHRSScalerEvtHandler::DefVars()
 {
   // called after AddVars has finished being called.
   Int_t Nvars = scalerloc.size();
@@ -447,12 +457,12 @@ void SBSScalerEvtHandler::DefVars()
   dvars = new Double_t[Nvars];  // dvars is a member of this class
   memset(dvars, 0, Nvars*sizeof(Double_t));
   if (gHaVars) {
-  	if(fDebugFile) *fDebugFile << "SBSScalerEvtHandler:: Have gHaVars "<<gHaVars<<endl;
+  	if(fDebugFile) *fDebugFile << "LHRSScalerEvtHandler:: Have gHaVars "<<gHaVars<<endl;
   } else {
   	cout << "No gHaVars ?!  Well, that's a problem !!"<<endl;
   	return;
   }
-  if(fDebugFile) *fDebugFile << "SBSScalerEvtHandler:: scalerloc size "<<scalerloc.size()<<endl;
+  if(fDebugFile) *fDebugFile << "LHRSScalerEvtHandler:: scalerloc size "<<scalerloc.size()<<endl;
   const Int_t* count = 0;
   for (UInt_t i = 0; i < scalerloc.size(); i++) {
   	gHaVars->DefineByType(scalerloc[i]->name.Data(), scalerloc[i]->description.Data(),
@@ -460,4 +470,4 @@ void SBSScalerEvtHandler::DefVars()
   }
 }
 //______________________________________________________________________________
-ClassImp(SBSScalerEvtHandler)
+ClassImp(LHRSScalerEvtHandler)
