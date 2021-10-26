@@ -71,11 +71,15 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   Int_t adcbaroff = 0;
   std::vector<Double_t> timewalkpar0;
   std::vector<Double_t> timewalkpar1;
+  Double_t tdcwinmin = -100.0;//ns changed default value from 0 to this
+  Double_t tdcwinmax = +100.0;//ns changed default value from 0 to this
   DBRequest config_request[] = {
     { "timewalk0map",    &timewalkpar0,      kDoubleV, 0, false }, //parameter for time walk correction
     { "timewalk1map",    &timewalkpar1,      kDoubleV, 0, false }, //parameter for time walk correction
     { "tdcbaroffset",    &tdcbaroff,         kInt,    0, true }, //to allow for cycling through sections
     { "adcbaroffset",    &adcbaroff,         kInt,    0, true }, //to allow for cycling through sections
+    { "tdcwindowmin", &tdcwinmin, kDouble, 0, true }, //parameter for tdc window min
+    { "tdcwindowmax", &tdcwinmax, kDouble, 0, true }, //parameter for tdc window max
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
@@ -86,6 +90,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   
   DBRequest barquality_params[] = {
     { "horizposbarcut", &fHorizPosBarCut, kDouble, 0, true }, //parameter for bar horizontal position selection
+    // what is below shall basically be redundant with fTDCWinMin and TDCWinMax
     { "timeref",      &fTimeRef,      kDouble, 0, true }, //parameter for time reference
     { "timebarcut", &fTimeBarCut, kDouble, 0, true }, //parameter for time bar selection
     { 0 } ///< Request must end in a NULL
@@ -153,6 +158,8 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   // assign the bar offsets
   fTDCBarOffset = tdcbaroff;
   fADCBarOffset = adcbaroff;
+  fTDCWinMin = tdcwinmin;
+  fTDCWinMax = tdcwinmax;
 
   if( WithTDC() || WithADC()){
     if(timewalkpar0.size()!=fNelem || timewalkpar1.size()!=fNelem){
@@ -344,7 +351,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   
   // now loop through bars to find good hits in bars
   // should we move this code into findgoodhit?
-
+  
   fGoodBarIDsTDC.clear();
   fGoodBarTDCmean.clear();
   fGoodBarTDCdiff.clear();
@@ -375,6 +382,8 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   // std::cout << "fTDCBarOffset " << fTDCBarOffset << std::endl;
   // std::cout << "fADCBarOffset " << fADCBarOffset << std::endl;
   // std::cout << "NBars " << NBars << " fElements.size()/2 " << fElements.size()/2 << std::endl;
+  //std::cout << "fTDCWinMin: " << fTDCWinMin << std::endl;
+  //std::cout << "fTDCWinMax: " << fTDCWinMax << std::endl;
   if(NBars!=(fElements.size()/2)){
     Error( Here("CoarseProcess"),
 	   "hodoscope #bars length not of correct size ie !=#elements/2");
@@ -393,11 +402,19 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 
     if(WithTDC()){
       if(elL->TDC()->HasData() && elR->TDC()->HasData()){
+	
+	//get left and right LE times 
+	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
+	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
+	Double_t LEl = hitL.le.val;
+	Double_t LEr = hitR.le.val;
+
+	if(fTDCWinMin < LEl && LEl < fTDCWinMax && fTDCWinMin < LEr && LEr < fTDCWinMax){
 	//Int_t bar = BarInc;// why redeclare the index?
 	// don't need to add offset to tdc since all readout simultaneously
 	
 	// left hit
-	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
+	// fGoodBarTDCLle.push_back(hitL.le.val);//commenting this here: this is done later after another quality check
 	// fGoodBarTDCLle.push_back(hitL.le.raw);
 	//.raw is tdc bin, val is corrected using offset and ns/bin
 	Double_t LleW = SBSTimingHodoscope::TimeWalk(hitL.le.val,
@@ -408,7 +425,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 				Ltwalk0, Ltwalk1);
 	
 	// right hit
-	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
+	// fGoodBarTDCRle.push_back(hitR.le.val);//commenting this here: this is done later after another quality check
 	Double_t RleW = SBSTimingHodoscope::TimeWalk(hitR.le.val,
 				(hitR.te.val-hitR.le.val),
 				Rtwalk0, Rtwalk1);
@@ -431,9 +448,10 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	Double_t HorizPos = -0.5 * (bartimediff-ftDiff0) * fvScint; // position from L based on timediff and in m. 
 	
 	// check basic quality before pushing
-	if(fabs(HorizPos)>fHorizPosBarCut)continue;
-	if(fabs(barmeantime-fTimeRef)>fTimeBarCut)continue;
+	//if(fabs(HorizPos)>fHorizPosBarCut)continue;
+	//if(fabs(barmeantime-fTimeRef)>fTimeBarCut)continue;
 	
+	// Grouping all of this here makes it easier to apply additional cuts, if needed.
 	fGoodBarIDsTDC.push_back(BarInc);
 	
 	fGoodBarTDCLle.push_back(hitL.le.val);
@@ -466,6 +484,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	bar->SetElementPos(elR->GetY());
 	bar->SetLeftHit(hitL);
 	bar->SetRightHit(hitR);
+	}
       }// tdc hit on both pmts
     }// with tdc
     // adc events
