@@ -153,7 +153,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   Int_t nskip=0;
   UInt_t *P = rdata;
   // UInt_t *Pstop = rdata+ndata;
-  int k=0;
+  int j=0;
 
   Int_t ifound=0;
   Int_t itimeout=0;
@@ -184,10 +184,10 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
      }
   }
 
-  while (p < pstop && k < ndata) {
+  while (p < pstop && j < ndata) {
     if (fDebugFile) {
       // *fDebugFile << "p  and  pstop  "<< k++ << "   " << p << "   " << pstop << "   data = " << hex << *p << "   " << dec << endl;
-      *fDebugFile << "k++ = " << k++ << " p  = " << p << " pstop = " << pstop << " data = " << hex << *p << " (hex), " << dec << endl;
+      *fDebugFile << "j++ = " << j++ << " p  = " << p << " pstop = " << pstop << " data = " << hex << *p << " (hex), " << dec << endl;
     }
     nskip = 1;
     itimeout=0;
@@ -222,7 +222,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
        }
        continue1:
           p = p + nskip;
-       k++; 
+       // k++; 
   }
       
   giveup1:
