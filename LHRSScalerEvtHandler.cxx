@@ -160,8 +160,6 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   UInt_t NScalers=0;
 
   // Added by D Flay (10/27/21) for parsing data
-  UInt_t *p=0;
-  UInt_t *pstop=0;
   std::string word[MAXTEVT]; 
   UInt_t A[MAXTEVT]; 
   int NWORDS=0;
@@ -171,10 +169,10 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   P = P + 4;
 
   // do the conversion 
-  char *pc = (char *)P;
-  NWORDS = ParseData(pc,word,A);
-  p = A;  
-  pstop = p + ndata - 4;  
+  char *pc      = (char *)P;
+  NWORDS        = ParseData(pc,word,A);
+  UInt_t *p     = A;  
+  UInt_t *pstop = p + ndata - 4;  
 
   char msg[200];  
 
@@ -185,10 +183,6 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
         *fDebugFile << msg << endl; 
      }
   }
-
-  // coda event has a header, but not included in total number of words. 
-  // total words? ndata+1 but subtract 4 because of header 
-  // multiply by 4=> number of characters 
 
   while (p < pstop && k < ndata) {
     if (fDebugFile) {
@@ -201,11 +195,9 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
     *fDebugFile << "**** NUM SCALERS = " << NScalers << std::endl;
     for (UInt_t j=0; j<NScalers; j++) {
        if(fDebugFile) *fDebugFile << "**** DEBUG PRINT j = " << j << " ****" << std::endl;
-       // if(fDebugFile) scalers[j]->DebugPrint(fDebugFile);
        // bump pointer until scaler found, and don't decode if already found for this event.
        if (scalerloc[j]->found) continue;
        if (fDebugFile) *fDebugFile << "Slot " << scalers[j]->GetSlot() << endl;
-       // p should now be pointer to a new array of ints (needs a new pstop as well)  
        while (p < pstop) {
           if (scalers[j]->IsSlot(*p) == kTRUE) {
                   scalerloc[j]->found=kTRUE;
