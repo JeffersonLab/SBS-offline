@@ -138,6 +138,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   // Parse the data, load local data arrays.
 
   Int_t ndata = evdata->GetEvLength();
+  if(fDebugFile) *fDebugFile << "NDATA = " << dec << ndata << std::endl;
   if (ndata >= static_cast<Int_t>(MAXTEVT)) {
 	  cout << "LHRSScalerEvtHandler:: ERROR: Event length crazy "<<endl;
 	  ndata = MAXTEVT-1;
@@ -150,18 +151,49 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   for (Int_t i=0; i<ndata; i++) rdata[i] = evdata->GetRawData(i);
 
   Int_t nskip=0;
-  UInt_t *p = rdata;
-  UInt_t *pstop = rdata+ndata;
+  UInt_t *P = rdata;
+  // UInt_t *Pstop = rdata+ndata;
   int k=0;
 
   Int_t ifound=0;
   Int_t itimeout=0;
   UInt_t NScalers=0;
 
+  // Added by D Flay (10/27/21) for parsing data
+  UInt_t *p=0;
+  UInt_t *pstop=0;
+  std::string word[MAXTEVT]; 
+  UInt_t A[MAXTEVT]; 
+  int NWORDS=0;
+
+  // skip the first 4 words because it looks like the first word associated with 
+  // the scalers starts there... 
+  P = P + 4;
+
+  // do the conversion 
+  char *pc = (char *)P;
+  NWORDS = ParseData(pc,word,A);
+  p = A;  
+  pstop = p + ndata - 4;  
+
+  char msg[200];  
+
+  if(fDebugFile){
+     *fDebugFile << "**** parsed int array = " << p << ", NWORDS = " << dec << NWORDS << endl; 
+     for(int ii=0;ii<NWORDS;ii++){
+        sprintf(msg,"   i = %03d, word = %s, int = %u, hex = %02x",ii,word[ii].c_str(),p[ii],p[ii]); 
+        *fDebugFile << msg << endl; 
+     }
+  }
+
+  // coda event has a header, but not included in total number of words. 
+  // total words? ndata+1 but subtract 4 because of header 
+  // multiply by 4=> number of characters 
+
   while (p < pstop && k < ndata) {
     if (fDebugFile) {
       // *fDebugFile << "p  and  pstop  "<< k++ << "   " << p << "   " << pstop << "   data = " << hex << *p << "   " << dec << endl;
-      *fDebugFile << "k++ = " << k++ << " p  = " << p << " pstop = " << pstop << " data = " << hex << *p << endl;
+      *fDebugFile << "k++ = " << k++ << " p  = " << p << " pstop = " << pstop << " data = " << hex << *p << " (hex), " << dec << endl;
     }
     nskip = 1;
     itimeout=0;
@@ -173,13 +205,12 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
        // bump pointer until scaler found, and don't decode if already found for this event.
        if (scalerloc[j]->found) continue;
        if (fDebugFile) *fDebugFile << "Slot " << scalers[j]->GetSlot() << endl;
+       // p should now be pointer to a new array of ints (needs a new pstop as well)  
        while (p < pstop) {
           if (scalers[j]->IsSlot(*p) == kTRUE) {
                   scalerloc[j]->found=kTRUE;
                   ifound = 1;
                   goto found1;
-          }else{
-		  *fDebugFile << " ==> DID NOT FIND DATA" << std::endl;
           }
           p++;
           if (itimeout++ > 5000) { // avoid infinite loop
@@ -468,6 +499,38 @@ void LHRSScalerEvtHandler::DefVars()
   	gHaVars->DefineByType(scalerloc[i]->name.Data(), scalerloc[i]->description.Data(),
   			&dvars[i], kDouble, count);
   }
+}
+//______________________________________________________________________________
+int LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int){
+   // loop through the message (msg) and convert into data words 
+   // - input:  a char array to parse (i.e., scaler data)  
+   // - output: std::string array (word) and int array (word_int)     
+   char data[200];
+   sprintf(data,"");
+  
+   char *pEnd;
+ 
+   // std::cout << "Message to decode: " << std::endl;
+   // std::cout << msg << std::endl;
+   
+   int j=0;
+   int length = strlen(msg);
+   for(int i=0;i<length;i++){
+      if(msg[i]=='\n'){
+      	// now have a full word
+      	word[j]     = data;
+        word_int[j] = std::strtol(data,&pEnd,16);  // base 16 (hex)
+      	// increment the index on the word array
+      	j++;
+      	// empty the constructed word 
+      	sprintf(data,"");
+      }else{
+      	// not a new line, build the word  
+      	sprintf(data,"%s%c",data,msg[i]);
+      }
+   }
+   
+   return j; // return the number of words 
 }
 //______________________________________________________________________________
 ClassImp(LHRSScalerEvtHandler)
