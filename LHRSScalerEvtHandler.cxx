@@ -153,7 +153,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   Int_t nskip=0;
   UInt_t *P = rdata;
   // UInt_t *Pstop = rdata+ndata;
-  int j=0;
+  int k=0;
 
   Int_t ifound=0;
   Int_t itimeout=0;
@@ -184,10 +184,10 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
      }
   }
 
-  while (p < pstop && j < ndata) {
+  while (p < pstop && k < ndata) {
     if (fDebugFile) {
       // *fDebugFile << "p  and  pstop  "<< k++ << "   " << p << "   " << pstop << "   data = " << hex << *p << "   " << dec << endl;
-      *fDebugFile << "j++ = " << j++ << " p  = " << p << " pstop = " << pstop << " data = " << hex << *p << " (hex), " << dec << endl;
+      *fDebugFile << "k = " << k << " p  = " << p << " pstop = " << pstop << " data = " << hex << *p << " (hex), " << dec << endl;
     }
     nskip = 1;
     itimeout=0;
@@ -219,10 +219,10 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
 		    scalers[j]->DebugPrint(fDebugFile);
 	    }
 	    if (nskip > 1) goto continue1;
-       }
-       continue1:
-          p = p + nskip;
-       // k++; 
+    }
+    continue1:
+       p = p + nskip;
+    k++; 
   }
       
   giveup1:
@@ -242,12 +242,12 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   	size_t ivar  = scalerloc[i]->ivar;
   	size_t idx   = scalerloc[i]->index;
   	size_t ichan = scalerloc[i]->ichan;
-  	if (fDebugFile) *fDebugFile << "Debug dvars "<<i<<"   "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
-  	if( ivar < scalerloc.size() && idx < scalers.size() && ichan < MAXCHAN ) {
+  	if (fDebugFile) *fDebugFile << "Debug dvars i = "<<i<<", var = "<<ivar<<", index = "<<idx<<", ch = "<<ichan<<endl;
+  	if( ivar < scalerloc.size() && idx < scalers.size() && ichan < MAXCHAN ){
   		if (scalerloc[ivar]->ikind == ICOUNT) dvars[ivar] = scalers[idx]->GetData(ichan);
   		if (scalerloc[ivar]->ikind == IRATE)  dvars[ivar] = scalers[idx]->GetRate(ichan);
-  		if (fDebugFile) *fDebugFile << "   dvars  "<<scalerloc[ivar]->ikind<<"  "<<dvars[ivar]<<endl;
-  	} else {
+  		if (fDebugFile) *fDebugFile << "   dvars kind = "<<scalerloc[ivar]->ikind<<", value = "<<dvars[ivar]<<endl;
+  	}else{
   		cout << "LHRSScalerEvtHandler:: ERROR:: incorrect index "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
   	}
   }
@@ -274,7 +274,7 @@ THaAnalysisObject::EStatus LHRSScalerEvtHandler::Init(const TDatime& date)
   fStatus = kOK;
   fNormIdx = -1;
 
-  std::cout << "[LHRSScalerEventHandler::Init]: Initializing " << fName << "..." << std::endl;
+  // std::cout << "[LHRSScalerEventHandler::Init]: Initializing " << fName << "..." << std::endl;
 
   eventtypes.push_back(140);  // what events to look for
 

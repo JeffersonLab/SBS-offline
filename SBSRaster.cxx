@@ -27,7 +27,7 @@ Int_t SBSRaster::ReadDatabase( const TDatime& date )
   Double_t freq[NBPM], rped[NBPM], sped[NBPM];
   Double_t raw2posA[NBPM*NPOS], raw2posB[NBPM*NPOS], raw2posT[NBPM*NPOS];
 
-  std::cout << GetDBFileName() << std::endl;
+  // std::cout << GetDBFileName() << std::endl;
 
   FILE* file = OpenFile( date );
   if( !file )
@@ -105,7 +105,7 @@ Int_t SBSRaster::ReadDatabase( const TDatime& date )
   // readlink(path,result,sizeof(result)-1);
   // printf(Form("File name: %s\n",result));
   // printf(Form("%d",fileno(file))); // /proc/self/fd/number...
-  printf(Form("OFFSETs and Scaler Factors of Raster for file %d: %f, %f, %f, %f\n",date.GetDate(),raw2posT[0],raw2posT[1],rped[0],rped[1]));
+  // printf(Form("OFFSETs and Scaler Factors of Raster for file %d: %f, %f, %f, %f\n",date.GetDate(),raw2posT[0],raw2posT[1],rped[0],rped[1]));
   fclose(file);
   if( err )
     return err;
