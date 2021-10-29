@@ -448,7 +448,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	Double_t HorizPos = -0.5 * (bartimediff-ftDiff0) * fvScint; // position from L based on timediff and in m. 
 	
 	// check basic quality before pushing
-	//if(fabs(HorizPos)>fHorizPosBarCut)continue;
+	if(fabs(HorizPos)>fHorizPosBarCut)continue;
 	//if(fabs(barmeantime-fTimeRef)>fTimeBarCut)continue;
 	
 	// Grouping all of this here makes it easier to apply additional cuts, if needed.
