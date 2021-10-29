@@ -30,7 +30,7 @@ Int_t SBSBPM::ReadDatabase( const TDatime& date )
   vector<Int_t> detmap;
   Double_t pedestals[NCHAN], rotations[NCHAN], offsets[2];
 
-  std::cout << GetDBFileName() << std::endl;
+  // std::cout << GetDBFileName() << std::endl;
 
   FILE* file = OpenFile( date );
   if( !file )
@@ -79,7 +79,7 @@ Int_t SBSBPM::ReadDatabase( const TDatime& date )
   fRot2HCSPos(1,0) = rotations[2];
   fRot2HCSPos(1,1) = rotations[3];
 
-  printf("OFFSETS for BPMs in file %d: %f, %f\n",date.GetDate(),offsets[0],offsets[1]);
+  // printf(Form("OFFSETS for BPMs in file %d: %f, %f\n",date.GetDate(),offsets[0],offsets[1]));
   return kOK;
 }
 //_____________________________________________________________________________
