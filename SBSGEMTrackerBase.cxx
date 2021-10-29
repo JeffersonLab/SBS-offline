@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cstdlib>
+#include "Helper.h"
 
 using namespace std;
 
@@ -83,8 +84,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
-  //for now, do nothing; let the derived classes handle the clearing out of the modules
-  
+  //This is best done here to ensure fModules still exists when it is cleared
+  DeleteContainer(fModules);
 }
 
 void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff

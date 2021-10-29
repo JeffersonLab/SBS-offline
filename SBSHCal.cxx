@@ -50,6 +50,7 @@ Int_t SBSHCal::ReadDatabase( const TDatime& date )
       {0}
     };
     err = LoadDB( file, date, led_request, fPrefix );
+    fclose(file);
     if(err) {
 	return err;
     }

@@ -1161,7 +1161,7 @@ Int_t SBSScintPlane::ReadDatabase( const TDatime& date )
             return kInitError;
         }
     }
-
+    fclose(file);
     delete [] values;
 
     fNBars= GetNBars();

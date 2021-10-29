@@ -28,14 +28,16 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
 {
   SetMultiTracks(false);
   SetTrSorting(false);
-  fTrackerPitchAngle = 10.0;
-  fDetectorStackYaw = 0;
-  fDetectorStackRoll = 0;
+  //fTrackerPitchAngle = 10.0;
+  //fDetectorStackYaw = 0;
+  //fDetectorStackRoll = 0;
   fOpticsOrder = -1;
   fFrontConstraintWidthX = 1.5;
   fFrontConstraintWidthY = 1.5;
   fBackConstraintWidthX = 1.5;
   fBackConstraintWidthY = 1.5;
+  fFrontConstraintX0 = 0.0;
+  fFrontConstraintY0 = 0.0;
   fTrackGrinchClusCorr_0 = 0.0;
   fTrackGrinchClusCorr_1 = 0.0;
   fTrackGrinchClusCorr_Sigma = 1.5;
@@ -47,6 +49,29 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   fYtar_01000 = 0.0;
   fYtar_00010 = 0.0;
   fECaloFudgeFactor = 1.0;
+
+  //Default ideal optics angle (central bend angle) to 10 deg:
+
+  //This should match the g4sbs simulation coordinate system, and user should not ordinarily need to modify:
+  //This is relative to target center along spectrometer axis:
+  fMagDist = 1.80; //this will eventually be overridden by the DB, and will become a required parameter for BigBite
+  
+  fOpticsAngle = 10.0*TMath::DegToRad();
+  fOpticsOrigin.SetXYZ( -0.1701, 0.0, 1.1087 + fMagDist );
+
+  InitOpticsAxes( fOpticsAngle );
+  
+  //These will be the real GEM coordinates from the zero-field alignment:
+  //Default these to match the simulation coordinate system:
+  fGEMtheta = fOpticsAngle;
+  fGEMphi   = 180.0*TMath::DegToRad();
+  fGEMorigin = fOpticsOrigin; 
+
+  InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
+  
+  //Default 
+  
+  
   // Constructor. Defines standard detectors
   //The standard BigBite detector package in the 12 GeV/SBS era will include:
   // pre-shower + shower calorimeters (inherit from THaNonTrackingDetector OR THaPidDetector)
@@ -84,6 +109,29 @@ void SBSBigBite::Clear( Option_t *opt )
   fProbaPi.clear();
 }
 
+Int_t SBSBigBite::ReadRunDatabase( const TDatime &date ){
+  const char* const here = "SBSBigBite::ReadRunDatabase()";
+
+  Int_t err = THaSpectrometer::ReadRunDatabase( date );
+  if( err ) return err;
+
+  FILE* file = OpenRunDBFile( date );
+  if( !file ) return kFileError;
+
+  //Require magdist:
+  const DBRequest req[] = {
+    { "magdist", &fMagDist, kDouble, 0, 0, 1 },
+    { nullptr }
+  };
+  err = LoadDB( file, date, req );
+  fclose(file);
+  if( err )
+    return kInitError;
+
+  fOpticsOrigin.SetXYZ( -0.1701, 0.0, 1.1087+fMagDist );
+  
+  return kOK;
+}
 
 //_____________________________________________________________________________
 Int_t SBSBigBite::ReadDatabase( const TDatime& date )
@@ -107,11 +155,19 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   std::vector<Double_t> pssh_pidproba;
   std::vector<Double_t> pcal_pidproba;
   std::vector<Double_t> grinch_pidproba;
+
+  std::vector<Double_t> optics_origin;
+
+  double gemthetadeg = fGEMtheta * TMath::RadToDeg();
+  double gemphideg   = fGEMphi * TMath::RadToDeg();
+  double opticsthetadeg = fOpticsAngle * TMath::RadToDeg(); 
+  
   const DBRequest request[] = {
-    { "tracker_pitch_angle",    &fTrackerPitchAngle, kDouble,  0, 1, 1},
-    { "tracker_yaw_angle",    &fDetectorStackYaw, kDouble,  0, 1, 1},
-    { "tracker_roll_angle",    &fDetectorStackRoll, kDouble,  0, 1, 1},
-    { "firstgemoffset_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
+    { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
+    { "gemphi", &gemphideg, kDouble, 0, 1, 1},
+    { "gemorigin_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
+    { "opticstheta", &opticsthetadeg, kDouble, 0, 1, 1},
+    { "optics_origin", &optics_origin, kDoubleV, 0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "ecalo_fudgefactor", &fECaloFudgeFactor, kDouble, 0, 1, 1},
@@ -120,6 +176,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 1, 0},
     { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 1, 0},
     { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 1, 0},
+    { "frontconstraint_x0", &fFrontConstraintX0, kDouble, 0, 1, 0},
+    { "frontconstraint_y0", &fFrontConstraintY0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_const", &fTrackGrinchClusCorr_0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_slope", &fTrackGrinchClusCorr_1, kDouble, 0, 1, 0},
     { "trackgrinchcorr_sigma", &fTrackGrinchClusCorr_Sigma, kDouble, 0, 1, 0},
@@ -131,66 +189,35 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   };
     
   Int_t status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
-  
+  fclose(file);
   if( status != 0 ){
-    fclose(file);
     return status;
   }
+
+  fOpticsAngle = opticsthetadeg * TMath::DegToRad();
+  if( optics_origin.size() == 3 ){ //database overrides default values:
+    fOpticsOrigin.SetXYZ( optics_origin[0],
+			  optics_origin[1],
+			  optics_origin[2] );
+  }
+
+  InitOpticsAxes( fOpticsAngle );
+  
+  //Database values for these angles are assumed to be given in degrees:
+  // These will have been initialized to default values in degrees above, or if they were loaded from the database they will have been given in degrees:
+  fGEMtheta = gemthetadeg * TMath::DegToRad();
+  fGEMphi = gemphideg * TMath::DegToRad();
+  if( firstgem_offset.size() == 3 ){ //database overrides default values:
+    fGEMorigin.SetXYZ( firstgem_offset[0],
+		       firstgem_offset[1],
+		       firstgem_offset[2] );
+  }
+
+  InitGEMAxes( fGEMtheta, fGEMphi );
   
   if(fECaloFudgeFactor!=1.0)cout << "Setting the calorimeter energy fudge factor to " << fECaloFudgeFactor << endl;
   
   fPID = ( pidflag != 0 );
-
-  fDetectorStackPitch = (fTrackerPitchAngle-10.0)*TMath::DegToRad();
-  fTrackerPitchAngle*= TMath::DegToRad();
-  fDetectorStackYaw*= TMath::DegToRad();
-  fDetectorStackRoll*= TMath::DegToRad();
-  
-  double fDetectorStackThSph;
-  double fDetectorStackPhSph;
-
-  //can we maybe neglect roll for the moment? I think we can.
-  
-  GeoToSph(fDetectorStackYaw, fDetectorStackPitch, 
-	   fDetectorStackThSph, fDetectorStackPhSph);
-  
-  Double_t st = TMath::Sin(fDetectorStackThSph);
-  Double_t ct = TMath::Cos(fDetectorStackThSph);
-  Double_t sp = TMath::Sin(fDetectorStackPhSph);
-  Double_t cp = TMath::Cos(fDetectorStackPhSph);
-
-  // Compute the rotation from Optics (ideal) to Detector (actual) and vice versa.
-  // If the pitch is positive i.e. the actual tracker pitch angle is larger than 
-  // the nominal 10deg, the transformation from the detector coordinates 
-  // to the optics coordinate should transfomr the track dx into a more negative dx
-  // The transformation effectively does that if 
-  // fDetectorStackPitch>0 when fTrackerPitchAngle>10.
-  // But, for consistency reasons, I would like 
-  // fDetectorStackPitch<0 when fTrackerPitchAngle>10.
-  // Since I'm too dumb (and lack time) to rewrite the transformation, 
-  // I prefer to evaluate the transformation with fDetectorStackPitch>0 
-  // and *then* transform fDetectorStackPitch into -fDetectorStackPitch...
-  Double_t norm = TMath::Sqrt(ct*ct + st*st*cp*cp);
-  //TVector3 nx( st*st*sp*cp/norm, -norm, st*ct*sp/norm );
-  //TVector3 ny( ct/norm,          0.0,   -st*cp/norm   );
-  //TVector3 nz( st*cp,            st*sp, ct            );
-  TVector3 nx( norm,   st*st*sp*cp/norm, st*ct*sp/norm );
-  TVector3 ny( 0.0,    ct/norm,          -st*cp/norm   );
-  TVector3 nz( -st*sp, st*cp,            ct            );
-  fDet2OptRot.SetToIdentity().RotateAxes( nx, ny, nz );
-  fOpt2DetRot = fDet2OptRot.Inverse();
-  
-  fDetectorStackPitch = -fDetectorStackPitch;
-  
-  cout << firstgem_offset.size() << endl;
-  if(firstgem_offset.size()==3){
-    fFirstGEMLayerOffset = TVector3(firstgem_offset[0],
-				    firstgem_offset[1],
-				    firstgem_offset[2]);
-  }else{
-    fFirstGEMLayerOffset = TVector3(0, 0, 0);
-    std::cout << "First GEM offset not set or set improperly, setting to 0, 0, 0" << std::endl;
-  }
   
   //do we have non tracking detectors
   bool nontrackdet = false;
@@ -276,7 +303,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_PSSH_table.clear();
   fProba_pi_PSSH_table.clear();
   
-  if(pssh_pidproba.size()){
+  if(!pssh_pidproba.empty()){
     int npts = pssh_pidproba.size()/3;
     fEpsEtotRatio_table.resize(npts);
     fProba_e_PSSH_table.resize(npts);
@@ -294,7 +321,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_PCAL_table.clear();
   fProba_pi_PCAL_table.clear();
   
-  if(pcal_pidproba.size()){
+  if(!pcal_pidproba.empty()){
     int npts = pcal_pidproba.size()/3;
     fEtotPratio_table.resize(npts);
     fProba_e_PCAL_table.resize(npts);
@@ -311,7 +338,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_GRINCH_table.clear();
   fProba_pi_GRINCH_table.clear();
   
-  if(grinch_pidproba.size() && fP_table.size()){
+  if(!grinch_pidproba.empty() && fP_table.size()){
     int n_ppts = 2+fP_table.size();
     int npts = grinch_pidproba.size()/(n_ppts);
     fNGRINCHPMTs_table.resize(npts);
@@ -451,7 +478,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	    x_bcp/=sumweights_x;
 	    y_bcp/=sumweights_y;
 	    
-	    double dx = (Etot*fECaloFudgeFactor*fTrackerPitchAngle - fPtheta_00000 + x_bcp * (Etot*fECaloFudgeFactor*fXptar_10000-fPtheta_10000)) /
+	    double dx = (Etot*fECaloFudgeFactor*fOpticsAngle - fPtheta_00000 + x_bcp * (Etot*fECaloFudgeFactor*fXptar_10000-fPtheta_10000)) /
 	      (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
 	    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	    
@@ -533,7 +560,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 
 	double Efudge = Etot * fECaloFudgeFactor;
 	
-	double xp_bcp = ( fPtheta_00000 + fPtheta_10000 * x_bcp - Efudge * ( fTrackerPitchAngle + fXptar_10000 * x_bcp ) ) /
+	double xp_bcp = ( fPtheta_00000 + fPtheta_10000 * x_bcp - Efudge * ( fOpticsAngle + fXptar_10000 * x_bcp ) ) /
 	  ( Efudge * (fXptar_00100 - 1.0 - fXptar_10000*z_bcp) + fPtheta_10000 * z_bcp - fPtheta_00100 );
 	
 	// The dy equation is correct under the assumption ytarget = 0: can we refine?
@@ -576,8 +603,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	  h1_dyVdx->Fill(dx, dy);
 	*/
 	
-	fFrontConstraintX.push_back(x_fcp);
-	fFrontConstraintY.push_back(y_fcp);
+	fFrontConstraintX.push_back(x_fcp + fFrontConstraintX0);
+	fFrontConstraintY.push_back(y_fcp + fFrontConstraintY0);
 	fBackConstraintX.push_back(x_bcp);
 	fBackConstraintY.push_back(y_bcp);
 	
@@ -591,7 +618,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	  if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
 	    SBSGEMSpectrometerTracker* BBGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
 	    //std::cout << "setting constraints for tracks" << std::endl;
-	    BBGEM->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
+	    BBGEM->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
 	    BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
 	    BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
 					   fFrontConstraintWidthY);
@@ -701,36 +728,70 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
   Double_t x_fp, y_fp, xp_fp, yp_fp;
   Double_t px, py, pz;// NB: not the actual momentum!
   
-  x_fp = track->GetX()+fFirstGEMLayerOffset.X();
-  y_fp = track->GetY()+fFirstGEMLayerOffset.Y();
+  x_fp = track->GetX();
+  y_fp = track->GetY();
   xp_fp = track->GetTheta();
   yp_fp = track->GetPhi();
+
+  TVector3 TrackPosLocal_GEM( x_fp, y_fp, 0.0 );
+
+  //std::cout << "calculating optics coordinates: (xfp,yfp,xpfp,ypfp)=(" << x_fp << ", " << y_fp << ", " << xp_fp << ", " << yp_fp << ")" << std::endl;
+
+  TVector3 TrackPosGlobal_GEM = fGEMorigin + TrackPosLocal_GEM.X() * fGEMxaxis_global + TrackPosLocal_GEM.Y() * fGEMyaxis_global + TrackPosLocal_GEM.Z() * fGEMzaxis_global;
   
-  // cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
+  //std::cout << "Track pos global = " << endl;
+  //TrackPosGlobal_GEM.Print(); 
+
+  TVector3 TrackDirLocal_GEM( xp_fp, yp_fp, 1.0 );
+  TrackDirLocal_GEM = TrackDirLocal_GEM.Unit();
+
+  //  std::cout << "Track direction local = " << endl;
+
+  // TrackDirLocal_GEM.Print();
+
+  TVector3 TrackDirGlobal_GEM = TrackDirLocal_GEM.X() * fGEMxaxis_global + TrackDirLocal_GEM.Y() * fGEMyaxis_global + TrackDirLocal_GEM.Z() * fGEMzaxis_global;
+  TrackDirGlobal_GEM = TrackDirGlobal_GEM.Unit(); //Likely unnecessary, but safer (I guess)
   
-  // x_fp = track->GetX()+fFirstGEMLayerOffset.X();
-  // y_fp = track->GetY()+fFirstGEMLayerOffset.Y();
+  //  std::cout << "Track direction global = " << endl;
+  //TrackDirGlobal_GEM.Print();
+
+  //Now project track to the z = 0 plane of the ideal optics system:
+  // recall the formula to intersect a ray with a plane:
+  // (x + s * trackdir - x0) dot planedir = 0.0
+
+  double sintersect = (fOpticsOrigin - TrackPosGlobal_GEM).Dot(fOpticsZaxis_global)/ (TrackDirGlobal_GEM.Dot( fOpticsZaxis_global ) );
+
+  TVector3 TrackIntersect_global = TrackPosGlobal_GEM + sintersect * TrackDirGlobal_GEM;
   
-  // cout << x_fp << " " << y_fp << " " 
-  //  << xp_fp+fDetectorStackPitch << " " << yp_fp+fDetectorStackYaw << endl;
-  // provided involved angles are small maybe we could almost do 
-  // xp_fp+= -fDetectorStackPitch
-  // yp_fp+= fDetectorStackYaw
-  // and forgo transformation calculation altogether? 
-  // defo should use that as a sanity check
-  pz = sqrt( 1.0/(xp_fp*xp_fp+yp_fp*yp_fp+1.0) );
-  px = xp_fp * pz;
-  py = yp_fp * pz;
+  //  std::cout << "Track intersection point, global = " << endl;
+  //TrackIntersect_global.Print();
+
+  //rather than modifying the x, y, theta, phi directly, let's use the RX, RY, RTheta, and RPhi coordinates:
+  //TVector3 TrackIntersect_ = TrackIntersect_global - fOpticsOrigin;
+
+  double xoptics = (TrackIntersect_global - fOpticsOrigin).Dot( fOpticsXaxis_global );
+  double yoptics = (TrackIntersect_global - fOpticsOrigin).Dot( fOpticsYaxis_global );
+
+  double xpoptics = TrackDirGlobal_GEM.Dot( fOpticsXaxis_global )/TrackDirGlobal_GEM.Dot( fOpticsZaxis_global );
+  double ypoptics = TrackDirGlobal_GEM.Dot( fOpticsYaxis_global )/TrackDirGlobal_GEM.Dot( fOpticsZaxis_global );
+
+  //std::cout << "GEM origin = " << std::endl;
+  //fGEMorigin.Print();
+  //std::cout << "Optics origin = " << std::endl;
+  //fOpticsOrigin.Print();
+
+  //std::cout << "GEM z axis global = " << std::endl;
+  //fGEMzaxis_global.Print();
+  //std::cout << "Optics z axis global = " << std::endl;
+  //fOpticsZaxis_global.Print();
   
-  TVector3 p_trk(px, py, pz);
-  p_trk.Transform(fDet2OptRot);
+  //std::cout << "GEM (x,y,xp,yp) = " << x_fp << ", " << y_fp << ", " << xp_fp << ", " << yp_fp << std::endl;
+  // std::cout << "Optics (x,y,xp,yp) = " << xoptics << ", " << yoptics << ", " << xpoptics << ", " << ypoptics << endl;
   
-  xp_fp = p_trk.X()/p_trk.Z();
-  yp_fp = p_trk.Y()/p_trk.Z();
+  track->SetR( xoptics, yoptics, xpoptics, ypoptics );
   
-  // cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
-  
-  track->Set(x_fp, y_fp, xp_fp, yp_fp);
+  //The following line is no longer necessary as we are using the "Rotated TRANSPORT coordinates" to store the track parameters in ideal optics system
+  //track->Set(x_fp, y_fp, xp_fp, yp_fp);
   
   
 }
@@ -755,15 +816,25 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   
   spec_zaxis_fp = BB_zaxis;
   spec_yaxis_fp = BB_yaxis;
-  spec_zaxis_fp.Rotate(-fTrackerPitchAngle, spec_yaxis_fp);
+  spec_zaxis_fp.Rotate(-fOpticsAngle, spec_yaxis_fp);
   spec_xaxis_fp = spec_yaxis_fp.Cross(spec_zaxis_fp).Unit();
  
   Double_t x_fp, y_fp, xp_fp, yp_fp;
   //if( fCoordType == kTransport ) {
-  x_fp = track->GetX();
-  y_fp = track->GetY();
-  xp_fp = track->GetTheta();
-  yp_fp = track->GetPhi();
+
+  if( track->HasRot() ){
+    //    std::cout << "using rotated track coordinates for optics: " << endl;
+    x_fp = track->GetRX();
+    y_fp = track->GetRY();
+    xp_fp = track->GetRTheta();
+    yp_fp = track->GetRPhi();
+  } else {
+    //std::cout << "using non-rotated track coordinates for optics: " << endl;
+    x_fp = track->GetX();
+    y_fp = track->GetY();
+    xp_fp = track->GetTheta();
+    yp_fp = track->GetPhi();
+  }
   //}
   //cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
 
@@ -801,26 +872,38 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     }
   }
 
+  //Let's simplify the bend angle reconstruction to avoid double-counting, even though 
+  //this calculation is almost certainly correct:
+
   TVector3 phat_tgt_fit(xptar_fit, yptar_fit, 1.0 );
   phat_tgt_fit = phat_tgt_fit.Unit();
+
+  TVector3 phat_fp(xp_fp, yp_fp, 1.0 );
+  phat_fp = phat_fp.Unit();
+
+  TVector3 phat_fp_rot = phat_fp.X() * fOpticsXaxis_global + 
+    phat_fp.Y() * fOpticsYaxis_global + 
+    phat_fp.Z() * fOpticsZaxis_global; 
   
-  TVector3 phat_tgt_fit_global = phat_tgt_fit.X() * spec_xaxis_tgt +
-    phat_tgt_fit.Y() * spec_yaxis_tgt +
-    phat_tgt_fit.Z() * spec_zaxis_tgt;
+  thetabend_fit = acos( phat_fp_rot.Dot( phat_tgt_fit ) );
+
+  // TVector3 phat_tgt_fit_global = phat_tgt_fit.X() * spec_xaxis_tgt +
+  //   phat_tgt_fit.Y() * spec_yaxis_tgt +
+  //   phat_tgt_fit.Z() * spec_zaxis_tgt;
   
-  TVector3 phat_fp_fit(xp_fp, yp_fp, 1.0 );
-  phat_fp_fit = phat_fp_fit.Unit();
+  // TVector3 phat_fp_fit(xp_fp, yp_fp, 1.0 );
+  // phat_fp_fit = phat_fp_fit.Unit();
   
-  TVector3 phat_fp_fit_global = phat_fp_fit.X() * spec_xaxis_fp +
-    phat_fp_fit.Y() * spec_yaxis_fp +
-    phat_fp_fit.Z() * spec_zaxis_fp;
+  // TVector3 phat_fp_fit_global = phat_fp_fit.X() * spec_xaxis_fp +
+  //   phat_fp_fit.Y() * spec_yaxis_fp +
+  //   phat_fp_fit.Z() * spec_zaxis_fp;
   
-  thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
+  //thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
   
   p_fit = pthetabend_fit/thetabend_fit;
   vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
   
-  pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1) );
+  pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1.) );
   px = xptar_fit * pz;
   py = yptar_fit * pz;
 
@@ -829,6 +912,9 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   px = +pvect_BB.Z()*sin(th_bb)+pvect_BB.Y()*cos(th_bb);
   py = -pvect_BB.X();
   pz = pvect_BB.Z()*cos(th_bb)-pvect_BB.Y()*sin(th_bb);
+
+  //We should move this to before the optics calculations in case we want to actually correct the optics for the beam position:
+  double ybeam=0.0,xbeam=0.0;
   
   //retrieve beam position, if available, to calculate xtar.
   TIter aiter(gHaApps);
@@ -837,8 +923,8 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     if(app->InheritsFrom("SBSRasteredBeam")){
       SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
       //double xbeam = RasterBeam->GetPosition().X();
-      double ybeam = RasterBeam->GetPosition().Y();
-      
+      ybeam = RasterBeam->GetPosition().Y();
+      xbeam = RasterBeam->GetPosition().X();
       xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
     }
     //cout << var->GetName() << endl;
@@ -848,7 +934,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
   track->SetPvect(TVector3(px, py, pz));
-  track->SetVertex(TVector3(0, 0, vz_fit));
+  track->SetVertex(TVector3(xbeam, ybeam, vz_fit));
 
   //cout << px << " " << py << " " << pz << "   " << vz_fit << endl;
   //cout << track->GetLabPx() << " " << track->GetLabPy() << " " << track->GetLabPz() 
@@ -879,7 +965,7 @@ Int_t SBSBigBite::CalcPID()
     auto* theTrack = static_cast<THaTrack*>( fTracks->At(t) );
     CalcTrackPID(theTrack);
   }
-  
+  return 0;
 }
 
 //_____________________________________________________________________________
@@ -1169,4 +1255,32 @@ Bool_t SBSBigBite::SetMultiTracks( Bool_t set )
 Bool_t SBSBigBite::GetMultiTracks() const
 {
   return TestBit(kMultiTracks);
+}
+
+void SBSBigBite::InitOpticsAxes(double BendAngle, const TVector3 &Origin ){
+  fOpticsOrigin = Origin;
+  fOpticsYaxis_global.SetXYZ(0,1,0);
+  fOpticsZaxis_global.SetXYZ(-sin(BendAngle), 0, cos(BendAngle) );
+  fOpticsXaxis_global.SetXYZ(cos(BendAngle), 0, sin(BendAngle) );
+}
+
+void SBSBigBite::InitOpticsAxes(double BendAngle ){
+  // fOpticsOrigin = Origin;
+  fOpticsYaxis_global.SetXYZ(0,1,0);
+  fOpticsZaxis_global.SetXYZ(-sin(BendAngle), 0, cos(BendAngle) );
+  fOpticsXaxis_global.SetXYZ(cos(BendAngle), 0, sin(BendAngle) );
+}
+
+void SBSBigBite::InitGEMAxes( double theta, double phi, const TVector3 &Origin ){
+  fGEMorigin = Origin;
+  fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
+  fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
+  fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
+}
+
+void SBSBigBite::InitGEMAxes( double theta, double phi ){
+  //fGEMorigin = Origin;
+  fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
+  fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
+  fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
 }

@@ -202,8 +202,10 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     UInt_t flags = THaDetMap::kFillRefIndex;//THaDetMap::kFillPlane;//TestBit(kHaveRefChans) ? THaDetMap::kFillRefChan : 0;
     //cout<<"asd################asda"<<flags<<endl;
     // Parse the detector map of the data channels
-    if( FillDetMap( *detmap, flags, here ) <= 0 )
+    if( FillDetMap( *detmap, flags, here ) <= 0 ) {
+      fclose(fi);
       return kInitError;
+    }
     
     delete detmap;
   }

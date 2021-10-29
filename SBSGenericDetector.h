@@ -25,6 +25,7 @@
 #include "TVector3.h"
 #include "THaDetMap.h"
 #include "SBSElement.h"
+#include "Helper.h"
 
 namespace SBSModeADC {
   enum Mode{
@@ -61,25 +62,25 @@ struct SBSGenericOutputData {
   // ADC variables
   std::vector<Int_t> ped;         //< [] pedestal
   std::vector<Int_t> a_mult;         //< [] ADC # of hits per channel
-  std::vector<Float_t> a;         //< [] ADC integral
-  std::vector<Float_t> a_p;         //< [] ADC integral -pedestal
-  std::vector<Float_t> a_c;         //< [] (ADC integral -pedestal)*calib
-  std::vector<Float_t> a_amp;     //< [] ADC pulse amplitude
-  std::vector<Float_t> a_amp_p;     //< [] ADC pulse amplitude -pedestal
-  std::vector<Float_t> a_amp_c;     //< [] ADC pulse amplitude -pedestal
-  std::vector<Float_t> a_amptrig_p;     //< [] ADC pulse amplitude -pedestal
-  std::vector<Float_t> a_amptrig_c;     //< [] ADC pulse amplitude -pedestal
-  std::vector<Float_t> a_time;    //< [] ADC pulse time
+  std::vector<Double_t> a;         //< [] ADC integral
+  std::vector<Double_t> a_p;         //< [] ADC integral -pedestal
+  std::vector<Double_t> a_c;         //< [] (ADC integral -pedestal)*calib
+  std::vector<Double_t> a_amp;     //< [] ADC pulse amplitude
+  std::vector<Double_t> a_amp_p;     //< [] ADC pulse amplitude -pedestal
+  std::vector<Double_t> a_amp_c;     //< [] ADC pulse amplitude -pedestal
+  std::vector<Double_t> a_amptrig_p;     //< [] ADC pulse amplitude -pedestal
+  std::vector<Double_t> a_amptrig_c;     //< [] ADC pulse amplitude -pedestal
+  std::vector<Double_t> a_time;    //< [] ADC pulse time
   // TDC variables
   std::vector<Int_t> t_mult;         //< [] TDC # of hits per channel
-  std::vector<Float_t> t;         //< [] TDC (leading edge) time
-  std::vector<Float_t> t_te;      //< [] TDC trailing edge time
-  std::vector<Float_t> t_ToT;     //< [] TDC Time-Over-Threshold
+  std::vector<Double_t> t;         //< [] TDC (leading edge) time
+  std::vector<Double_t> t_te;      //< [] TDC trailing edge time
+  std::vector<Double_t> t_ToT;     //< [] TDC Time-Over-Threshold
   // Waveform variables
   std::vector<Int_t> samps_elemID;      //< [] Element ID of samples
   std::vector<Int_t> nsamps;      //< [] Number of ADC samples
   std::vector<Int_t> sidx;        //< [] Index of start of ADC samples in for this row-col-layer
-  std::vector<Float_t> samps;     //< []*nsamps ADC samples
+  std::vector<Double_t> samps;     //< []*nsamps ADC samples
 
   // Quick clear class
   void clear() {
@@ -149,7 +150,7 @@ public:
   // Can be re-implemented by other classes to specify a different
   // SBSElement sub-class (i.e. useful when one wants to chang  the logic
   // in SBSElement::CoarseProcess()
-  virtual SBSElement* MakeElement(Float_t x, Float_t y, Float_t z, Int_t row,
+  virtual SBSElement* MakeElement(Double_t x, Double_t y, Double_t z, Int_t row,
       Int_t col, Int_t layer, Int_t id = 0);
   
   Double_t SizeRow(){ return fSizeRow; };
@@ -201,9 +202,9 @@ protected:
   Bool_t fFineProcessed;    //< Was fine processed already called
 
   //Gain correction 
-  Float_t   fConst;     // const from gain correction 
-  Float_t   fSlope;     // slope for gain correction
-  Float_t   fAccCharge; // accumulated charge
+  Double_t   fConst;     // const from gain correction 
+  Double_t   fSlope;     // slope for gain correction
+  Double_t   fAccCharge; // accumulated charge
 
   // Per event data
   Int_t      fNhits;     ///< Number of hits in event
@@ -213,41 +214,6 @@ protected:
 
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
-
-private:
-  // Simple and quick routine to init and clear most vectors
-  // (of integers, floats, doubles, etc...)
-  // Reset/Init 1D vector
-  template<class T>
-  void InitVector(std::vector<T> &vec, T val = 0, size_t n = 0) {
-    vec.resize(n);
-    ResetVector(vec,val);
-  }
-
-  template<class T>
-  void ResetVector(std::vector<T> &vec, T val = 0, size_t n = 0) {
-    if(n > 0) {
-      vec.clear();
-      vec.resize(n);
-    }
-    for(size_t i = 0; i < vec.size(); i++) {
-      vec[i] = val;
-    }
-  }
-
-  // Reset 2D vector
-  template<class T>
-  void ResetVector(std::vector<std::vector<T> > &vec, T val = 0,
-      size_t nr = 0, size_t nc = 0) {
-    if(nr > 0) {
-      vec.clear();
-      vec.resize(nr);
-    }
-    for(size_t i = 0; i < vec.size(); i++) {
-      ResetVector(vec[i],val,nc);
-    }
-  }
-
 
   ClassDef(SBSGenericDetector,0)     //Generic shower detector class
 };

@@ -30,7 +30,7 @@ SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_LIBDIR}")
 # which point to directories outside the build tree to the install RPATH
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-SET(CMAKE_BUILD_TYPE RelWithDebInfo)
+#SET(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 # the RPATH to be used when installing, but only if it's not a system directory
 LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_FULL_LIBDIR}" isSystemDir)
@@ -79,7 +79,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
 string(REGEX REPLACE .cxx .h headers "${sources}")
 ## Append a few extra header files in the repository.  (But do not append the
 ## sbs_LinkDef.h header here, that is further down this cmake config.
-list(APPEND headers "DebugDef.h")
+list(APPEND headers "DebugDef.h" "Helper.h")
 
 ## Setup default variables (copied from Makefile)
 #FIXME: should be configure'd:
@@ -152,17 +152,8 @@ if(VERBOSE)
 endif()
 
 
-if(DEFINED ENV{EVIO_INCDIR})
-  set(EVIO_INCLUDE_DIR $ENV{EVIO_INCDIR})
-  message(STATUS "Found EVIO at ${EVIO_INCLUDE_DIR}")
-else() # assuming that if the user has not specified EVIO_INCDIR, then user is using Podd's self-built EVIO installation:
-  set(EVIO_INCLUDE_DIR $ENV{ANALYZER}/include)
-  message(WARNING "No EVIO directory found. Defaulting to $ENV{ANALYZER}/include, assuming use of Podd's built-in EVIO verison...")
-endif()
 
-
-
-include_directories(${ROOT_INCLUDE_DIR} ${Podd_INCLUDE_DIR} ${EVIO_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
+include_directories(${ROOT_INCLUDE_DIR} ${Podd_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ROOT_CXX_FLAGS}")
 
 ## Generate the ROOT dictionary

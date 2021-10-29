@@ -106,6 +106,7 @@ Int_t SBSRaster::ReadDatabase( const TDatime& date )
   // printf(Form("File name: %s\n",result));
   // printf(Form("%d",fileno(file))); // /proc/self/fd/number...
   // printf(Form("OFFSETs and Scaler Factors of Raster for file %d: %f, %f, %f, %f\n",date.GetDate(),raw2posT[0],raw2posT[1],rped[0],rped[1]));
+
   fclose(file);
   if( err )
     return err;
