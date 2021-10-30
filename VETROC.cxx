@@ -78,14 +78,14 @@ namespace Decoder {
     if (data_type_def ==0 && data_type_cont==0) data_type_def = 3; // trigger time continuatio 
     switch(data_type_def) {
     case 0: // block header
-      	tdc_data.glb_hdr_evno = (*p >> 22) & 0x1F; // bits 26-5
-	tdc_data.glb_hdr_slno = (*p >> 8) & 0x3FF;       // bits 
+      	tdc_data.glb_hdr_slno = (*p >> 22) & 0x1F; // 
+	//	tdc_data.glb_hdr_slno = (*p >> 8) & 0x3FF;       // bits 
 	if (tdc_data.glb_hdr_slno == fSlot) {
 #ifdef WITH_DEBUG
 	if (fDebugFile)
 	  *fDebugFile << "VETROCModule:: Block HEADER >> data = " 
 		      << hex << *p << " >> event number = " << dec 
-		      << tdc_data.glb_hdr_evno << " >> slot number = "  
+		      <<  << " >> slot number = "  
 		      << tdc_data.glb_hdr_slno << endl;
 #endif
       }
