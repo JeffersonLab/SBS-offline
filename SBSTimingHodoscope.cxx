@@ -892,8 +892,8 @@ void SBSTimingHodoscope::ClearEvent()
   fGoodBarADCRa.clear();
   fGoodBarADCRap.clear();
   fGoodBarADCRac.clear();
-  
-  fClusters.clear();
+
+  DeleteContainer(fClusters);
   
   /*
   fClusterMult.clear();
@@ -932,6 +932,7 @@ SBSTimingHodoscope::~SBSTimingHodoscope()
   DeleteContainer(fBars);
   DeleteContainer(fPMTMapL);
   DeleteContainer(fPMTMapR);
+  DeleteContainer(fClusters);
 }
 
 SBSTimingHodoscopeCluster* SBSTimingHodoscope::GetCluster(int i)
