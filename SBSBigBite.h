@@ -19,7 +19,7 @@ public:
   virtual Int_t	CoarseTrack();
   virtual Int_t	Reconstruct();
   virtual Int_t	Track();
-  virtual Int_t       CalcPID();
+  virtual Int_t CalcPID();
    
   virtual Int_t FindVertices( TClonesArray& tracks );
   virtual Int_t TrackCalc();
@@ -38,7 +38,8 @@ protected:
   virtual Int_t ReadDatabase( const TDatime& date );
   virtual Int_t ReadRunDatabase( const TDatime& date );
   virtual Int_t DefineVariables( EMode mode = kDefine );
-    
+  virtual void  DefinePidParticles();
+
   void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
   void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords
   void CalcTrackTiming( THaTrack* the_track );
