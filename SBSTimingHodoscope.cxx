@@ -32,14 +32,13 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
   fClusMaxSize = 5;
   fMaxYposDiffCluster = 0.15;//m
   fMaxTimeDiffCluster = 10.0;//ns
-
-  fvScint = 0.454*0.299792458; //m/ns
-  //Defaults for track match cuts:
-  ftDiff0 = -1.35;  //ns
   
   fTrackMatchCutX = 0.05;
   fTrackMatchCutY = 0.15;
 
+  fTDCWinMin = -102.;
+  fTDCWinMax = -62.;
+  fTotMin = 7.;
 
 }
 
@@ -80,6 +79,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     { "adcbaroffset",    &adcbaroff,         kInt,    0, true }, //to allow for cycling through sections
     { "tdcwindowmin", &tdcwinmin, kDouble, 0, true }, //parameter for tdc window min
     { "tdcwindowmax", &tdcwinmax, kDouble, 0, true }, //parameter for tdc window max
+    { "tdctotmin", &fTotMin, kDouble, 0, true }, //parameter for tdc window max
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
@@ -116,17 +116,25 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   }
   
   DBRequest trackmatch_params[] = {
-    { "vscint",          &fvScint, kDouble, 0, 1, 1},
-    { "tdiffoffset",     &ftDiff0, kDouble, 0, 1, 1},
+    { "vscint",         &fvScint, kDoubleV, 0, 1, 1},
+    { "tdiffoffset",    &ftDiff0, kDoubleV, 0, 1, 1},
     { "trackmatchcutX",  &fTrackMatchCutX, kDouble, 0, 1, 1},
     { "trackmatchcutY",  &fTrackMatchCutY, kDouble, 0, 1, 1},
     { 0 }
   };
-
   err = LoadDB( file, date, trackmatch_params, fPrefix );
   if(err) {
     fclose(file);
     return err;
+  }
+
+  if( fvScint.size() != (UInt_t)fNelem/2 ) {
+    std::cout << " vScint vector too small " << fvScint.size() << " # of bars =" << fNelem/2 << std::endl;
+    std::fill(fvScint.begin(), fvScint.end(),  0.454*0.299792458 ); // m/ns
+  }
+  if( ftDiff0.size() != (UInt_t)fNelem/2 ) {
+    std::cout << " tDiff0 vector too small " << ftDiff0.size() << " # of bars =" << fNelem/2 << std::endl;
+    std::fill(ftDiff0.begin(), ftDiff0.end(),  -1.35 ); // ns
   }
 
   std::vector<Double_t> ypos;//position of element
@@ -139,7 +147,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     return err;
   }
   if (ypos.size()>0) {
-    if (ypos.size() == fNelem) {
+    if (ypos.size() == (UInt_t)fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	SBSElement* blk= fElements[ne];
 	fElements[ne]->SetY(ypos[ne]);
@@ -162,7 +170,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   fTDCWinMax = tdcwinmax;
 
   if( WithTDC() || WithADC()){
-    if(timewalkpar0.size()!=fNelem || timewalkpar1.size()!=fNelem){
+    if(timewalkpar0.size()!=(UInt_t)fNelem || timewalkpar1.size()!=(UInt_t)fNelem){
       Error( Here("ReadDatabase"),
 	     "N elements for hodoscope time walk maps != fNelem");
       return kInitError;
@@ -384,7 +392,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   // std::cout << "NBars " << NBars << " fElements.size()/2 " << fElements.size()/2 << std::endl;
   //std::cout << "fTDCWinMin: " << fTDCWinMin << std::endl;
   //std::cout << "fTDCWinMax: " << fTDCWinMax << std::endl;
-  if(NBars!=(fElements.size()/2)){
+  if((UInt_t)NBars!=(fElements.size()/2)){
     Error( Here("CoarseProcess"),
 	   "hodoscope #bars length not of correct size ie !=#elements/2");
     return kInitError;
@@ -409,7 +417,9 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	Double_t LEl = hitL.le.val;
 	Double_t LEr = hitR.le.val;
 
-	if(fTDCWinMin < LEl && LEl < fTDCWinMax && fTDCWinMin < LEr && LEr < fTDCWinMax){
+	if(fTDCWinMin < LEl && LEl < fTDCWinMax && fTDCWinMin < LEr && LEr < fTDCWinMax
+	   && (hitL.te.val-hitL.le.val) > fTotMin && (hitR.te.val-hitR.le.val) > fTotMin ) {
+
 	//Int_t bar = BarInc;// why redeclare the index?
 	// don't need to add offset to tdc since all readout simultaneously
 	
@@ -445,7 +455,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	// The offset aligns this quantity with the GEM track projection to the hodoscope
 	// fvScint ~= 0.454c is the average effective propagation speed as
 	// measured by the GEM-TH correlation.
-	Double_t HorizPos = -0.5 * (bartimediff-ftDiff0) * fvScint; // position from L based on timediff and in m. 
+	Double_t HorizPos = -0.5 * (bartimediff-ftDiff0.at(BarInc)) * fvScint.at(BarInc); // position from L based on timediff and in m. 
 	
 	// check basic quality before pushing
 	//if(fabs(HorizPos)>fHorizPosBarCut)continue;
@@ -602,14 +612,14 @@ Int_t SBSTimingHodoscope::DoClustering()
   std::vector<int> localmax_idx;
   localmax_idx.clear();
   
-  for(int i = 0; i<fGoodBarIDsTDC.size(); i++){
+  for(int i = 0; i<(int)fGoodBarIDsTDC.size(); i++){
     int baridx = fGoodBarIDsTDC[i];
     SBSTimingHodoscopeBar* Bar = fBars[baridx];
     //std::cout << "id: " << baridx << " mean ToT: " 
     //<< fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i] << std::endl;
     //find local maximum first:
     // check for the "middle" elements
-    if(0<i && i<fGoodBarIDsTDC.size()-1){
+    if(0<i && i<(int)fGoodBarIDsTDC.size()-1){
       // if the considered element has larger Time over Threshold than both its direct neighbors, it is considered a local maximum
       if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) && (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) ){
 	//std::cout << " case 1 " << std::endl;
@@ -642,7 +652,7 @@ Int_t SBSTimingHodoscope::DoClustering()
 	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
 	fClusters.push_back(clus);
       }
-    }else if(i==fGoodBarIDsTDC.size()-1){
+    }else if(i==(int)fGoodBarIDsTDC.size()-1){
       if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) || baridx-fGoodBarIDsTDC[i-1]>1 ){
 	//check for last element
 	//std::cout << " case 6 " << std::endl;
@@ -775,7 +785,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 	SBSElement *blk2 = fElementGrid[r][c][l];
 	Int_t column = blk2->GetCol();
 	Int_t row = blk2->GetRow();
-	if(p>=fElements.size()){
+	if(p>=(int)fElements.size()){
 	  std::cout << "row " << r << " col " << c << " l " << l  << " p " << p << "/" << fElements.size() << std::endl;
 	  std::cout << "element column " << column << " and row " << row << std::endl;
 	}
@@ -824,7 +834,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
   std::cout << "n elements " << nElements << ", nbars " << nbars << std::endl;
   
   // now we have the arrays of left and right pmts, we need to make the bars
-  if( fPMTMapL.size()!=fPMTMapR.size() || fPMTMapL.size()!=nbars || fPMTMapR.size()!=nbars) {
+  if( fPMTMapL.size()!=fPMTMapR.size() || fPMTMapL.size()!=(UInt_t)nbars || fPMTMapR.size()!=(UInt_t)nbars) {
     Error( Here("ConstructHodoscope"),
 	   "PMT arrays for constructing hodoscope bars not of correct length");
     return kInitError;
