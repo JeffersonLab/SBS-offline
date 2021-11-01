@@ -99,8 +99,12 @@ public:
   /* speed of light in scint? what is n for ej200 */
   // n = 1.58 => n=c/v =>v=c/n
   //  Double_t n=1.58;
-  Double_t fvScint; //default to 0.454c, later we might want to define separately for different bars?
-  Double_t ftDiff0; //offset of time difference to align horizontal position from time difference with horizontal projection of tracks
+
+  std::vector<Double_t> fvScint; 
+  std::vector<Double_t> ftDiff0;
+
+  //  Double_t fvScint; //default to 0.454c, later we might want to define separately for different bars?
+  //  Double_t ftDiff0; //offset of time difference to align horizontal position from time difference with horizontal projection of tracks
   Double_t fTrackMatchCutX;
   Double_t fTrackMatchCutY;
   
@@ -114,6 +118,7 @@ public:
   Int_t fTDCRefLeR;
   Double_t fTDCWinMin;
   Double_t fTDCWinMax;
+  Double_t fTotMin;
   
   std::vector<Int_t>   fGoodBarIDsTDC;
   std::vector<Double_t> fGoodBarTDCmean;
