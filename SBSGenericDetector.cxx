@@ -1120,6 +1120,14 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   Double_t reftime  = 0;
   //
+  std::vector<TDCHits> tdchit;
+  if(fModeTDC == SBSModeTDC::kTDC )  {
+    for(Int_t ihit = 0; ihit < nhit; ihit++) {
+      TDCHits c1 = {evdata.GetRawData(d->crate, d->slot, chan, ihit),evdata.GetData(d->crate, d->slot, chan, ihit)};
+      tdchit.push_back(c1);
+    }
+    std::sort(tdchit.begin(), tdchit.end(), [](const TDCHits& c1, const TDCHits& c2) {return c1.rawtime < c2.rawtime;});
+  }
   //
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
@@ -1151,15 +1159,14 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
         if(fModeTDC == SBSModeTDC::kTDCSimple) {
     blk->TDC()->ProcessSimple(elemID,evdata.GetData(d->crate, d->slot, chan, ihit) - reftime,ihit);
 	} else {
-      edge = evdata.GetRawData(d->crate, d->slot, chan, ihit);
+      edge = tdchit[ihit].edge;
       //           std::cout << ihit << " " << evdata.GetData(d->crate, d->slot, chan, ihit) - reftime << " " << edge << std::endl;
     if (edge ==1 && ihit ==0) continue; // skip first hit if trailing edge
     if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
-    blk->TDC()->Process(elemID,
-        evdata.GetData(d->crate, d->slot, chan, ihit) - reftime, edge);
+    blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
   }
   if (!blk->TDC()->HasData()) {
-          Double_t val= evdata.GetData(d->crate, d->slot, chan, 0);
+          Double_t val=tdchit[0].rawtime ;
 	  blk->TDC()->Process(elemID,val - reftime , edge);
 	  /*
             if (nhit==1)  {	 
