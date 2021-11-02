@@ -44,7 +44,11 @@ namespace SBSModeTDC {
     kTDCSimple,  //< Does not contain trailing edge, and hence no ToT info
   };
 }
-
+// structure for sorting TDC hits
+struct TDCHits {
+  UInt_t edge;
+  UInt_t rawtime;
+};
 
 // This structure has output data when the user wants every hit to be stored
 // in the rootfile.
