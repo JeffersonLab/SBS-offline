@@ -155,7 +155,7 @@ namespace SBSData {
     Double_t ThresVal=GetThres(); // mV
     UInt_t ThresCrossBin=TMath::Max(NPedsum-1,0);
     //    std::cout << " ped = " << fSamples.ped << " thres = " << ThresVal << std::endl ;
-    while ( fSamples.samples_raw[ThresCrossBin] < fSamples.ped+ThresVal && ThresCrossBin < vals.size() ) {
+    while ( ThresCrossBin < vals.size() && fSamples.samples_raw[ThresCrossBin] < fSamples.ped+ThresVal ) {
         ThresCrossBin++;
     }
      //

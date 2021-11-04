@@ -69,7 +69,13 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
 
   InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
   
-  //Default 
+  // Define our own PID parameters (undo what THaSpectrometer has set up)
+  SBSBigBite::DefinePidParticles();
+
+  // Enable PID calculations (call CalcPID)
+  SetPID(true);
+
+  //Default
   
   
   // Constructor. Defines standard detectors
@@ -109,6 +115,19 @@ void SBSBigBite::Clear( Option_t *opt )
   fProbaPi.clear();
 }
 
+//_____________________________________________________________________________
+void SBSBigBite::DefinePidParticles()
+{
+  // Define the default set of PID particles:
+  //  electron, pion
+
+  fPidParticles->Delete();    //make sure array is empty
+
+  AddPidParticle( "e",  "electron",   0.511e-3, -1 );
+  AddPidParticle( "pi", "pion",   0.139, -1 );
+}
+
+//_____________________________________________________________________________
 Int_t SBSBigBite::ReadRunDatabase( const TDatime &date ){
   const char* const here = "SBSBigBite::ReadRunDatabase()";
 
@@ -1067,12 +1086,9 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
      fBackConstraintX.size()==0 || fBackConstraintY.size()==0)return;
   
   //particles: 0: electron, 1: pion
-  //detectors: 0: ps/sh
-  THaPIDinfo* pidinfo = new THaPIDinfo(2, 2);
-  pidinfo->SetDefaultPriors();
-  
-  the_track->SetPIDinfo(pidinfo);
-  
+  //detectors: 0: calo, 1: GRINCH
+  auto* pidinfo = the_track->GetPIDinfo();
+
   double eproba, piproba;
   
   TIter next( fNonTrackingDetectors );
@@ -1101,8 +1117,8 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       proba_pcal(fEtot[i_match]/the_track->GetP(), pr1, pr2);
       eproba*=pr1;
       piproba*=pr2;
-      the_track->GetPIDinfo()->SetProb(0, 0, eproba);
-      the_track->GetPIDinfo()->SetProb(0, 1, piproba);
+      pidinfo->SetProb(0, 0, eproba);
+      pidinfo->SetProb(0, 1, piproba);
     }//end if(inheritsfrom(SBSBBTotalShower))
     
     // then, GRINCH PID
@@ -1135,11 +1151,11 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       }
       
       proba_grinch(NGRINCHPMTs_match, the_track->GetP(), eproba, piproba);
-      the_track->GetPIDinfo()->SetProb(1, 0, eproba);
-      the_track->GetPIDinfo()->SetProb(1, 1, piproba);
+      pidinfo->SetProb(1, 0, eproba);
+      pidinfo->SetProb(1, 1, piproba);
     }
     
-    the_track->GetPIDinfo()->CombinePID();
+    pidinfo->CombinePID();
     
     // cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
     // 	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
@@ -1153,8 +1169,8 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
     // 	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
     // 	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
     
-    fProbaE.push_back(the_track->GetPIDinfo()->GetCombinedProb(0));
-    fProbaPi.push_back(the_track->GetPIDinfo()->GetCombinedProb(1));
+    fProbaE.push_back(pidinfo->GetCombinedProb(0));
+    fProbaPi.push_back(pidinfo->GetCombinedProb(1));
     
   }
 }
