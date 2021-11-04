@@ -325,7 +325,21 @@ protected:
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster
   std::vector<double> fHitIsampMaxVstrip; //same but for max strip in cluster
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
-  std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC. 
+  std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC.
+  //For pulse shape studies:
+  std::vector<double> fHitADCfrac0_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac1_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac2_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac3_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac4_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac5_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac0_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac1_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac2_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac3_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac4_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac5_MaxVstrip; //time sample 0 of max U strip
+
   //And I THINK that's all we need to get started!
   std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
   std::vector<UInt_t> fHitU_CM_GOOD;

@@ -13,6 +13,7 @@ class THaEvData;
 class THaRunBase;
 class TH1D;
 class TH2D;
+class TF1;
 class TClonesArray;
 
 namespace SBSGEM {
@@ -165,6 +166,12 @@ class SBSGEMModule : public THaSubDetector {
 
   double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
   
+  void fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool max=false );
+
+  double FitStripTime( int striphitindex, double RMS=20.0 ); // "dumb" fit method 
+
+  TF1 *fStripTimeFunc;
+
   bool fIsDecoded;
   
   //UShort_t GetLayer() const { return fLayer; }
@@ -227,7 +234,8 @@ class SBSGEMModule : public THaSubDetector {
   Bool_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
   Bool_t fUseStripTimingCuts; // Apply strip timing cuts:
   
-  
+
+  Double_t fStripTau; //time constant for strip timing fit
   Double_t fStripMaxTcut_central, fStripMaxTcut_width; // Strip timing cuts for local maximum used to seed cluster
   Double_t fStripAddTcut_width; //Time cut for adding strips to a cluster
 
@@ -308,6 +316,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
+  std::vector<Double_t> fStripTfit; //Dumb strip fit:
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
   std::vector<UInt_t> fStrip_ENABLE_CM; //Flag to indicate whether CM was done online or offline for this strip
   std::vector<UInt_t> fStrip_CM_GOOD; //Flag to indicate whether online CM succeeded
@@ -508,6 +517,14 @@ class SBSGEMModule : public THaSubDetector {
   TH2D *hMPD_EventCount_Alignment_vs_Fiber;
   TH2D *hMPD_FineTimeStamp_vs_Fiber; 
   
+  //Pulse-shape diagnostics:
+
+  bool fPulseShapeInitialized; 
+
+  TH2D *hADCfrac_vs_timesample_allstrips; //All fired strips
+  TH2D *hADCfrac_vs_timesample_goodstrips;  //strips on good tracks
+  TH2D *hADCfrac_vs_timesample_maxstrip; //max strip in cluster on good track
+
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;
   // TClonesArray *hrawADCs_by_strip_sampleV;

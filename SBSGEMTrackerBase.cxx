@@ -175,7 +175,21 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitV_CM_GOOD.clear();
   fHitV_BUILD_ALL_SAMPLES.clear();
   
+  fHitADCfrac0_MaxUstrip.clear();
+  fHitADCfrac1_MaxUstrip.clear();
+  fHitADCfrac2_MaxUstrip.clear();
+  fHitADCfrac3_MaxUstrip.clear();
+  fHitADCfrac4_MaxUstrip.clear();
+  fHitADCfrac5_MaxUstrip.clear();
+
+  fHitADCfrac0_MaxVstrip.clear();
+  fHitADCfrac1_MaxVstrip.clear();
+  fHitADCfrac2_MaxVstrip.clear();
+  fHitADCfrac3_MaxVstrip.clear();
+  fHitADCfrac4_MaxVstrip.clear();
+  fHitADCfrac5_MaxVstrip.clear();
   
+
   fclustering_done = false;
   ftracking_done = false;
   
@@ -1345,7 +1359,13 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	fModules[module]->fStripTrackIndex[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = itrack;
 	fModules[module]->fStripOnTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
 	fModules[module]->fStripUonTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
+
+	bool ismaxstrip = (istrip == uclustinfo->istripmax);
+
+	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( uclustinfo->hitindex[istrip-uclustinfo->istriplo], ismaxstrip );
+	
       }
+      
       
       //
       fHitNstripsV.push_back( vclustinfo->nstrips );
@@ -1359,7 +1379,49 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	fModules[module]->fStripTrackIndex[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = itrack;
 	fModules[module]->fStripOnTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
 	fModules[module]->fStripVonTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
+
+	bool ismaxstrip = (istrip == vclustinfo->istripmax);
+
+	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( vclustinfo->hitindex[istrip-vclustinfo->istriplo], ismaxstrip );
+	
       }
+ 
+	  //hard-coded limit of 6 APV25 samples for output:
+      int ntimesamples = 6; 
+      
+      double ADCfrac_maxUstrip[ntimesamples];
+      double ADCfrac_maxVstrip[ntimesamples]; 
+     
+      
+      UInt_t hitidx_umax = uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo];
+      UInt_t hitidx_vmax = vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo];
+      
+      double ADCsum_maxUstrip = fModules[module]->fADCsums[hitidx_umax];
+      double ADCsum_maxVstrip = fModules[module]->fADCsums[hitidx_vmax];
+      
+      for( int isamp=0; isamp<ntimesamples; isamp++ ){
+	ADCfrac_maxUstrip[isamp] = 0.0;
+	ADCfrac_maxVstrip[isamp] = 0.0;
+	if( isamp < fModules[module]->fN_MPD_TIME_SAMP ){
+	  ADCfrac_maxUstrip[isamp] = fModules[module]->fADCsamples[hitidx_umax][isamp]/ADCsum_maxUstrip;
+	  ADCfrac_maxVstrip[isamp] = fModules[module]->fADCsamples[hitidx_vmax][isamp]/ADCsum_maxVstrip;
+	}
+      }
+      
+      fHitADCfrac0_MaxUstrip.push_back( ADCfrac_maxUstrip[0] );
+      fHitADCfrac1_MaxUstrip.push_back( ADCfrac_maxUstrip[1] );
+      fHitADCfrac2_MaxUstrip.push_back( ADCfrac_maxUstrip[2] );
+      fHitADCfrac3_MaxUstrip.push_back( ADCfrac_maxUstrip[3] );
+      fHitADCfrac4_MaxUstrip.push_back( ADCfrac_maxUstrip[4] );
+      fHitADCfrac5_MaxUstrip.push_back( ADCfrac_maxUstrip[5] );
+      
+      fHitADCfrac0_MaxVstrip.push_back( ADCfrac_maxVstrip[0] );
+      fHitADCfrac1_MaxVstrip.push_back( ADCfrac_maxVstrip[1] );
+      fHitADCfrac2_MaxVstrip.push_back( ADCfrac_maxVstrip[2] );
+      fHitADCfrac3_MaxVstrip.push_back( ADCfrac_maxVstrip[3] );
+      fHitADCfrac4_MaxVstrip.push_back( ADCfrac_maxVstrip[4] );
+      fHitADCfrac5_MaxVstrip.push_back( ADCfrac_maxVstrip[5] );
+      
       
       fHitUlocal.push_back( hitinfo->uhit );
       fHitVlocal.push_back( hitinfo->vhit );
@@ -1379,12 +1441,11 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitUADC.push_back( uclustinfo->clusterADCsum );
       fHitVADC.push_back( vclustinfo->clusterADCsum );
       fHitADCavg.push_back( 0.5*( fHitUADC.back() + fHitVADC.back() ) );
-
+      
       fHitUADCmaxclustsample.push_back( uclustinfo->ADCsamples[uclustinfo->isampmax] );
       fHitVADCmaxclustsample.push_back( vclustinfo->ADCsamples[vclustinfo->isampmax] );
       
-      UInt_t hitidx_umax = uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo];
-      UInt_t hitidx_vmax = vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo];
+      
       
       fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_umax] );
       fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_vmax] );
