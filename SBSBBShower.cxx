@@ -187,6 +187,7 @@ void SBSBBShower::MakeMainCluster()
     SBSCalorimeterCluster *clus = fClusters[0];
     fMainclus.e.push_back(clus->GetE());
     fMainclus.atime.push_back(clus->GetAtime());
+    fMainclus.tdctime.push_back(clus->GetTDCtime());
     fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
     fMainclus.x.push_back(clus->GetX());
     fMainclus.y.push_back(clus->GetY());

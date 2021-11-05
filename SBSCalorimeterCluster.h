@@ -23,6 +23,7 @@ public:
     Double_t GetY() const {return fY;}
     Double_t GetE() const {return fE;}
     Double_t GetAtime() const {return fAtime;}
+    Double_t GetTDCtime() const {return fTDCtime;}
     Double_t GetEblk() const {return fEblk;}
     Int_t   GetMult() const {return fMult;}
     Int_t   GetRow()  const {return fRow; }
@@ -37,6 +38,7 @@ public:
     void SetY(Double_t var) {fY=var;}
     void SetE(Double_t var) {fE=var;}
     void SetAtime(Double_t var) {fAtime=var;}
+    void SetTDCtime(Double_t var) {fTDCtime=var;}
     void SetEblk(Double_t var) {fEblk=var;}
     void SetMult(Int_t var) {fMult=var;}
     void SetRow(Int_t var) { fRow=var; }
@@ -59,6 +61,7 @@ private:
 
     Double_t fE;       // Energy deposit in block
     Double_t fAtime;       // ADC time  of block with highest E
+    Double_t fTDCtime;       // TDC time  of block with highest E
     Double_t fEblk;    // Energy of block with highest E
     Int_t   fRow;     // Row of block with highest E
     Int_t   fCol;     // Row of block with highest E
