@@ -27,6 +27,7 @@ public:
   Double_t GetZ()     const { return fZ; }
   Double_t GetE()     const { return fE; }
   Double_t GetAtime()     const { return fAtime; }
+  Double_t GetTDCtime()     const { return fTDCtime; }
   Int_t   GetRow()   const { return fRow; }
   Int_t   GetCol()   const { return fCol; }
   Int_t   GetLayer() const { return fLayer; }
@@ -42,6 +43,7 @@ public:
   void SetZ(Double_t var)    { fZ = var; }
   void SetE(Double_t var)    { fE = var; }
   void SetAtime(Double_t var)    { fAtime = var; }
+  void SetTDCtime(Double_t var)    { fTDCtime = var; }
   void SetRow(Int_t var)    { fRow = var; }
   void SetCol(Int_t var)    { fCol = var; }
   void SetLayer(Int_t var)  { fLayer = var; }
@@ -65,6 +67,7 @@ protected:
   Double_t fZ;       ///< relative z position of the center
   Double_t fE;       ///< calibrated energy of event in this block
   Double_t fAtime;       ///< ADC time of event in this block
+  Double_t fTDCtime;       ///< TDC time of event in this block
 
   Int_t   fRow;     ///< Row of the block
   Int_t   fCol;     ///< Column of the block
