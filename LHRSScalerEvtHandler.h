@@ -47,7 +47,9 @@ private:
    void AddVars(TString name, TString desc, Int_t iscal, Int_t ichan, Int_t ikind);
    void DefVars();
 
-   int ParseData(char *msg,std::string *word,UInt_t *word_int); 
+   int ParseData(char *msg,std::string *word,UInt_t *word_int);
+
+   Int_t AnalyzeBuffer(Int_t ndata,UInt_t *rdata); 
 
    std::vector<Decoder::GenScaler*> scalers;
    std::vector<ScalerVar*> scalerloc;

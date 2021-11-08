@@ -77,6 +77,7 @@ LHRSScalerEvtHandler::LHRSScalerEvtHandler(const char *name, const char* descrip
     dvars(0), fScalerTree(0)
 {
   rdata = new UInt_t[MAXTEVT];
+  fDebugFile = nullptr; // initialize the pointer to null  
 }
 //______________________________________________________________________________
 LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
@@ -147,7 +148,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   if (fDebugFile) *fDebugFile<<"\n\nLHRSScalerEvtHandler :: Debugging event type "<<dec<<evdata->GetEvType()<<endl<<endl;
 
   // local copy of data
-  // FIXME: event is ASCII, not 32-bit binary! We need to convert ASCII to 32-bit binary  
+  // NOTE: event is ASCII, not 32-bit binary! We need to convert ASCII to 32-bit binary  
   for (Int_t i=0; i<ndata; i++) rdata[i] = evdata->GetRawData(i);
 
   Int_t nskip=0;
@@ -176,13 +177,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
 
   char msg[200];  
 
-  if(fDebugFile){
-     *fDebugFile << "**** parsed int array = " << p << ", NWORDS = " << dec << NWORDS << endl; 
-     for(int ii=0;ii<NWORDS;ii++){
-        sprintf(msg,"   i = %03d, word = %s, int = %u, hex = %02x",ii,word[ii].c_str(),p[ii],p[ii]); 
-        *fDebugFile << msg << endl; 
-     }
-  }
+  AnalyzeBuffer(ndata,rdata); 
 
   while (p < pstop && k < ndata) {
     if (fDebugFile) {
@@ -192,39 +187,38 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
     nskip = 1;
     itimeout=0;
     NScalers = scalers.size();
-    *fDebugFile << "**** NUM SCALERS = " << NScalers << std::endl;
     for (UInt_t j=0; j<NScalers; j++) {
-       if(fDebugFile) *fDebugFile << "**** DEBUG PRINT j = " << j << " ****" << std::endl;
        // bump pointer until scaler found, and don't decode if already found for this event.
        if (scalerloc[j]->found) continue;
        if (fDebugFile) *fDebugFile << "Slot " << scalers[j]->GetSlot() << endl;
        while (p < pstop) {
           if (scalers[j]->IsSlot(*p) == kTRUE) {
-                  scalerloc[j]->found=kTRUE;
-                  ifound = 1;
-                  goto found1;
+             scalerloc[j]->found=kTRUE;
+             ifound = 1;
+             goto found1;
           }
           p++;
           if (itimeout++ > 5000) { // avoid infinite loop
-                  std::cout << "LHRSScalerEvtHandler:: cannot find a slot "<< std::endl;
-                  goto giveup1;
+             std::cout << "LHRSScalerEvtHandler:: cannot find a slot "<< std::endl;
+             goto giveup1;
           }
        }
        found1:
-	    if(p==pstop && ifound==0) break;
-            *fDebugFile << "\n[LHRSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
-	    nskip = scalers[j]->Decode(p);
-	    if (fDebugFile && nskip > 1) {
-		    *fDebugFile << "\n===== Scaler # "<<j<<"     fName = "<<fName<<"   nskip = "<<nskip<<endl;
-		    scalers[j]->DebugPrint(fDebugFile);
-	    }
-	    if (nskip > 1) goto continue1;
+           if(p==pstop && ifound==0) break;
+            if(fDebugFile) *fDebugFile << "\n[LHRSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
+           nskip = scalers[j]->Decode(p);
+           if (fDebugFile && nskip > 1) {
+               *fDebugFile << "\n===== Scaler # "<<j<<"     fName = "<<fName<<"   nskip = "<<nskip<<endl;
+               scalers[j]->DebugPrint(fDebugFile);
+	       // scalers[j]->DoPrint(); 
+           }
+           if (nskip > 1) goto continue1;
     }
     continue1:
        p = p + nskip;
     k++; 
   }
-      
+       
   giveup1:
     if (fDebugFile) {
       *fDebugFile << "Finished with decoding.  "<<endl;
@@ -264,6 +258,62 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   if (fScalerTree) fScalerTree->Fill();
   
   return 1;
+}
+//______________________________________________________________________________
+Int_t LHRSScalerEvtHandler::AnalyzeBuffer(Int_t ndata,UInt_t *rdata){
+   // added by D. Flay to analyze data
+   UInt_t *P = rdata;
+
+   // rdata is actually ASCII, have to convert 
+   
+   std::string word[MAXTEVT]; 
+   UInt_t A[MAXTEVT]; 
+
+   // skip the first 4 words because it looks like the first word associated with 
+   // the scalers starts there... 
+   P = P + 4;
+
+   // do the conversion 
+   char *pc      = (char *)P;
+   int NWORDS    = ParseData(pc,word,A);
+   UInt_t *p     = A;  
+   UInt_t *pstop = p + *p - 4;
+    
+   char msg[200];  
+
+   if(fDebugFile){
+      *fDebugFile << "========== D FLAY TEST FUNCTION ==========" << std::endl;
+      *fDebugFile << "**** parsed int array = " << p << ", NWORDS = " << dec << NWORDS << endl; 
+      for(int ii=0;ii<NWORDS;ii++){
+         sprintf(msg,"   word index i = %03d, word = %s, int = %u, hex = %02x",ii,word[ii].c_str(),p[ii],p[ii]); 
+         *fDebugFile << msg << endl; 
+      }
+   }
+
+   // if(fDebugFile){
+   //    *fDebugFile << "--- Increment through pointer ---" << std::endl;
+   //    *fDebugFile << "start addr = " << p     << std::endl;
+   //    *fDebugFile << "end addr = "   << pstop << std::endl;
+   // }
+
+   // int NS = scalers.size(); 
+   // int k=0;
+   // while(p<pstop && k < ndata){
+   //    if(fDebugFile){
+   //       *fDebugFile << "   ptr addr = " << p << std::endl;  
+   //    }
+   //    // loop over scalers
+   //    for(int j=0;j<NS;j++){
+   //       if(scalerloc[j]->found) continue;
+   //       
+   //    } 
+   //    p++; // increment pointer 
+   //    k++;  
+   // }
+
+   if(fDebugFile) *fDebugFile << "========== END D FLAY TEST FUNCTION ==========" << std::endl;
+
+   return 0;
 }
 //______________________________________________________________________________
 THaAnalysisObject::EStatus LHRSScalerEvtHandler::Init(const TDatime& date)
@@ -360,10 +410,10 @@ THaAnalysisObject::EStatus LHRSScalerEvtHandler::Init(const TDatime& date)
            		  // fNormIdx is the index in scaler[] and 
            		  // fNormSlot is the slot#, checked for consistency
            		  if (clkchan >= 0) {  
-           			  scalers[idx]->SetClock(defaultDT, clkchan, clkfreq);
+           			  int clk_rc = scalers[idx]->SetClock(defaultDT, clkchan, clkfreq);
            			  fNormIdx = idx;
            			  if (islot != fNormSlot) cout << "LHRSScalerEvtHandler:: WARN: contradictory norm slot ! "<<islot<<endl;  
-           			  if (fDebugFile) *fDebugFile <<"Setting scaler clock ... channel = "<<clkchan<<" ... freq = "<<clkfreq<<"   fNormIdx = "<<fNormIdx<<"  fNormSlot = "<<fNormSlot<<"  slot = "<<islot<<endl;
+           			  if (fDebugFile) *fDebugFile <<"Setting scaler clock: dt = " << defaultDT <<", channel = "<<clkchan<<", freq = "<<clkfreq<<", fNormIdx = "<<fNormIdx<<", fNormSlot = "<<fNormSlot<<", slot = "<<islot<<", SetClock return value = "<<clk_rc<<endl;
            		  }
            	  }
              }
@@ -373,10 +423,11 @@ THaAnalysisObject::EStatus LHRSScalerEvtHandler::Init(const TDatime& date)
   // need to do LoadNormScaler after scalers created and if fNormIdx found.
   Int_t nscalers = static_cast<Int_t>(scalers.size());
   if ( fNormIdx >= 0 && fNormIdx < nscalers ) {
-	  for (Int_t i = 0; i < nscalers; i++) {
-		  if (i==fNormIdx) continue;
-		  scalers[i]->LoadNormScaler(scalers[fNormIdx]);
-	  }
+     for (Int_t i = 0; i < nscalers; i++) {
+        if (i==fNormIdx) continue;
+        scalers[i]->LoadNormScaler(scalers[fNormIdx]);
+        if(fDebugFile) *fDebugFile << "==> Scaler " << i << ": Loaded normalization scaler ptr = " << scalers[fNormIdx] << std::endl;
+     }
   }
 
 #ifdef HARDCODED
@@ -497,31 +548,45 @@ int LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int
    // loop through the message (msg) and convert into data words 
    // - input:  a char array to parse (i.e., scaler data)  
    // - output: std::string array (word) and int array (word_int)     
-   char data[200];
+   char data[200],subword[200];
    sprintf(data,"");
-  
-   char *pEnd;
- 
+   sprintf(subword,"");
+
    // std::cout << "Message to decode: " << std::endl;
    // std::cout << msg << std::endl;
-   
+
+   char *pEnd;
+   std::string myStr;
+
    int j=0;
    int length = strlen(msg);
    for(int i=0;i<length;i++){
-      if(msg[i]=='\n'){
-      	// now have a full word
-      	word[j]     = data;
-        word_int[j] = std::strtol(data,&pEnd,16);  // base 16 (hex)
-      	// increment the index on the word array
-      	j++;
-      	// empty the constructed word 
-      	sprintf(data,"");
-      }else{
-      	// not a new line, build the word  
-      	sprintf(data,"%s%c",data,msg[i]);
-      }
+     if(msg[i]=='\n'){
+        // now have a full word
+	word[j] = data;
+	// determine if this is the header
+	for(int k=0;k<3;k++){
+	   sprintf(subword,"%s%c",subword,data[k]);
+	}
+	myStr = subword;
+	if(myStr.compare("abc")==0){
+	   // this is the header -- convert to base 16 int (hex) 
+	   word_int[j] = std::strtoul(data,&pEnd,16);
+	}else{
+           // these are the counts -- convert to base 10 int 
+	   word_int[j] = std::strtoul(data,&pEnd,10);
+	}
+	// increment the index on the word array
+	j++;
+	// empty the constructed word 
+	sprintf(data,"");
+	sprintf(subword,"");
+     }else{
+	// not a new line, build the word  
+	sprintf(data,"%s%c",data,msg[i]);
+     }
    }
-   
+
    return j; // return the number of words 
 }
 //______________________________________________________________________________
