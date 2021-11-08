@@ -1346,82 +1346,14 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       sbsgemcluster_t *uclustinfo = &(fModules[module]->fUclusters[hitinfo->iuclust]);
       sbsgemcluster_t *vclustinfo = &(fModules[module]->fVclusters[hitinfo->ivclust]);
 
-      fHitModule.push_back( module );
-      fHitLayer.push_back( layer );
-      //
-      fHitNstripsU.push_back( uclustinfo->nstrips );
-      fHitUstripMax.push_back( uclustinfo->istripmax );
-      fHitUstripLo.push_back( uclustinfo->istriplo );
-      fHitUstripHi.push_back( uclustinfo->istriphi );
+      int ntimesamples = fModules[module]->fN_MPD_TIME_SAMP;
 
-      //Also set the "trackindex" variable for all strips on this track:
-      for( int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
-	fModules[module]->fStripTrackIndex[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = itrack;
-	fModules[module]->fStripOnTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
-	fModules[module]->fStripUonTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
-
-	bool ismaxstrip = (istrip == uclustinfo->istripmax);
-
-	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( uclustinfo->hitindex[istrip-uclustinfo->istriplo], ismaxstrip );
-	
-      }
-      
-      
-      //
-      fHitNstripsV.push_back( vclustinfo->nstrips );
-      fHitVstripMax.push_back( vclustinfo->istripmax );
-      fHitVstripLo.push_back( vclustinfo->istriplo );
-      fHitVstripHi.push_back( vclustinfo->istriphi );
-      //
-
-      //Also set the "trackindex" variable for all strips on this track:
-      for( int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
-	fModules[module]->fStripTrackIndex[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = itrack;
-	fModules[module]->fStripOnTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
-	fModules[module]->fStripVonTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
-
-	bool ismaxstrip = (istrip == vclustinfo->istripmax);
-
-	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( vclustinfo->hitindex[istrip-vclustinfo->istriplo], ismaxstrip );
-	
-      }
- 
-	  //hard-coded limit of 6 APV25 samples for output:
-      int ntimesamples = 6; 
-      
-      double ADCfrac_maxUstrip[ntimesamples];
-      double ADCfrac_maxVstrip[ntimesamples]; 
-     
-      
       UInt_t hitidx_umax = uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo];
       UInt_t hitidx_vmax = vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo];
       
-      double ADCsum_maxUstrip = fModules[module]->fADCsums[hitidx_umax];
-      double ADCsum_maxVstrip = fModules[module]->fADCsums[hitidx_vmax];
-      
-      for( int isamp=0; isamp<ntimesamples; isamp++ ){
-	ADCfrac_maxUstrip[isamp] = 0.0;
-	ADCfrac_maxVstrip[isamp] = 0.0;
-	if( isamp < fModules[module]->fN_MPD_TIME_SAMP ){
-	  ADCfrac_maxUstrip[isamp] = fModules[module]->fADCsamples[hitidx_umax][isamp]/ADCsum_maxUstrip;
-	  ADCfrac_maxVstrip[isamp] = fModules[module]->fADCsamples[hitidx_vmax][isamp]/ADCsum_maxVstrip;
-	}
-      }
-      
-      fHitADCfrac0_MaxUstrip.push_back( ADCfrac_maxUstrip[0] );
-      fHitADCfrac1_MaxUstrip.push_back( ADCfrac_maxUstrip[1] );
-      fHitADCfrac2_MaxUstrip.push_back( ADCfrac_maxUstrip[2] );
-      fHitADCfrac3_MaxUstrip.push_back( ADCfrac_maxUstrip[3] );
-      fHitADCfrac4_MaxUstrip.push_back( ADCfrac_maxUstrip[4] );
-      fHitADCfrac5_MaxUstrip.push_back( ADCfrac_maxUstrip[5] );
-      
-      fHitADCfrac0_MaxVstrip.push_back( ADCfrac_maxVstrip[0] );
-      fHitADCfrac1_MaxVstrip.push_back( ADCfrac_maxVstrip[1] );
-      fHitADCfrac2_MaxVstrip.push_back( ADCfrac_maxVstrip[2] );
-      fHitADCfrac3_MaxVstrip.push_back( ADCfrac_maxVstrip[3] );
-      fHitADCfrac4_MaxVstrip.push_back( ADCfrac_maxVstrip[4] );
-      fHitADCfrac5_MaxVstrip.push_back( ADCfrac_maxVstrip[5] );
-      
+      fHitModule.push_back( module );
+      fHitLayer.push_back( layer );
+      //
       
       fHitUlocal.push_back( hitinfo->uhit );
       fHitVlocal.push_back( hitinfo->vhit );
@@ -1444,8 +1376,6 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       
       fHitUADCmaxclustsample.push_back( uclustinfo->ADCsamples[uclustinfo->isampmax] );
       fHitVADCmaxclustsample.push_back( vclustinfo->ADCsamples[vclustinfo->isampmax] );
-      
-      
       
       fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_umax] );
       fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_vmax] );
@@ -1480,6 +1410,116 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );
       fHitCorrCoeffMaxStrip.push_back( hitinfo->corrcoeff_strip );
 
+      fHitNstripsU.push_back( uclustinfo->nstrips );
+      fHitUstripMax.push_back( uclustinfo->istripmax );
+      fHitUstripLo.push_back( uclustinfo->istriplo );
+      fHitUstripHi.push_back( uclustinfo->istriphi );
+
+      //
+      fHitNstripsV.push_back( vclustinfo->nstrips );
+      fHitVstripMax.push_back( vclustinfo->istripmax );
+      fHitVstripLo.push_back( vclustinfo->istriplo );
+      fHitVstripHi.push_back( vclustinfo->istriphi );
+      //
+      
+      
+      
+      //Also set the "trackindex" variable and other properties for strips on this track:
+      for( int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
+
+	int hitidx_i = uclustinfo->hitindex[istrip-uclustinfo->istriplo];
+	
+	fModules[module]->fStripTrackIndex[hitidx_i] = itrack;
+	fModules[module]->fStripOnTrack[hitidx_i] = 1;
+	fModules[module]->fStripUonTrack[hitidx_i] = 1;
+
+	bool ismaxstrip = (istrip == uclustinfo->istripmax);
+
+	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( hitidx_i, ismaxstrip );
+	//Fill strip time difference and corr. coefficient: 
+	fModules[module]->fStripTdiff[hitidx_i] = fModules[module]->fTmean[hitidx_i] - fHitTavg.back();
+
+	
+	
+	double ccor_temp;
+	if( ismaxstrip ){ //for the max. strip, calculate corr. coeff with the cluster-summed ADC samples:
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   uclustinfo->ADCsamples );
+	} else { //for other strips, calculate corr. coeff. with the max strip:
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   fModules[module]->fADCsamples[hitidx_umax] );
+	}
+	fModules[module]->fStripCorrCoeff[hitidx_i] = ccor_temp;
+	
+      }
+      
+      
+
+      //Also set the "trackindex" variable and other properties for all strips on this track:
+      for( int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
+	int hitidx_i = vclustinfo->hitindex[istrip - vclustinfo->istriplo];
+	
+	fModules[module]->fStripTrackIndex[hitidx_i] = itrack;
+	fModules[module]->fStripOnTrack[hitidx_i] = 1;
+	fModules[module]->fStripVonTrack[hitidx_i] = 1;
+
+	bool ismaxstrip = (istrip == vclustinfo->istripmax);
+
+	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( vclustinfo->hitindex[istrip-vclustinfo->istriplo], ismaxstrip );
+	fModules[module]->fStripTdiff[hitidx_i] = fModules[module]->fTmean[hitidx_i] - fHitTavg.back();
+
+	double ccor_temp;
+	if( ismaxstrip ){
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   vclustinfo->ADCsamples );
+	} else {
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   fModules[module]->fADCsamples[hitidx_vmax] );
+	}
+
+	fModules[module]->fStripCorrCoeff[hitidx_i] = ccor_temp;
+      }
+ 
+	  //hard-coded limit of 6 APV25 samples for output:
+      //int ntimesamples = 6; 
+      
+      double ADCfrac_maxUstrip[ntimesamples];
+      double ADCfrac_maxVstrip[ntimesamples]; 
+     
+      
+      
+      
+      double ADCsum_maxUstrip = fModules[module]->fADCsums[hitidx_umax];
+      double ADCsum_maxVstrip = fModules[module]->fADCsums[hitidx_vmax];
+      
+      for( int isamp=0; isamp<ntimesamples; isamp++ ){
+	ADCfrac_maxUstrip[isamp] = 0.0;
+	ADCfrac_maxVstrip[isamp] = 0.0;
+	if( isamp < fModules[module]->fN_MPD_TIME_SAMP ){
+	  ADCfrac_maxUstrip[isamp] = fModules[module]->fADCsamples[hitidx_umax][isamp]/ADCsum_maxUstrip;
+	  ADCfrac_maxVstrip[isamp] = fModules[module]->fADCsamples[hitidx_vmax][isamp]/ADCsum_maxVstrip;
+	}
+      }
+      
+      fHitADCfrac0_MaxUstrip.push_back( ADCfrac_maxUstrip[0] );
+      fHitADCfrac1_MaxUstrip.push_back( ADCfrac_maxUstrip[1] );
+      fHitADCfrac2_MaxUstrip.push_back( ADCfrac_maxUstrip[2] );
+      fHitADCfrac3_MaxUstrip.push_back( ADCfrac_maxUstrip[3] );
+      fHitADCfrac4_MaxUstrip.push_back( ADCfrac_maxUstrip[4] );
+      fHitADCfrac5_MaxUstrip.push_back( ADCfrac_maxUstrip[5] );
+      
+      fHitADCfrac0_MaxVstrip.push_back( ADCfrac_maxVstrip[0] );
+      fHitADCfrac1_MaxVstrip.push_back( ADCfrac_maxVstrip[1] );
+      fHitADCfrac2_MaxVstrip.push_back( ADCfrac_maxVstrip[2] );
+      fHitADCfrac3_MaxVstrip.push_back( ADCfrac_maxVstrip[3] );
+      fHitADCfrac4_MaxVstrip.push_back( ADCfrac_maxVstrip[4] );
+      fHitADCfrac5_MaxVstrip.push_back( ADCfrac_maxVstrip[5] );
+
+      
       if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 && itrack == 0 ){
 	//fill "did hit" efficiency histos (numerator for efficiency determination):
 	double sdummy;

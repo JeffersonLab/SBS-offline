@@ -58,6 +58,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fN_MPD_TIME_SAMP = 6;
   fMPDMAP_ROW_SIZE = 9;
 
+  //We should probably get rid of this as it's not used, only leads to confusion:
   fNumberOfChannelInFrame = 129;
 
   fSamplePeriod = 25.0; //nanoseconds:
@@ -117,11 +118,32 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //Number of sigmas for defining common-mode max for online zero suppression
   fCommonModeRange_nsigma = 5.0;
 
-  fSuppressFirstLast = true; // suppress strips peaking in first or last time sample:
+  fSuppressFirstLast = true; // suppress strips peaking in first or last time sample by default:
+  //fUseStripTimingCuts = false;
+
+  fStripTau = 56.0; //ns, default value. Eventually load this from DB. This is not actually used as of yet.
   fUseStripTimingCuts = false;
+  fUseTSchi2cut = false;
+  fStripMaxTcut_central = 87.0; //ns
+  fStripMaxTcut_width = 25.0; //ns
+  fStripAddTcut_width = 25.0; //ns
+  fStripAddCorrCoeffCut = 0.5;
+  fStripTSchi2Cut = 10.0; //not yet clear what is a good value for this.
 
-  fStripTau = 56.0; //ns, default value. Eventually load this from DB
+  fGoodStrip_TSfrac_mean.resize( fN_MPD_TIME_SAMP );
+  fGoodStrip_TSfrac_sigma.resize( fN_MPD_TIME_SAMP );
 
+  //Define some defaults for these:
+  double fracmean_default[6] = {0.055, 0.135, 0.203, 0.224, 0.208, 0.174};
+  double fracsigma_default[6] = {0.034, 0.039, 0.019, 0.021, 0.032, 0.035};
+
+  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+    if( isamp < fN_MPD_TIME_SAMP && isamp < 6 ){
+      fGoodStrip_TSfrac_mean[isamp] = fracmean_default[isamp];
+      fGoodStrip_TSfrac_sigma[isamp] = fracsigma_default[isamp];
+    }
+  }
+  
   fPulseShapeInitialized = false;
 
   return;
@@ -460,6 +482,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fADCmax.resize( nstripsmax );
   fTmean.resize( nstripsmax );
   fTsigma.resize( nstripsmax );
+  fStripTdiff.resize( nstripsmax );
+  fStripTSchi2.resize( nstripsmax );
+  fStripCorrCoeff.resize( nstripsmax );
   fStripTfit.resize( nstripsmax );
   fTcorr.resize( nstripsmax );
   //Storing these by individual strip is redundant but convenient:
@@ -686,6 +711,9 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.Tsigma", "ADC-weighted rms strip time", kDouble, 0, &(fTsigma[0]), &fNstrips_hit },
     { "strip.Tcorr", "Corrected strip time", kDouble, 0, &(fTcorr[0]), &fNstrips_hit },
     { "strip.Tfit", "Fitted strip time", kDouble, 0, &(fStripTfit[0]), &fNstrips_hit },
+    { "strip.Tdiff", "time diff. wrt max strip in cluster (or perhaps cluster tmean)", kDouble, 0, &(fStripTdiff[0]), &fNstrips_hit },
+    { "strip.TSchi2", "chi2 of strip pulse shape (time samples) wrt average good strip pulse shape", kDouble, 0, &(fStripTSchi2[0]), &fNstrips_hit },
+    { "strip.CorrCoeff", "Correlation coefficient of strip wrt max strip on cluster (or perhaps cluster tmean)", kDouble, 0, &(fStripCorrCoeff[0]), &fNstrips_hit },
     { "strip.itrack", "Index of track containing this strip (-1 if not on any track)", kInt, 0, &(fStripTrackIndex[0]), &fNstrips_hit },
     { "strip.ontrack", "Is this strip on any track (0/1)?", kUInt, 0, &(fStripOnTrack[0]), &fNstrips_hit },
     { "strip.ADCavg", "average of ADC samples on a strip", kDouble, 0, &(fStripADCavg[0]), &fNstrips_hit },
@@ -1040,7 +1068,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
     if( nsamp > 0 ){
       
-      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
+      //      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
       
       // std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
@@ -1258,7 +1286,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //assert( ((UInt_t) fNch) < fMPDmap.size()*fN_APV25_CHAN );
 	  //assert( fNstrips_hit < fMPDmap.size()*fN_APV25_CHAN );
 	}
-	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
+	//	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
 
@@ -1328,7 +1356,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	if(!fZeroSuppress ||
 	   ( ADCsum_temp/double(fN_MPD_TIME_SAMP) > fZeroSuppressRMS*rmstemp ) ){ //Default threshold is 5-sigma!
 	  //Increment hit count and populate decoded data structures:
-	  //Theshold on the max. sample is also not used in the standalone decoder, but for sufficiently low values should be redundant with the
+	 
 	  //threshold on the average ADC
 	  
 	  //Slight reorganization: compute Tmean and Tsigma before applying gain correction:
@@ -1367,6 +1395,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
 	  }
 
+	  if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
+	    fKeepStrip[fNstrips_hit] = false;
+	  }
+
 	  //std::cout << "axis, Int_t(axis) = " << axis << ", " << Int_t(axis) << std::endl;
 	  //fStripAxis.push_back( Int_t(axis) );
 	  // fADCsamples.push_back( ADCtemp ); //pedestal-subtracted
@@ -1398,6 +1430,15 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
 	  fTsigma[fNstrips_hit] = Tsigma_temp;
 	  //fTcorr.push_back( fTmean.back() ); //don't apply any corrections for now
+
+	  fStripTSchi2[fNstrips_hit] = StripTSchi2(fNstrips_hit);
+
+	  if( fUseTSchi2cut && fStripTSchi2[fNstrips_hit] > fStripTSchi2Cut ){
+	    fKeepStrip[fNstrips_hit] = false;
+	  }
+	  
+	  fStripTdiff[fNstrips_hit] = -1000.; //This will become meaningful only at the clustering stage
+	  fStripCorrCoeff[fNstrips_hit] = -1000.; //This will become meaningful only at the clustering stage
 	  fTcorr[fNstrips_hit] = fTmean[fNstrips_hit];
 
 	  //fStripTfit[fNstrips_hit] = FitStripTime( fNstrips_hit, rmstemp*2.45 );
@@ -1743,16 +1784,55 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     int striphi = stripmax;
     double ADCmax = fADCsums[hitindex[stripmax]];
 
-    while( striplist.find( striplo-1 ) != striplist.end() &&
-	   stripmax - striplo < maxsep ){
-      striplo--;
+    bool found_neighbor_low = true;
+    
+    //while( striplist.find( striplo-1 ) != striplist.end() &&
+    //	   stripmax - striplo < maxsep ){
+    while( found_neighbor_low ){
+      
+      found_neighbor_low = striplist.find( striplo - 1 ) != striplist.end() && stripmax - striplo < maxsep;
+
+      if( found_neighbor_low && fUseStripTimingCuts ){
+	//check time difference and correlation coefficient of the candidate strip
+	//with the max strip:
+	double Tdiff = fTmean[hitindex[striplo-1]] - fTmean[hitindex[stripmax]];
+	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_low = false;
+	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex[striplo-1]], fADCsamples[hitindex[stripmax]] );
+	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_low = false;
+      }
+
+      //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
+      //fails the cuts, stop growing the cluster in this direction
+      
+      if( found_neighbor_low ) striplo--;
     }
 
-    while( striplist.find( striphi+1 ) != striplist.end() &&
-	   striphi - stripmax < maxsep ){
-      striphi++;
-    }
+    // while( striplist.find( striphi+1 ) != striplist.end() &&
+    // 	   striphi - stripmax < maxsep ){
+    //   striphi++;
+    // }
 
+    bool found_neighbor_high = true;
+    
+    while( found_neighbor_high ){
+      
+      found_neighbor_high = striplist.find( striphi + 1 ) != striplist.end() && striphi - stripmax < maxsep;
+
+      if( found_neighbor_high && fUseStripTimingCuts ){
+	//check time difference and correlation coefficient of the candidate strip
+	//with the max strip:
+	double Tdiff = fTmean[hitindex[striphi+1]] - fTmean[hitindex[stripmax]];
+	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_high = false;
+	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex[striphi+1]], fADCsamples[hitindex[stripmax]] );
+	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_high = false;
+      }
+
+      //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
+      //fails the cuts, stop growing the cluster in this direction
+      
+      if( found_neighbor_high ) striphi++;
+    }
+    
     int nstrips = striphi-striplo+1;
 
     double sumx = 0.0, sumx2 = 0.0, sumADC = 0.0, sumt = 0.0, sumt2 = 0.0;
@@ -2570,7 +2650,7 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
 }
 
 //utility method to calculate correlation coefficient of U and V samples: 
-Double_t SBSGEMModule::CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples ){
+Double_t SBSGEMModule::CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples ){
   Double_t sumu=0.0, sumv=0.0, sumu2=0.0, sumv2=0.0, sumuv=0.0;
 
   if ( Usamples.size() < nsamples || Vsamples.size() < nsamples ){
@@ -2844,6 +2924,16 @@ void SBSGEMModule::fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool i
       hADCfrac_vs_timesample_maxstrip->Fill( isamp, fADCsamples[hitindex][isamp]/fADCsums[hitindex] );
     }
   }
+}
+
+//This function calculates the chi2 of a vector of time samples with respect to the "Good Strip" averages:
+double SBSGEMModule::StripTSchi2( int hitindex ){
+  if( hitindex < 0 || hitindex > fNstrips_hit ) return -1.;
+  double chi2 = 0.0;
+  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+    chi2 += pow( (fADCsamples[hitindex][isamp] / fADCsums[hitindex] - fGoodStrip_TSfrac_mean[isamp])/fGoodStrip_TSfrac_sigma[isamp], 2 );
+  }
+  return chi2;
 }
 
 //Experimental, not used for now:

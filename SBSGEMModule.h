@@ -153,8 +153,9 @@ class SBSGEMModule : public THaSubDetector {
   void filter_2Dhits(); 
   
   //Utility function to calculate correlation coefficient between U and V time samples:
-  Double_t CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples );
-
+  Double_t CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples );
+  Double_t StripTSchi2( int hitindex );
+  
   //Utility functions to compute "module local" X and Y coordinates from U and V (strip coordinates) to "transport" coordinates (x,y) and vice-versa:
   TVector2 UVtoXY( TVector2 UV );
   TVector2 XYtoUV( TVector2 XY );
@@ -238,7 +239,16 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fStripTau; //time constant for strip timing fit
   Double_t fStripMaxTcut_central, fStripMaxTcut_width; // Strip timing cuts for local maximum used to seed cluster
   Double_t fStripAddTcut_width; //Time cut for adding strips to a cluster
+  Double_t fStripAddCorrCoeffCut; //cut on correlation coefficient for adding neighboring strips to a cluster.
+  
+  //These are database parameters used to reject out-of-time background strips:
+  bool fUseTSchi2cut;
+  std::vector<double> fGoodStrip_TSfrac_mean;  //should have same dimension as number of APV25 time samples:
+  std::vector<double> fGoodStrip_TSfrac_sigma; //
 
+  Double_t fStripTSchi2Cut;
+  
+  
   //In principle we will eventually also require some time walk corrections
   
   //Strip cuts: 
@@ -317,11 +327,14 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
   std::vector<Double_t> fStripTfit; //Dumb strip fit:
+  std::vector<Double_t> fStripTdiff; //strip time diff wrt max strip in cluster
+  std::vector<Double_t> fStripTSchi2; //strip time-sample chi2 wrt "good" pulse shape
+  std::vector<Double_t> fStripCorrCoeff; //strip correlation coeff wrt max strip in cluster 
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
   std::vector<UInt_t> fStrip_ENABLE_CM; //Flag to indicate whether CM was done online or offline for this strip
   std::vector<UInt_t> fStrip_CM_GOOD; //Flag to indicate whether online CM succeeded
   std::vector<UInt_t> fStrip_BUILD_ALL_SAMPLES; //Flag to indicate whether online zero suppression was enabled 
-
+  
   //because the cut definition machinery sucks, let's define some more booleans:
   std::vector<UInt_t> fStripUonTrack;
   std::vector<UInt_t> fStripVonTrack;
@@ -524,7 +537,7 @@ class SBSGEMModule : public THaSubDetector {
   TH2D *hADCfrac_vs_timesample_allstrips; //All fired strips
   TH2D *hADCfrac_vs_timesample_goodstrips;  //strips on good tracks
   TH2D *hADCfrac_vs_timesample_maxstrip; //max strip in cluster on good track
-
+  
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;
   // TClonesArray *hrawADCs_by_strip_sampleV;
