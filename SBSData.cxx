@@ -8,7 +8,7 @@ namespace SBSData {
 
   /////////////////////////////////////////////////////////////////////////////
   // ADC data functions
-  ADC::ADC(Float_t ped, Float_t gain, Float_t tcal) :
+  ADC::ADC(Double_t ped, Double_t gain, Double_t tcal) :
       fHasData(false), fMode(SBS_ADC_MODE_SINGLE)
   {
     SetPed(ped);
@@ -16,7 +16,7 @@ namespace SBSData {
     SetTimeCal(tcal);
   }
 
-  void ADC::Process(Float_t val)
+  void ADC::Process(Double_t val)
   {
     SingleData zero = { 0.0, 0.0 };
     SingleData integral = { val, (val-fADC.ped)*fADC.cal };
@@ -25,16 +25,16 @@ namespace SBSData {
     fMode = SBS_ADC_MODE_SINGLE; //< Mode gets set to simple if this function is called
   }
 
-  void ADC::Process(Float_t integral, Float_t time, Float_t amp, Float_t ped) {
+  void ADC::Process(Double_t integral, Double_t time, Double_t amp, Double_t ped) {
     //fADC.push_back({ped,fGlobalCal,val,val-ped,(val-ped)*fGlobalCal});
     // convert to pC, assume tcal is in ns, and 50ohm resistance
-    Float_t pC_Conv = fADC.tcal/50.;
-    Float_t PedVal = ped*GetChanTomV();
-    Float_t TimeVal= time*fADC.tcal/64.;
-    Float_t IntRaw=  integral*GetChanTomV()*pC_Conv;
-    Float_t IntVal=  (IntRaw-PedVal*(GetNSA()+GetNSB()+1)*pC_Conv)*GetGain();
-    Float_t AmpRaw=  amp*GetChanTomV();
-    Float_t AmpVal=  (AmpRaw-PedVal)*GetAmpCal();
+    Double_t pC_Conv = fADC.tcal/50.;
+    Double_t PedVal = ped*GetChanTomV();
+    Double_t TimeVal= time*fADC.tcal/64.;
+    Double_t IntRaw=  integral*GetChanTomV()*pC_Conv;
+    Double_t IntVal=  (IntRaw-PedVal*(GetNSA()+GetNSB()+1)*pC_Conv)*GetGain();
+    Double_t AmpRaw=  amp*GetChanTomV();
+    Double_t AmpVal=  (AmpRaw-PedVal)*GetAmpCal();
     SingleData t_integral = { IntRaw, IntVal   };
     SingleData t_time     = { time, TimeVal };
     SingleData t_amp     = { AmpRaw, AmpVal };
@@ -53,7 +53,7 @@ namespace SBSData {
 
   /////////////////////////////////////////////////////////////////////////////
   // TDC data functions
-  TDC::TDC(Float_t offset, Float_t cal, Float_t GoodTimeCut) : fHasData(false)
+  TDC::TDC(Double_t offset, Double_t cal, Double_t GoodTimeCut) : fHasData(false)
   {
     fEdgeIdx[0] = fEdgeIdx[1]=0;
     SetOffset(offset);
@@ -61,7 +61,7 @@ namespace SBSData {
     SetGoodTimeCut(GoodTimeCut);
   }
 
-  void TDC::ProcessSimple(Int_t elemID, Float_t val, Int_t nhit)
+  void TDC::ProcessSimple(Int_t elemID, Double_t val, Int_t nhit)
   {
     fTDC.hits.push_back(TDCHit());
     TDCHit *hit = &fTDC.hits[nhit];
@@ -75,7 +75,7 @@ namespace SBSData {
       fHasData = true;
   }
 
-  void TDC::Process(Int_t elemID, Float_t val, Float_t fedge)
+  void TDC::Process(Int_t elemID, Double_t val, Double_t fedge)
   {
     Int_t edge = int(fedge);
     // std::cout << " tdc process " << val << " " << edge  << " ftdc hits size = " <<fTDC.hits.size() << " hits in edge "  << fEdgeIdx[edge]<< std::endl;
@@ -116,7 +116,7 @@ namespace SBSData {
 
   /////////////////////////////////////////////////////////////////////////////
   // Waveform data functions
-  Waveform::Waveform(Float_t ped, Float_t gain, Float_t ChanTomV,Float_t GoodTimeCut, Float_t tcal) :
+  Waveform::Waveform(Double_t ped, Double_t gain, Double_t ChanTomV,Double_t GoodTimeCut, Double_t tcal) :
     fHasData(false)
   {
     SetPed(ped);
@@ -126,7 +126,7 @@ namespace SBSData {
     SetGoodTimeCut(GoodTimeCut);
   }
 
-  void Waveform::Process(std::vector<Float_t> &vals)
+  void Waveform::Process(std::vector<Double_t> &vals)
   {
     //printf("vals size %d, samples raw size %d\n", vals.size(), fSamples.samples_raw.size());
     if( vals.size() != fSamples.samples_raw.size()) {
@@ -152,7 +152,7 @@ namespace SBSData {
       fSamples.samples[i] = (fSamples.samples_raw[i]-fSamples.ped)*fSamples.cal;
     }
     // Try and fixd sample threshold crossing above the pedestal
-    Float_t ThresVal=GetThres(); // mV
+    Double_t ThresVal=GetThres(); // mV
     UInt_t ThresCrossBin=TMath::Max(NPedsum-1,0);
     //    std::cout << " ped = " << fSamples.ped << " thres = " << ThresVal << std::endl ;
     while ( fSamples.samples_raw[ThresCrossBin] < fSamples.ped+ThresVal && ThresCrossBin < vals.size() ) {
@@ -163,10 +163,10 @@ namespace SBSData {
     UInt_t NSB = GetNSB();
     UInt_t NSA = GetNSA();
     UInt_t FixedThresCrossBin=GetFixThresBin();
-    Float_t FineTime = 0;
-    Float_t max  = 0;
-    Float_t sum = 0;
-    Float_t sped = 0;
+    Double_t FineTime = 0;
+    Double_t max  = 0;
+    Double_t sum = 0;
+    Double_t sped = 0;
     
     Bool_t PeakFound= kFALSE;
       UInt_t PeakBin= 0;
@@ -180,7 +180,7 @@ namespace SBSData {
       IntMaxBin = TMath::Min(FixedThresCrossBin+NSA-1,IntMaxBin);
     }
     // convert to pC, assume tcal is in ns, and 50ohm resistance
-    Float_t pC_Conv = fSamples.tcal/50.;
+    Double_t pC_Conv = fSamples.tcal/50.;
     
     for(size_t i =IntMinBin ; i <IntMaxBin ; i++ ) {
          sped+=fSamples.ped*pC_Conv;
@@ -197,7 +197,7 @@ namespace SBSData {
     //
     //    std::cout << " Int = " << IntMinBin << " " << IntMaxBin<< " ThresCrossBin =   " << ThresCrossBin << " peak-found " << PeakFound << std::endl ;
     //
-    Float_t VMid = (max+fSamples.ped)/2.;
+    Double_t VMid = (max+fSamples.ped)/2.;
     if (PeakFound) {
       for(size_t i =IntMinBin ; i <PeakBin+1 ; i++ ) {
 	if (VMid >= fSamples.samples_raw[i]  && VMid < fSamples.samples_raw[i+1]) {

@@ -5,6 +5,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "SBSTimingHodoscope.h"
+#include "Helper.h"
 
 ClassImp(SBSTimingHodoscope);
 
@@ -22,6 +23,12 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
   // SBSGenericDetector::SetStoreRawHits(true);
   fDataOutputLevel = 0;//default
   fClusMaxSize = 5;
+  fvScint = 0.454*0.299792458; //m/ns
+  //Defaults for track match cuts:
+  ftDiff0 = -1.35;  //ns
+  
+  fTrackMatchCutX = 0.05;
+  fTrackMatchCutY = 0.15;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35,6 +42,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   Int_t err = SBSGenericDetector::ReadDatabase(date);
   if(err)
     return err;
+  fIsInit = false;
 
   // If we want to add any new variables, uncomment the following and add
   // the new variables we want to read from the database
@@ -45,29 +53,52 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
 
   // get time walk or other parameters from database file
   // Read mapping/geometry/configuration parameters
-  fChanMapStart = 0;
   fTDCBarOffset = 0;
   Int_t tdcbaroff = 0;
   fADCBarOffset = 0;
   Int_t adcbaroff = 0;
   std::vector<Double_t> timewalkpar0;
   std::vector<Double_t> timewalkpar1;
+  Double_t tdcwinmin = 0.0;
+  Double_t tdcwinmax = 0.0;
   DBRequest config_request[] = {
     { "timewalk0map",    &timewalkpar0,      kDoubleV, 0, false }, //parameter for time walk correction
     { "timewalk1map",    &timewalkpar1,      kDoubleV, 0, false }, //parameter for time walk correction
     { "tdcbaroffset",    &tdcbaroff,         kInt,    0, true }, //to allow for cycling through sections
     { "adcbaroffset",    &adcbaroff,         kInt,    0, true }, //to allow for cycling through sections
+    { "tdcwindowmin", &tdcwinmin, kDouble, 0, true }, //parameter for tdc window min
+    { "tdcwindowmax", &tdcwinmax, kDouble, 0, true }, //parameter for tdc window max
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
-  if(err)
+  if(err) {
+    fclose(file);
     return err;
+  }
+
+  DBRequest trackmatch_params[] = {
+    { "vscint",          &fvScint, kDouble, 0, 1, 1},
+    { "tdiffoffset",     &ftDiff0, kDouble, 0, 1, 1},
+    { "trackmatchcutX",  &fTrackMatchCutX, kDouble, 0, 1, 1},
+    { "trackmatchcutY",  &fTrackMatchCutY, kDouble, 0, 1, 1},
+    { 0 }
+  };
+
+  err = LoadDB( file, date, trackmatch_params, fPrefix );
+  if(err) {
+    fclose(file);
+    return err;
+  }
 
   std::vector<Double_t> ypos;//position of element
   std::vector<DBRequest> vr;
   vr.push_back({ "ypos", &ypos,    kDoubleV, 0, 1 });
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
+  if(err) {
+    fclose(file);
+    return err;
+  }
   if (ypos.size()>0) {
     if (ypos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
@@ -84,9 +115,12 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, misc_request, fPrefix );
-  if(err)
-    return err;  
-  
+  if(err) {
+    fclose(file);
+    return err;
+  }
+  fclose(file);
+
   // std::cout << "fNelem " << fNelem << std::endl;
   // std::cout << "timewalkpar0.size() " << timewalkpar0.size() << std::endl;
   // std::cout << "timewalkpar1.size() " << timewalkpar1.size() << std::endl;
@@ -94,6 +128,8 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   // assign the bar offsets
   fTDCBarOffset = tdcbaroff;
   fADCBarOffset = adcbaroff;
+  fTDCWinMin = tdcwinmin;
+  fTDCWinMax = tdcwinmax;
 
   if( WithTDC() || WithADC()){
     if(timewalkpar0.size()!=fNelem || timewalkpar1.size()!=fNelem){
@@ -110,25 +146,19 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
       // std::cout << "fNRefElem " << fNRefElem << std::endl;
       fTimeWalkPar0.resize(fNrows);
       fTimeWalkPar1.resize(fNrows);
-      int rr=0;
-      int cc=0;
-      int ll=0;
       int k=0;
       for(int r = 0; r < fNrows; r++) {
-	rr = r+fChanMapStart;
 	// std::cout << "On row " << r << " fNcols " << fNcols[r] << std::endl;
 	fTimeWalkPar0[r].resize(fNcols[r]);
 	fTimeWalkPar1[r].resize(fNcols[r]);
 	for(int c = 0; c < fNcols[r]; c++) {
-	  cc = c+fChanMapStart;
+          fTimeWalkPar0[r][c].resize(fNlayers);
+          fTimeWalkPar1[r][c].resize(fNlayers);
 	  for(int l = 0; l < fNlayers; l++, k++) {
 	    // std::cout << "On col " << c << " fNlayers " << fNlayers << std::endl;
 	    // std::cout << "k " << k << std::endl;
-	    fTimeWalkPar0[r][c].resize(fNlayers);
-	    fTimeWalkPar1[r][c].resize(fNlayers);
-	    ll = l+fChanMapStart;
-	    fTimeWalkPar0[rr][cc][ll] = timewalkpar0[k];
-	    fTimeWalkPar1[rr][cc][ll] = timewalkpar1[k];
+	    fTimeWalkPar0[r][c][l] = timewalkpar0[k];
+	    fTimeWalkPar1[r][c][l] = timewalkpar1[k];
 	    // std::cout << "timewalkpar0[k] " << timewalkpar0[k] << " timewalkpar1[k] " << timewalkpar1[k] << std::endl;
 	  }//lay
 	}//col
@@ -137,15 +167,15 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   }// if tdc then get time walk into a grid if needed
 
   // call the function to build the bars
-  SBSTimingHodoscope::ConstructHodoscope();
+  err = SBSTimingHodoscope::ConstructHodoscope();
+  if(err)
+    return err;
 
   // Make sure to call parent class so that the generic variables can be read
   // return SBSGenericDetector::ReadDatabase(date);
-  if(err)
-    return err;
-  
   
   // All is well that ends well
+  fIsInit = true;
   return kOK;
 }
 
@@ -206,7 +236,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
   //if(fDataOutputLevel>1){
   RVarDef vars_clus[] = {
     { "allclus.size",  "cluster size",          "fOutClus.n"},
-    { "allclus.id", "cluster max bar id",     "fOutClust.id" },
+    { "allclus.id", "cluster max bar id",     "fOutClus.id" },
     { "allclus.xmean", "cluster mean X",        "fOutClus.x"},
     { "allclus.ymean", "cluster mean Y",        "fOutClus.y"},
     { "allclus.tmean", "cluster mean T",        "fOutClus.t"},
@@ -291,7 +321,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   
   // now loop through bars to find good hits in bars
   // should we move this code into findgoodhit?
-
+  
   fGoodBarIDsTDC.clear();
   fGoodBarTDCmean.clear();
   fGoodBarTDCdiff.clear();
@@ -322,6 +352,8 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
   // std::cout << "fTDCBarOffset " << fTDCBarOffset << std::endl;
   // std::cout << "fADCBarOffset " << fADCBarOffset << std::endl;
   // std::cout << "NBars " << NBars << " fElements.size()/2 " << fElements.size()/2 << std::endl;
+  //std::cout << "fTDCWinMin: " << fTDCWinMin << std::endl;
+  //std::cout << "fTDCWinMax: " << fTDCWinMax << std::endl;
   if(NBars!=(fElements.size()/2)){
     Error( Here("CoarseProcess"),
 	   "hodoscope #bars length not of correct size ie !=#elements/2");
@@ -340,12 +372,19 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 
     if(WithTDC()){
       if(elL->TDC()->HasData() && elR->TDC()->HasData()){
+
+	//get left and right LE times 
+	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
+	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
+	Double_t LEl = hitL.le.val;
+	Double_t LEr = hitR.le.val;
+
+	if(fTDCWinMin < LEl && LEl < fTDCWinMax && fTDCWinMin < LEr && LEr < fTDCWinMax){
 	//Int_t bar = BarInc;// why redeclare the index?
 	// don't need to add offset to tdc since all readout simultaneously
 	fGoodBarIDsTDC.push_back(BarInc);
 	
 	// left hit
-	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
 	fGoodBarTDCLle.push_back(hitL.le.val);
 	// fGoodBarTDCLle.push_back(hitL.le.raw);
 	//.raw is tdc bin, val is corrected using offset and ns/bin
@@ -362,7 +401,6 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarTDCLtotW.push_back(LteW-LleW);
 	
 	// right hit
-	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
 	fGoodBarTDCRle.push_back(hitR.le.val);//.raw is tdc bin, val is corrected using offset and ns/bin
 	Double_t RleW = SBSTimingHodoscope::TimeWalk(hitR.le.val,
 				(hitR.te.val-hitR.le.val),
@@ -383,7 +421,14 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarTDCdiff.push_back(bartimediff);
 	// convert to position? effective velocity times time? should we divide by 2? yes
 	// Double_t HorizPos = 0.5 * (bartimediff*1.0e-9) * vScint; // position from L based on timediff and in m
-	Double_t HorizPos = 0.5 * (bartimediff*0.1e-9) * vScint; // position from L based on timediff and in m
+	//Assuming bartimediff is in ns, then horizontal position is
+
+	//AJRP: the -sign is added because the time difference as defined here has
+	// a negative correlation with the y of transport coordinates
+	// The offset aligns this quantity with the GEM track projection to the hodoscope
+	// fvScint ~= 0.454c is the average effective propagation speed as
+	// measured by the GEM-TH correlation.
+	Double_t HorizPos = -0.5 * (bartimediff-ftDiff0) * fvScint; // position from L based on timediff and in m. 
 	fGoodBarTDCpos.push_back(HorizPos);
 	fGoodBarTDCvpos.push_back(elR->GetY());
 	
@@ -394,6 +439,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	bar->SetElementPos(elR->GetY());
 	bar->SetLeftHit(hitL);
 	bar->SetRightHit(hitR);
+	}
       }// tdc hit on both pmts
     }// with tdc
     // adc events
@@ -483,14 +529,14 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
       //AJRP: we should fill these variables regardless;
       // output is contolled by the odef file:
       //if(fDataOutputLevel>0){
-      for(int i = 0; i<GetCluster(i)->GetSize(); i++){
-	fMainClusBars.id.push_back(GetCluster(i)->GetElement(i)->GetBarNum());
+      for(int j = 0; j<GetCluster(i)->GetSize(); j++){
+	fMainClusBars.id.push_back(GetCluster(i)->GetElement(j)->GetBarNum());
 	fMainClusBars.n.push_back(1);
-	fMainClusBars.t.push_back(GetCluster(i)->GetElement(i)->GetMeanTime());
-	fMainClusBars.tot.push_back(GetCluster(i)->GetElement(i)->GetMeanToT());
-	fMainClusBars.tdiff.push_back(GetCluster(i)->GetElement(i)->GetTimeDiff());
-	fMainClusBars.x.push_back(GetCluster(i)->GetElement(i)->GetElementPos());
-	fMainClusBars.y.push_back(GetCluster(i)->GetElement(i)->GetHitPos());
+	fMainClusBars.t.push_back(GetCluster(i)->GetElement(j)->GetMeanTime());
+	fMainClusBars.tot.push_back(GetCluster(i)->GetElement(j)->GetMeanToT());
+	fMainClusBars.tdiff.push_back(GetCluster(i)->GetElement(j)->GetTimeDiff());
+	fMainClusBars.x.push_back(GetCluster(i)->GetElement(j)->GetElementPos());
+	fMainClusBars.y.push_back(GetCluster(i)->GetElement(j)->GetHitPos());
 	fMainClusBars.trackindex.push_back( fOutClus.trackindex[i] );
       }
     }
@@ -537,18 +583,21 @@ Int_t SBSTimingHodoscope::MatchTrack(THaTrack* the_track)
   
   for(int i=0; i<GetNClusters(); i++){
     SBSTimingHodoscopeCluster* clus = GetCluster(i);
-    if(clus->GetXmean()-clus->GetSize()*SizeCol()/2.<x_track && 
-       x_track<clus->GetXmean()+clus->GetSize()*SizeCol()/2. &&
-       fabs( clus->GetYmean() - y_track ) <= SizeRow()/2. ){
+    // if(clus->GetXmean()-clus->GetSize()*SizeCol()/2.<x_track && 
+    //    x_track<clus->GetXmean()+clus->GetSize()*SizeCol()/2. &&
+    //    fabs( clus->GetYmean() - y_track ) <= SizeRow()/2. ){
+    // this is more idiot-proof:
+    if( fabs( clus->GetXmean()-x_track ) <= fTrackMatchCutX &&
+	fabs( clus->GetYmean()-y_track ) <= fTrackMatchCutY ){
+    
       //later when things are calibrated we can do something like: 
-      
-      //return i;
       //the_track->SetTime(clus->GetTmean());
       if( bestmatch < 0 || fabs( clus->GetXmean() - x_track ) < minxdiff ){
 	minxdiff = fabs(clus->GetXmean() - x_track );
 	bestmatch = i;
       }
-      //choose the cluster with the smallest difference between 
+      //choose the cluster with the smallest difference between the cluster and track
+      // X (vertical) positions
     }  
   }
   return bestmatch;
@@ -561,20 +610,23 @@ Int_t SBSTimingHodoscope::MatchTrack(THaTrack* the_track)
 Int_t SBSTimingHodoscope::ConstructHodoscope()
 {
   Int_t nElements = fElements.size();
-  // std::cout << "n elements " << nElements << std::endl;
+  std::cout << "n elements " << nElements << std::endl;
   if( nElements%2!=0 ) {
     Error( Here("ConstructHodoscope"),
 	   "N elements for hodoscope is not even, need an even number for a 2 sided detector analysis.");
     return kInitError;
   }
   // make the pmt objects
-  fPMTMapL.clear();
-  fPMTMapR.clear();
   if( fNrows!=2 ) {
     Error( Here("ConstructHodoscope"),
 	   "fNrows for hodoscope is not 2, which we need for left and right.");
     return kInitError;
   }
+  const int nbars = nElements/2;
+  DeleteContainer(fPMTMapL);
+  DeleteContainer(fPMTMapR);
+  fPMTMapL.reserve(nbars);
+  fPMTMapR.reserve(nbars);
   int p=0;
   for(int r = 0; r < fNrows; r++) {
     for(int c = 0; c < fNcols[r]; c++) {
@@ -583,8 +635,10 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
 	SBSElement *blk2 = fElementGrid[r][c][l];
 	Int_t column = blk2->GetCol();
 	Int_t row = blk2->GetRow();
-	// std::cout << "row " << r << " col " << c << " l " << l  << " p " << p << std::endl;
-	// std::cout << "element column " << column << " and row " << row << std::endl;
+	if(p>=fElements.size()){
+	  std::cout << "row " << r << " col " << c << " l " << l  << " p " << p << "/" << fElements.size() << std::endl;
+	  std::cout << "element column " << column << " and row " << row << std::endl;
+	}
 	Double_t tw0 = fTimeWalkPar0[r][c][l];
 	Double_t tw1 = fTimeWalkPar1[r][c][l];
 	if(row==0){//left// could also use r index
@@ -624,21 +678,25 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
       }//lay
     }//col
   }//row ie side of hodo
-  // std::cout << "n elements in left pmt array " << fPMTMapL.size() << std::endl;
-  // std::cout << "n elements in right pmt array " << fPMTMapR.size() << std::endl;
-  // std::cout << "n elements " << nElements << std::endl;
+
+  std::cout << "n elements in left pmt array " << fPMTMapL.size() << std::endl;
+  std::cout << "n elements in right pmt array " << fPMTMapR.size() << std::endl;
+  std::cout << "n elements " << nElements << ", nbars " << nbars << std::endl;
   
   // now we have the arrays of left and right pmts, we need to make the bars
-  if( fPMTMapL.size()!=fPMTMapR.size() || fPMTMapL.size()!=(nElements/2) || fPMTMapR.size()!=(nElements/2) ) {
+  if( fPMTMapL.size()!=fPMTMapR.size() || fPMTMapL.size()!=nbars || fPMTMapR.size()!=nbars) {
     Error( Here("ConstructHodoscope"),
 	   "PMT arrays for constructing hodoscope bars not of correct length");
     return kInitError;
   }
-  fBars.clear();
-  for(Int_t BarInc=0; BarInc<(Int_t)(nElements/2); BarInc++){
+  DeleteContainer(fBars);
+  fBars.reserve(nbars);
+
+  for(Int_t BarInc=0; BarInc<nbars; BarInc++){
+    //std::cout << BarInc << " " << nbars << std::endl;
     // bar constructor is barid, pmt left, pmt right, bar offset mostly for adc sections
     if( WithTDC() ){
-      // std::cout << fPMTMapL.at(BarInc)->GetTdcFlag() << std::endl;
+      //std::cout << fPMTMapL.at(BarInc)->GetTdcFlag() << std::endl;
       SBSTimingHodoscopeBar *bar = new SBSTimingHodoscopeBar(BarInc, fPMTMapL.at(BarInc),
 							     fPMTMapR.at(BarInc), fTDCBarOffset);
       fBars.push_back(bar);
@@ -649,8 +707,10 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
       fBars.push_back(bar);
     }//adc
   }//bar loop
-  // std::cout << "We have filled " << fBars.size() << " bars" << std::endl;
 
+  //std::cout << "We have filled " << fBars.size() << " bars" << std::endl;
+  
+  return kOK;
 }// construct hodo
 /*
  * TimeWalk()
@@ -729,7 +789,9 @@ void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)
 SBSTimingHodoscope::~SBSTimingHodoscope()
 {
   // Delete any new objects/instances created here
-  ClearEvent();
+  DeleteContainer(fBars);
+  DeleteContainer(fPMTMapL);
+  DeleteContainer(fPMTMapR);
 }
 
 SBSTimingHodoscopeCluster* SBSTimingHodoscope::GetCluster(int i)

@@ -70,7 +70,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   Int_t err = SBSGenericDetector::ReadDatabase(date);
   if(err)
     return err;
-
+  fIsInit = false;
 
   // Read this detector's parameters from the database file 'fi'.
   // This function is called by THaDetectorBase::Init() once at the
@@ -84,27 +84,29 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   if( !file ) return kFileError;
 
   // Some temporary variables which we'll use to read in the database
-  //Float_t angle = 0.0;
+  //Double_t angle = 0.0;
   std::vector<Int_t> cluster_dim; // Default is 3x3 if none specified
 
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
-    { "emin",         &fEmin,   kFloat, 0, false }, ///< minimum energy threshold
+    { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
-    { "const", &fConst, kFloat, 0, true }, ///< const from gain correction 
-    { "slope", &fSlope, kFloat, 0, true }, ///< slope for gain correction 
-    { "Rmax_dis", &fRmax_dis, kFloat, 0, true }, ///< slope for gain correction 
-    { "acc_charge", &fAccCharge, kFloat, 0, true }, ///< accumulated charge
+    { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
+    { "slope", &fSlope, kDouble, 0, true }, ///< slope for gain correction 
+    { "Rmax_dis", &fRmax_dis, kDouble, 0, true }, ///< slope for gain correction 
+    { "acc_charge", &fAccCharge, kDouble, 0, true }, ///< accumulated charge
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
-  
-  // Reinitialization only possible for same basic configuration
-  if( !err ) {
+  if(err) {
+    fclose(file);
+    return err;
+  }
+
     // Compute the max possible cluster size (which at most should be
     // cluster_dim x cluster_dim)
-    if(cluster_dim.size() == 0) {
+    if(cluster_dim.empty()) {
       cluster_dim.push_back(3);
       cluster_dim.push_back(3);
     } else if (cluster_dim.size() < 2) {
@@ -118,25 +120,27 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     fNclubr = TMath::Min( cluster_dim[0], fNrows);
     fNclubc = TMath::Min( cluster_dim[1], fNcols[0] );
     fNclublk = fNclubr*fNclubc;
-  }
 
   //
-  std::vector<Float_t> xpos,ypos;
-  std::vector<Float_t> trigtoFADCratio;
+  std::vector<Double_t> xpos,ypos;
+  std::vector<Double_t> trigtoFADCratio;
   std::vector<DBRequest> vr;
-    vr.push_back({ "xpos", &xpos,    kFloatV, 0, 1 });
-    vr.push_back({ "ypos", &ypos,    kFloatV, 0, 1 });
-    vr.push_back({ "trigtoFADCratio", &trigtoFADCratio,    kFloatV, 0, 1 });
+    vr.push_back({ "xpos", &xpos,    kDoubleV, 0, 1 });
+    vr.push_back({ "ypos", &ypos,    kDoubleV, 0, 1 });
+    vr.push_back({ "trigtoFADCratio", &trigtoFADCratio,    kDoubleV, 0, 1 });
   vr.push_back({0});
   err = LoadDB( file, date, vr.data(), fPrefix );
-  //
-  if (trigtoFADCratio.size()>0) {
+  fclose(file);
+  if(err)
+    return err;
+
+  if (!trigtoFADCratio.empty()) {
     if (trigtoFADCratio.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	SBSElement* blk= fElements[ne];
 	if (WithADC() && fModeADC == SBSModeADC::kWaveform) {
         SBSData::Waveform *wave = blk->Waveform();
-	Float_t gain = wave->GetGain();
+	Double_t gain = wave->GetGain();
 	wave->SetGain(gain*trigtoFADCratio[ne]);
 	wave->SetTrigCal(trigtoFADCratio[ne]);
 	}
@@ -151,7 +155,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     }
   }
   //
-  if (xpos.size()>0) {
+  if (!xpos.empty()) {
     if (xpos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	fElements[ne]->SetX(xpos[ne]);
@@ -161,7 +165,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     }
   }
   //
-  if (ypos.size()>0) {
+  if (!ypos.empty()) {
     if (ypos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	fElements[ne]->SetY(ypos[ne]);
@@ -170,13 +174,9 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
       std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
     }
   }
-  //
-  // At this point, if an error has been encountered, don't bother continuing,
-  // complain and return the error now.
-  if(err)
-    return err;
 
   // All is well that ends well
+  fIsInit = true;
   return kOK;
 }
 
@@ -195,8 +195,8 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     { "nclus", "Number of clusters meeting threshold", "fNclus" },
     { "e",      "Energy (MeV) of largest cluster",    "GetE()" },
     { "e_c",    "Corrected Energy (MeV) of largest cluster",    "GetECorrected()" },
+    { "atimeblk", "ADC time of highest energy block in the largest cluster", "GetAtime()" },
     { "eblk",   "Energy (MeV) of highest energy block in the largest cluster",    "GetEBlk()" },
-    { "atimeblk",   "ADC time of highest energy block in the largest cluster",    "GetAtime()" },
     { "eblk_c", "Corrected Energy (MeV) of highest energy block in the largest cluster",    "GetEBlkCorrected()" },
     { "rowblk", "Row of block with highest energy in the largest cluster",    "GetRow()" },
     { "colblk", "Col of block with highest energy in the largest cluster",    "GetCol()" },
@@ -273,7 +273,7 @@ void SBSCalorimeter::ClearEvent()
 {
   SBSGenericDetector::ClearEvent();
   ClearOutputVariables();
-  fClusters.clear();
+  DeleteContainer(fClusters);
   fGoodBlocks.clear();
   fBlockSet.clear();
 }
@@ -342,11 +342,11 @@ Int_t SBSCalorimeter::FindClusters()
 {
   // fBlockSet is initially ordered by energy in MakeGoodblocks
   fNclus = 0;
-  fClusters.clear();
+  DeleteContainer(fClusters);
  	//
 	Int_t NSize = fBlockSet.size();
         while ( NSize != 0 )  {
-             if (fBlockSet.size() !=0)  std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
+             std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
 	     Bool_t AddingBlocksToCluster = kTRUE;
 	     fBlockSetIterator it = fBlockSet.begin();
 	     SBSElement *blk= fElements[(*it).id-fChanMapStart] ; 
@@ -361,7 +361,7 @@ Int_t SBSCalorimeter::FindClusters()
 	    while (!IsNeighbor && (it2 < fBlockSet.end())) {
 	      SBSElement *blk= fElements[(*it2).id-fChanMapStart]  ; 
 	      Int_t Index = fClusters.size()-1;
-	      Float_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
+	      Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
  	      IsNeighbor =( Rad<fRmax_dis );
      	      if (IsNeighbor) {
                fClusters[Index]->AddElement(blk);
@@ -377,11 +377,11 @@ Int_t SBSCalorimeter::FindClusters()
 	}
 	}
 	//
-  if(fClusters.size()>0) {
+  if(!fClusters.empty()) {
     SBSCalorimeterCluster *clus = fClusters[0];
     fMainclus.e.push_back(clus->GetE());
-    fMainclus.atime.push_back(clus->GetAtime());
     fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    fMainclus.atime.push_back(clus->GetAtime());
     fMainclus.x.push_back(clus->GetX());
     fMainclus.y.push_back(clus->GetY());
     fMainclus.n.push_back(clus->GetMult());
@@ -405,15 +405,15 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     return err;
   // Get information on the cluster with highest energy (useful even if
   // fMaxNclus is zero, i.e., storing no vector of clusters)
-  if(fClusters.size()>0) {
+  if(!fClusters.empty()) {
     SBSCalorimeterCluster *clus = fClusters[0];
  
     if(fDataOutputLevel > 0 ) {
       for(UInt_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
         fMainclusblk.e.push_back(blk->GetE());
-        fMainclusblk.atime.push_back(blk->GetAtime());
         fMainclusblk.e_c.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));
+        fMainclusblk.atime.push_back(blk->GetAtime());        
         fMainclusblk.x.push_back(blk->GetX());
         fMainclusblk.y.push_back(blk->GetY());
         fMainclusblk.row.push_back(blk->GetRow());
@@ -428,8 +428,8 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     // Now store the remaining clusters (up to fMaxNclus)
     Int_t nres = TMath::Min(Int_t(fMaxNclus),Int_t(fClusters.size()));
     fOutclus.e.reserve(nres);
-    fOutclus.atime.reserve(nres);
     fOutclus.e_c.reserve(nres);
+    fOutclus.atime.reserve(nres);
     fOutclus.x.reserve(nres);
     fOutclus.y.reserve(nres);
     fOutclus.n.reserve(nres);
@@ -440,11 +440,11 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     fOutclus.id.reserve(nres);
 
     int nclus = 0;
-    for(SBSCalorimeterCluster *cluster : fClusters) {
+    for( const auto* cluster: fClusters ) {
       if(nclus < fMaxNclus) { // Keep adding them until we reach fMaxNclus
         fOutclus.e.push_back(cluster->GetE());
-        fOutclus.atime.push_back(cluster->GetAtime());
         fOutclus.e_c.push_back(cluster->GetE()*(fConst + fSlope*fAccCharge));
+        fOutclus.atime.push_back(cluster->GetAtime());
         fOutclus.x.push_back(cluster->GetX());
         fOutclus.y.push_back(cluster->GetY());
         fOutclus.n.push_back(cluster->GetMult());

@@ -206,6 +206,7 @@ bool SBSSimSADCEncoder::DecodeSADC(SimEncoder::sadc_data &data,
     //std::cout << enc_data[i] << " ";
   }
   //std::cout << std::endl;
+  return true;
 }
 
 /*

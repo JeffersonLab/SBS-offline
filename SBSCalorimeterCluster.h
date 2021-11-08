@@ -19,25 +19,25 @@ public:
     SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block);
     virtual ~SBSCalorimeterCluster();
 
-    Float_t GetX() const {return fX;}
-    Float_t GetY() const {return fY;}
-    Float_t GetE() const {return fE;}
-    Float_t GetAtime() const {return fAtime;}
-    Float_t GetEblk() const {return fEblk;}
+    Double_t GetX() const {return fX;}
+    Double_t GetY() const {return fY;}
+    Double_t GetE() const {return fE;}
+    Double_t GetAtime() const {return fAtime;}
+    Double_t GetEblk() const {return fEblk;}
     Int_t   GetMult() const {return fMult;}
     Int_t   GetRow()  const {return fRow; }
     Int_t   GetCol()  const {return fCol; }
     Int_t   GetElemID()  const {return fElemID; }
     SBSElement* GetMaxElement() { return fMaxElement; }
-    Float_t GetMaxE() const {if(fMaxElement) return fMaxElement->GetE(); return 0; }
+    Double_t GetMaxE() const {if(fMaxElement) return fMaxElement->GetE(); return 0; }
 
     Int_t GetNMaxElements() const {return fNMaxElements;}
 
-    void SetX(Float_t var) {fX=var;}
-    void SetY(Float_t var) {fY=var;}
-    void SetE(Float_t var) {fE=var;}
-    void SetAtime(Float_t var) {fAtime=var;}
-    void SetEblk(Float_t var) {fEblk=var;}
+    void SetX(Double_t var) {fX=var;}
+    void SetY(Double_t var) {fY=var;}
+    void SetE(Double_t var) {fE=var;}
+    void SetAtime(Double_t var) {fAtime=var;}
+    void SetEblk(Double_t var) {fEblk=var;}
     void SetMult(Int_t var) {fMult=var;}
     void SetRow(Int_t var) { fRow=var; }
     void SetCol(Int_t var) { fCol=var; }
@@ -54,12 +54,12 @@ public:
 
 private:
 
-    Float_t fX;       // x position of the center
-    Float_t fY;       // y position of the center
+    Double_t fX;       // x position of the center
+    Double_t fY;       // y position of the center
 
-    Float_t fE;       // Energy deposit in block
-    Float_t fAtime;       // ADC time  of block with highest E
-    Float_t fEblk;    // Energy of block with highest E
+    Double_t fE;       // Energy deposit in block
+    Double_t fAtime;       // ADC time  of block with highest E
+    Double_t fEblk;    // Energy of block with highest E
     Int_t   fRow;     // Row of block with highest E
     Int_t   fCol;     // Row of block with highest E
     Int_t   fElemID;     // ElemID of block with highest E

@@ -12,6 +12,7 @@
 #include "SBSGEMModule.h"
 #include "THaTrack.h"
 #include "TClonesArray.h"
+#include "Helper.h"
 
 using namespace Podd;
 
@@ -36,7 +37,6 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
 SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
   fTestTracks->Clear("C");
   delete fTestTracks;
-  return;
 }
 
 
@@ -52,9 +52,9 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
   if( status == kOK ){
 
     //    int modcounter=0;
-    
-    for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-      status = (*it)->Init(date); //This triggers calling of ReadDatabase for each module (I hope)!
+
+    for( auto& module: fModules ) {
+      status = module->Init(date); //This triggers calling of ReadDatabase for each module (I hope)!
       if( status != kOK ){
 	return status;
       }
@@ -134,9 +134,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   
   
-  Int_t status = kInitError;
-  LoadDB( file, date, request, fPrefix );
+  Int_t err = LoadDB( file, date, request, fPrefix );
   fclose(file);
+  if( err )
+    return err;
 
   fMakeEfficiencyPlots = (doefficiency_flag != 0 );
   if( !fPedMode_DBoverride ) {
@@ -180,23 +181,23 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   if( fModulesInitialized ){
     //first check if the size changed:
     if( fModules.size() != modules.size() ) { //If the size of the configuration changed, we know that we have to re-initialize everything!
-      fModules.clear();
+      DeleteContainer(fModules);
       fModules.resize( modules.size() );
       fModulesInitialized = false;
     } else { //size stayed the same, but we need to check if any of the names changed:
-      
-      for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
+
+      for( auto it = modules.begin(); it != modules.end(); ++it ) {
 	if( fModules[modcounter] ){
 
 	  std::string modname = fModules[modcounter]->GetName();
-	  if( modname.compare( *it ) != 0 ){ //name of one or more modules changed, assume we need to re-init everything:
-	    fModules.clear();
+	  if( modname != *it ){ //name of one or more modules changed, assume we need to re-init everything:
+            DeleteContainer(fModules);
 	    fModules.resize( modules.size() );
 	    fModulesInitialized = false;
 	    break;
 	  }
 	} else { //one or more modules not allocated, re-init everything:
-	  fModules.clear();
+          DeleteContainer(fModules);
 	  fModules.resize( modules.size() );
 	  fModulesInitialized = false;
 	  break;
@@ -215,11 +216,11 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   std::cout << "Modules initialized = " << fModulesInitialized << ", number of modules = " << fModules.size() << std::endl;
   //we need to implement some checks to make sure the modules are not already allocated:
-  for (std::vector<std::string>::iterator it = modules.begin() ; it != modules.end(); ++it){
+  for( const auto& module: modules ) {
 
-    if( !fModulesInitialized ){
-      std::cout << "Initializing module " << *it << "... ";
-      fModules[modcounter] = new SBSGEMModule( (*it).c_str(), (*it).c_str(), this);
+    if( !fModulesInitialized ) {
+      std::cout << "Initializing module " << module << "... ";
+      fModules[modcounter] = new SBSGEMModule(module.c_str(), module.c_str(), this);
       std::cout << " done." << std::endl;
     }
     fModules[modcounter]->fModule = modcounter; //just a dummy index in the module array
@@ -241,10 +242,6 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //     return err;
   // }
     
-  status = kOK;
-
-  if( status != kOK )
-    return status;
 
   fIsInit = kTRUE;
     
@@ -252,9 +249,9 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 }
 
 
-Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
-  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    (*it)->Begin(run);
+Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ) {
+  for( auto& module: fModules ) {
+    module->Begin(run);
   }
 
   TString appname = GetApparatus()->GetName();
@@ -271,12 +268,10 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ){
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
   SBSGEMTrackerBase::Clear();
-  
-  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    (*it)->Clear(opt);
-  }
 
-  return;
+  for( auto& module: fModules ) {
+    module->Clear(opt);
+  }
 }
 
 Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
@@ -285,15 +280,15 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
   //Triggers decoding of each module:
 
-  Int_t stripcounter=0;
-  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    
-    (*it)->Decode(evdata);
+  Int_t stripcounter = 0;
+  for( auto& module: fModules ) {
+
+    module->Decode(evdata);
 
     //std::cout << "Decoding module " << (*it)->GetName() << ", nstrips fired = " << (*it)->fNstrips_hit << std::endl;
-   
-    
-    stripcounter += (*it)->fNstrips_hit;
+
+
+    stripcounter += module->fNstrips_hit;
     //std::cout << "done..." << std::endl;
   }
 
@@ -354,10 +349,10 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     // fpedfile_cmr << message << std::endl;
     // fpedfile_cmr << "# format = crate     slot      mpd_id     adc_ch      commonmode min      commonmode max" << std::endl;
   }
-  
-  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    if( fPedestalMode ) { (*it)->PrintPedestals( fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr ); }
-    (*it)->End(run);
+
+  for( auto& module: fModules ) {
+    if( fPedestalMode ) { module->PrintPedestals(fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr); }
+    module->End(run);
   }
 
   if( fMakeEfficiencyPlots ){
@@ -412,21 +407,17 @@ void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
     (*it)->Print(opt);
     }
   */
-  for( unsigned int i = 0; i < fModules.size(); i++ ){
-    fModules[i]->Print(opt);
+  for( const auto& module: fModules ) {
+    module->Print(opt);
   }
-
-  return;
 }
 
 
-void SBSGEMSpectrometerTracker::SetDebug( Int_t level ){
-  THaTrackingDetector::SetDebug( level );
-  for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
-    (*it)->SetDebug(level);
+void SBSGEMSpectrometerTracker::SetDebug( Int_t level ) {
+  THaTrackingDetector::SetDebug(level);
+  for( auto& module: fModules ) {
+    module->SetDebug(level);
   }
-
-  return;
 }
 
 Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){

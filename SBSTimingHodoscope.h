@@ -53,15 +53,15 @@ public:
   std::vector<Double_t> GetGoodBarsTimeDiffPos() {return fGoodBarTDCpos;};
   std::vector<Double_t> GetGoodBarsVPos() {return fGoodBarTDCvpos;};
   Double_t GetGoodBarVPosElement(Int_t i) {
-    if(i<fGoodBarTDCvpos.size())
+    if((Double_t)i<fGoodBarTDCvpos.size())
       return fGoodBarTDCvpos[i];
     else return -999.0;};
   Double_t GetGoodBarHPosElement(Int_t i) {
-    if(i<fGoodBarTDCpos.size())
+    if((Double_t)i<fGoodBarTDCpos.size())
       return fGoodBarTDCpos[i];
     else return -999.0;};
   Double_t GetGoodBarMeanTimeElement(Int_t i) {
-    if(i<fGoodBarTDCmean.size())
+    if((Double_t)i<fGoodBarTDCmean.size())
       return fGoodBarTDCmean[i];
     else return -999.0;};
   
@@ -92,9 +92,12 @@ public:
   Double_t AttLength = 1.0/3.8;//380cm for ej200. units per m?
   /* speed of light in scint? what is n for ej200 */
   // n = 1.58 => n=c/v =>v=c/n
-  Double_t n=1.58;
-  Double_t vScint = 2.9979e8/n;
-
+  //  Double_t n=1.58;
+  Double_t fvScint; //default to 0.454c, later we might want to define separately for different bars?
+  Double_t ftDiff0; //offset of time difference to align horizontal position from time difference with horizontal projection of tracks
+  Double_t fTrackMatchCutX;
+  Double_t fTrackMatchCutY; 
+  
   /* std::vector<SBSTimingHodoscopePMT> fPMTMap; */
   std::vector<SBSTimingHodoscopePMT*> fPMTMapL;
   std::vector<SBSTimingHodoscopePMT*> fPMTMapR;
@@ -103,7 +106,9 @@ public:
   Int_t fADCBarOffset;
   Int_t fTDCRefLeL;
   Int_t fTDCRefLeR;
-
+  Double_t fTDCWinMin;
+  Double_t fTDCWinMax;
+  
   std::vector<Int_t>   fGoodBarIDsTDC;
   std::vector<Double_t> fGoodBarTDCmean;
   std::vector<Double_t> fGoodBarTDCdiff;
@@ -141,7 +146,6 @@ public:
   */
   
   // Mapping (see also fDetMap)
-  UShort_t   fChanMapStart; ///< Starting number for block number (i.e. 0 or 1)
   // maps of time walk parameters - in row, col, lay
   std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar0;
   std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar1;
