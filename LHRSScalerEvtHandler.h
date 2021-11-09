@@ -59,6 +59,21 @@ private:
    Double_t *dvars;
    TTree *fScalerTree;
 
+   // added by D Flay 
+   Bool_t fUseFirstEvent; 
+   Int_t fClockChan;
+   Double_t fClockFreq;
+   UInt_t fLastClock;
+   Int_t fClockOverflows;
+   Double_t fTotalTime;
+   Double_t fPrevTotalTime;
+   Double_t fDeltaTime;
+   Double_t *dvarsFirst;
+   UInt_t *dvars_prev_read;
+   std::vector<UInt_t> scal_prev_read;
+   std::vector<UInt_t> scal_present_read;
+   std::vector<UInt_t> scal_overflows;
+
    LHRSScalerEvtHandler(const LHRSScalerEvtHandler& fh);
    LHRSScalerEvtHandler& operator=(const LHRSScalerEvtHandler& fh);
 

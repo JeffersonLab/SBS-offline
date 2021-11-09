@@ -61,7 +61,6 @@
 #include <iostream>
 #include <sstream>
 
-
 using namespace std;
 using namespace Decoder;
 using namespace THaString;
@@ -73,11 +72,18 @@ static const UInt_t MAXTEVT   = 5000;
 static const UInt_t defaultDT = 4;
 
 LHRSScalerEvtHandler::LHRSScalerEvtHandler(const char *name, const char* description)
-  : THaEvtTypeHandler(name,description), evcount(0), fNormIdx(-1), fNormSlot(-1),
-    dvars(0), fScalerTree(0)
+  : THaEvtTypeHandler(name,description),evcount(0),fNormIdx(-1),fNormSlot(-1),
+    dvars(0),fScalerTree(0),fUseFirstEvent(kTRUE),
+    fClockChan(-1),fClockFreq(-1),fLastClock(0),fClockOverflows(0),
+    fTotalTime(0),fPrevTotalTime(0),fDeltaTime(-1),
+    dvarsFirst(0),dvars_prev_read(0)
 {
   rdata = new UInt_t[MAXTEVT];
-  fDebugFile = nullptr; // initialize the pointer to null  
+  fDebugFile = nullptr; // initialize the pointer to null
+  // for by hand calculation of rates 
+  scal_prev_read.clear();
+  scal_present_read.clear();
+  scal_overflows.clear(); 
 }
 //______________________________________________________________________________
 LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
@@ -86,6 +92,10 @@ LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
   if (fScalerTree) {
     delete fScalerTree;
   }
+  // added by D Flay 11/9/21
+  delete [] dvars_prev_read;
+  delete [] dvars;
+  delete [] dvarsFirst;
 }
 //______________________________________________________________________________
 Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
@@ -230,32 +240,194 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   // the other arms event type.  (The arm is fName).
   if (!ifound) return 0;
 
-  // The correspondance between dvars and the scaler and the channel
-  // will be driven by a scaler.map file, or could be hard-coded.
-  for (size_t i = 0; i < scalerloc.size(); i++) {
-  	size_t ivar  = scalerloc[i]->ivar;
-  	size_t idx   = scalerloc[i]->index;
-  	size_t ichan = scalerloc[i]->ichan;
-  	if (fDebugFile) *fDebugFile << "Debug dvars i = "<<i<<", var = "<<ivar<<", index = "<<idx<<", ch = "<<ichan<<endl;
-  	if( ivar < scalerloc.size() && idx < scalers.size() && ichan < MAXCHAN ){
-  		if (scalerloc[ivar]->ikind == ICOUNT) dvars[ivar] = scalers[idx]->GetData(ichan);
-  		if (scalerloc[ivar]->ikind == IRATE)  dvars[ivar] = scalers[idx]->GetRate(ichan);
-  		if (fDebugFile) *fDebugFile << "   dvars kind = "<<scalerloc[ivar]->ikind<<", value = "<<dvars[ivar]<<endl;
-  	}else{
-  		cout << "LHRSScalerEvtHandler:: ERROR:: incorrect index "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
-  	}
+  // // The correspondance between dvars and the scaler and the channel
+  // // will be driven by a scaler.map file, or could be hard-coded.
+  // for (size_t i = 0; i < scalerloc.size(); i++) {
+  // 	size_t ivar  = scalerloc[i]->ivar;
+  // 	size_t idx   = scalerloc[i]->index;
+  // 	size_t ichan = scalerloc[i]->ichan;
+  // 	if (fDebugFile) *fDebugFile << "Debug dvars i = "<<i<<", var = "<<ivar<<", index = "<<idx<<", ch = "<<ichan<<endl;
+  // 	if( (ivar<scalerloc.size()) && (idx<scalers.size()) && (ichan<MAXCHAN) ){
+  // 		if (scalerloc[ivar]->ikind == ICOUNT) dvars[ivar] = scalers[idx]->GetData(ichan);
+  // 		if (scalerloc[ivar]->ikind == IRATE)  dvars[ivar] = scalers[idx]->GetRate(ichan);
+  // 		if (fDebugFile) *fDebugFile << "   dvars kind = "<<scalerloc[ivar]->ikind<<", value = "<<dvars[ivar]<<endl;
+  // 	}else{
+  // 		cout << "LHRSScalerEvtHandler:: ERROR:: incorrect index "<<ivar<<"  "<<idx<<"  "<<ichan<<endl;
+  // 	}
+  // }
+  
+  // By-hand calculation of rates (added by D Flay 11/9/21) 
+  UInt_t thisClock = scalers[fNormIdx]->GetData(fClockChan);
+
+  // FIXME: empirically found maxima (is this right?) 
+  UInt_t CLOCK_MAX  = 106680229;
+  UInt_t SCALER_MAX = 816862727;  
+
+  if(thisClock<fLastClock){  // Count clock scaler wrap arounds
+    fClockOverflows++;
+    if(fLastClock>CLOCK_MAX) CLOCK_MAX = fLastClock; // update CLOCK_MAX if necessary  
+    if(fDebugFile){
+       *fDebugFile << "*** CLOCK OVERFLOW! ***" << std::endl;
+       *fDebugFile << "cntr       = " << fClockOverflows << std::endl;
+       *fDebugFile << "this clock = " << thisClock       << std::endl;
+       *fDebugFile << "last clock = " << fLastClock      << std::endl;
+       *fDebugFile << "kMaxUInt   = " << kMaxUInt        << std::endl;
+       *fDebugFile << "***********************" << std::endl;
+    }
   }
 
+  // fTotalTime = ( thisClock + ( ( (Double_t)fClockOverflows )*kMaxUInt + fClockOverflows ) )/fClockFreq;
+  fTotalTime = ( thisClock + ( ( (Double_t)fClockOverflows )*CLOCK_MAX + fClockOverflows) )/fClockFreq;
+  fDeltaTime = fTotalTime - fPrevTotalTime;
+
+  if(fDebugFile){
+     *fDebugFile << "======== Time Check ========" << std::endl;
+     *fDebugFile << "Clock frequency = " << fClockFreq     << std::endl;
+     *fDebugFile << "Current clock   = " << thisClock      << std::endl;
+     *fDebugFile << "Previous clock  = " << fLastClock     << std::endl;
+     *fDebugFile << "Current time    = " << fTotalTime     << std::endl;
+     *fDebugFile << "Previous time   = " << fPrevTotalTime << std::endl;
+     *fDebugFile << "delta time      = " << fDeltaTime     << std::endl;
+     *fDebugFile << "============================" << std::endl;
+  }
+
+  if(fDeltaTime==0){
+     cout << " *******************  Severe Warning   ****************************" << endl;
+     cout << " [LHRSScalerEvtHandler]: Found fDeltaTime is zero!!   " << endl;
+     cout << " ******************* Alert DAQ experts ****************************" << endl;
+  }
+
+  // set up for next event 
+  fLastClock     = thisClock;
+  fPrevTotalTime = fTotalTime;
+
+  UInt_t scalerData=0,diff=0;
+
+  Double_t rate=0;
+
+  Int_t nscal=0;
+
+  for(size_t i=0;i<scalerloc.size();i++){
+     size_t ivar  = scalerloc[i]->ivar;
+     size_t idx   = scalerloc[i]->index;
+     size_t ichan = scalerloc[i]->ichan;
+     if (fDebugFile) *fDebugFile << "event " << evcount << " Debug dvars i = "<<i<<", var = "<<ivar<<", index = "<<idx<<", ch = "<<ichan<<endl;
+     if(evcount==0){
+        if( (ivar<scalerloc.size()) && (idx<scalers.size()) && (ichan<MAXCHAN) ){
+           if(fUseFirstEvent){
+             scalerData = scalers[idx]->GetData(ichan); 
+             if(scalerloc[ivar]->ikind==ICOUNT){
+               dvars[ivar] = scalerData;
+               scal_present_read.push_back(scalerData);
+               scal_prev_read.push_back(0);
+               scal_overflows.push_back(0);
+               dvarsFirst[ivar] = 0.0;
+             }
+             if(scalerloc[ivar]->ikind==IRATE){
+		scalerData = scalers[idx]->GetData(ichan); 
+		rate       = scalerData/fDeltaTime;
+                dvars[ivar]      = rate;
+                dvarsFirst[ivar] = rate;
+                if(fDebugFile) *fDebugFile << "  RATE CALC ivar " << ivar << " diff = " << scalerData << " dtime = " << fDeltaTime << " rate = " << rate << std::endl;
+             }
+           }else{
+              // not using first event
+              if(scalerloc[ivar]->ikind==ICOUNT){
+		 scalerData = scalers[idx]->GetData(ichan); 
+                 dvarsFirst[ivar] = scalerData;
+                 scal_present_read.push_back(dvarsFirst[ivar]);
+                 scal_prev_read.push_back(0);
+              }
+              if(scalerloc[ivar]->ikind==IRATE){
+		 scalerData = scalers[idx]->GetData(ichan); 
+		 rate       = scalerData/fDeltaTime;
+                 dvarsFirst[ivar] = rate;
+                 if(fDebugFile) *fDebugFile << "  RATE CALC ivar " << ivar << " diff = " << scalerData << " dtime = " << fDeltaTime << " rate = " << rate << std::endl;
+              }
+           }
+        }
+     }else{
+	// evcount != 0
+        if( (ivar<scalerloc.size()) && (idx<scalers.size()) && (ichan<MAXCHAN) ){
+           if(scalerloc[ivar]->ikind==ICOUNT) {
+	      scalerData = scalers[idx]->GetData(ichan);
+	      rate       = 0; 
+              if(scalerData<scal_prev_read[nscal]){
+                scal_overflows[nscal]++;
+                if(fDebugFile){
+                   *fDebugFile << "*** OVERFLOW ENCOUNTERED! ***" << std::endl;
+                   *fDebugFile << "scal_overflows[" << nscal << "] = " << scal_overflows[nscal] << std::endl;
+                   *fDebugFile << "scal_prev_read[" << nscal << "] = " << scal_prev_read[nscal] << std::endl;
+                   *fDebugFile << "scalerData = " << scalerData << std::endl;
+                   *fDebugFile << "kMaxUInt = " << kMaxUInt << std::endl; 
+                   *fDebugFile << "SCALER_MAX = " << SCALER_MAX << std::endl; 
+                   *fDebugFile << "*****************************" << std::endl; 
+                }
+                SCALER_MAX = scal_prev_read[nscal]; // ok...
+                // if(scal_prev_read[nscal]>SCALER_MAX) SCALER_MAX = scal_prev_read[nscal];  
+                if(scal_prev_read[nscal]>kMaxUInt){
+                   dvars[ivar] = scalerData + (1+((Double_t)kMaxUInt))*scal_overflows[nscal] - dvarsFirst[ivar];
+                }else{
+		   // dvars[ivar] = scalerData + scal_prev_read[nscal];
+                   dvars[ivar] = scalerData + (1+((Double_t)SCALER_MAX))*scal_overflows[nscal] - dvarsFirst[ivar];
+                }
+              }else{
+                dvars[ivar] = scalerData;
+              }
+              scal_present_read[nscal] = dvars[ivar]; // scalerData;
+              nscal++;
+           }
+           if(scalerloc[ivar]->ikind==IRATE){
+	      scalerData = scalers[idx]->GetData(ichan);
+	      rate       = 0; 
+              diff       = 0;
+              if(scalerData<scal_prev_read[nscal-1]){
+                if(scal_prev_read[nscal-1]>kMaxUInt){
+                   diff = (kMaxUInt-(scal_prev_read[nscal-1] - 1)) + scalerData;
+                }else{
+		   // diff = (scal_prev_read[nscal-1] - 1) + scalerData; 
+                   diff = (SCALER_MAX-(scal_prev_read[nscal-1] - 1)) + scalerData;  
+                }
+                if(fDebugFile){
+                   *fDebugFile << "*** OVERFLOW ENCOUNTERED! ***" << std::endl; 
+                   *fDebugFile << "scal_prev_read[" << nscal-1 << "] = " << scal_prev_read[nscal-1] << std::endl; 
+                   *fDebugFile << "scalerData = " << scalerData << std::endl; 
+                   *fDebugFile << "diff = " << diff << std::endl; 
+                   *fDebugFile << "kMaxUInt = " << kMaxUInt << std::endl; 
+                   *fDebugFile << "SCALER_MAX = " << SCALER_MAX << std::endl; 
+                   *fDebugFile << "*****************************" << std::endl; 
+                }
+              }else{
+                diff = scalerData - scal_prev_read[nscal-1];
+              }
+              rate        = diff/fDeltaTime;
+              dvars[ivar] = rate;
+              if(fDebugFile){
+                 *fDebugFile << "  RATE CALC ivar " << ivar << " scalerData = " << scalerData 
+                             << " scal_prev_read = " << scal_prev_read[nscal-1] 
+                             << " diff = " << diff 
+                             << " dtime = " << fDeltaTime << " rate = " << rate << std::endl;
+              }
+           }
+	}
+     } // end of evcount if-else  
+     // if(fDebugFile) *fDebugFile << "ivar " << ivar << " counts = " << scalerData << " rate = " << rate << std::endl;
+  } // end of for loop 
+
   evcount = evcount + 1.0;
+
+  // set up for next read 
+  for(size_t j=0;j<scal_prev_read.size();j++) scal_prev_read[j]=scal_present_read[j];
   
-  for (size_t j=0; j<scalers.size(); j++) {
-  	scalers[j]->Clear("");
-  	scalerloc[j]->found=kFALSE;
+  for(size_t j=0;j<scalers.size();j++){
+     scalers[j]->Clear("");
+     scalerloc[j]->found=kFALSE;
   }
   
   if (fDebugFile) *fDebugFile << "scaler tree ptr  "<<fScalerTree<<endl;
   
   if (fScalerTree) fScalerTree->Fill();
+
   
   return 1;
 }
@@ -382,6 +554,9 @@ THaAnalysisObject::EStatus LHRSScalerEvtHandler::Init(const TDatime& date)
            	  if (dbline.size()>8) {
            		  clkchan = atoi(dbline[7].c_str());
            		  clkfreq = 1.0*atoi(dbline[8].c_str());
+			  // save to the class's private variables 
+			  fClockChan = clkchan; 
+			  fClockFreq = clkfreq; 
            	  }
            	  if (fDebugFile) {
            		  *fDebugFile << "map line "<<dec<<imodel<<"  "<<icrate<<"  "<<islot<<endl;
@@ -528,8 +703,12 @@ void LHRSScalerEvtHandler::DefVars()
   // called after AddVars has finished being called.
   Int_t Nvars = scalerloc.size();
   if (Nvars == 0) return;
-  dvars = new Double_t[Nvars];  // dvars is a member of this class
+  dvars           = new Double_t[Nvars];  // dvars is a member of this class
+  dvarsFirst      = new Double_t[Nvars];  // dvarsFirst is a member of this class
+  dvars_prev_read = new UInt_t[Nvars];    // dvars_prev_read is a member of this class
   memset(dvars, 0, Nvars*sizeof(Double_t));
+  memset(dvarsFirst, 0, Nvars*sizeof(Double_t));
+  memset(dvars_prev_read, 0, Nvars*sizeof(UInt_t));
   if (gHaVars) {
   	if(fDebugFile) *fDebugFile << "LHRSScalerEvtHandler:: Have gHaVars "<<gHaVars<<endl;
   } else {

@@ -93,8 +93,8 @@ SBSScalerEvtHandler::~SBSScalerEvtHandler()
   if (!TROOT::Initialized()) {
     delete fScalerTree;
   }
-  Podd::DeleteContainer(scalers);
-  Podd::DeleteContainer(scalerloc);
+  DeleteContainer(scalers);
+  DeleteContainer(scalerloc);
   delete [] dvars_prev_read;
   delete [] dvars;
   delete [] dvarsFirst;
