@@ -106,7 +106,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int mc_flag = fIsMC ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
-  
+
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
@@ -129,6 +129,14 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
+    { "xptar_min", &fxptarmin_track, kDouble, 0, 1, 1},
+    { "xptar_max", &fxptarmax_track, kDouble, 0, 1, 1},
+    { "yptar_min", &fyptarmin_track, kDouble, 0, 1, 1},
+    { "yptar_max", &fyptarmax_track, kDouble, 0, 1, 1},
+    { "ytar_min", &fytarmin_track, kDouble, 0, 1, 1},
+    { "ytar_max", &fytarmax_track, kDouble, 0, 1, 1},
+    { "pmin", &fPmin_track, kDouble, 0, 1, 1},
+    { "pmax", &fPmax_track, kDouble, 0, 1, 1},
     {0}
   };
 

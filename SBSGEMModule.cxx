@@ -213,6 +213,12 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   int eventinfoplots_flag = fMakeEventInfoPlots ? 1 : 0;
 
+  int usestriptimingcuts = fUseStripTimingCuts ? 1 : 0;
+  int useTSchi2cut = fUseTSchi2cut ? 1 : 0;
+
+  std::vector<double> TSfrac_mean_temp;
+  std::vector<double> TSfrac_sigma_temp;
+  
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
     { "apvmap",         &fAPVmapping,    kUInt, 0, 1, 1}, //optional, allow search up the tree if all modules in a setup have the same APV mapping
@@ -268,6 +274,14 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "chan_event_count", &fChan_MPD_EventCount, kUInt, 0, 1, 1},
     { "pedsub_online", &fPedSubFlag, kInt, 0, 1, 1},
     { "max2Dhits", &fMAX2DHITS, kUInt, 0, 1, 1}, //optional, search up tree
+    { "usestriptimingcut", &usestriptimingcuts, kInt, 0, 1, 1 },
+    { "useTSchi2cut", &useTSchi2cut, kInt, 0, 1, 1 },
+    { "maxstrip_t0", &fStripMaxTcut_central, kDouble, 0, 1, 1 },
+    { "maxstrip_tcut", &fStripMaxTcut_width, kDouble, 0, 1, 1 },
+    { "addstrip_tcut", &fStripAddTcut_width, kDouble, 0, 1, 1 },
+    { "addstrip_ccor_cut", &fStripAddCorrCoeffCut, kDouble, 0, 1, 1 },
+    { "goodstrip_TSfrac_mean", &TSfrac_mean_temp, kDoubleV, 0, 1, 1 },
+    { "goodstrip_TSfrac_sigma", &TSfrac_sigma_temp, kDoubleV, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -282,6 +296,14 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
 
   fMakeEventInfoPlots = eventinfoplots_flag != 0;
+
+  fUseStripTimingCuts = usestriptimingcuts != 0;
+  fUseTSchi2cut = useTSchi2cut != 0;
+
+  if( fUseTSchi2cut && TSfrac_mean_temp.size() == fN_MPD_TIME_SAMP && TSfrac_sigma_temp.size() == fN_MPD_TIME_SAMP ){
+    fGoodStrip_TSfrac_mean = TSfrac_mean_temp;
+    fGoodStrip_TSfrac_sigma = TSfrac_sigma_temp;
+  }
   
   //  std::cout << "After loadDB, fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
  
