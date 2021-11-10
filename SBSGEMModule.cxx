@@ -721,6 +721,12 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   
   VarDef varstrip[] = {
     { "strip.nstripsfired", "Number of strips fired", kUInt, 0, &fNstrips_hit },
+    { "strip.nstrips_keep", "Number of fired strips passing basic timing cuts", kUInt, 0, &fNstrips_keep },
+    { "strip.nstrips_keepU", "Number of U/X strips passing basic timing cuts", kUInt, 0, &fNstrips_keepU },
+    { "strip.nstrips_keepV", "Number of V/Y strips passing basic timing cuts", kUInt, 0, &fNstrips_keepV },
+    { "strip.nstrips_keep_lmax", "Number of strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmax },
+    { "strip.nstrips_keep_lmaxU", "Number of U/X strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmaxU },
+    { "strip.nstrips_keep_lmaxV", "Number of V/Y strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmaxV },
     { "strip.istrip", "strip index", kUInt, 0, &(fStrip[0]), &fNstrips_hit },
     { "strip.IsU", "U strip?", kUInt, 0, &(fStripIsU[0]), &fNstrips_hit },
     { "strip.IsV", "V strip?", kUInt, 0, &(fStripIsV[0]), &fNstrips_hit },
@@ -845,6 +851,17 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fIsDecoded = false;
 
   fTrackPassedThrough = 0;
+
+  //numbers of strips passing basic zero suppression thresholds and timing cuts:
+  fNstrips_keep = 0;
+  fNstrips_keepU = 0;
+  fNstrips_keepV = 0;
+  //numbers of strips passing basic zero suppression thresholds, timing cuts, and higher max. sample and strip sum thresholds for
+  // local max:
+  fNstrips_keep_lmax = 0;
+  fNstrips_keep_lmaxU = 0;
+  fNstrips_keep_lmaxV = 0;
+  
   
   fNclustU = 0;
   fNclustV = 0;
@@ -1409,16 +1426,18 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fAxis[fNstrips_hit] = axis;
 	  
 	  fKeepStrip[fNstrips_hit] = true;
+	  //fStripKeep[fNstrips_hit] = 1;
 	  //	  fMaxSamp.push_back( iSampMax );
 	  fMaxSamp[fNstrips_hit] = iSampMax;
 
 	  if( fSuppressFirstLast && (iSampMax == 0 || iSampMax+1 == fN_MPD_TIME_SAMP ) ){
 	    fKeepStrip[fNstrips_hit] = false;
-    
+	    //fStripKeep[fNstrips_hit] = 0;
 	  }
 
 	  if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
 	    fKeepStrip[fNstrips_hit] = false;
+	    //fStripKeep[fNstrips_hit] = 0;
 	  }
 
 	  //std::cout << "axis, Int_t(axis) = " << axis << ", " << Int_t(axis) << std::endl;
@@ -1493,10 +1512,24 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //      if( axis == SBSGEM::kVaxis ) fVstripIndex[strip] = fNstrips_hit;
 
 	  //std::cout << "starting pedestal histograms..." << std::endl;
-	  
+
+	  if( fKeepStrip[fNstrips_hit] ){
+	    fNstrips_keep++;
+	    fNstrips_keepU += isU;
+	    fNstrips_keepV += isV;
+	    if( fADCmax[fNstrips_hit] >= fThresholdSample && fADCsums[fNstrips_hit] >= fThresholdStripSum ){
+	      fNstrips_keep_lmax++;
+	      fNstrips_keep_lmaxU += isU;
+	      fNstrips_keep_lmaxV += isV;
+	    }
+	    
+	  }
 	  
 	  
 	  fNstrips_hit++;
+
+	  
+	  
 	} //check if passed zero suppression cuts
       } //end loop over strips on this APV card
     } //end if( nsamp > 0 )

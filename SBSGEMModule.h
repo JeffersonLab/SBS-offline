@@ -302,6 +302,15 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fNstrips_hitU; //total number of U strips fired
   UInt_t fNstrips_hitV; //total number of V strips fired
 
+  // Number of strips passing basic zero suppression thresholds:
+  UInt_t fNstrips_keep;
+  UInt_t fNstrips_keepU;
+  UInt_t fNstrips_keepV;
+  //Number of strips passing "local max" thresholds:
+  UInt_t fNstrips_keep_lmax;
+  UInt_t fNstrips_keep_lmaxU;
+  UInt_t fNstrips_keep_lmaxV; 
+  
   UInt_t fTrackPassedThrough; //flag to indicate track passed through module:
   
   //Map strip indices in this array:
@@ -322,6 +331,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripOnTrack; //Is this strip on any track?
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<bool> fKeepStrip; //keep this strip?
+  //std::vector<Int_t> fStripKeep; //Strip passes timing cuts (and part of a cluster)?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
