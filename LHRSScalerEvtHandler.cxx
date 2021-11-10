@@ -261,23 +261,30 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
 
   // FIXME: empirically found maxima (is this right?) 
   UInt_t CLOCK_MAX  = 106680229;
-  UInt_t SCALER_MAX = 816862727;  
+  // UInt_t SCALER_MAX = 816862727;  
+  // UInt_t delta=0; // for overflow accumulation
 
   if(thisClock<fLastClock){  // Count clock scaler wrap arounds
     fClockOverflows++;
-    if(fLastClock>CLOCK_MAX) CLOCK_MAX = fLastClock; // update CLOCK_MAX if necessary  
+    if(fLastClock>CLOCK_MAX) CLOCK_MAX = fLastClock; // update CLOCK_MAX if necessary 
+    // delta = kMaxUInt - fLastClock;  
     if(fDebugFile){
        *fDebugFile << "*** CLOCK OVERFLOW! ***" << std::endl;
        *fDebugFile << "cntr       = " << fClockOverflows << std::endl;
        *fDebugFile << "this clock = " << thisClock       << std::endl;
        *fDebugFile << "last clock = " << fLastClock      << std::endl;
+       // *fDebugFile << "CLOCK_MAX  = " << CLOCK_MAX       << std::endl;
+       // *fDebugFile << "delta      = " << delta           << std::endl;
        *fDebugFile << "kMaxUInt   = " << kMaxUInt        << std::endl;
        *fDebugFile << "***********************" << std::endl;
     }
+    // fTotalTime = (thisClock + fLastClock)/fClockFreq; // ( thisClock + ( ( 1. + (Double_t)kMaxUInt )*fClockOverflows - fLastClock ) )/fClockFreq;
   }
 
-  // fTotalTime = ( thisClock + ( ( (Double_t)fClockOverflows )*kMaxUInt + fClockOverflows ) )/fClockFreq;
-  fTotalTime = ( thisClock + ( ( (Double_t)fClockOverflows )*CLOCK_MAX + fClockOverflows) )/fClockFreq;
+  // FIXME 
+  fTotalTime = ( thisClock + ( ( (Double_t)fClockOverflows )*kMaxUInt + fClockOverflows ) )/fClockFreq; // this is definitely not right.
+  // fTotalTime = ( thisClock + ( ( (Double_t)fClockOverflows )*CLOCK_MAX + fClockOverflows) )/fClockFreq; // this is closer 
+  // fTotalTime = ( thisClock + ( ( (Double_t)fClockOverflows )*CLOCK_MAX + (Double_t)fClockOverflows)*delta )/fClockFreq;  // not right
   fDeltaTime = fTotalTime - fPrevTotalTime;
 
   if(fDebugFile){
@@ -360,17 +367,18 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
                    *fDebugFile << "scal_prev_read[" << nscal << "] = " << scal_prev_read[nscal] << std::endl;
                    *fDebugFile << "scalerData = " << scalerData << std::endl;
                    *fDebugFile << "kMaxUInt = " << kMaxUInt << std::endl; 
-                   *fDebugFile << "SCALER_MAX = " << SCALER_MAX << std::endl; 
+                   // *fDebugFile << "SCALER_MAX = " << SCALER_MAX << std::endl; 
                    *fDebugFile << "*****************************" << std::endl; 
                 }
-                SCALER_MAX = scal_prev_read[nscal]; // ok...
+                dvars[ivar] = scalerData + (1+((Double_t)kMaxUInt))*scal_overflows[nscal] - dvarsFirst[ivar];
+                // SCALER_MAX = scal_prev_read[nscal]; // ok...
                 // if(scal_prev_read[nscal]>SCALER_MAX) SCALER_MAX = scal_prev_read[nscal];  
-                if(scal_prev_read[nscal]>kMaxUInt){
-                   dvars[ivar] = scalerData + (1+((Double_t)kMaxUInt))*scal_overflows[nscal] - dvarsFirst[ivar];
-                }else{
-		   // dvars[ivar] = scalerData + scal_prev_read[nscal];
-                   dvars[ivar] = scalerData + (1+((Double_t)SCALER_MAX))*scal_overflows[nscal] - dvarsFirst[ivar];
-                }
+                // if(scal_prev_read[nscal]>kMaxUInt){
+                //    dvars[ivar] = scalerData + (1+((Double_t)kMaxUInt))*scal_overflows[nscal] - dvarsFirst[ivar];
+                // }else{
+		//    // dvars[ivar] = scalerData + scal_prev_read[nscal];
+                //    dvars[ivar] = scalerData + (1+((Double_t)SCALER_MAX))*scal_overflows[nscal] - dvarsFirst[ivar];
+                // }
               }else{
                 dvars[ivar] = scalerData;
               }
@@ -385,8 +393,8 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
                 if(scal_prev_read[nscal-1]>kMaxUInt){
                    diff = (kMaxUInt-(scal_prev_read[nscal-1] - 1)) + scalerData;
                 }else{
-		   // diff = (scal_prev_read[nscal-1] - 1) + scalerData; 
-                   diff = (SCALER_MAX-(scal_prev_read[nscal-1] - 1)) + scalerData;  
+		   diff = (scal_prev_read[nscal-1] - 1) + scalerData; 
+                   // diff = (SCALER_MAX-(scal_prev_read[nscal-1] - 1)) + scalerData;  
                 }
                 if(fDebugFile){
                    *fDebugFile << "*** OVERFLOW ENCOUNTERED! ***" << std::endl; 
@@ -394,7 +402,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
                    *fDebugFile << "scalerData = " << scalerData << std::endl; 
                    *fDebugFile << "diff = " << diff << std::endl; 
                    *fDebugFile << "kMaxUInt = " << kMaxUInt << std::endl; 
-                   *fDebugFile << "SCALER_MAX = " << SCALER_MAX << std::endl; 
+                   // *fDebugFile << "SCALER_MAX = " << SCALER_MAX << std::endl; 
                    *fDebugFile << "*****************************" << std::endl; 
                 }
               }else{
