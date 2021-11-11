@@ -70,7 +70,7 @@ protected:
   bool fIsSpectrometerTracker; //default to true:
   bool fIsPolarimeterTracker; 
   bool fUseOpticsConstraint; //default to FALSE:
-  bool fUseFrontTrackerConstraint; //default to FALSE:
+  //bool fUseFrontTrackerConstraint; //default to FALSE:
   
   //1D and 2D clustering: 
   void hit_reconstruction();
@@ -200,7 +200,13 @@ protected:
   double fPmax_track; //GeV
   double fxptarmin_track, fxptarmax_track;
   double fyptarmin_track, fyptarmax_track;
-  double fytarmin_track, fytarmax_track; 
+  double fytarmin_track, fytarmax_track;
+
+  bool fUseSlopeConstraint;
+  double fxpfpmin, fxpfpmax;
+  double fypfpmin, fypfpmax;
+
+  //FP track cuts: 
   
   Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   

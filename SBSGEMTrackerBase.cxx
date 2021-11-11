@@ -69,7 +69,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fIsSpectrometerTracker = true; //default to true
   fIsPolarimeterTracker = false;
   fUseOpticsConstraint = false;
-  fUseFrontTrackerConstraint =false;
+  //fUseFrontTrackerConstraint =false;
 
   fPmin_track = 0.5; //GeV
   fPmax_track = 11.0; //GeV
@@ -80,6 +80,13 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fyptarmax_track = 0.25;
   fytarmin_track = -0.3; //m
   fytarmax_track = 0.3;  //m
+
+  fUseSlopeConstraint = false;
+  fxpfpmin = -0.5;
+  fxpfpmax = 0.5;
+  fypfpmin = -0.2;
+  fypfpmax = 0.2;
+  
   
 }
 
