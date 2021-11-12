@@ -90,6 +90,7 @@ LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
 Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
 {
   if (fScalerTree) fScalerTree->Write();
+  //Insert here the addition of 
   return 0;
 }
 //______________________________________________________________________________
