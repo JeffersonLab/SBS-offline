@@ -106,7 +106,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int mc_flag = fIsMC ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
-
+  int useslopeconstraint = fUseSlopeConstraint ? 1 : 0;
+  
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
@@ -137,6 +138,11 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "ytar_max", &fytarmax_track, kDouble, 0, 1, 1},
     { "pmin", &fPmin_track, kDouble, 0, 1, 1},
     { "pmax", &fPmax_track, kDouble, 0, 1, 1},
+    { "useslopeconstraint", &useslopeconstraint, kInt, 0, 1, 1 },
+    { "xpfp_min", &fxpfpmin, kDouble, 0, 1, 1 },
+    { "xpfp_max", &fxpfpmax, kDouble, 0, 1, 1 },
+    { "ypfp_min", &fypfpmin, kDouble, 0, 1, 1 },
+    { "ypfp_max", &fypfpmax, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -158,6 +164,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 
+  fUseSlopeConstraint = (useslopeconstraint != 0 );
+  
   //std::cout << "pedestal file name = " << fpedfilename << std::endl;
   
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
