@@ -496,9 +496,11 @@ Int_t SBSBigBite::CoarseReconstruct()
 
 	    x_bcp/=sumweights_x;
 	    y_bcp/=sumweights_y;
+
+	    double Efudge = Etot * fECaloFudgeFactor;
 	    
-	    double dx = (Etot*fECaloFudgeFactor*fOpticsAngle - fPtheta_00000 + x_bcp * (Etot*fECaloFudgeFactor*fXptar_10000-fPtheta_10000)) /
-	      (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
+	    double dx = (Efudge*fOpticsAngle - fPtheta_00000 + x_bcp * (Efudge*fXptar_10000-fPtheta_10000)) /
+	      (-fPtheta_10000*z_bcp+fPtheta_00100+Efudge*(fXptar_10000*z_bcp+1-fXptar_00100));
 	    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	    
 	    z_fcp = 0;
