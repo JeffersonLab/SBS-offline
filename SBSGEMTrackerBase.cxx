@@ -808,7 +808,7 @@ void SBSGEMTrackerBase::hit_reconstruction(){
 void SBSGEMTrackerBase::find_tracks(){ 
 
   //should this method invoke clear()? Yes: Clear() just clears out all the track arrays. It is assumed that this method will only be called once per event.
-  //Although that is probably not correct; it might be called as many as two times. Anyway, for now, let's use it, might need to revisit later:
+  //Although that is probably not correct; it might be called as many as two times or perhaps once per cluster (to be developed later). Anyway, for now, let's use it, might need to revisit later:
   Clear();
   //std::cout << "[SBSGEMTrackerBase::find_tracks]: finished clearing track arrays..." << std::endl;
   
@@ -1032,7 +1032,16 @@ void SBSGEMTrackerBase::find_tracks(){
 	      }
 
 	      if( !constraint_check ) continue;
-	       
+
+	      //If using slope constraint, ignore pairs of hits that would give slope outside the allowed range
+	      //along X or Y:
+	      bool slope_check = true;
+	      if( fUseSlopeConstraint ){
+		slope_check = ( fxpfpmin <= xptrtemp && xptrtemp <= fxpfpmax &&
+				fypfpmin <= yptrtemp && yptrtemp <= fypfpmax );
+	      }
+
+	      if( !slope_check ) continue;
 	      
 	      //Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
 
