@@ -612,7 +612,7 @@ Int_t SBSTimingHodoscope::DoClustering()
     //<< fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i] << std::endl;
     //find local maximum first:
     // check for the "middle" elements
-    if(0<i && i<(int)fGoodBarIDsTDC.size()-1){
+    if(0<i && i+1<(int)fGoodBarIDsTDC.size()){
       // if the considered element has larger Time over Threshold than both its direct neighbors, it is considered a local maximum
       if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) && (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) ){
 	//std::cout << " case 1 " << std::endl;
@@ -637,7 +637,7 @@ Int_t SBSTimingHodoscope::DoClustering()
 	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
 	fClusters.push_back(clus);
       }
-    }else if(i==0){
+    }else if(i==0 && i+1<fGoodBarIDsTDC.size()){
       if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) || fGoodBarIDsTDC[i+1]-baridx>1 ){
 	//check for first element
 	//std::cout << " case 5 " << std::endl;
@@ -896,8 +896,7 @@ void SBSTimingHodoscope::ClearEvent()
   fGoodBarADCRap.clear();
   fGoodBarADCRac.clear();
   
-  fClusters.clear();
-  
+  DeleteContainer(fClusters);  
   /*
   fClusterMult.clear();
   fClusterXmean.clear();
@@ -935,6 +934,7 @@ SBSTimingHodoscope::~SBSTimingHodoscope()
   DeleteContainer(fBars);
   DeleteContainer(fPMTMapL);
   DeleteContainer(fPMTMapR);
+  DeleteContainer(fClusters);
 }
 
 SBSTimingHodoscopeCluster* SBSTimingHodoscope::GetCluster(int i)
