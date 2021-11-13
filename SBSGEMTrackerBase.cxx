@@ -210,7 +210,7 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   fModuleListByLayer.clear();
   //loop on the array of (initialized) modules and fill out missing info:
   
-  for( int imod=0; imod<fModules.size(); imod++ ){
+  for( int imod=0; imod<(int)fModules.size(); imod++ ){
     int layer = fModules[imod]->fLayer;
 
     fLayers.insert( layer );
@@ -245,8 +245,7 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   fIndexByLayer.clear();
   
   int layerindex=0;
-  for( auto ilay = fLayers.begin(); ilay != fLayers.end(); ++ilay ){
-    int layer = *ilay;
+  for(int layer : fLayers){
     fLayerByIndex.push_back( layer ); //this is a vector version of the layer list, unless the user has defined something weird, layer[layerindex] = layerindex for layerindex = 0, ..., Nlayers-1
     fIndexByLayer[layer] = layerindex;
     fNumModulesByLayer[layer] = fModuleListByLayer[layer].size();
@@ -260,7 +259,7 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   InitLayerCombos();
   InitGridBins();
 
-  if( fpedfilename != "" ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
+  if( !fpedfilename.empty() ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
     //NOTE: if we load the pedestals from a file formatted in the way the DAQ wants, then we have to assume that SLOT, MPD_ID, and ADC_CH are sufficient to uniquely identify
 
     LoadPedestals( fpedfilename.c_str() );
@@ -608,10 +607,10 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
 
   Long64_t ncombos_all_layers=1;
   
-  for( int imodule=0; imodule<fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
+  for( int imodule=0; imodule<(int)fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
     int layer = fIndexByLayer[fModules[imodule]->fLayer];
 
-    int n2Dhits_mod = fModules[imodule]->fN2Dhits; 
+    int n2Dhits_mod = fModules[imodule]->fN2Dhits;
     
     for( int ihit=0; ihit<n2Dhits_mod; ihit++ ){
       sbsgemhit_t hittemp = fModules[imodule]->fHits[ihit];
@@ -627,8 +626,8 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
     }
   }
 
-  for( auto ilay=layers_with_2Dhits.begin(); ilay != layers_with_2Dhits.end(); ++ilay ){
-    ncombos_all_layers *= N2Dhits_layer[*ilay];
+  for(int layer : layers_with_2Dhits){
+    ncombos_all_layers *= N2Dhits_layer[layer];
   }
 
   return ncombos_all_layers;
@@ -824,7 +823,7 @@ void SBSGEMTrackerBase::find_tracks(){
   //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
 
   //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
-  Long64_t Ncombos_allhits_all_layers = InitHitList();
+  /*Long64_t Ncombos_allhits_all_layers = */InitHitList();
 
   
   //std::cout << 
@@ -833,7 +832,7 @@ void SBSGEMTrackerBase::find_tracks(){
   // 	    << layers_with_2Dhits.size() << ", total hit combinations = " << Ncombos_allhits_all_layers << std::endl;
   //At this stage the static "hit lists" that we need for the tracking are initialized. Let's get started:
   
-  if( layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
+  if( (int)layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
     //bool foundtrack = true; rendered unnecessary by the removal of the outermost, redundant while loop:
       
     int nhitsrequired = layers_with_2Dhits.size(); //initially we favor tracks with the largest possible number of hits; if we fail to find a track at this hit requirement, we decrement the number of required hits as long as it exceeds the minimum
@@ -867,7 +866,7 @@ void SBSGEMTrackerBase::find_tracks(){
       // 		<< ", number of layers with unused hits, ntracks = " 
       // 		<< layerswithfreehits.size() << ", " << fNtracks_found << ", free hit combinations = " << Ncombos_free << std::endl;
       
-      if( layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
+      if( (int)layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
 	//The basic algorithm should do the following:
 
 	// 1. Loop over all possible layer combinations for which the number of layers is equal to the current minimum hit requirement:
@@ -894,7 +893,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	//Let's carry around the track fitting residuals so that we don't have to repeat the calculation when adding the fitted track with best chi2 to the track arrays:
 	vector<double> uresidbest, vresidbest;
 	  
-	for( int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
+	for( unsigned int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
 
 	  // std::cout << "layer combo index, list of layers = "
 	  // 	    << icombo << ", ";
@@ -927,7 +926,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	  // std::cout << "minlayer, maxlayer, ncombos_minmax = " << minlayer << ", "
 	  // 	    << maxlayer << ", " << ncombos_minmax << std::endl;
 	  
-	  if( layerstotest.size() < nhitsrequired ){
+	  if( (int)layerstotest.size() < nhitsrequired ){
 	    //skip this layer combination if any layers lack free hits at the current minimum hit requirement:
 	    continue;
 	  }
@@ -1122,7 +1121,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		    
 		    if( binx >= 0 && binx < fGridNbinsX_layer[layer] &&
 			biny >= 0 && biny < fGridNbinsY_layer[layer] ) { 
-		      for( int khit=0; khit<freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
+		      for( int khit=0; khit<(int)freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
 			//this step can be computationally expensive:
 			freehitlist_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
 		      }
@@ -1249,7 +1248,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
 		    int layerk = *klay;
 		    
-		    for( int khit=0; khit<freehitlist_goodxy[layerk].size(); khit++ ){
+		    for( int khit=0; khit<(int)freehitlist_goodxy[layerk].size(); khit++ ){
 		      int hitk = freehitlist_goodxy[layerk][khit];
 
 		      int modk = modindexhit2D[layerk][hitk];
@@ -1441,7 +1440,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       
       
       //Also set the "trackindex" variable and other properties for strips on this track:
-      for( int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
+      for( unsigned int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
 
 	int hitidx_i = uclustinfo->hitindex[istrip-uclustinfo->istriplo];
 	
@@ -1474,7 +1473,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       
 
       //Also set the "trackindex" variable and other properties for all strips on this track:
-      for( int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
+      for( unsigned int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
 	int hitidx_i = vclustinfo->hitindex[istrip - vclustinfo->istriplo];
 	
 	fModules[module]->fStripTrackIndex[hitidx_i] = itrack;
@@ -1724,7 +1723,7 @@ bool SBSGEMTrackerBase::GetNextCombo( const std::set<int> &layers, std::map<int,
     int nextlayer = *nextlayercounter;
     
     if( layer == nextlayer && !firstcombo ){
-      if( hitcounter[layer]+1 < freehitlist_goodxy[layer].size() ){
+      if( hitcounter[layer]+1 < (int)freehitlist_goodxy[layer].size() ){
 	hitcounter[layer]++;
       } else {
 	//reached last hit in current layer; roll back to first hit in this layer and increment hit counter in next layer:
@@ -1757,8 +1756,8 @@ TVector3 SBSGEMTrackerBase::GetHitPosGlobal( int module, int clustindex ){
   
   //check that module and cluster are in range: these conditions should never evaluate to true, but we want to prevent
   // seg. faults anyway
-  if( module < 0 || module >= fModules.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
-  if( clustindex < 0 || clustindex >= fModules[module]->fHits.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
+  if( module < 0 || module >= (int)fModules.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
+  if( clustindex < 0 || clustindex >= (int)fModules[module]->fHits.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
   
   return TVector3( fModules[module]->fHits[clustindex].xghit,
 		   fModules[module]->fHits[clustindex].yghit,

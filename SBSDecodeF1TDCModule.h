@@ -22,6 +22,7 @@ public:
 
    using Module::GetData;
    using Module::LoadSlot;
+   using Module::Init;
 
    enum EResolution { ILO = 0, IHI = 1 };
 
@@ -48,7 +49,7 @@ public:
    // Loads slot data for bank structures
    virtual UInt_t LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len);
 // Loads sldat and increments ptr to evbuffer
-   UInt_t LoadSlot(THaSlotData *sldat,  const UInt_t* evbuffer, const UInt_t *pstop );
+   virtual UInt_t LoadSlot(THaSlotData *sldat,  const UInt_t* evbuffer, const UInt_t *pstop );
 
 private:
 
@@ -74,6 +75,7 @@ public:
   SBSDecodeF1TDCLowResModule() : SBSDecodeF1TDCModule() {};
   SBSDecodeF1TDCLowResModule(Int_t crate, Int_t slot);
   virtual ~SBSDecodeF1TDCLowResModule();
+  using SBSDecodeF1TDCModule::Init;
   virtual void Init();
 private:
    ClassDef(SBSDecodeF1TDCLowResModule,0)  //  JLab F1 TDC Module, test version
@@ -85,6 +87,7 @@ public:
   SBSDecodeF1TDCHighResModule() : SBSDecodeF1TDCModule() {};
   SBSDecodeF1TDCHighResModule(Int_t crate, Int_t slot);
   virtual ~SBSDecodeF1TDCHighResModule();
+  using SBSDecodeF1TDCModule::Init;
   virtual void Init();
 private:
    ClassDef(SBSDecodeF1TDCHighResModule,0)  //  JLab F1 TDC Module, test version

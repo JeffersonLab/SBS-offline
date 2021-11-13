@@ -42,6 +42,7 @@ namespace Decoder {
 
     using Module::GetData;
     using Module::LoadSlot;
+    using Module::Init;
 
     //virtual Int_t GetData(Int_t adc, Int_t sample, Int_t chan) const;
     virtual void Init();

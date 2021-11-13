@@ -194,8 +194,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 	
       if(detmap){
 	cout << "detmap size = " << detmap->size() << endl;
-	for(int i = 0; i<detmap->size(); i++)
-	  cout << "detmap[i] = " << detmap->at(i) << endl;
+	for(int i : *detmap)
+	  cout << "detmap[i] = " << i << endl;
       }
     }
     
@@ -337,11 +337,11 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
   if( fDoBench ) fBench->Begin("Decode");
 
   Int_t nHit = 0;
-  SBSGRINCH_Hit* theHit;
+  SBSGRINCH_Hit* theHit = nullptr;
   
   bool edge;
   Int_t channel;
-  ushort tdctime_raw;
+  //ushort tdctime_raw;
   bool col0_ismaxsize = false;
 
   if( fabs((-fPMTmatrixHext / 2.0 - fY_TCPMT) / fY_TCPMT) < 1.0e-4 )
@@ -361,7 +361,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
       cout << "crate " << d->crate << " slot " << d->slot 
 	   << " num chans " << evdata.GetNumChan(d->crate, d->slot) << endl;
     
-    for( Int_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
+    for( UInt_t j = 0; j < evdata.GetNumChan( d->crate, d->slot ); j++) {
       bool col_ismaxsize = col0_ismaxsize;
 
       UInt_t chan = evdata.GetNextChan( d->crate, d->slot, j );
@@ -371,7 +371,7 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
       // Get the data.
       UInt_t nhit = evdata.GetNumHits( d->crate, d->slot, chan );
       
-      if( GetNumHits()+nhit > fMaxNumHits ) {
+      if( GetNumHits()+nhit > (UInt_t)fMaxNumHits ) {
 	Warning("Decode", "Too many hits! Should never ever happen! "
 		"Event skipped.");
 	cout << "(fMaxNumHits = " << fMaxNumHits << ")" << endl;
