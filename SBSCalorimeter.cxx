@@ -135,7 +135,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     return err;
 
   if (!trigtoFADCratio.empty()) {
-    if (trigtoFADCratio.size() == fNelem) {
+    if ((int)trigtoFADCratio.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	SBSElement* blk= fElements[ne];
 	if (WithADC() && fModeADC == SBSModeADC::kWaveform) {
@@ -156,7 +156,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   }
   //
   if (!xpos.empty()) {
-    if (xpos.size() == fNelem) {
+    if ((int)xpos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	fElements[ne]->SetX(xpos[ne]);
       }
@@ -166,7 +166,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   }
   //
   if (!ypos.empty()) {
-    if (ypos.size() == fNelem) {
+    if ((int)ypos.size() == fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	fElements[ne]->SetY(ypos[ne]);
       }
@@ -417,7 +417,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     SBSCalorimeterCluster *clus = fClusters[0];
  
     if(fDataOutputLevel > 0 ) {
-      for(UInt_t nc=0;nc<clus->GetMult();nc++ ) {
+      for(Int_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
         fMainclusblk.e.push_back(blk->GetE());
         fMainclusblk.e_c.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));

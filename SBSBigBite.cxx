@@ -131,7 +131,7 @@ void SBSBigBite::DefinePidParticles()
 
 //_____________________________________________________________________________
 Int_t SBSBigBite::ReadRunDatabase( const TDatime &date ){
-  const char* const here = "SBSBigBite::ReadRunDatabase()";
+  //const char* const here = "SBSBigBite::ReadRunDatabase()";
 
   Int_t err = THaSpectrometer::ReadRunDatabase( date );
   if( err ) return err;
@@ -253,7 +253,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   if(!nontrackdet)fPID = false;
 
   if(fOpticsOrder>=0){
-    int nterms = 0;
+    unsigned int nterms = 0;
     
     for(int i = 0; i<=fOpticsOrder; i++){ //x 
       for( int j=0; j<=fOpticsOrder-i; j++){ //y
@@ -272,7 +272,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     
     //we expect 9 parameters per line: four coefficients plus five exponents:
 
-    int nparams = 9*nterms;
+    unsigned int nparams = 9*nterms;
 
     if(nparams!=optics_param.size()){
       std::cerr << "Warning: mismatch between " << optics_param.size()
@@ -293,7 +293,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     f_ol.resize(nterms);
     f_om.resize(nterms);
     
-    for(int i=0; i<nterms; i++){
+    for(unsigned int i=0; i<nterms; i++){
       fb_xptar[i] = optics_param[9*i];
       fb_yptar[i] = optics_param[9*i+1];
       fb_ytar[i] = optics_param[9*i+2];
@@ -327,12 +327,12 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_pi_PSSH_table.clear();
   
   if(!pssh_pidproba.empty()){
-    int npts = pssh_pidproba.size()/3;
+    unsigned int npts = pssh_pidproba.size()/3;
     fEpsEtotRatio_table.resize(npts);
     fProba_e_PSSH_table.resize(npts);
     fProba_pi_PSSH_table.resize(npts);
     
-    for(int i = 0; i<npts; i++){
+    for(unsigned int i = 0; i<npts; i++){
       fEpsEtotRatio_table[i] = pssh_pidproba[3*i];
       fProba_e_PSSH_table[i] = pssh_pidproba[3*i+1];
       fProba_pi_PSSH_table[i] = pssh_pidproba[3*i+2];
@@ -345,12 +345,12 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_pi_PCAL_table.clear();
   
   if(!pcal_pidproba.empty()){
-    int npts = pcal_pidproba.size()/3;
+    unsigned int npts = pcal_pidproba.size()/3;
     fEtotPratio_table.resize(npts);
     fProba_e_PCAL_table.resize(npts);
     fProba_pi_PCAL_table.resize(npts);
     
-    for(int i = 0; i<npts; i++){
+    for(unsigned int i = 0; i<npts; i++){
       fEtotPratio_table[i] = pcal_pidproba[3*i];
       fProba_e_PCAL_table[i] = pcal_pidproba[3*i+1];
       fProba_pi_PCAL_table[i] = pcal_pidproba[3*i+2];
@@ -361,19 +361,19 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_GRINCH_table.clear();
   fProba_pi_GRINCH_table.clear();
   
-  if(!grinch_pidproba.empty() && fP_table.size()){
-    int n_ppts = 2+fP_table.size();
-    int npts = grinch_pidproba.size()/(n_ppts);
+  if(!grinch_pidproba.empty() && !fP_table.empty()){
+    unsigned int n_ppts = 2+fP_table.size();
+    unsigned int npts = grinch_pidproba.size()/(n_ppts);
     fNGRINCHPMTs_table.resize(npts);
     fProba_e_GRINCH_table.resize(npts);
     fProba_pi_GRINCH_table.resize(fP_table.size());
-    for(int j = 0; j<fP_table.size(); j++){
+    for(unsigned int j = 0; j<fP_table.size(); j++){
       fProba_pi_GRINCH_table[j].resize(npts);
     }
-    for(int i = 0; i<npts; i++){
+    for(unsigned int i = 0; i<npts; i++){
       fNGRINCHPMTs_table[i] = grinch_pidproba[n_ppts*i];
       fProba_e_GRINCH_table[i] = grinch_pidproba[n_ppts*i+1];
-      for(int j = 0; j<fP_table.size(); j++){
+      for(unsigned int j = 0; j<fP_table.size(); j++){
 	fProba_pi_GRINCH_table[j][i] = grinch_pidproba[n_ppts*i+2+j];
       }
     }
@@ -487,13 +487,13 @@ Int_t SBSBigBite::CoarseReconstruct()
 	sumweights_x = 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	sumweights_y = 1.;
 	//cout << BBTotalShower->GetShower()->GetECorrected() << endl;
-	for(int i = 0; i<ShowerClusters.size(); i++){
+	for(unsigned int i = 0; i<ShowerClusters.size(); i++){
 	  Etot = ShowerClusters[i]->GetE();
 	  npts = 1;
 	  x_bcp = ShowerClusters[i]->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	  y_bcp = ShowerClusters[i]->GetY();
 	  
-	  if(BBTotalShower->PSMatchClusIdx(i)<PreShowerClusters.size()){
+	  if(BBTotalShower->PSMatchClusIdx(i)<(int)PreShowerClusters.size()){
 	    Etot+= PreShowerClusters[BBTotalShower->PSMatchClusIdx(i)]->GetE();
 	    fEpsEtotRatio.push_back(EpsEtotRatio);
 	    fEtot.push_back(Etot);
@@ -749,7 +749,7 @@ Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
 void SBSBigBite::CalcOpticsCoords( THaTrack* track )
 {
   Double_t x_fp, y_fp, xp_fp, yp_fp;
-  Double_t px, py, pz;// NB: not the actual momentum!
+  //Double_t px, py, pz;// NB: not the actual momentum!
   
   x_fp = track->GetX();
   y_fp = track->GetY();
@@ -861,7 +861,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //}
   //cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
 
-  double vx, vy, vz, px, py, pz;
+  double /*vx, vy, vz, */px, py, pz;
   double p_fit, xptar_fit, yptar_fit, ytar_fit, xtar;
   xtar = 0.0;
   double thetabend_fit;
@@ -1004,7 +1004,7 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
       
       //x, y of track at z = Z_hodoscope
       double x_track = the_track->GetX(TH->GetOrigin().Z());
-      double y_track = the_track->GetY(TH->GetOrigin().Z());
+      //double y_track = the_track->GetY(TH->GetOrigin().Z());
       //cout << x_track << " " << y_track << endl;
       // Not sure what to use for the hodoscope. 
       // Perhaps we'd have to complete the class with a cluster
@@ -1024,7 +1024,7 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
       double Z_cst =  BBTotalShower->GetShower()->GetOrigin().Z();
       //check that the track we consider is consistent with the calorimeter constraint 
       int i_match = -1;
-      for(int i = 0; i<fEtot.size(); i++){
+      for(int i = 0; i<(int)fEtot.size(); i++){
 	/*
 	cout << "back X: " << fBackConstraintX[i]-fBackConstraintWidthX 
 	     << " <? " << the_track->GetX(Z_cst) << " <? " 
@@ -1105,7 +1105,7 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       double Z_cst =  BBTotalShower->GetShower()->GetOrigin().Z();
       //check that the track we consider is consistent with the calorimeter constraint 
       int i_match = -1;
-      for(int i = 0; i<fEtot.size(); i++){
+      for(int i = 0; i<(int)fEtot.size(); i++){
 	if(fBackConstraintX[i]-fBackConstraintWidthX < the_track->GetX(Z_cst) &&  
 	   the_track->GetX(Z_cst) < fBackConstraintX[i]+fBackConstraintWidthX && 
 	   fBackConstraintY[i]-fBackConstraintWidthY < the_track->GetY(Z_cst) &&  

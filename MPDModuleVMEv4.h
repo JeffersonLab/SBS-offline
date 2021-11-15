@@ -40,10 +40,9 @@ namespace Decoder {
     MPDModuleVMEv4(Int_t crate, Int_t slot);
     virtual ~MPDModuleVMEv4();
 
-    /*
-    using Module::GetData;
-    */
-    using Module::LoadSlot;
+    using VmeModule::GetData;
+    using VmeModule::LoadSlot;
+    using VmeModule::Init;
 
     virtual UInt_t GetData( UInt_t adc, UInt_t sample, UInt_t chan) const;
     virtual void Init();
@@ -87,7 +86,7 @@ namespace Decoder {
     // configuration parameters
     Int_t fAcqMode; // normal, zero suppression, histogram, synch ...
     Int_t fSamplePeriod; // 25 ns, 75 ns ...
-    Int_t fNumSample; // number of sample / event
+    UInt_t fNumSample; // number of sample / event
     
     Int_t fNumADC; // number of ADC fifos (number of front end cards served by the MPD)
     

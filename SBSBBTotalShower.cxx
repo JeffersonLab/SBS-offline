@@ -214,7 +214,7 @@ Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
   // beginning of the analysis.
   // 'date' contains the date/time of the run being analyzed.
   
-  static const char* const here = "ReadDatabase()";
+  //static const char* const here = "ReadDatabase()";
   
   FILE* file = OpenFile( date );
   if( !file ) return kFileError;
@@ -249,12 +249,12 @@ Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
     return kInitError;
   }
   
-  for(int i = 0; i<pssh_matchmap_x.size(); i+=3){
+  for(unsigned int i = 0; i<pssh_matchmap_x.size(); i+=3){
     fPSSHmatchmapX[ pssh_matchmap_x[i] ] = 
       std::make_pair(pssh_matchmap_x[i+1], pssh_matchmap_x[i+2]);
   }
 
-  for(int i = 0; i<pssh_matchmap_y.size(); i+=3){
+  for(unsigned int i = 0; i<pssh_matchmap_y.size(); i+=3){
     fPSSHmatchmapY[ pssh_matchmap_y[i] ] = 
       std::make_pair(pssh_matchmap_y[i+1], pssh_matchmap_y[i+2]);
   }
@@ -294,11 +294,11 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
   fSHclusPSclusIDmap.resize(ShowerClusters.size());
   std::vector<SBSBlockSet> PreShowerBlockSet = fPreShower->GetBlockSet();
   Int_t PreShower_Nclus= 0;
-  for (Int_t nc=0;nc<ShowerClusters.size();nc++) {
+  for (UInt_t nc=0;nc<ShowerClusters.size();nc++) {
     Double_t xsh = ShowerClusters[nc]->GetX();
     Double_t ysh = ShowerClusters[nc]->GetY();
     Bool_t AddToPreShowerCluster = kFALSE;
-    for (Int_t nps=0;nps<PreShowerBlockSet.size();nps++) {
+    for (UInt_t nps=0;nps<PreShowerBlockSet.size();nps++) {
       if (!PreShowerBlockSet[nps].InCluster) {
 	SBSElement* psblk = fPreShower->GetElement(PreShowerBlockSet[nps].id);
 	     Double_t xps =  PreShowerBlockSet[nps].x;

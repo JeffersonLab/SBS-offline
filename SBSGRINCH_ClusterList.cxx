@@ -78,7 +78,7 @@ SBSGRINCH_Cluster::SBSGRINCH_Cluster() : // f(0)
 
 //_____________________________________________________________________________
 SBSGRINCH_Cluster::SBSGRINCH_Cluster( const SBSGRINCH_Cluster& rhs ) : // f(rhs.f)
-  fXcenter(rhs.fXcenter), fYcenter(rhs.fYcenter),
+  TObject(rhs), fXcenter(rhs.fXcenter), fYcenter(rhs.fYcenter),
   fXcenter_w(rhs.fXcenter_w), fYcenter_w(rhs.fYcenter_w), fCharge(rhs.fCharge), 
   fMeanRisingTime(rhs.fMeanRisingTime), fMeanFallingTime(rhs.fMeanFallingTime),
   fRisingTimeRMS(rhs.fRisingTimeRMS), fFallingTimeRMS(rhs.fFallingTimeRMS),

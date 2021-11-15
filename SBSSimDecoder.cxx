@@ -253,8 +253,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
 
   if( fDoBench ) fBench->Begin("clearEvent");
   Clear();
-  for( int i=0; i<fSlotClear.size(); i++ )
-    crateslot[fSlotClear[i]]->clearEvent();
+  for(unsigned short i : fSlotClear)
+    crateslot[i]->clearEvent();
   if( fDoBench ) fBench->Stop("clearEvent");
 
   // FIXME: needed?
@@ -265,7 +265,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   event_type = 0;//event_type set to 0 by default 
   // only set it to 1 if there is some signal in at least one detector...
   event_num = simEvent->EvtID;//++;
-  int recent_event = event_num;
+  //int recent_event = event_num; // no longer used
 
   // Event weight
   fWeight = simEvent->Tgmn->ev_sigma*simEvent->Tgmn->ev_solang;
@@ -340,14 +340,14 @@ Int_t SBSSimDecoder::RetrieveDetMapParam(const char* detname,
 
 Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 				   std::vector<UInt_t> > &map,
-				   const std::string detname, 
+				   const std::string& detname,
 				   const SBSSimEvent* simev)
 {
   if(fDebug>1)std::cout << "SBSSimDecoder::LoadDectector(" << detname << ")" << std::endl;
   //int detid = detinfo.DetUniqueId();
   Int_t crate, slot;
-  unsigned int nwords = 0;
-  unsigned short data_type = 0, chan = 0, chan_mult = 0;
+  //unsigned int nwords = 0;
+  unsigned short chan = 0;//, data_type = 0, chan_mult = 0;
   int lchan;
   int mod, apvnum;
   //SimEncoder::mpd_data tmp_mpd;
@@ -357,12 +357,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   std::vector<UInt_t> times;
 
   bool loadevt = false;
-  int cur_apv = -1;
+  //int cur_apv = -1;
   
   Decoder::THaSlotData *sldat = 0;
   //This should be *general* and work for *every* subsystem
   // Loop over all raw data in this event
-  UInt_t j = 0;
+  //UInt_t j = 0;
   //FIXME: we don't want that, I just set it up this way for the sake of going forward
   //Simple fix (might not be ideal): do "if(detname=="xyz")"
   //cout << detname.c_str() << endl;
@@ -412,10 +412,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	
 	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
 	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
-	if(samps.size()){
+	if(!samps.empty()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
-	  for(int k = 0; k<samps.size(); k++){
-	    myev->push_back(samps[k]);
+	  for(unsigned int samp : samps){
+	    myev->push_back(samp);
 	    //cout << " " << samps[k];
 	  }
 	}
@@ -489,10 +489,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	
 	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
 	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
-	if(samps.size()){
+	if(!samps.empty()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
-	  for(int k = 0; k<samps.size(); k++){
-	    myev->push_back(samps[k]);
+	  for(unsigned int samp : samps){
+	    myev->push_back(samp);
 	    //cout << " " << samps[k];
 	  }
 	}
@@ -664,11 +664,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
 	std::vector<UInt_t> *myev = &(map[sldat]);
 	
-	if(samps.size()){
+	if(!samps.empty()){
 	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
 	  //I think I'm onto something here, but I also need to transmit strip num 
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
-	  for(int k = 0; k<samps.size(); k++){
+	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
 	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
 	  }
@@ -714,10 +714,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	
 	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
 	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
-	if(samps.size()){
+	if(!samps.empty()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
-	  for(int k = 0; k<samps.size(); k++){
-	    myev->push_back(samps[k]);
+	  for(unsigned int samp : samps){
+	    myev->push_back(samp);
 	    //cout << " " << samps[k];
 	  }
 	}
@@ -729,10 +729,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  sldat = crateslot[idx(crate,slot)].get();
 	}
 	myev = &(map[sldat]);
-	if(times.size()){
+	if(!times.empty()){
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, times.size()));
-	  for(int k = 0; k<times.size(); k++){
-	    myev->push_back(times[k]);
+	  for(unsigned int time : times){
+	    myev->push_back(time);
 	  }
 	}
 	
@@ -954,8 +954,9 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   //int cps, spc, fs, fc;
   
   bool isgem = (detname.find("gem")!=std::string::npos);
-  int apv_num = -1, mpd = -1, mod = 0, pos = -1, axis = -1;
-  
+  int apv_num = -1, mpd = -1, mod = 0, axis = -1;
+  //int pos = -1;
+
   DBRequest request[] = {
     {"nchan", &nchan, kInt, 0, false},// 
     {"nlog_chan", &nlogchan, kInt, 0, true},// <- optional
@@ -1033,7 +1034,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	  slot   = chanmap[k+1];
 	  mpd   = chanmap[k+2];
 	  apv_num = mpd << 4 | chanmap[k+4];//
-	  pos = chanmap[k+6];
+	  //pos = chanmap[k+6];
 	  axis = chanmap[k+8];
 	  if(axis==0)n_ax_x++;
 	  if(axis==1)n_ax_y++;
@@ -1143,7 +1144,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	   cout << crate << " " << slot << " " << i << " " << apv_num << endl;
 	 }
 	 */
-	 if(ch_count>nlogchan){
+	 if(ch_count>(int)nlogchan){
 	   std::cout << " <1> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
@@ -1164,13 +1165,13 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
        if(detname.find("hodo")!=std::string::npos)chan_offset = 0;
        if(detname.find("ps")!=std::string::npos)chan_offset = 0;
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
-	 if(ch_count>nlogchan){
+	 if(ch_count>(int)nlogchan){
 	   std::cout << " <2> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
 	   return THaAnalysisObject::kInitError;
 	 }
 	 if(fDebug>=2)std::cout << " i = " << i << ", crate = " << crate << ", slot = " << slot <<  ", ch_count = " << ch_count << " chan = " << chanmap[ch_map]-chan_offset << " (+" << nchan << ") " << std::endl;
 	 if(chanmap[ch_map]>=0){
-	   if(ch_count<nchan){
+	   if(ch_count<(int)nchan){
 	     (fInvDetMap[detname])[chanmap[ch_map]-chan_offset]=detchaninfo(crate, slot, i);
 	     if(fDebug>=3)std::cout << chanmap[ch_map]-chan_offset << " " << &(fInvDetMap.at(detname)).at(chanmap[ch_map]-chan_offset) << std::endl;
 	   }else{
