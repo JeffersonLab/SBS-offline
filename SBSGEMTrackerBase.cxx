@@ -1537,6 +1537,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 
       
       if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 && itrack == 0 ){
+      //if( fMakeEfficiencyPlots && itrack == 0 ){
 	//fill "did hit" efficiency histos (numerator for efficiency determination):
 	double sdummy;
 	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
@@ -1601,6 +1602,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	  fModules[module]->fTrackPassedThrough = 1;
 	  
 	  if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= minhits && itrack == 0 ){
+	  //if( fMakeEfficiencyPlots && itrack == 0 ){
 
 	    bool constraint_check = true;
 

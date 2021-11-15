@@ -463,6 +463,7 @@ class SBSGEMModule : public THaSubDetector {
        
   Bool_t fIsMC;//we kinda want this guy no matter what don't we...
 
+
   //Efficiency histograms:
   TH1D *fhdidhitx;
   TH1D *fhdidhity;
