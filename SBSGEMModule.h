@@ -41,8 +41,8 @@ struct sbsgemhit_t { //2D reconstructed hits
   Bool_t keep;     //Should this cluster be considered for tracking? We use this variable to implement "cluster quality" cuts (thresholds, XY ADC and time correlation, etc.)
   Bool_t ontrack;  //Is this cluster on any track?
   Int_t trackidx; //Index of track containing this cluster (within the array of tracks found by the parent SBSGEMTracker
-  Int_t iuclust;  //Index in (1D) U cluster array of the "U" cluster used to define this 2D hit.
-  Int_t ivclust;  //Index in (1D) V cluster array of the "V" cluster used to define this 2D hit.
+  UInt_t iuclust;  //Index in (1D) U cluster array of the "U" cluster used to define this 2D hit.
+  UInt_t ivclust;  //Index in (1D) V cluster array of the "V" cluster used to define this 2D hit.
   
   //Strip info: should we store a list of strips? We shouldn't need to if the clustering algorithm requires all strips in a cluster to be contiguous:
   //Some of this information is probably redundant with 1D clustering results stored in sbsgemcluster_t, but it may or may not be more efficient to store a copy here:
@@ -462,6 +462,7 @@ class SBSGEMModule : public THaSubDetector {
   //For geometry parameters, we will re-use the THaDetectorBase functionalities as much as possible
        
   Bool_t fIsMC;//we kinda want this guy no matter what don't we...
+
 
   //Efficiency histograms:
   TH1D *fhdidhitx;

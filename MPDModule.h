@@ -40,10 +40,8 @@ namespace Decoder {
     MPDModule(Int_t crate, Int_t slot);
     virtual ~MPDModule();
 
-    /*
-    using Module::GetData;
-    */
-    using Module::LoadSlot;
+    using VmeModule::GetData;
+    using VmeModule::LoadSlot;
 
     virtual UInt_t GetData( UInt_t adc, UInt_t sample, UInt_t chan) const;
     virtual void Init();

@@ -119,6 +119,7 @@ public:
   Double_t fTDCWinMin;
   Double_t fTDCWinMax;
   Double_t fTotMin;
+  Double_t fTotMax;
   
   std::vector<Int_t>   fGoodBarIDsTDC;
   std::vector<Double_t> fGoodBarTDCmean;

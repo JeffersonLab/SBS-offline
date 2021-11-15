@@ -533,7 +533,7 @@ int LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int
    // - input:  a char array to parse (i.e., scaler data)  
    // - output: std::string array (word) and int array (word_int)     
    char data[200];
-   sprintf(data,"");
+   strcpy(data,"");
   
    char *pEnd;
  
@@ -550,7 +550,7 @@ int LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int
       	// increment the index on the word array
       	j++;
       	// empty the constructed word 
-      	sprintf(data,"");
+      	strcpy(data,"");
       }else{
       	// not a new line, build the word  
       	sprintf(data,"%s%c",data,msg[i]);

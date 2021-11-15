@@ -123,13 +123,13 @@ namespace Decoder {
 
     //Get the slot number for this call to LoadSlot:
     UInt_t this_slot = sldat->getSlot();
-    UInt_t this_crate = sldat->getCrate();
+    //UInt_t this_crate = sldat->getCrate();
     
     //UInt_t mask, shift;
-    UInt_t slot=MAXSLOT+1, mpd_id=0, apv_id=0, apv_chan=0, fiber=0;
-    //UInt_t apv_chan_40, apv_chan65;
+    UInt_t slot=MAXSLOT+1, apv_id=0, apv_chan=0, fiber=0;
+    //UInt_t mpd_id=0, apv_chan_40, apv_chan65;
     
-    UInt_t prev_slot=0;
+    //UInt_t prev_slot=0;
 
     UInt_t effChan=0;
     //UInt_t effChan_old = MAXCHAN+1; //set "old" effective channel to something impossible so that the first channel will always trigger "loading" of the cm_flags:
@@ -156,7 +156,7 @@ namespace Decoder {
     UInt_t mpd_strip_count = 0;
     UInt_t mpd_word_count = 0;
 
-    UInt_t old_type_tag=16;
+    //UInt_t old_type_tag=16;
     UInt_t type_tag=16; //intialize to something that is NOT one of the recognized data types
 
     
@@ -178,7 +178,7 @@ namespace Decoder {
       
       
       if( word_type == 1 ){ //data-type defining: extract data type from bits 30-27:
-	old_type_tag = type_tag;
+	//old_type_tag = type_tag;
 	
 	type_tag = (thisword & 0x78000000)>>27;
 	//std::cout << "Data-type defining word, type tag, fBlockHeader = " << type_tag << ", " << fBlockHeader << std::endl;
@@ -188,7 +188,7 @@ namespace Decoder {
 	  
 	  found_MPD_header = false; 
 	  
-	  prev_slot = slot;
+	  //prev_slot = slot;
 	  //extract "SLOTID" from bits 26-22 and compare to this_slot
 	  slot = (thisword & 0x07C00000)>>22; //7C = 0111 1100
 	  if( slot == this_slot ) found_this_slot = true;
@@ -215,7 +215,7 @@ namespace Decoder {
 	  fiber = (thisword & 0x001F0000)>>16;
 
 	  //MPD ID is in bits 0-4, but we basically ignore it:
-	  mpd_id = (thisword & 0x0000001F);
+	  //mpd_id = (thisword & 0x0000001F);
 
 	  found_MPD_header = true;
 

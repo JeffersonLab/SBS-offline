@@ -118,7 +118,11 @@ protected:
   //so we can center the peaks at zero, tighten up the windows, 
   //and get tracking to run faster until things are better calibrated:
   Double_t fFrontConstraintX0;
-  Double_t fFrontConstraintY0; 
+  Double_t fFrontConstraintY0;
+  //Might as well add back constraint offsets as well to account for a possible mismatch between 
+  //shower cluster position and track position:
+  Double_t fBackConstraintX0; 
+  Double_t fBackConstraintY0;
 
     
   //for output only... Vectors instead?
