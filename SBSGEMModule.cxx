@@ -215,6 +215,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   int usestriptimingcuts = fUseStripTimingCuts ? 1 : 0;
   int useTSchi2cut = fUseTSchi2cut ? 1 : 0;
+  int suppressfirstlast = fSuppressFirstLast ? 1 : 0;
 
   std::vector<double> TSfrac_mean_temp;
   std::vector<double> TSfrac_sigma_temp;
@@ -282,6 +283,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "addstrip_ccor_cut", &fStripAddCorrCoeffCut, kDouble, 0, 1, 1 },
     { "goodstrip_TSfrac_mean", &TSfrac_mean_temp, kDoubleV, 0, 1, 1 },
     { "goodstrip_TSfrac_sigma", &TSfrac_sigma_temp, kDoubleV, 0, 1, 1 },
+    { "suppressfirstlast", &suppressfirstlast, kInt, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -299,6 +301,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fUseStripTimingCuts = usestriptimingcuts != 0;
   fUseTSchi2cut = useTSchi2cut != 0;
+
+  fSuppressFirstLast = suppressfirstlast != 0; 
 
   if( fUseTSchi2cut && TSfrac_mean_temp.size() == fN_MPD_TIME_SAMP && TSfrac_sigma_temp.size() == fN_MPD_TIME_SAMP ){
     fGoodStrip_TSfrac_mean = TSfrac_mean_temp;

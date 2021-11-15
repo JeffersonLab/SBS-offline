@@ -38,6 +38,8 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   fBackConstraintWidthY = 1.5;
   fFrontConstraintX0 = 0.0;
   fFrontConstraintY0 = 0.0;
+  fBackConstraintX0 = 0.0;
+  fBackConstraintY0 = 0.0;
   fTrackGrinchClusCorr_0 = 0.0;
   fTrackGrinchClusCorr_1 = 0.0;
   fTrackGrinchClusCorr_Sigma = 1.5;
@@ -197,6 +199,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 1, 0},
     { "frontconstraint_x0", &fFrontConstraintX0, kDouble, 0, 1, 0},
     { "frontconstraint_y0", &fFrontConstraintY0, kDouble, 0, 1, 0},
+    { "backconstraint_x0", &fBackConstraintX0, kDouble, 0, 1, 0},
+    { "backconstraint_y0", &fBackConstraintY0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_const", &fTrackGrinchClusCorr_0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_slope", &fTrackGrinchClusCorr_1, kDouble, 0, 1, 0},
     { "trackgrinchcorr_sigma", &fTrackGrinchClusCorr_Sigma, kDouble, 0, 1, 0},
@@ -624,8 +628,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	
 	fFrontConstraintX.push_back(x_fcp + fFrontConstraintX0);
 	fFrontConstraintY.push_back(y_fcp + fFrontConstraintY0);
-	fBackConstraintX.push_back(x_bcp);
-	fBackConstraintY.push_back(y_bcp);
+	fBackConstraintX.push_back(x_bcp + fBackConstraintX0);
+	fBackConstraintY.push_back(y_bcp + fBackConstraintY0);
 	
 	// std::cout << "Front constraint point x, y, z: " 
 	// 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
@@ -638,7 +642,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	    SBSGEMSpectrometerTracker* BBGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
 	    //std::cout << "setting constraints for tracks" << std::endl;
 	    BBGEM->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
-	    BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
+	    BBGEM->SetBackConstraintPoint(x_bcp + fBackConstraintX0, y_bcp + fBackConstraintY0, z_bcp);
 	    BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
 					   fFrontConstraintWidthY);
 	    BBGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
