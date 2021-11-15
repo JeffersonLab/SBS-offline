@@ -42,6 +42,7 @@
 #include "THaEvData.h"
 #include "THaVarList.h"
 #include "THaString.h"
+#include "THaAnalyzer.h"
 
 #include "GenScaler.h"
 #include "Scaler3800.h"
@@ -90,7 +91,28 @@ LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
 Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
 {
   if (fScalerTree) fScalerTree->Write();
-  //Insert here the addition of 
+  //Insert here the addition of summary filling
+  THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
+  if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
+    const char* summaryfilename = analyzer->GetSummaryFileName();
+    if( strcmp(summaryfilename,"")!=0  ) {
+      ofstream ostr(summaryfilename, std::ofstream::app);
+      if( ostr ) {
+	// Write to file via cout
+	streambuf* cout_buf = cout.rdbuf();
+	cout.rdbuf(ostr.rdbuf());
+	TDatime now;
+	cout << "LHRS scalers Summary " //<< fRun->GetNumber()
+	     << " completed " << now.AsString()
+	     << endl << endl;
+	//gHaCuts->Print("STATS");
+	cout.rdbuf(cout_buf);
+	ostr.close();
+
+      }
+
+    }
+  }
   return 0;
 }
 //______________________________________________________________________________
