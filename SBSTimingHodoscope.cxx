@@ -36,9 +36,13 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
   fTrackMatchCutX = 0.05;
   fTrackMatchCutY = 0.15;
 
-  fTDCWinMin = -102.;
-  fTDCWinMax = -62.;
+  fTDCBarOffset = 0;
+  fADCBarOffset = 32;
+
+  fTDCWinMin = -20.;
+  fTDCWinMax = 20.;
   fTotMin = 7.;
+  fTotMax= 30.;
 
 }
 
@@ -64,22 +68,17 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
 
   // get time walk or other parameters from database file
   // Read mapping/geometry/configuration parameters
-  fTDCBarOffset = 0;
-  Int_t tdcbaroff = 0;
-  fADCBarOffset = 0;
-  Int_t adcbaroff = 0;
   std::vector<Double_t> timewalkpar0;
   std::vector<Double_t> timewalkpar1;
-  Double_t tdcwinmin = -100.0;//ns changed default value from 0 to this
-  Double_t tdcwinmax = +100.0;//ns changed default value from 0 to this
   DBRequest config_request[] = {
     { "timewalk0map",    &timewalkpar0,      kDoubleV, 0, false }, //parameter for time walk correction
     { "timewalk1map",    &timewalkpar1,      kDoubleV, 0, false }, //parameter for time walk correction
-    { "tdcbaroffset",    &tdcbaroff,         kInt,    0, true }, //to allow for cycling through sections
-    { "adcbaroffset",    &adcbaroff,         kInt,    0, true }, //to allow for cycling through sections
-    { "tdcwindowmin", &tdcwinmin, kDouble, 0, true }, //parameter for tdc window min
-    { "tdcwindowmax", &tdcwinmax, kDouble, 0, true }, //parameter for tdc window max
+    { "tdcbaroffset",    &fTDCBarOffset,         kInt,    0, true }, //to allow for cycling through sections
+    { "adcbaroffset",    &fADCBarOffset,         kInt,    0, true }, //to allow for cycling through sections
+    { "tdcwindowmin", &fTDCWinMin, kDouble, 0, true }, //parameter for tdc window min
+    { "tdcwindowmax", &fTDCWinMax, kDouble, 0, true }, //parameter for tdc window max
     { "tdctotmin", &fTotMin, kDouble, 0, true }, //parameter for tdc window max
+    { "tdctotmax", &fTotMax, kDouble, 0, true }, //parameter for tdc window max
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
@@ -128,12 +127,15 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     return err;
   }
 
+  // If problem with vscint or tdiff0 db entries, set defaults
   if( fvScint.size() != (UInt_t)fNelem/2 ) {
     std::cout << " vScint vector too small " << fvScint.size() << " # of bars =" << fNelem/2 << std::endl;
-    std::fill(fvScint.begin(), fvScint.end(),  0.454*0.299792458 ); // m/ns
+    fvScint.resize((UInt_t)fNelem/2);
+    std::fill(fvScint.begin(), fvScint.end(),  0.178 ); // m/ns
   }
   if( ftDiff0.size() != (UInt_t)fNelem/2 ) {
     std::cout << " tDiff0 vector too small " << ftDiff0.size() << " # of bars =" << fNelem/2 << std::endl;
+    ftDiff0.resize((UInt_t)fNelem/2);
     std::fill(ftDiff0.begin(), ftDiff0.end(),  -1.35 ); // ns
   }
 
@@ -158,16 +160,6 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
   }
   
   fclose(file);
-
-  // std::cout << "fNelem " << fNelem << std::endl;
-  // std::cout << "timewalkpar0.size() " << timewalkpar0.size() << std::endl;
-  // std::cout << "timewalkpar1.size() " << timewalkpar1.size() << std::endl;
-
-  // assign the bar offsets
-  fTDCBarOffset = tdcbaroff;
-  fADCBarOffset = adcbaroff;
-  fTDCWinMin = tdcwinmin;
-  fTDCWinMax = tdcwinmax;
 
   if( WithTDC() || WithADC()){
     if(timewalkpar0.size()!=(UInt_t)fNelem || timewalkpar1.size()!=(UInt_t)fNelem){
@@ -418,7 +410,8 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	Double_t LEr = hitR.le.val;
 
 	if(fTDCWinMin < LEl && LEl < fTDCWinMax && fTDCWinMin < LEr && LEr < fTDCWinMax
-	   && (hitL.te.val-hitL.le.val) > fTotMin && (hitR.te.val-hitR.le.val) > fTotMin ) {
+	   && (hitL.te.val-hitL.le.val) > fTotMin && (hitR.te.val-hitR.le.val) > fTotMin 
+	   && (hitL.te.val-hitL.le.val) < fTotMax && (hitR.te.val-hitR.le.val) < fTotMax ) {
 
 	//Int_t bar = BarInc;// why redeclare the index?
 	// don't need to add offset to tdc since all readout simultaneously
@@ -477,7 +470,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	fGoodBarTDCRteW.push_back(RteW);
 	fGoodBarTDCRtot.push_back(hitR.te.val-hitR.le.val);
 	fGoodBarTDCRtotW.push_back(RteW-RleW);
-
+	
 	fGoodBarTDCmean.push_back(barmeantime);
 	fGoodBarTDCdiff.push_back(bartimediff);
 	
@@ -618,7 +611,7 @@ Int_t SBSTimingHodoscope::DoClustering()
     //std::cout << "id: " << baridx << " mean ToT: " 
     //<< fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i] << std::endl;
     //find local maximum first:
-    // check for the "middle" element
+    // check for the "middle" elements
     if(0<i && i+1<(int)fGoodBarIDsTDC.size()){
       // if the considered element has larger Time over Threshold than both its direct neighbors, it is considered a local maximum
       if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) && (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) ){
@@ -652,7 +645,7 @@ Int_t SBSTimingHodoscope::DoClustering()
 	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
 	fClusters.push_back(clus);
       }
-    }else if(i>0 && i+1==(int)fGoodBarIDsTDC.size()){
+    }else if(i==(int)fGoodBarIDsTDC.size()-1){
       if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i-1]+fGoodBarTDCLtotW[i-1]) || baridx-fGoodBarIDsTDC[i-1]>1 ){
 	//check for last element
 	//std::cout << " case 6 " << std::endl;
@@ -902,9 +895,8 @@ void SBSTimingHodoscope::ClearEvent()
   fGoodBarADCRa.clear();
   fGoodBarADCRap.clear();
   fGoodBarADCRac.clear();
-
-  DeleteContainer(fClusters);
   
+  DeleteContainer(fClusters);  
   /*
   fClusterMult.clear();
   fClusterXmean.clear();
