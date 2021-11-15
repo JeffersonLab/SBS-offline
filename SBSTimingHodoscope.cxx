@@ -152,7 +152,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     if (ypos.size() == (UInt_t)fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	SBSElement* blk= fElements[ne];
-	fElements[ne]->SetY(ypos[ne]);
+	blk->SetY(ypos[ne]);
       }
     } else {
       std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
@@ -534,8 +534,8 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   // Clustering here? 
   // Wait, if I understand the code, 
   // the way the information is stored in the vectors is by increasing index always.
-  int nclusters = DoClustering();
-  
+  /*int nclusters = */DoClustering();
+
   //fill output here:
   //if(fDataOutputLevel>1){
   for(int i = 0; i<GetNClusters(); i++){
@@ -637,7 +637,7 @@ Int_t SBSTimingHodoscope::DoClustering()
 	SBSTimingHodoscopeCluster* clus = new SBSTimingHodoscopeCluster(fClusMaxSize, Bar);
 	fClusters.push_back(clus);
       }
-    }else if(i==0 && i+1<fGoodBarIDsTDC.size()){
+    }else if(i==0 && i+1<(int)fGoodBarIDsTDC.size()){
       if( (fGoodBarTDCRtotW[i]+fGoodBarTDCLtotW[i])>(fGoodBarTDCRtotW[i+1]+fGoodBarTDCLtotW[i+1]) || fGoodBarIDsTDC[i+1]-baridx>1 ){
 	//check for first element
 	//std::cout << " case 5 " << std::endl;

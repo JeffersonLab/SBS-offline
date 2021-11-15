@@ -652,7 +652,7 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 
 
 
-	Int_t prevfirst=0;
+	//Int_t prevfirst=0;
 	Int_t prevlast=-1;
 	int first=0;
 	int last=-1;
@@ -708,7 +708,7 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 #endif//#if DEBUG_LEVEL>=4
 				}
 			}
-			prevfirst=first;
+			//prevfirst=first;
 			prevlast=last;
 		}
 	}
@@ -725,7 +725,7 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 	Double_t rwrapa=0.;
 	Int_t llowtdclim=0, luptdclim=65536;
 	Int_t rlowtdclim=0, ruptdclim=65536;
-	prevfirst=0;
+	//prevfirst=0;
 	prevlast=-1;
 	first=0;
 	last=-1;
@@ -835,7 +835,7 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 					x=x+dx; y=y+dy; z=z+dz;
 				}
 			}
-			prevfirst=first;
+			//prevfirst=first;
 			prevlast=last;      
 		}
 	}
@@ -1731,8 +1731,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 	// and we need one line (=one module) per reference channel
 	// otherwise only the first will be used
 	Int_t i=0;
-	UInt_t data;
-  while( (i < (Int_t)fDetMap->GetSize()) && (i < GetNRefCh()) ) {
+        while( i < (Int_t)fDetMap->GetSize() && i < GetNRefCh() ) {
 		THaDetMap::Module * d = fDetMap->GetModule(i);
 
 		// Get number of channels with hits
@@ -1753,7 +1752,6 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 			fErrorReferenceChRateWarningThreshold)
 			and
 			fEventCount>2000;
-		;
 
 		if (nHits!=1 and fTooManyErrRefCh) 
 		{
@@ -1767,7 +1765,8 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
                                 */
 		}
 
-		if (nHits<1) {
+                Int_t data = BIT(31);//new error value to
+                if (nHits<1) {
 #if DEBUG_LEVEL>=2//this warning occurs from time to time, lower its level to info.
 			if (fTooManyErrRefCh)
 			{
@@ -1779,7 +1778,6 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 				Warning(Here(here),"%s",s.str().c_str());
 			}
 #endif//#if DEBUG_LEVEL>=2
-			data = (1LL << 31);//new error value to
 			return (0);//Jin Huang
 		} else {
 			if (nHits>1) {
@@ -1878,7 +1876,7 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 			// PMTNum is kind of artificial, since it comes from the 
 			// way the detector map is read in: so the first GetNbars are 
 			// left TDC channels, the next right TDC channels and so on
-			UInt_t PMTNum  = d->first + chan - d->lo;
+			Int_t PMTNum  = d->first + chan - d->lo;
 
 			// due to numbering, the first channels are timing reference channels,
 			// so remove them
@@ -1932,10 +1930,10 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 #endif
 
 			// loop through the hits
-			for (Int_t hit = 0; hit < nHits; hit++) {
+			for (UInt_t hit = 0; hit < nHits; hit++) {
 				// Loop through all hits for this channel, and store the
 				// TDC/ADC  data for this hit
-				UInt_t data = evdata.GetData(d->crate, d->slot, chan, hit);
+				Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
 				if (isAdc) {  // it is an ADC module
 					if (isLeft) {              
 						new( (*fLaHits)[nextLaHit++] )  SBSAdcHit( pmt, data );
@@ -2113,8 +2111,8 @@ Int_t SBSCDet::BuildAllBars( TClonesArray& tracks )
 	Double_t Ampl=0.0;
 	Double_t Tdiff=0.0;
 	Double_t Tof=0.0;
-	Double_t LeftTime=0.0;
-	Double_t RightTime=0.0;
+	//Double_t LeftTime=0.0;
+	//Double_t RightTime=0.0;
 
 	// idea: for each TDC fire, construct a full hit from the ADC and other side TDC
 	//      since multi-hit TDCs, right now constructing a set for each combination
@@ -2154,8 +2152,8 @@ Int_t SBSCDet::BuildAllBars( TClonesArray& tracks )
 					//Ampl = TMath::Sqrt(La_c*Ra_c*TMath::Exp(fAttLen*2*fYBar));
 					//Ampl = TMath::Sqrt(La_c*Ra_c*TMath::Exp(fYBar/fAttLen));
 					Ampl = TMath::Sqrt(La_c*Ra_c);
-					LeftTime = TimeWalkCorrection( lt->GetPMT(), La_c, Lt_c );
-					RightTime= TimeWalkCorrection( rt->GetPMT(), Ra_c, Rt_c );
+					//LeftTime = TimeWalkCorrection( lt->GetPMT(), La_c, Lt_c );
+					//RightTime= TimeWalkCorrection( rt->GetPMT(), Ra_c, Rt_c );
 					//Tdiff=RightTime-LeftTime;
 					Tdiff= .5*(Rt_c - Lt_c);
 					//Tof = .5*(LeftTime + RightTime)- fYBar/fCn;
@@ -2518,7 +2516,7 @@ Int_t SBSCDet::BuildCompleteBars( TClonesArray& tracks ) {
 	//      since multi-hit TDCs, right now constructing a set for each combination
 	DEBUG_LINE_INFO(static const char *here="BuildCompleteBars");
 
-	const Double_t Big=-1.e35;
+	//const Double_t Big=-1.e35;
 
 	Int_t HitNum=0;
 
@@ -2566,7 +2564,7 @@ Int_t SBSCDet::BuildCompleteBars( TClonesArray& tracks ) {
 				// we now have a complete set!
 				// build the paddle hit
 				Double_t cn  = ptBar->GetC();
-				Double_t att = ptBar->GetAtt();
+				//Double_t att = ptBar->GetAtt();
 				//Double_t len = ptBar->GetYWidth();
 
 				Int_t bar = ptBar->GetBarNum();
@@ -2580,12 +2578,12 @@ Int_t SBSCDet::BuildCompleteBars( TClonesArray& tracks ) {
 
 				Double_t lamp = la->GetAmpl();
 				Double_t ramp = ra->GetAmpl();
-				Double_t ya=Big;
+				// Double_t ya=Big;
 				amp = 0;
 
 				if (lamp>0 && ramp>0) {
 					amp   = TMath::Sqrt(lamp*ramp);
-					ya    = TMath::Log(la->GetAmpl()/ra->GetAmpl())*.5*att + ptBar->GetYPos();
+					//ya    = TMath::Log(la->GetAmpl()/ra->GetAmpl())*.5*att + ptBar->GetYPos();
 				}
 
 #if CUT_ON_YPOS

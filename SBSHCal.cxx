@@ -89,7 +89,7 @@ Int_t SBSHCal::CoarseProcess(TClonesArray& tracks)
   if(err) {
     return err;
   }
-  Int_t BlockSize = SBSCalorimeter::MakeGoodBlocks();
+  /*Int_t BlockSize = */ SBSCalorimeter::MakeGoodBlocks();
 
   Int_t ClusSize = SBSCalorimeter::FindClusters();
 
