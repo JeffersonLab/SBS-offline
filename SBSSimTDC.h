@@ -25,7 +25,7 @@ namespace Decoder {
     virtual ~SBSSimTDC();                // Virtual constructor
 
     // Use parent class functions
-    using Module::Init;
+    using PipeliningModule::Init;
 
     virtual void Clear(const Option_t *opt="");
     virtual void Init();

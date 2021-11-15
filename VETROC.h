@@ -22,9 +22,9 @@ namespace Decoder {
     VETROCModule(Int_t crate, Int_t slot);
     virtual ~VETROCModule() = default;
 
-    using Module::GetData;
-    using Module::Init;
-    using Module::GetOpt;
+    using VmeModule::GetData;
+    using VmeModule::Init;
+    using VmeModule::GetOpt;
 
     virtual void  Init();
     virtual void  Clear(Option_t *opt="");

@@ -20,9 +20,8 @@ public:
    SBSDecodeF1TDCModule(Int_t crate, Int_t slot);
    virtual ~SBSDecodeF1TDCModule();
 
-   using Module::GetData;
-   using Module::LoadSlot;
-   using Module::Init;
+   using VmeModule::GetData;
+   using VmeModule::Init;
 
    enum EResolution { ILO = 0, IHI = 1 };
 
@@ -35,7 +34,6 @@ public:
    void SetResolution(Int_t which=0) {
      fResol = IHI;
      if (which==0) fResol=ILO;
-     return;
    }
    EResolution GetResolution() const { return fResol; };
    Bool_t IsHiResolution() const { return (fResol==IHI); };
