@@ -95,6 +95,7 @@ Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
   THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
   if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
     const char* summaryfilename = analyzer->GetSummaryFileName();
+    cout << "LHRSScalerEvtHandler Summary in " << summaryfilename << endl;
     if( strcmp(summaryfilename,"")!=0  ) {
       ofstream ostr(summaryfilename, std::ofstream::app);
       if( ostr ) {
@@ -104,13 +105,24 @@ Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
 	TDatime now;
 	cout << "LHRS scalers Summary " //<< fRun->GetNumber()
 	     << " completed " << now.AsString()
-	     << endl << endl;
-	//gHaCuts->Print("STATS");
+	     << endl << " count " << evcount << endl
+	     << endl;
+
+	for (UInt_t i = 0; i < scalerloc.size(); i++) {
+	  TString name = scalerloc[i]->name; 
+	  //tinfo = name + "/D";
+	  //fScalerTree->Branch(name.Data(), &dvars[i], tinfo.Data(), 4000);
+	  cout << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
+	}	
+	//std::vector<Decoder::GenScaler*> scalers;
+	//std::vector<ScalerVar*> scalerloc;
+	cout << endl;
+	
 	cout.rdbuf(cout_buf);
 	ostr.close();
-
+	
       }
-
+      
     }
   }
   return 0;
@@ -215,7 +227,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
     nskip = 1;
     itimeout=0;
     NScalers = scalers.size();
-    *fDebugFile << "**** NUM SCALERS = " << NScalers << std::endl;
+    if (fDebugFile)*fDebugFile << "**** NUM SCALERS = " << NScalers << std::endl;
     for (UInt_t j=0; j<NScalers; j++) {
        if(fDebugFile) *fDebugFile << "**** DEBUG PRINT j = " << j << " ****" << std::endl;
        // bump pointer until scaler found, and don't decode if already found for this event.
@@ -235,7 +247,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
        }
        found1:
 	    if(p==pstop && ifound==0) break;
-            *fDebugFile << "\n[LHRSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
+             if (fDebugFile)*fDebugFile << "\n[LHRSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
 	    nskip = scalers[j]->Decode(p);
 	    if (fDebugFile && nskip > 1) {
 		    *fDebugFile << "\n===== Scaler # "<<j<<"     fName = "<<fName<<"   nskip = "<<nskip<<endl;
