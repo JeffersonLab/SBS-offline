@@ -141,10 +141,10 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
       ofstream ostr(summaryfilename, std::ofstream::app);
       if( ostr ) {
 	// Write to file via cout
-	streambuf* cout_buf = cout.rdbuf();
-	cout.rdbuf(ostr.rdbuf());
+	//streambuf* cout_buf = cout.rdbuf();
+	//cout.rdbuf(ostr.rdbuf());
 	TDatime now;
-	cout << "SBS scalers Summary " //<< fRun->GetNumber()
+	ostr << "SBS scalers Summary " //<< fRun->GetNumber()
 	     << " completed " << now.AsString()
 	     << endl << " count " << evcount << endl
 	     << endl;
@@ -153,13 +153,13 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 	  TString name = scalerloc[i]->name; 
 	  //tinfo = name + "/D";
 	  //fScalerTree->Branch(name.Data(), &dvars[i], tinfo.Data(), 4000);
-	  cout << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
+	  ostr << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
 	}	
 	//std::vector<Decoder::GenScaler*> scalers;
 	//std::vector<ScalerVar*> scalerloc;
-	cout << endl;
+	ostr << endl;
 	
-	cout.rdbuf(cout_buf);
+	//cout.rdbuf(cout_buf);
 	ostr.close();
 	
       }
