@@ -38,6 +38,7 @@ To enable debugging, add the line
 #include "Scaler560.h"
 //#include "Scaler9001.h"
 //#include "Scaler9250.h"
+#include "THaAnalyzer.h"
 #include "THaCodaData.h"
 #include "THaEvData.h"
 //#include "THcParmList.h"
@@ -131,6 +132,42 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
   fDelayedEvents.clear();
 
   if (fScalerTree) fScalerTree->Write();
+  
+  THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
+  if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
+    const char* summaryfilename = analyzer->GetSummaryFileName();
+    cout << "LHRSScalerEvtHandler Summary in " << summaryfilename << endl;
+    if( strcmp(summaryfilename,"")!=0  ) {
+      ofstream ostr(summaryfilename, std::ofstream::app);
+      if( ostr ) {
+	// Write to file via cout
+	streambuf* cout_buf = cout.rdbuf();
+	cout.rdbuf(ostr.rdbuf());
+	TDatime now;
+	cout << "SBS scalers Summary " //<< fRun->GetNumber()
+	     << " completed " << now.AsString()
+	     << endl << " count " << evcount << endl
+	     << endl;
+	
+	for (UInt_t i = 0; i < scalerloc.size(); i++) {
+	  TString name = scalerloc[i]->name; 
+	  //tinfo = name + "/D";
+	  //fScalerTree->Branch(name.Data(), &dvars[i], tinfo.Data(), 4000);
+	  cout << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
+	}	
+	//std::vector<Decoder::GenScaler*> scalers;
+	//std::vector<ScalerVar*> scalerloc;
+	cout << endl;
+	
+	cout.rdbuf(cout_buf);
+	ostr.close();
+	
+      }
+      
+    }
+  }
+
+  
   return 0;
 }
 
