@@ -2053,6 +2053,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	hittemp.xhit = XYtemp.X();
 	hittemp.yhit = XYtemp.Y();
 
+	
+	
 	//Check if candidate 2D hit is inside the constraint region before doing anything else:
 	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
 	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax &&
@@ -2089,10 +2091,22 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  UInt_t vhitidx = fVclusters[iv].hitindex[vstripidx];
 	
 	  hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
-	
+
+	  bool add_hit = true;
+	  //we need special handling if we want to use single-strip clusters: 
+	  if( fUclusters[iu].nstrips == 1 || fVclusters[iv].nstrips == 1 ){
+	    //If EITHER of these clusters is only single-strip, it must pass more stringent requirements to use as a 2D hit candidate:
+	    //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
+	    add_hit = false;
+	    if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
+		hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut ){
+	      add_hit = true;
+	    }
+	  }
+	  
 	  //Okay, that should be everything. Now add it to the 2D hit array:
 	  //fHits.push_back( hittemp );
-	  fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
+	  if( add_hit ) fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
 	  //fN2Dhits++;
 	} //end check that 2D point is inside track search region
       } //end check that both U and V clusters passed filtering criteria:
@@ -2874,7 +2888,7 @@ void SBSGEMModule::filter_2Dhits(){
     }
   }
 
-  //other criteria could include correlation coefficient, time sample peaking, etc. 
+  //other criteria could include time sample peaking, etc. 
   
 }
 
