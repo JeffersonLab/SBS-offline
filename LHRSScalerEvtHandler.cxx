@@ -67,6 +67,10 @@ using namespace THaString;
 
 static const UInt_t ICOUNT    = 1;
 static const UInt_t IRATE     = 2;
+static const UInt_t ICURRENT  = 3;
+static const UInt_t ICHARGE   = 4;
+static const UInt_t ITIME     = 5;
+static const UInt_t ICUT      = 6;
 static const UInt_t MAXCHAN   = 32;
 static const UInt_t MAXTEVT   = 5000;
 static const UInt_t defaultDT = 4;
@@ -76,7 +80,9 @@ LHRSScalerEvtHandler::LHRSScalerEvtHandler(const char *name, const char* descrip
     dvars(0),fScalerTree(0),fUseFirstEvent(kTRUE),
     fClockChan(-1),fClockFreq(-1),fLastClock(0),fClockOverflows(0),
     fTotalTime(0),fPrevTotalTime(0),fDeltaTime(-1),
-    dvarsFirst(0),dvars_prev_read(0)
+    dvarsFirst(0),dvars_prev_read(0),
+    fNumBCMs(0),fbcm_Current_Threshold_Index(0),fbcm_Current_Threshold(0),
+    fBCM_Gain(0),fBCM_Offset(0),fBCM_SatOffset(0),fBCM_SatQuadratic(0),fBCM_delta_charge(0)
 {
   rdata = new UInt_t[MAXTEVT];
   fDebugFile = nullptr; // initialize the pointer to null
@@ -96,6 +102,11 @@ LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
   delete [] dvars_prev_read;
   delete [] dvars;
   delete [] dvarsFirst;
+  delete [] fBCM_Gain;
+  delete [] fBCM_Offset;
+  delete [] fBCM_SatOffset;
+  delete [] fBCM_SatQuadratic;
+  delete [] fBCM_delta_charge;
 }
 //______________________________________________________________________________
 Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
@@ -311,6 +322,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   UInt_t scalerData=0,diff=0;
 
   Double_t rate=0;
+  Double_t scal_current=0;
 
   Int_t nscal=0;
 
@@ -335,8 +347,39 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
 		rate       = scalerData/fDeltaTime;
                 dvars[ivar]      = rate;
                 dvarsFirst[ivar] = rate;
-                if(fDebugFile) *fDebugFile << "  RATE CALC ivar " << ivar << " diff = " << scalerData << " dtime = " << fDeltaTime << " rate = " << rate << std::endl;
+                if(fDebugFile){
+		   *fDebugFile << "  RATE CALC ivar " << ivar << " diff = " << scalerData 
+                               << " dtime = " << fDeltaTime << " rate = " << rate << std::endl;
+                }
              }
+	     if(scalerloc[ivar]->ikind == ICURRENT || scalerloc[ivar]->ikind == ICHARGE){
+                Int_t bcm_ind=-1;
+                for(Int_t itemp =0; itemp<fNumBCMs;itemp++){
+                   size_t match = string(scalerloc[ivar]->name.Data()).find(string(fBCM_Name[itemp]));
+                   if (match!=string::npos){
+                        bcm_ind=itemp;
+                   }
+                }
+                if(scalerloc[ivar]->ikind == ICURRENT){
+                   dvars[ivar]=0.;
+                   if (bcm_ind != -1) {
+                        dvars[ivar]=((scalers[idx]->GetData(ichan))/fDeltaTime-fBCM_Offset[bcm_ind])/fBCM_Gain[bcm_ind];
+                        dvars[ivar]=dvars[ivar]+fBCM_SatQuadratic[bcm_ind]*TMath::Power(TMath::Max(dvars[ivar]-fBCM_SatOffset[bcm_ind],0.0),2.0);
+                   
+                   }
+                   if (bcm_ind==fbcm_Current_Threshold_Index) scal_current= dvars[ivar];
+                }
+                if(scalerloc[ivar]->ikind == ICHARGE){
+                   if(bcm_ind != -1){
+                      Double_t cur_temp=((scalers[idx]->GetData(ichan))/fDeltaTime-fBCM_Offset[bcm_ind])/fBCM_Gain[bcm_ind];
+                      cur_temp=cur_temp+fBCM_SatQuadratic[bcm_ind]*TMath::Power(TMath::Max(cur_temp-fBCM_SatOffset[bcm_ind],0.0),2.0);
+                      fBCM_delta_charge[bcm_ind]=fDeltaTime*cur_temp;
+                      dvars[ivar]+=fBCM_delta_charge[bcm_ind];
+                   }
+                }
+                //      printf("1st event %i index %i fBCMname %s scalerloc %s offset %f gain %f computed %f\n",evcount, bcm_ind, fBCM_Name[bcm_ind],scalerloc[ivar]->name.Data(),fBCM_Offset[bcm_ind],fBCM_Gain[bcm_ind],dvars[ivar]);
+                //                
+	     }
            }else{
               // not using first event
               if(scalerloc[ivar]->ikind==ICOUNT){
@@ -351,6 +394,31 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
                  dvarsFirst[ivar] = rate;
                  if(fDebugFile) *fDebugFile << "  RATE CALC ivar " << ivar << " diff = " << scalerData << " dtime = " << fDeltaTime << " rate = " << rate << std::endl;
               }
+	      if(scalerloc[ivar]->ikind==ICURRENT || scalerloc[ivar]->ikind==ICHARGE){
+                 Int_t bcm_ind=-1;
+                 for(Int_t itemp =0; itemp<fNumBCMs;itemp++){
+                    size_t match = string(scalerloc[ivar]->name.Data()).find(string(fBCM_Name[itemp]));
+                    if(match!=string::npos){
+                         bcm_ind=itemp;
+                    }
+                 }
+                 if(scalerloc[ivar]->ikind == ICURRENT){
+                    dvarsFirst[ivar]=0.0;
+                    if(bcm_ind != -1){
+                       dvarsFirst[ivar]=((scalers[idx]->GetData(ichan))/fDeltaTime-fBCM_Offset[bcm_ind])/fBCM_Gain[bcm_ind];
+                       dvarsFirst[ivar]=dvarsFirst[ivar]+fBCM_SatQuadratic[bcm_ind]*TMath::Power(TMath::Max(dvars[ivar]-fBCM_SatOffset[bcm_ind],0.0),2.);
+                    }
+                    if(bcm_ind==fbcm_Current_Threshold_Index) scal_current= dvarsFirst[ivar];
+                 }
+                 if(scalerloc[ivar]->ikind == ICHARGE){
+                    if(bcm_ind != -1){
+                       Double_t cur_temp=((scalers[idx]->GetData(ichan))/fDeltaTime-fBCM_Offset[bcm_ind])/fBCM_Gain[bcm_ind];
+                       cur_temp=cur_temp+fBCM_SatQuadratic[bcm_ind]*TMath::Power(TMath::Max(cur_temp-fBCM_SatOffset[bcm_ind],0.0),2.);
+                       fBCM_delta_charge[bcm_ind]=fDeltaTime*cur_temp;
+                       dvarsFirst[ivar]+=fBCM_delta_charge[bcm_ind];
+                    }
+                 }
+	      }
            }
         }
      }else{
@@ -498,6 +566,9 @@ Int_t LHRSScalerEvtHandler::AnalyzeBuffer(Int_t ndata,UInt_t *rdata){
 //______________________________________________________________________________
 THaAnalysisObject::EStatus LHRSScalerEvtHandler::Init(const TDatime& date)
 {
+
+  ReadDatabase(date);
+
   const int LEN = 200;
   char cbuf[LEN];
 
@@ -731,10 +802,10 @@ void LHRSScalerEvtHandler::DefVars()
   }
 }
 //______________________________________________________________________________
-int LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int){
+Int_t LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int){
    // loop through the message (msg) and convert into data words 
    // - input:  a char array to parse (i.e., scaler data)  
-   // - output: std::string array (word) and int array (word_int)     
+   // - output: number of words, std::string array (word) and int array (word_int)     
    char data[200],subword[200];
    sprintf(data,"");
    sprintf(subword,"");
@@ -775,6 +846,59 @@ int LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int
    }
 
    return j; // return the number of words 
+}
+//______________________________________________________________________________
+Int_t LHRSScalerEvtHandler::ReadDatabase(const TDatime& date){
+   char prefix[2];
+   prefix[0]='g';
+   prefix[1]='\0';
+   fNumBCMs = 0;
+
+#ifdef HALLCPARM
+   DBRequest list[]={
+     {"NumBCMs",&fNumBCMs, kInt, 0, 1},
+     {0}
+   };
+   gHcParms->LoadParmValues((DBRequest*)&list, prefix);
+   std::cout << "[LHRSScalerEvtHandler::ReadDatabase]: Number of BCMs = " << fNumBCMs << std::endl;
+
+   if(fNumBCMs>0) {
+     fBCM_Gain         = new Double_t[fNumBCMs];
+     fBCM_Offset       = new Double_t[fNumBCMs];
+     fBCM_SatOffset    = new Double_t[fNumBCMs];
+     fBCM_SatQuadratic = new Double_t[fNumBCMs];
+     fBCM_delta_charge = new Double_t[fNumBCMs];
+     std::string bcm_namelist;
+     DBRequest list2[]={ 
+       {"BCM_Gain"                   , fBCM_Gain                    , kDouble, (UInt_t) fNumBCMs    },
+       {"BCM_Offset"                 , fBCM_Offset                  , kDouble, (UInt_t) fNumBCMs    },
+       {"BCM_SatQuadratic"           , fBCM_SatQuadratic            , kDouble, (UInt_t) fNumBCMs, 1 },
+       {"BCM_SatOffset"              , fBCM_SatOffset               , kDouble, (UInt_t) fNumBCMs, 1 },
+       {"BCM_Names"                  , &bcm_namelist                , kString                       },
+       {"BCM_Current_threshold"      , &fbcm_Current_Threshold      , kDouble, 0                , 1 },
+       {"BCM_Current_threshold_index", &fbcm_Current_Threshold_Index, kInt   , 0                , 1 },
+       {0}
+     };
+     fbcm_Current_Threshold = 0.0;
+     fbcm_Current_Threshold_Index = 0;
+     for(Int_t i=0;i<fNumBCMs;i++) {
+       fBCM_SatOffset[i]=0.;
+       fBCM_SatQuadratic[i]=0.;
+     }
+     gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
+     std::vector<string> bcm_names = Podd::vsplit(bcm_namelist);
+     for(Int_t i=0;i<fNumBCMs;i++) {
+       fBCM_Name.push_back(bcm_names[i]+".scal");
+       fBCM_delta_charge[i]=0.;
+     }
+   }
+#endif
+
+   fTotalTime=0.;
+   fPrevTotalTime=0.;
+   fDeltaTime=-1.;
+
+   return kOK; 
 }
 //______________________________________________________________________________
 ClassImp(LHRSScalerEvtHandler)

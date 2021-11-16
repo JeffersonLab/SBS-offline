@@ -47,9 +47,9 @@ private:
    void AddVars(TString name, TString desc, Int_t iscal, Int_t ichan, Int_t ikind);
    void DefVars();
 
-   int ParseData(char *msg,std::string *word,UInt_t *word_int);
-
-   Int_t AnalyzeBuffer(Int_t ndata,UInt_t *rdata); 
+   Int_t ParseData(char *msg,std::string *word,UInt_t *word_int);
+   Int_t AnalyzeBuffer(Int_t ndata,UInt_t *rdata);
+   Int_t ReadDatabase(const TDatime& date); 
 
    std::vector<Decoder::GenScaler*> scalers;
    std::vector<ScalerVar*> scalerloc;
@@ -70,6 +70,15 @@ private:
    Double_t fDeltaTime;
    Double_t *dvarsFirst;
    UInt_t *dvars_prev_read;
+   Int_t fNumBCMs;
+   Int_t fbcm_Current_Threshold_Index;
+   Double_t fbcm_Current_Threshold;
+   Double_t *fBCM_Gain;
+   Double_t *fBCM_Offset;
+   Double_t *fBCM_SatOffset;
+   Double_t *fBCM_SatQuadratic;
+   Double_t *fBCM_delta_charge;
+   std::vector<std::string> fBCM_Name;
    std::vector<UInt_t> scal_prev_read;
    std::vector<UInt_t> scal_present_read;
    std::vector<UInt_t> scal_overflows;
