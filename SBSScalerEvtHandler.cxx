@@ -133,10 +133,13 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 
   if (fScalerTree) fScalerTree->Write();
   
+  double Ntrigs, Time, BeamCurrent, BeamCharge, LiveTime;
+  double clk_cnt = 0, clk_rate = 0, edtm_cnt = 0, unser_cnt = 0;
+  
   THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
   if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
     const char* summaryfilename = analyzer->GetSummaryFileName();
-    cout << "LHRSScalerEvtHandler Summary in " << summaryfilename << endl;
+    cout << "SBSScalerEvtHandler Summary in " << summaryfilename << endl;
     if( strcmp(summaryfilename,"")!=0  ) {
       ofstream ostr(summaryfilename, std::ofstream::app);
       if( ostr ) {
@@ -153,11 +156,46 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 	  TString name = scalerloc[i]->name; 
 	  //tinfo = name + "/D";
 	  //fScalerTree->Branch(name.Data(), &dvars[i], tinfo.Data(), 4000);
-	  ostr << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
+	  bool found = false;
+	  if(name.Contains("BBCALTRG")){
+	    found = true;
+	    if(name.Contains("scaler") && !name.Contains("Rate"))Ntrigs = dvars[i];
+	  }
+	  if(name.Contains("EDTM")){
+	    found = true;
+	    if(name.Contains("scaler") && !name.Contains("Rate"))edtm_cnt = dvars[i];
+	  }
+	  if(name.Contains("104kHz_CLK")){
+	    found = true;
+	    cout << name.Data() << endl;
+	    if(name.Contains("rate")){
+	      cout << "104kHz clock rate? " << dvars[i] << endl;
+	      clk_rate = dvars[i];
+	    }else if(name.Contains("cnt")){
+	      clk_cnt = dvars[i];
+	    }
+	  }
+	  if(name.Contains("bcm")){
+	    found = true;
+	    if(name.Contains("unser.cnt") && !name.Contains("rate"))unser_cnt = dvars[i];
+	  }
+	  	  
+	  if(found)ostr << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
 	}	
 	//std::vector<Decoder::GenScaler*> scalers;
 	//std::vector<ScalerVar*> scalerloc;
 	ostr << endl;
+	
+	Time = clk_cnt/clk_rate;
+	BeamCharge = unser_cnt*2.38E-03;//uA/counts 
+	BeamCurrent = BeamCharge/Time;
+	LiveTime = (edtm_cnt/Time)/20.5;//TODO, put EDTM frequency in a DB
+	
+	ostr << " scaler summary : N_trigs = " << Ntrigs << endl;
+	ostr << " scaler summary : Time = " << Time  << " s " << endl;
+	ostr << " scaler summary : Average beam current = " << BeamCurrent << " uA " << endl;
+	ostr << " scaler summary : Beam charge = " << BeamCharge << " uC " << endl;
+	ostr << " scaler summary : Live time = " << LiveTime*100 << " % " << endl;
 	
 	//cout.rdbuf(cout_buf);
 	ostr.close();
