@@ -134,7 +134,7 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
   if (fScalerTree) fScalerTree->Write();
   
   double Ntrigs, Time, BeamCurrent, BeamCharge, LiveTime;
-  double clk_cnt = 0, clk_rate = 0, edtm_cnt = 0, unser_cnt = 0;
+  double clk_cnt = 0, clk_rate = 0, edtm_cnt = 0, unew_cnt = 0, d3_cnt = 0, d10_cnt = 0;
   
   THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
   if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
@@ -177,7 +177,9 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 	  }
 	  if(name.Contains("bcm")){
 	    found = true;
-	    if(name.Contains("unser.cnt") && !name.Contains("rate"))unser_cnt = dvars[i];
+	    if(name.Contains("unew.cnt") && !name.Contains("rate"))unew_cnt = dvars[i];
+	    if(name.Contains("d3.cnt") && !name.Contains("rate"))d3_cnt = dvars[i];
+	    if(name.Contains("d10.cnt") && !name.Contains("rate"))d10_cnt = dvars[i];
 	  }
 	  	  
 	  if(found)ostr << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
@@ -186,15 +188,26 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 	//std::vector<ScalerVar*> scalerloc;
 	ostr << endl;
 	
+	double unew_charge = unew_cnt/2.8725e3;//uC/counts  //TODO put those numbers in DB
+	double d3_charge = d3_cnt/1.7e3;//uC/counts  //TODO put those numbers in DB
+	double d10_charge = d10_cnt/7.52e3;//uC/counts  //TODO put those numbers in DB
+	// those numbers have been obtained using run 11991 by plotting the 
+	// corresponding scaler rates for this run and dividing by 
+	// the beam current for this run i.e. 4uA
+	
 	Time = clk_cnt/clk_rate;
-	BeamCharge = unser_cnt*2.38E-03;//uA/counts 
+	BeamCharge = (unew_charge+d3_charge+d10_charge)/3;
 	BeamCurrent = BeamCharge/Time;
 	LiveTime = (edtm_cnt/Time)/20.5;//TODO, put EDTM frequency in a DB
-	
+	//setting 20.5 Hz instead of 20.0 is sort of an educated guess
+
 	ostr << " scaler summary : N_trigs = " << Ntrigs << endl;
 	ostr << " scaler summary : Time = " << Time  << " s " << endl;
+	ostr << " scaler summary : beam charge (unew) = " << unew_charge << " uC " << endl;
+	ostr << " scaler summary : beam charge (d3) = " << d3_charge << " uC " << endl;
+	ostr << " scaler summary : beam charge (d10) = " << d10_charge << " uC " << endl;
+	ostr << " scaler summary : Average beam charge = " << BeamCharge << " uC " << endl;
 	ostr << " scaler summary : Average beam current = " << BeamCurrent << " uA " << endl;
-	ostr << " scaler summary : Beam charge = " << BeamCharge << " uC " << endl;
 	ostr << " scaler summary : Live time = " << LiveTime*100 << " % " << endl;
 	
 	//cout.rdbuf(cout_buf);
