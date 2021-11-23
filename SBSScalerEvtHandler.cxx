@@ -133,7 +133,7 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 
   if (fScalerTree) fScalerTree->Write();
   
-  double Ntrigs, Time, BeamCurrent, BeamCharge, LiveTime;
+  double Ntrigs, NtrigsA, Time, BeamCurrent, BeamCharge, LiveTime;
   double clk_cnt = 0, clk_rate = 0, edtm_cnt = 0, unew_cnt = 0, d3_cnt = 0, d10_cnt = 0;
   
   THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
@@ -157,6 +157,10 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 	  //tinfo = name + "/D";
 	  //fScalerTree->Branch(name.Data(), &dvars[i], tinfo.Data(), 4000);
 	  bool found = false;
+	  if(name.Contains("L1A")){
+	    found = true;
+	    if(name.Contains("scaler") && !name.Contains("Rate"))NtrigsA = dvars[i];
+	  }
 	  if(name.Contains("BBCALTRG")){
 	    found = true;
 	    if(name.Contains("scaler") && !name.Contains("Rate"))Ntrigs = dvars[i];
@@ -194,21 +198,23 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
 	// those numbers have been obtained using run 11991 by plotting the 
 	// corresponding scaler rates for this run and dividing by 
 	// the beam current for this run i.e. 4uA
-	
+		
 	Time = clk_cnt/clk_rate;
 	BeamCharge = (unew_charge+d3_charge+d10_charge)/3;
 	BeamCurrent = BeamCharge/Time;
-	LiveTime = (edtm_cnt/Time)/20.5;//TODO, put EDTM frequency in a DB
-	//setting 20.5 Hz instead of 20.0 is sort of an educated guess
+	LiveTime = (edtm_cnt/Time)/21.;//TODO, put EDTM frequency in a DB
+	//setting 21.0 Hz instead of 20.0 is sort of an educated guess 
 
 	ostr << " scaler summary : N_trigs = " << Ntrigs << endl;
+	ostr << " scaler summary : N_trigs_accepted = " << NtrigsA << endl;
 	ostr << " scaler summary : Time = " << Time  << " s " << endl;
 	ostr << " scaler summary : beam charge (unew) = " << unew_charge << " uC " << endl;
 	ostr << " scaler summary : beam charge (d3) = " << d3_charge << " uC " << endl;
 	ostr << " scaler summary : beam charge (d10) = " << d10_charge << " uC " << endl;
 	ostr << " scaler summary : Average beam charge = " << BeamCharge << " uC " << endl;
 	ostr << " scaler summary : Average beam current = " << BeamCurrent << " uA " << endl;
-	ostr << " scaler summary : Live time = " << LiveTime*100 << " % " << endl;
+	ostr << " scaler summary : Live time (NtrigA/Ntrig) = " << NtrigsA/Ntrigs*100 << " % " << endl;
+	ostr << " scaler summary : Live time (EDTM) = " << LiveTime*100 << " % " << endl;
 	
 	//cout.rdbuf(cout_buf);
 	ostr.close();
