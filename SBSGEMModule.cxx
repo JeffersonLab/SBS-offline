@@ -3059,8 +3059,6 @@ double SBSGEMModule::FitStripTime( int striphitindex, double RMS ){
 }
 
 void SBSGEMModule::InitAPVMAP(){
-  APVMAP.clear();
-
   APVMAP[SBSGEM::kINFN].resize(fN_APV25_CHAN);
   APVMAP[SBSGEM::kUVA_XY].resize(fN_APV25_CHAN);
   APVMAP[SBSGEM::kUVA_UV].resize(fN_APV25_CHAN);

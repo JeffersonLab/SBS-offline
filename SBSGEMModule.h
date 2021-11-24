@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <array>
 
 //using namespace std;
 
@@ -189,9 +190,9 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
-  UInt_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
+  SBSGEM::APVmap_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
 
-  std::map<UInt_t, std::vector<UInt_t> > APVMAP;
+  std::array<std::vector<UInt_t>, 4 > APVMAP;
 
   void InitAPVMAP();
   
