@@ -42,6 +42,8 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
 {
   // Constructor.
   fEmin = 1.0; // 1 MeV minimum energy to be in cluster
+  fEmin_seed = 1.0; // 1 MeV minimum energy to seed a cluster
+  fTmax = 1000.0; // 1000 ns maximum arrival time difference with seed to be in cluster
   fXmax_dis = .30; // Maximum X (m) distance from cluster center to be included in cluster
   fYmax_dis = .30; // Maximum Y (m) distance from cluster center to be included in cluster
   fRmax_dis = .30; // Maximum Radius (m) from cluster center to be included in cluster
@@ -90,6 +92,8 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
     { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
+    { "emin_seed",    &fEmin_seed,   kDouble, 0, false }, ///< minimum energy threshold for seed
+    { "tmax",         &fTmax,   kDouble, 0, false }, ///< maximum time difference for block
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
@@ -354,24 +358,37 @@ Int_t SBSCalorimeter::FindClusters()
 	Int_t NSize = fBlockSet.size();
         while ( NSize != 0 )  {
              std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
+
+	     //SAS - Add minimum seed energy requirement here, after the blocks are sorted. Return first element of fBlockset and check it against fEmin_seed
+
+	     const SBSBlockSet& cS = fBlockSet.begin(); 
 	     Bool_t AddingBlocksToCluster = kTRUE;
-	     fBlockSetIterator it = fBlockSet.begin();
 	     SBSElement *blk= fElements[(*it).id-fChanMapStart] ; 
 	     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(fBlockSet.size(),blk);
+
+	     if( cS.e < fEmin_seed ){
+	       AddingBlocksToCluster = kFALSE;
+	       fBlockSet.erase(it);
+	       NSize--;
+	       continue;
+	     }	     
+
              fClusters.push_back(cluster);
 	     fBlockSet.erase(it);
 	     NSize--;
 	while (AddingBlocksToCluster) {
-
+	  Bool_t InTime=kFALSE;
 	  Bool_t IsNeighbor=kFALSE;
 	     fBlockSetIterator it2 = fBlockSet.begin();
 	    while (!IsNeighbor && (it2 < fBlockSet.end())) {
 	      SBSElement *blk= fElements[(*it2).id-fChanMapStart]  ; 
+	      SBSElement *blk_p= fElements[fBlockSet.begin()-fChanMapStart];
 	      Int_t Index = fClusters.size()-1;
 	      Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
  	      IsNeighbor =( Rad<fRmax_dis );
-     	      if (IsNeighbor) {
-               fClusters[Index]->AddElement(blk);
+	      InTime=( fabs( blk->GetAtime()-blk_p->GetAtime() ) < fTmax);
+     	      if (IsNeighbor&&InTime) {
+		fClusters[Index]->AddElement(blk);
 	      } else {	       
 		  ++it2;
               }
