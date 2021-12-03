@@ -361,12 +361,13 @@ Int_t SBSCalorimeter::FindClusters()
 
 	     //SAS - Add minimum seed energy requirement here, after the blocks are sorted. Return first element of fBlockset and check it against fEmin_seed
 
-	     const SBSBlockSet& cS = fBlockSet.begin(); 
 	     Bool_t AddingBlocksToCluster = kTRUE;
+	     fBlockSetIterator it = fBlockSet.begin();
 	     SBSElement *blk= fElements[(*it).id-fChanMapStart] ; 
 	     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(fBlockSet.size(),blk);
 
-	     if( cS.e < fEmin_seed ){
+	     //SAS - where this first element will be the good block with highest energy
+	     if( blk->GetE() < fEmin_seed ){
 	       AddingBlocksToCluster = kFALSE;
 	       fBlockSet.erase(it);
 	       NSize--;
@@ -382,7 +383,7 @@ Int_t SBSCalorimeter::FindClusters()
 	     fBlockSetIterator it2 = fBlockSet.begin();
 	    while (!IsNeighbor && (it2 < fBlockSet.end())) {
 	      SBSElement *blk= fElements[(*it2).id-fChanMapStart]  ; 
-	      SBSElement *blk_p= fElements[fBlockSet.begin()-fChanMapStart];
+	      SBSElement *blk_p= fElements[(*fBlockSet.begin()).id-fChanMapStart];
 	      Int_t Index = fClusters.size()-1;
 	      Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
  	      IsNeighbor =( Rad<fRmax_dis );

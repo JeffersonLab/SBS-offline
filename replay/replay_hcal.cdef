@@ -1,0 +1,18 @@
+# Sample cut definition file
+Block: RawDecode
+
+RawDecode_master        1
+
+Block: Decode
+#GoodGoldenTrack                1
+#GoodPhi                        abs(R.gold.ph)<0.05
+#GoodTheta              abs(R.gold.th)<0.1
+#InAcceptance           GoodPhi&&GoodTheta
+Decode_master   1
+
+Block: CoarseReconstruct
+
+
+CoarseReconstruct_master 1
+
+
