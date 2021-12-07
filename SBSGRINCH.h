@@ -9,7 +9,8 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include "THaPidDetector.h"
+//#include "THaPidDetector.h"
+#include "SBSGenericDetector.h"
 #include "SBSGRINCH_ClusterList.h"
 #include "TBits.h"
 #include "TClonesArray.h"
@@ -25,7 +26,8 @@ const double m_el = 0.5110034e-3; // electron mas in GeV
 const double m_ka = 493.677e-3;   // kaon mass in GeV
 const double m_pr = 938.272e-3;   // proton mass in GeV
 
-class SBSGRINCH : public THaPidDetector {
+//class SBSGRINCH : public THaPidDetector {
+class SBSGRINCH : public SBSGenericDetector {
   
 public:
 
@@ -67,7 +69,7 @@ public:
   { fDoBench = b; }
   void                 PrintBenchmarks() const;
   
-  double GetZ() {return fZCkovIn;};
+  //double GetZ() {return fZCkovIn;};
   
 protected:
 
@@ -101,7 +103,7 @@ protected:
   Double_t fNradiator;     // radiator index of refraction;
   Double_t fLradiator;     // radiator length on central ray;
   */
-  Double_t fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
+  //Double_t fZCkovIn;       // Z of the entrance window in the spectrometer central ray;
   Int_t    fNPMTs;         // number of PMTs
   Int_t    fNPMTrows;      // number of PMT rows
   Int_t    fNPMTcolsMax;   // max number of PMT columns 

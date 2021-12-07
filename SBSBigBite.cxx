@@ -1134,7 +1134,7 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       SBSGRINCH* GRINCH = reinterpret_cast<SBSGRINCH*>(theNonTrackDetector);
       
       //x, y of track at z = Z_GRINCH
-      double x_track = the_track->GetX(GRINCH->GetZ());
+      double x_track = the_track->GetX(GRINCH->GetOrigin().Z());
       //double y_track = the_track->GetY()+
       //the_track->GetPhi()*GRINCH->GetOrigin().Z();
       

@@ -34,7 +34,7 @@ using namespace std;
 //_____________________________________________________________________________
 SBSGRINCH::SBSGRINCH( const char* name, const char* description, 
 		  THaApparatus* apparatus ) :
-  THaPidDetector(name,description,apparatus), 
+  SBSGenericDetector(name,description,apparatus), 
   // fMIPs(0),
   // fMaxxMIP(100000), fMinxMIP(-100000), fMaxyMIP(100000), fMinyMIP(-100000),
   fDoResolve(false), fDoTimeFilter(false), //fNseg(0), fXseg(0),
@@ -76,7 +76,7 @@ void SBSGRINCH::Clear( Option_t* opt )
   // Reset event-by-event data
   if(fDebug)cout << "SBSGRINCH::Clear() " << endl; 
   if( fDoBench ) fBench->Begin("Clear");
-  THaPidDetector::Clear(opt);
+  SBSGenericDetector::Clear(opt);
   if(fDebug)cout << "Clear hits() " << endl; 
   fHits->Clear();
   //fResolvedHits->Clear();
@@ -107,7 +107,13 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   // Open the database file
   FILE* fi = OpenFile( date );
   if( !fi ) return kFileError;
- 
+
+  Int_t err = SBSGenericDetector::ReadDatabase(date);
+  if(err) {
+    return err;
+  }
+  fIsInit = false;
+
   // to be inserted in the data base 
   /*
   fiducial_zone_range = 0.05;
@@ -129,8 +135,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     detmap = new vector<Int_t>;
     // Set up a table of tags to read and locations to store values.
     const DBRequest tags[] = {
-      {"detmap",       detmap,         kIntV,   0, false },
-      {"zpos",     &fZCkovIn,      kDouble, 0, false },
+      //{"zpos",     &fZCkovIn,      kDouble, 0, false },
       //{"n_radiator",   &fNradiator,    kDouble, 0, 1},
       //{"l_radiator",   &fLradiator,    kDouble, 0, 1},
       {"nchan",        &fNPMTs,        kInt,    0, false },
@@ -177,8 +182,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     
     if(fDebug){
       cout << "GRINCH params: " << endl;
-
-      cout << "zpos_front " << fZCkovIn  << endl;
+      
+      //cout << "zpos_front " << fZCkovIn  << endl;
       /*	   << " n_radiator " << fNradiator 
 	   << " l_radiator " << fLradiator << endl;
       */
@@ -823,9 +828,9 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       double Xclus = theCluster->GetXcenter()*100.0;// in cm...
       double Yclus = theCluster->GetYcenter()*100.0;// in cm...
       
-      double Xtrk = theTrack->GetX(fZCkovIn)*100.0;// in cm...
+      double Xtrk = theTrack->GetX(GetOrigin().Z())*100.0;// in cm...
       double dXtrk = theTrack->GetTheta()*100.0;// in cm...
-      double Ytrk = theTrack->GetY(fZCkovIn)*100.0;// in cm...
+      double Ytrk = theTrack->GetY(GetOrigin().Z())*100.0;// in cm...
       
       /* 
 	 // fx0,1,2_min,max (6); fx0,1,2_p0,1_corr (6); fsigma_x (1);
