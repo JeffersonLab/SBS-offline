@@ -31,6 +31,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fIsSpectrometerTracker = true; //used by tracker base
   fUseOpticsConstraint = false;
   
+  fTestTrackInitialized = false;
+
   fTestTracks = new TClonesArray("THaTrack",1);
 }
 
@@ -62,7 +64,11 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
 
     CompleteInitialization();
 
-    new( (*fTestTracks)[0] ) THaTrack();
+    if( !fTestTrackInitialized ){
+    
+      new( (*fTestTracks)[0] ) THaTrack();
+      fTestTrackInitialized = true;
+    }
     
   } else {
     return kInitError;
@@ -168,6 +174,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   
   //std::cout << "pedestal file name = " << fpedfilename << std::endl;
   
+  fUseOpticsConstraint = (useopticsconstraint != 0 );
+
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
@@ -593,6 +601,10 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 }
 
 bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction ){
+  
+  // std::cout << "[SBSGEMSpectrometerTracker::PassedOpticsConstraint]: Checking target reconstruction" 
+  // 	    << std::endl;
+
   double xptemp = track_direction.X()/track_direction.Z();
   double yptemp = track_direction.Y()/track_direction.Z();
 

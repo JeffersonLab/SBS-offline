@@ -104,7 +104,7 @@ SBSBigBite::~SBSBigBite()
 void SBSBigBite::Clear( Option_t *opt )
 {
   THaSpectrometer::Clear(opt);
-  f_xtg_exp.clear();
+  //  f_xtg_exp.clear();
   fEpsEtotRatio.clear();
   fEtot.clear();
   fEtotPratio.clear();
@@ -393,7 +393,7 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   // removing all that stuff since apparently I'm not able to code properly...
 
   RVarDef beamtrackvars[] = {
-    { "tr.tg_x", "track constraint y", "f_xtg_exp" },
+    { "tr.tg_x", "target x", "fTracks.THaTrack.fTX" },
     { nullptr }
   };
   DefineVarsFromList( beamtrackvars, mode );
@@ -954,7 +954,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     }
     //cout << var->GetName() << endl;
   }
-  f_xtg_exp.push_back(xtar);
+  //  f_xtg_exp.push_back(xtar);
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
