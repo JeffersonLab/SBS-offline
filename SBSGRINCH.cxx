@@ -135,17 +135,11 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     detmap = new vector<Int_t>;
     // Set up a table of tags to read and locations to store values.
     const DBRequest tags[] = {
-      //{"zpos",     &fZCkovIn,      kDouble, 0, false },
       //{"n_radiator",   &fNradiator,    kDouble, 0, 1},
       //{"l_radiator",   &fLradiator,    kDouble, 0, 1},
       {"nchan",        &fNPMTs,        kInt,    0, false },
-      {"nrows",        &fNPMTrows,     kInt,    0, false },
-      {"ncols",        &fNPMTcolsMax,  kInt,    0, false },
-      {"pmtdistx",     &fPMTdistX,     kDouble, 0, 1},
-      {"pmtdisty",     &fPMTdistY,     kDouble, 0, 1},
       {"x_tcpmt",      &fX_TCPMT,      kDouble, 0, 1},
       {"y_tcpmt",      &fY_TCPMT,      kDouble, 0, 1},
-	
       // { "l_emission", &l_emission, kDouble, 1, false},
       // { "z_ckovin", &Z_CkovIn, kDouble, 1, false},
       // { "maxdist",    &maxdist, kDouble, 1, true},
@@ -177,21 +171,21 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
       return kInitError;
     }
 
-    fPMTmatrixHext = (fNPMTcolsMax-1)*fPMTdistY;
-    fPMTmatrixVext = (fNPMTrows-1)*fPMTdistX;
+    fPMTmatrixHext = (fNcolsMax-1)*fSizeCol;
+    fPMTmatrixVext = (fNrows-1)*fSizeRow;
     
     if(fDebug){
       cout << "GRINCH params: " << endl;
       
-      //cout << "zpos_front " << fZCkovIn  << endl;
+      cout << "zpos " << GetOrigin().Z()  << endl;
       /*	   << " n_radiator " << fNradiator 
 	   << " l_radiator " << fLradiator << endl;
       */
       cout << "npmts " << fNPMTs 
-	   << " npmtrows " << fNPMTrows
-	   << " npmtcolsmax " << fNPMTcolsMax << endl;
-      cout << "pmtdistx " << fPMTdistX
-	   << " pmtdisty " << fPMTdistY
+	   << " npmtrows " << fNrows
+	   << " npmtcolsmax " << fNcolsMax << endl;
+      cout << "pmtdistx " << fSizeRow
+	   << " pmtdisty " << fSizeCol
 	   << " x_tcpmt " << fX_TCPMT
 	   << " y_tcpmt " << fY_TCPMT << endl;
       cout << "fPMTmatrixHext " << fPMTmatrixHext
@@ -462,27 +456,27 @@ Int_t SBSGRINCH::Decode( const THaEvData& evdata )
 	  theHit = new( (*fHits)[nHit++] ) SBSGRINCH_Hit();
 	  theHit->SetPMTNum(channel);
 	  
-	  div_t d = div(channel, (2*fNPMTcolsMax-1));
+	  div_t d = div(channel, (2*fNcolsMax-1));
 	  
 	  row = 2*d.quot;
 	  col = d.rem;
-	  if(d.rem>fNPMTcolsMax-1 && col0_ismaxsize){
+	  if(d.rem>fNcolsMax-1 && col0_ismaxsize){
 	    row+=1;
-	    col-=fNPMTcolsMax;
+	    col-=fNcolsMax;
 	    col_ismaxsize = false;
 	  }
 	  
-	  if(d.rem>fNPMTcolsMax-2 && !col0_ismaxsize){
+	  if(d.rem>fNcolsMax-2 && !col0_ismaxsize){
 	    row+=1;
-	    col-=fNPMTcolsMax-1;
+	    col-=fNcolsMax-1;
 	    col_ismaxsize = true;
 	  }
 	  
-	  X = row*fPMTdistX-fPMTmatrixVext/2.0;
+	  X = row*fSizeRow-fPMTmatrixVext/2.0;
 	  if(col_ismaxsize){
-	    Y = col*fPMTdistX-fPMTmatrixHext/2.0;
+	    Y = col*fSizeRow-fPMTmatrixHext/2.0;
 	  }else{
-	    Y = col*fPMTdistX-(fPMTmatrixHext-fPMTdistX)/2.0;
+	    Y = col*fSizeRow-(fPMTmatrixHext-fSizeRow)/2.0;
 	  }
 	  
 	  theHit->SetRow(row);
@@ -729,7 +723,7 @@ Int_t SBSGRINCH::FindClusters()
   // Return number of clusters found.
  
   // // minimum distance between two pads.
-  const double par = sqrt(fPMTdistX*fPMTdistX+fPMTdistY*fPMTdistY);//2.0; 
+  const double par = sqrt(fSizeRow*fSizeRow+fSizeCol*fSizeCol);//2.0; 
 
   // // maximum distance in X between two fired pads to be in the same cluster.
   // const double par2 = 0.1;//PAD_SIZE_X+0.1;  
