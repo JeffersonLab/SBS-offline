@@ -45,6 +45,8 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrack
  private:
   // std::vector <SBSGEMModule *> fPlanes; storing the modules moved to SBSGEMTrackerBase
 
+  bool fTestTrackInitialized;
+  
   TClonesArray *fTestTracks; 
   //bool fIsMC; moved to SBSGEMTrackerBase
 	

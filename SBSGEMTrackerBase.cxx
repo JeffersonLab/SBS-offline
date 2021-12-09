@@ -1210,7 +1210,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		    //Fit a track to the current hit combination:
 		    //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
 		    FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
-		  
+
 		    //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
 		  
 		    if( firstgoodcombo || chi2ndftemp < minchi2 ){
@@ -1305,12 +1305,67 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	  //We treat all layer combinations at the same minimum hit requirement on an equal footing as far as track-finding is concerned:
 	if( !firstgoodcombo && minchi2 < fTrackChi2Cut ){ //then we found at least one candidate track:
-	  foundtrack = true;
+	  //check optics and other constraints:
 
+	  //double xtrtemp = besttrack[0];
+	  //double ytrtemp = besttrack[1];
+	  //double xptrtemp = besttrack[2];
+	  //double yptrtemp = besttrack[3];
+
+	  TVector3 TrackPosTemp( besttrack[0], besttrack[1], 0.0 );
+	  TVector3 TrackDirTemp( besttrack[2], besttrack[3], 1.0 );
+	  TrackDirTemp = TrackDirTemp.Unit(); 
+
+	  bool goodoptics = true;
+	  if( fIsSpectrometerTracker && fUseOpticsConstraint ){
+	    goodoptics = PassedOpticsConstraint( TrackPosTemp, TrackDirTemp );
+	  }
+	  
+	  //If using search region constraint, ignore tracks that don't give straight-line track parameters consistent with the constraint:
+	  bool constraint_check = true;
+	  if( fUseConstraint ){
+	    constraint_check = CheckConstraint( besttrack[0], besttrack[1], besttrack[2], besttrack[3] );
+	  }
+		    
+	  //If using slope constraint, ignore tracks that would give slope outside the allowed range
+	  //along X or Y:
+	  bool slope_check = true;
+	  if( fUseSlopeConstraint ){
+	    slope_check = ( fxpfpmin <= besttrack[2] && besttrack[2] <= fxpfpmax &&
+			    fypfpmin <= besttrack[3] && besttrack[3] <= fypfpmax );
+	  }
+	  
+	  foundtrack = goodoptics && constraint_check && slope_check;
+	  
 	  // "AddTrack" takes care of incrementing fNtracks_found
 	  //Changed method name to "AddNewTrack to avoid conflict with THaTrackingDetector::AddTrack
-	  AddNewTrack( besthitcombo, besttrack, minchi2, uresidbest, vresidbest );
+	  
+	  Int_t nHighQualityHits = 0;
+	  //For three-hit tracks, we require ALL three hits to be "high-quality" hits: 
+	  //if( besthitcombo.size() == 3 ){
+	  for( auto ilayer = besthitcombo.begin(); ilayer != besthitcombo.end(); ++ilayer ){
+	    int layer = ilayer->first;
+	    int hitidx = ilayer->second;
 	    
+	    int module = modindexhit2D[layer][hitidx];
+	    int iclust = clustindexhit2D[layer][hitidx];
+	    
+	    if( fModules[module]->fHits[iclust].highquality ) nHighQualityHits++;
+
+	  }
+	  
+	  if( besthitcombo.size() == 3 ){
+	    foundtrack = foundtrack && nHighQualityHits >= 3;
+	  }
+
+	  // Special treatment and extra hit/track quality cuts for 3-hit tracks:
+	  // In particular, require at least 2x2 cluster size, good ADC correlation for all 3 hits on the track, 
+	  // And also check agreement of hit times with each other:
+	  
+
+	  if( foundtrack ){
+	    AddNewTrack( besthitcombo, besttrack, minchi2, uresidbest, vresidbest );
+	  }
 	}
 	  
       } else {

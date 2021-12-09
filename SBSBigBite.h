@@ -107,7 +107,7 @@ protected:
   Double_t fYtar_01000;
   Double_t fYtar_00010;
 
-  std::vector<double> f_xtg_exp;
+  //std::vector<double> f_xtg_exp;
 
 
   Double_t fFrontConstraintWidthX;

@@ -122,8 +122,6 @@ protected:
   void AddNewTrack( const std::map<int,int> &hitcombo, const std::vector<double> &BestTrack, double chi2ndf, const std::vector<double> &uresid, const std::vector<double> &vresid );
 
   void PurgeHits(int itrack);
-
-  
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:

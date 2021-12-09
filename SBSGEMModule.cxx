@@ -61,7 +61,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //We should probably get rid of this as it's not used, only leads to confusion:
   fNumberOfChannelInFrame = 129;
 
-  fSamplePeriod = 25.0; //nanoseconds:
+  fSamplePeriod = 24.0; //nanoseconds:
 
   fSigma_hitshape = 0.0004; //0.4 mm
   // for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
@@ -2033,6 +2033,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
       
 	//Initialize "keep" to true:
 	hittemp.keep = true;
+	hittemp.highquality = false;
 	hittemp.ontrack = false;
 	hittemp.trackidx = -1;
 	hittemp.iuclust = iu;
@@ -2092,6 +2093,15 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  UInt_t vhitidx = fVclusters[iv].hitindex[vstripidx];
 	
 	  hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
+
+	  //A "high-quality" hit is one that passes all the filtering criteria (might add more later):
+	  hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
+	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
+	    fUclusters[iu].clusterADCsum >= fThresholdClusterSum && 
+	    fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
+	    hittemp.corrcoeff_clust >= fCorrCoeffCut &&
+	    hittemp.corrcoeff_strip >= fCorrCoeffCut && 
+	    fabs( hittemp.tdiff ) <= fTimeCutUVdiff; 
 
 	  bool add_hit = true;
 	  //we need special handling if we want to use single-strip clusters: 
@@ -2889,8 +2899,6 @@ void SBSGEMModule::filter_2Dhits(){
     }
   }
 
-  //other criteria could include time sample peaking, etc. 
-  
 }
 
 double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo ){
@@ -2947,6 +2955,8 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
 	if( iter > 0 ) {
 	  maxtemp = cm_temp + fZeroSuppressRMS*rmstemp*fRMS_ConversionFactor; //2.45 = sqrt(6), don't want to calculate sqrt every time
 	  mintemp = 0.0;
+	  //experimental: 
+	  //mintemp = cm_temp - fZeroSuppressRMS*cm_rms;
 	}
 	
 	if( ADCtemp >= mintemp && ADCtemp <= maxtemp ){

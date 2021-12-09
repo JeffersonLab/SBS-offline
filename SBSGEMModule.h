@@ -41,6 +41,7 @@ struct sbsgemhit_t { //2D reconstructed hits
   //Track info:
   Bool_t keep;     //Should this cluster be considered for tracking? We use this variable to implement "cluster quality" cuts (thresholds, XY ADC and time correlation, etc.)
   Bool_t ontrack;  //Is this cluster on any track?
+  Bool_t highquality; //is this a "high quality" hit?
   Int_t trackidx; //Index of track containing this cluster (within the array of tracks found by the parent SBSGEMTracker
   UInt_t iuclust;  //Index in (1D) U cluster array of the "U" cluster used to define this 2D hit.
   UInt_t ivclust;  //Index in (1D) V cluster array of the "V" cluster used to define this 2D hit.
