@@ -265,7 +265,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   event_type = 0;//event_type set to 0 by default 
   // only set it to 1 if there is some signal in at least one detector...
   event_num = simEvent->EvtID;//++;
-  recent_event = event_num;
+  auto recent_event = event_num;
 
   // Event weight
   fWeight = simEvent->Tgmn->ev_sigma*simEvent->Tgmn->ev_solang;
