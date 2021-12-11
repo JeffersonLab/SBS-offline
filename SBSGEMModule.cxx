@@ -832,6 +832,7 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
 
   RVarDef varmisc[] = {
     {"ontrack", "Track passed through this module", "fTrackPassedThrough" },
+    {"layer", "Layer number of this module", "fLayer" },
     { nullptr },
   };
 
