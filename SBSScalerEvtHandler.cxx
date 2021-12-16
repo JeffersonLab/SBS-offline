@@ -384,7 +384,7 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
       
       //fill histos here?
       double Time = -10;
-      double clk_cnt = 0, clk_rate = 0, unser_cnt, u1_cnt = 0, unew_cnt = 0, dnew_cnt = 0, d1_cnt = 0, d3_cnt = 0, d10_cnt = 0;
+      double clk_cnt = 0, clk_rate = 0, unser_rate = 0, u1_rate = 0, unew_rate = 0, dnew_rate = 0, d1_rate = 0, d3_rate = 0, d10_rate = 0;
       for (UInt_t i = 0; i < scalerloc.size(); i++) {
 	TString name = scalerloc[i]->name; 
 	
@@ -399,25 +399,25 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
 	}
 	
 	if(name.Contains("bcm")){
-	  if(name.Contains("unser.cnt") && !name.Contains("rate"))unser_cnt = dvars[i];
-	  if(name.Contains("u1.cnt") && !name.Contains("rate"))u1_cnt = dvars[i];
-	  if(name.Contains("unew.cnt") && !name.Contains("rate"))unew_cnt = dvars[i];
-	  if(name.Contains("dnew.cnt") && !name.Contains("rate"))dnew_cnt = dvars[i];
-	  if(name.Contains("d1.cnt") && !name.Contains("rate"))d1_cnt = dvars[i];
-	  if(name.Contains("d3.cnt") && !name.Contains("rate"))d3_cnt = dvars[i];
-	  if(name.Contains("d10.cnt") && !name.Contains("rate"))d10_cnt = dvars[i];
+	  if(name.Contains("unser.rate"))unser_rate = dvars[i];
+	  if(name.Contains("u1.rate"))u1_rate = dvars[i];
+	  if(name.Contains("unew.rate"))unew_rate = dvars[i];
+	  if(name.Contains("dnew.rate"))dnew_rate = dvars[i];
+	  if(name.Contains("d1.rate"))d1_rate = dvars[i];
+	  if(name.Contains("d3.rate"))d3_rate = dvars[i];
+	  if(name.Contains("d10.rate"))d10_rate = dvars[i];
 	}
 	
       }
-      Time = clk_cnt/clk_rate;
+      Time = clk_rate/clk_rate;
       
-      if(fIunserVsTime!=NULL && Time>0)fIunserVsTime->Fill(Time, unser_cnt);
-      if(fIu1VsTime!=NULL && Time>0)fIu1VsTime->Fill(Time, u1_cnt);
-      if(fIunewVsTime!=NULL && Time>0)fIunewVsTime->Fill(Time, unew_cnt);
-      if(fIdnewVsTime!=NULL && Time>0)fIdnewVsTime->Fill(Time, dnew_cnt);
-      if(fId1VsTime!=NULL && Time>0)fId1VsTime->Fill(Time, d1_cnt);
-      if(fId3VsTime!=NULL && Time>0)fId3VsTime->Fill(Time, d3_cnt);
-      if(fId10VsTime!=NULL && Time>0)fId10VsTime->Fill(Time, d10_cnt);
+      if(fIunserVsTime!=NULL && Time>0)fIunserVsTime->Fill(Time, unser_rate);
+      if(fIu1VsTime!=NULL && Time>0)fIu1VsTime->Fill(Time, u1_rate);
+      if(fIunewVsTime!=NULL && Time>0)fIunewVsTime->Fill(Time, unew_rate);
+      if(fIdnewVsTime!=NULL && Time>0)fIdnewVsTime->Fill(Time, dnew_rate);
+      if(fId1VsTime!=NULL && Time>0)fId1VsTime->Fill(Time, d1_rate);
+      if(fId3VsTime!=NULL && Time>0)fId3VsTime->Fill(Time, d3_rate);
+      if(fId10VsTime!=NULL && Time>0)fId10VsTime->Fill(Time, d10_rate);
     }
     return ret;
 
