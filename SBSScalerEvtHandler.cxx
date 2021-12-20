@@ -58,6 +58,7 @@ To enable debugging, add the line
 #include "THaVarList.h"
 #include "VarDef.h"
 #include "Helper.h"
+#include "TH1D.h"
 
 using namespace std;
 using namespace Decoder;
@@ -111,6 +112,19 @@ SBSScalerEvtHandler::~SBSScalerEvtHandler()
   fDelayedEvents.clear();
 }
 
+Int_t SBSScalerEvtHandler::Begin( THaRunBase* rb )
+{
+  THaEvtTypeHandler::Begin( rb );
+  fIunserVsTime = new TH1D("fIunserVsTime", ";time (s);", 5000, 0, 5000);
+  fIu1VsTime = new TH1D("fIu1VsTime", ";time (s);", 5000, 0, 5000);
+  fIunewVsTime = new TH1D("fIunewVsTime", ";time (s);", 5000, 0, 5000);
+  fIdnewVsTime = new TH1D("fIdnewVsTime", ";time (s);", 5000, 0, 5000);
+  fId1VsTime = new TH1D("fId1VsTime", ";time (s);", 5000, 0, 5000);
+  fId3VsTime = new TH1D("fId3VsTime", ";time (s);", 5000, 0, 5000);
+  fId10VsTime = new TH1D("fId10VsTime", ";time (s);", 5000, 0, 5000);
+  return 0;
+}
+
 Int_t SBSScalerEvtHandler::End( THaRunBase* )
 {
   // Process any delayed events in order received
@@ -135,6 +149,14 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
   
   double Ntrigs, NtrigsA, Time, BeamCurrent, BeamCharge, LiveTime;
   double clk_cnt = 0, clk_rate = 0, edtm_cnt = 0, unew_cnt = 0, d3_cnt = 0, d10_cnt = 0;
+  
+  if(fIunserVsTime!=NULL)fIunserVsTime->Write( 0, kOverwrite );
+  if(fIu1VsTime!=NULL)fIu1VsTime->Write( 0, kOverwrite );
+  if(fIunewVsTime!=NULL)fIunewVsTime->Write( 0, kOverwrite );
+  if(fIdnewVsTime!=NULL)fIdnewVsTime->Write( 0, kOverwrite );
+  if(fId1VsTime!=NULL)fId1VsTime->Write( 0, kOverwrite );
+  if(fId3VsTime!=NULL)fId3VsTime->Write( 0, kOverwrite );
+  if(fId10VsTime!=NULL)fId10VsTime->Write( 0, kOverwrite );
   
   THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
   if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
@@ -359,6 +381,43 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
     if((ret=AnalyzeBuffer(rdata,fOnlySyncEvents))) {
       if (fDebugFile) *fDebugFile << "scaler tree ptr  "<<fScalerTree<<endl;
       if (fScalerTree) fScalerTree->Fill();
+      
+      //fill histos here?
+      double Time = -10;
+      double clk_cnt = 0, clk_rate = 0, unser_rate = 0, u1_rate = 0, unew_rate = 0, dnew_rate = 0, d1_rate = 0, d3_rate = 0, d10_rate = 0;
+      for (UInt_t i = 0; i < scalerloc.size(); i++) {
+	TString name = scalerloc[i]->name; 
+	
+	//cout << name.Data() << endl;
+	
+	if(name.Contains("4MHz_CLK")){
+	  if(name.Contains("Rate")){
+	    clk_rate = dvars[i];
+	  }else if(name.Contains("scaler") && !name.Contains("Cut")){
+	    clk_cnt = dvars[i];
+	  }
+	}
+	
+	if(name.Contains("bcm")){
+	  if(name.Contains("unser.rate"))unser_rate = dvars[i];
+	  if(name.Contains("u1.rate"))u1_rate = dvars[i];
+	  if(name.Contains("unew.rate"))unew_rate = dvars[i];
+	  if(name.Contains("dnew.rate"))dnew_rate = dvars[i];
+	  if(name.Contains("d1.rate"))d1_rate = dvars[i];
+	  if(name.Contains("d3.rate"))d3_rate = dvars[i];
+	  if(name.Contains("d10.rate"))d10_rate = dvars[i];
+	}
+	
+      }
+      Time = clk_rate/clk_rate;
+      
+      if(fIunserVsTime!=NULL && Time>0)fIunserVsTime->Fill(Time, unser_rate);
+      if(fIu1VsTime!=NULL && Time>0)fIu1VsTime->Fill(Time, u1_rate);
+      if(fIunewVsTime!=NULL && Time>0)fIunewVsTime->Fill(Time, unew_rate);
+      if(fIdnewVsTime!=NULL && Time>0)fIdnewVsTime->Fill(Time, dnew_rate);
+      if(fId1VsTime!=NULL && Time>0)fId1VsTime->Fill(Time, d1_rate);
+      if(fId3VsTime!=NULL && Time>0)fId3VsTime->Fill(Time, d3_rate);
+      if(fId10VsTime!=NULL && Time>0)fId10VsTime->Fill(Time, d10_rate);
     }
     return ret;
 

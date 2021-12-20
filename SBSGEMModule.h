@@ -270,6 +270,13 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fChan_TimeStamp_high;
   UInt_t fChan_MPD_EventCount;
   
+  //Trigger/reference time information: 
+  UInt_t fCrate_RefTime; 
+  UInt_t fSlot_RefTime; 
+  UInt_t fChan_RefTime; 
+  Double_t fRefTime_GoodTimeCut;
+  Double_t fRefTime_CAL; 
+
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   //Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
