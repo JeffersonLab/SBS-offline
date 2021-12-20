@@ -140,6 +140,8 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
+  void SetMakeCommonModePlots( int cmplots=0 ){ fMakeCommonModePlots = cmplots != 0; fCommonModePlots_DBoverride = true; }
+  
   //Don't call this method directly, it is called by find_2Dhits. Call that instead:
   void find_clusters_1D(SBSGEM::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
   void find_2Dhits(); // Version with no arguments assumes no constraint points
@@ -484,6 +486,8 @@ class SBSGEMModule : public THaSubDetector {
   bool fEfficiencyInitialized;
   bool fMakeCommonModePlots; //diagnostic plots for offline common-mode stuff: default = false;
   bool fCommonModePlotsInitialized;
+  bool fCommonModePlots_DBoverride;
+
 
   bool fMakeEventInfoPlots;
   bool fEventInfoPlotsInitialized;

@@ -47,6 +47,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCommonModeMinStripsInRange = 10;
   fMakeCommonModePlots = false;
   fCommonModePlotsInitialized = false;
+  fCommonModePlots_DBoverride = false;
 
   fMakeEventInfoPlots = false;
   fEventInfoPlotsInitialized = false;
@@ -293,7 +294,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     return status;
   }
 
-  fMakeCommonModePlots = cmplots_flag != 0;
+  if( !fCommonModePlots_DBoverride ) fMakeCommonModePlots = cmplots_flag != 0;
   fZeroSuppress = zerosuppress_flag != 0;
   fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
 
