@@ -42,6 +42,10 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
 {
   // Constructor.
   fEmin = 1.0; // 1 MeV minimum energy to be in cluster
+  
+  fEmin_clusSeed = 1.0; // Minimum energy (MeV) to be a cluster seed
+  fEmin_totClus = 1.0; // Minimum total cluster energy (MeV)
+
   fXmax_dis = .30; // Maximum X (m) distance from cluster center to be included in cluster
   fYmax_dis = .30; // Maximum Y (m) distance from cluster center to be included in cluster
   fRmax_dis = .30; // Maximum Radius (m) from cluster center to be included in cluster
@@ -90,6 +94,10 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
     { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
+
+    { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, false }, ///< minimum cluster seed energy
+    { "emin_totClus", &fEmin_totClus, kDouble, 0, false }, ///< minimum total cluster energy
+
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
@@ -356,6 +364,9 @@ Int_t SBSCalorimeter::FindClusters()
              std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
 	     Bool_t AddingBlocksToCluster = kTRUE;
 	     fBlockSetIterator it = fBlockSet.begin();
+
+	     std::cout << "*************" << (*it).e << std::endl;
+
 	     SBSElement *blk= fElements[(*it).id-fChanMapStart] ; 
 	     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(fBlockSet.size(),blk);
              fClusters.push_back(cluster);

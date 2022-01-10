@@ -135,6 +135,10 @@ protected:
 
   // Clusters for this event
   std::vector<SBSCalorimeterCluster*> fClusters; // Cluster
+
+  Double_t fEmin_clusSeed; //< Minimum energy for cluster seed
+  Double_t fEmin_totClus; //< Minimum total energy of a cluster
+
   Double_t    fEmin;         //< Minimum energy for a cluster center
   Double_t    fXmax_dis;         //< maximum X distance from a cluster center
   Double_t    fYmax_dis;         //< maximum Y distance from a cluster center
