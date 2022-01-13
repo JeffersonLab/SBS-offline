@@ -35,7 +35,7 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
    fRingSeed_reported(0),fRingSeed_actual(0),
    fRingPhase_reported(0),fRing_reported_polarity(0),
    fRing_actual_polarity(0), fEvtype(-1), fVerbosity(0), 
-   fHelScalerTree(nullptr),fBranch_seed(0),fBranch_errCode(0),
+   fHelScalerTree(nullptr),fBranch_seed(0),fBranch_errCode(0),fBranch_cumulative_0(0),
    fHisto(NHIST, nullptr)
 {
    for (UInt_t j=0; j<32; j++){
@@ -189,27 +189,34 @@ Int_t SBSScalerHelicity::Begin( THaRunBase* )
    // we're only attaching to the LHRS arm at the moment in this test
 
    TString treeName = Form("TShel");
+   TString armName  = Form("Lhel");   // for LHRS; eventually make this a user-changeable value
    TString treeInfo = Form("Helicity data plugged into LHRS");
    
    TString branchInfo;
 
-   const int NB = 3;
+   int j=0;
+   const int NB = 34;
    TString branchName[NB];
-   branchName[0] = Form("%s.seed"          ,treeName.Data());
-   branchName[1] = Form("%s.error.code"    ,treeName.Data());
-   branchName[2] = Form("%s.cumulative.Ch0",treeName.Data());
+   branchName[0] = Form("%s.seed"          ,armName.Data());
+   branchName[1] = Form("%s.error.code"    ,armName.Data());
+   for(int i=0;i<32;i++){
+      j = 2 + i;
+      branchName[j] = Form("%s.cumulative.Ch%d",armName.Data(),i);
+   }
 
    if(!fHelScalerTree){
       // if the tree isn't created yet, create it
       fHelScalerTree = new TTree(treeName,treeInfo);
       fHelScalerTree->SetAutoSave(200000000);
-      // FIXME: could make this a loop eventually... 
       branchInfo = Form("%s/D",branchName[0].Data()); 
-      fHelScalerTree->Branch(branchName[0].Data(),&fBranch_seed,branchInfo,4000);  
+      fHelScalerTree->Branch(branchName[0].Data(),&fBranch_seed,branchInfo.Data());  
       branchInfo = Form("%s/D",branchName[1].Data()); 
-      fHelScalerTree->Branch(branchName[1].Data(),&fBranch_errCode,branchInfo,4000);  
-      branchInfo = Form("%s/D",branchName[2].Data()); 
-      fHelScalerTree->Branch(branchName[2].Data(),&fScalerCumulative[0],branchInfo,4000);  
+      fHelScalerTree->Branch(branchName[1].Data(),&fBranch_errCode,branchInfo.Data()); 
+      for(int i=0;i<32;i++){
+	 j = 2 + i; 
+	 branchInfo = Form("%s/D",branchName[j].Data()); 
+	 fHelScalerTree->Branch(branchName[j].Data(),&fScalerCumulative[i],branchInfo.Data()); 
+      } 
    }
 
    return 0;
@@ -310,10 +317,10 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
    FillHisto();
 
    // assign variables that will get to the tree 
-   fBranch_seed    = fRing_NSeed; 
-   fBranch_errCode = fErrorCode;
+   fBranch_seed         = fRing_NSeed; 
+   fBranch_errCode      = fErrorCode;
 
-  if(fHelScalerTree) fHelScalerTree->Fill();
+   if(fHelScalerTree) fHelScalerTree->Fill();
    
    if(fVerbosity>0) std::cout << "[SBSScalerHelicity::Decode]: --> Done. " << std::endl; 
 

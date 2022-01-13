@@ -95,6 +95,7 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
       // branch variables
       Double_t fBranch_seed;
       Double_t fBranch_errCode;
+      Double_t fBranch_cumulative_0; 
 
       static const Int_t NHIST = 2;
       std::vector<TH1F*> fHisto;
