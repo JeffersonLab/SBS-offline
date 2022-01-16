@@ -236,7 +236,7 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 
                      // 1 = pedestal subtraction WAS done online, even for full readout events, only subtract the common-mode
 
-  Bool_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
+  Int_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
   Bool_t fUseStripTimingCuts; // Apply strip timing cuts:
   
 
