@@ -69,10 +69,13 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
       Double_t fErrorCode;
 
       // Ring related data
-      UInt_t fScalerCumulative[32];
+      // UInt_t fScalerCumulative[32];
       UInt_t fScalerCumulativePlus[32];
       UInt_t fScalerCumulativeMinus[32];
-
+      // 64-bit signed integer versions
+      Long64_t fScalerCumulative[32];  // 64-bit signed integer 
+      // Long64_t fScalerCumulativePlus[32];
+      // Long64_t fScalerCumulativeMinus[32];
 
       UInt_t fRing_NSeed; //number of event collected for seed
       UInt_t fRingU3plus, fRingU3minus;
@@ -93,9 +96,8 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
       // tree to write data to 
       TTree *fHelScalerTree;
       // branch variables
-      Double_t fBranch_seed;
+      UInt_t fBranch_seed;
       Double_t fBranch_errCode;
-      Double_t fBranch_cumulative_0; 
 
       static const Int_t NHIST = 2;
       std::vector<TH1F*> fHisto;

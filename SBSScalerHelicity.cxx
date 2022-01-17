@@ -35,7 +35,7 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
    fRingSeed_reported(0),fRingSeed_actual(0),
    fRingPhase_reported(0),fRing_reported_polarity(0),
    fRing_actual_polarity(0), fEvtype(-1), fVerbosity(0), 
-   fHelScalerTree(nullptr),fBranch_seed(0),fBranch_errCode(0),fBranch_cumulative_0(0),
+   fHelScalerTree(nullptr),fBranch_seed(0),fBranch_errCode(0),
    fHisto(NHIST, nullptr)
 {
    for (UInt_t j=0; j<32; j++){
@@ -195,12 +195,28 @@ Int_t SBSScalerHelicity::Begin( THaRunBase* )
    TString branchInfo;
 
    int j=0;
-   const int NB = 34;
+   const int NB = 49;
    TString branchName[NB];
-   branchName[0] = Form("%s.seed"          ,armName.Data());
-   branchName[1] = Form("%s.error.code"    ,armName.Data());
+   branchName[0]  = Form("%s.error.code"           ,armName.Data());
+   branchName[1]  = Form("%s.ring.seed"            ,armName.Data());
+   branchName[2]  = Form("%s.ring.seedReported"    ,armName.Data());
+   branchName[3]  = Form("%s.ring.seedActual"      ,armName.Data());
+   branchName[4]  = Form("%s.ring.phaseReported"   ,armName.Data());
+   branchName[5]  = Form("%s.ring.polarityReported",armName.Data());
+   branchName[6]  = Form("%s.ring.polarityActual"  ,armName.Data());
+   branchName[7]  = Form("%s.ring.U3Plus"          ,armName.Data());
+   branchName[8]  = Form("%s.ring.U3Minus"         ,armName.Data());
+   branchName[9]  = Form("%s.ring.T3Plus"          ,armName.Data());
+   branchName[10] = Form("%s.ring.T3Minus"         ,armName.Data());
+   branchName[11] = Form("%s.ring.T5Plus"          ,armName.Data());
+   branchName[12] = Form("%s.ring.T5Minus"         ,armName.Data());
+   branchName[13] = Form("%s.ring.T10Plus"         ,armName.Data());
+   branchName[14] = Form("%s.ring.T10Minus"        ,armName.Data());
+   branchName[15] = Form("%s.ring.TimePlus"        ,armName.Data());
+   branchName[16] = Form("%s.ring.TimeMinus"       ,armName.Data());
+
    for(int i=0;i<32;i++){
-      j = 2 + i;
+      j = 17 + i;
       branchName[j] = Form("%s.cumulative.Ch%d",armName.Data(),i);
    }
 
@@ -209,12 +225,42 @@ Int_t SBSScalerHelicity::Begin( THaRunBase* )
       fHelScalerTree = new TTree(treeName,treeInfo);
       fHelScalerTree->SetAutoSave(200000000);
       branchInfo = Form("%s/D",branchName[0].Data()); 
-      fHelScalerTree->Branch(branchName[0].Data(),&fBranch_seed,branchInfo.Data());  
-      branchInfo = Form("%s/D",branchName[1].Data()); 
-      fHelScalerTree->Branch(branchName[1].Data(),&fBranch_errCode,branchInfo.Data()); 
+      fHelScalerTree->Branch(branchName[0].Data(),&fBranch_errCode,branchInfo.Data()); 
+      branchInfo = Form("%s/i",branchName[1].Data()); 
+      fHelScalerTree->Branch(branchName[1].Data(),&fRing_NSeed,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[2].Data()); 
+      fHelScalerTree->Branch(branchName[2].Data(),&fRingSeed_reported,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[3].Data()); 
+      fHelScalerTree->Branch(branchName[3].Data(),&fRingSeed_actual,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[4].Data()); 
+      fHelScalerTree->Branch(branchName[4].Data(),&fRingPhase_reported,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[5].Data()); 
+      fHelScalerTree->Branch(branchName[5].Data(),&fRing_reported_polarity,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[6].Data()); 
+      fHelScalerTree->Branch(branchName[6].Data(),&fRing_actual_polarity,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[7].Data()); 
+      fHelScalerTree->Branch(branchName[7].Data(),&fRingU3plus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[8].Data()); 
+      fHelScalerTree->Branch(branchName[8].Data(),&fRingU3minus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[9].Data()); 
+      fHelScalerTree->Branch(branchName[9].Data(),&fRingT3plus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[10].Data()); 
+      fHelScalerTree->Branch(branchName[10].Data(),&fRingT3minus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[11].Data()); 
+      fHelScalerTree->Branch(branchName[11].Data(),&fRingT5plus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[12].Data()); 
+      fHelScalerTree->Branch(branchName[12].Data(),&fRingT5minus,branchInfo.Data()); 
+      branchInfo = Form("%s/i",branchName[13].Data()); 
+      fHelScalerTree->Branch(branchName[13].Data(),&fRingT10plus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[14].Data()); 
+      fHelScalerTree->Branch(branchName[14].Data(),&fRingT10minus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[15].Data()); 
+      fHelScalerTree->Branch(branchName[15].Data(),&fRingTimeplus,branchInfo.Data());  
+      branchInfo = Form("%s/i",branchName[16].Data()); 
+      fHelScalerTree->Branch(branchName[16].Data(),&fRingTimeminus,branchInfo.Data());  
       for(int i=0;i<32;i++){
-	 j = 2 + i; 
-	 branchInfo = Form("%s/D",branchName[j].Data()); 
+	 j = 17 + i; 
+	 branchInfo = Form("%s/L",branchName[j].Data()); 
 	 fHelScalerTree->Branch(branchName[j].Data(),&fScalerCumulative[i],branchInfo.Data()); 
       } 
    }
@@ -288,7 +334,7 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
    if (fIRing>0){
       for (UInt_t i=0; i<fIRing; i++){
 	 for (UInt_t j=0; j<32; j++){
-	    fScalerCumulative[j] += fScalerRing[i][j];
+	    fScalerCumulative[j] += (Long64_t)fScalerRing[i][j];
 	 }
       }
       if(fVerbosity>1){
