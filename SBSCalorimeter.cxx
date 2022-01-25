@@ -93,7 +93,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   DBRequest config_request[] = {
     { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
     { "emin_seed",    &fEmin_seed,   kDouble, 0, false }, ///< minimum energy threshold for seed
-    { "tmax",         &fTmax,   kDouble, 0, false }, ///< maximum time difference for block
+    { "tmax",         &fTmax,   kDouble, 0, true }, ///< maximum time difference for block
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
@@ -387,11 +387,14 @@ Int_t SBSCalorimeter::FindClusters()
 	      Int_t Index = fClusters.size()-1;
 	      Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
  	      IsNeighbor =( Rad<fRmax_dis );
-	      InTime=( fabs( blk->GetAtime()-blk_p->GetAtime() ) < fTmax);
-     	      if (IsNeighbor&&InTime) {
-		fClusters[Index]->AddElement(blk);
+	      //InTime=( fabs( blk->GetAtime()-blk_p->GetAtime() ) < fTmax);
+     	      if (IsNeighbor){
+		InTime=( fabs( blk->GetAtime()-blk_p->GetAtime() ) < fTmax);
+		if(InTime) {	
+		  fClusters[Index]->AddElement(blk);
+		}
 	      } else {	       
-		  ++it2;
+		++it2;
               }
 	    }
 	    if (it2 == fBlockSet.end()) AddingBlocksToCluster = kFALSE;
