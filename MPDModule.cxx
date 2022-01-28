@@ -210,10 +210,17 @@ namespace Decoder {
 	  ENABLE_CM = TESTBIT( thisword, 26 );        
 	  BUILD_ALL_SAMPLES = TESTBIT(thisword, 25 );
 	  CM_OR = TESTBIT(thisword, 24 );
-	  
-	  //FIBER number is in bits 20-16:
-	  fiber = (thisword & 0x001F0000)>>16;
 
+	  //NEW firmware to support up to 40 MPDs per VTP
+	  //to extract bits 21-16:
+	  // 0x003F0000 = 0000 0000 0011 1111 0000 0000 0000 0000
+	  
+	  //FIBER number was in bits 20-16:
+	  //fiber = (thisword & 0x001F0000)>>16;
+
+	  //NOW the fiber number is in bits 21-16:
+	  fiber = (thisword & 0x003F0000)>>16;
+	  
 	  //MPD ID is in bits 0-4, but we basically ignore it:
 	  //mpd_id = (thisword & 0x0000001F);
 
