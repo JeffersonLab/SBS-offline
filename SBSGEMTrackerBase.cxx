@@ -649,6 +649,7 @@ Long64_t SBSGEMTrackerBase::InitFreeHitList(){
   
   Nfreehits_binxy_layer.clear();
   freehitlist_binxy_layer.clear();
+  freehitlist_goodxy.clear();
 
   Long64_t Ncombos=1;
 
