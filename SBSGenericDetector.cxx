@@ -91,7 +91,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // Some temporary variables which we'll use to read in the database
   std::vector<Int_t> detmap, chanmap;
   std::vector<Double_t> xyz, dxyz;
-  Double_t angle = 0.0;
+  //Double_t angle = 0.0;
   Int_t model_in_detmap = 0;
 
   Int_t nrows = 1, nlayers = 1;
@@ -459,7 +459,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(reftdc_offset.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=reftdc_offset[0];
     ResetVector(reftdc_offset,temp,NRefTDCElem);    
-  } else if ( reftdc_offset.size() != NRefTDCElem ) {
+  } else if ( (int)reftdc_offset.size() != NRefTDCElem ) {
     Error( Here(here), "Inconsistent number of reftdc.offset  specified. Expected "
 	   "%d but got %d",NRefTDCElem,int(reftdc_offset.size()));
     return kInitError;
@@ -470,7 +470,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(reftdc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=reftdc_GoodTimeCut[0];
     ResetVector(reftdc_GoodTimeCut,temp,NRefTDCElem);    
-  } else if ( reftdc_GoodTimeCut.size() != NRefTDCElem ) {
+  } else if ( (int)reftdc_GoodTimeCut.size() != NRefTDCElem ) {
     Error( Here(here), "Inconsistent number of reftdc.GoodTimeCut  specified. Expected "
 	   "%d but got %d",NRefTDCElem,int(reftdc_GoodTimeCut.size()));
     return kInitError;
@@ -481,7 +481,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(reftdc_cal.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=reftdc_cal[0];
     ResetVector(reftdc_cal,temp,NRefTDCElem);    
-  } else if ( reftdc_cal.size() != NRefTDCElem ) {
+  } else if ( (int)reftdc_cal.size() != NRefTDCElem ) {
     Error( Here(here), "Inconsistent number of reftdc.cal specified. Expected "
 	   "%d but got %d",NRefTDCElem,int(reftdc_cal.size()));
     return kInitError;
@@ -494,7 +494,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(refadc_ped.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_ped[0];
     ResetVector(refadc_ped,temp,NRefADCElem);    
-  } else if ( refadc_ped.size() != NRefADCElem ) {
+  } else if ( (int)refadc_ped.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
 	   "%d but got %d",NRefADCElem,int(refadc_ped.size()));
     return kInitError;
@@ -505,7 +505,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(refadc_gain.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_gain[0];
     ResetVector(refadc_gain,temp,NRefADCElem);    
-  } else if ( refadc_gain.size() != NRefADCElem ) {
+  } else if ( (int)refadc_gain.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of adc.gain specified. Expected "
         "%d but got %d",int(refadc_gain.size()),NRefADCElem);
     return kInitError;
@@ -517,7 +517,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Double_t temp=refadc_thres[0];
     ResetVector(refadc_thres,temp,NRefADCElem);    
     std::cout << "set all elements  thres = " << refadc_thres[0] << std::endl;
-  } else if ( refadc_thres.size() != NRefADCElem ) {
+  } else if ( (int)refadc_thres.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of refadc.thres specified. Expected "
         "%d but got %d",int(refadc_thres.size()),NRefADCElem);
     return kInitError;
@@ -529,7 +529,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Double_t temp=refadc_conv[0];
     ResetVector(refadc_conv,temp,NRefADCElem);    
     std::cout << "set all elements  conv = " << refadc_conv[0] << std::endl;
-  } else if ( refadc_conv.size() != NRefADCElem ) {
+  } else if ( (int)refadc_conv.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of refadc.conv specified. Expected "
         "%d but got %d",int(refadc_conv.size()),NRefADCElem);
     return kInitError;
@@ -541,7 +541,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Double_t temp=refadc_AmpToIntRatio[0];
     ResetVector(refadc_AmpToIntRatio,temp,NRefADCElem);    
     std::cout << "set all elements  AmpToIntRatio = " << refadc_AmpToIntRatio[0] << std::endl;
-  } else if ( refadc_AmpToIntRatio.size() != NRefADCElem ) {
+  } else if ( (int)refadc_AmpToIntRatio.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of refadc.AmpToIntRatio specified. Expected "
         "%d but got %d",int(refadc_AmpToIntRatio.size()),NRefADCElem);
     return kInitError;
@@ -553,7 +553,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=refadc_NSB[0];
     ResetVector(refadc_NSB,temp,NRefADCElem);    
     std::cout << "set all elements  NSB = " << refadc_NSB[0] << std::endl;
-  } else if ( refadc_NSB.size() != NRefADCElem ) {
+  } else if ( (int)refadc_NSB.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of refadc.NSB specified. Expected "
         "%d but got %d",int(refadc_NSB.size()),NRefADCElem);
     return kInitError;
@@ -565,7 +565,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=refadc_NSA[0];
     ResetVector(refadc_NSA,temp,NRefADCElem);    
     std::cout << "set all elements  NSA = " << refadc_NSA[0] << std::endl;
-  } else if ( refadc_NSA.size() != NRefADCElem ) {
+  } else if ( (int)refadc_NSA.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of refadc.NSA specified. Expected "
         "%d but got %d",int(refadc_NSA.size()),NRefADCElem);
     return kInitError;
@@ -577,7 +577,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=refadc_NPedBin[0];
     ResetVector(refadc_NPedBin,temp,NRefADCElem);    
     std::cout << "set all elements  NPedBin = " << refadc_NPedBin[0] << std::endl;
-  } else if ( refadc_NPedBin.size() != NRefADCElem ) {
+  } else if ( (int)refadc_NPedBin.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of adc.NPedBin specified. Expected "
         "%d but got %d",int(refadc_NPedBin.size()),NRefADCElem);
     return kInitError;
@@ -589,7 +589,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=refadc_FixThresBin[0];
     ResetVector(refadc_FixThresBin,temp,NRefADCElem);    
     std::cout << "set all elements  FixThresBin = " << refadc_FixThresBin[0] << std::endl;
-  } else if ( refadc_FixThresBin.size() != NRefADCElem ) {
+  } else if ( (int)refadc_FixThresBin.size() != NRefADCElem ) {
     Error( Here(here), "Inconsistent number of adc.FixThresBin specified. Expected "
         "%d but got %d",int(refadc_FixThresBin.size()),NRefADCElem);
     return kInitError;
@@ -601,7 +601,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(refadc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=refadc_GoodTimeCut[0];
     ResetVector(refadc_GoodTimeCut,temp,fNelem);    
-  } else if ( refadc_GoodTimeCut.size() != fNelem ) {
+  } else if ( (int)refadc_GoodTimeCut.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of refadc.GoodTime specified. Expected "
 	   "%d but got %d",fNelem,int(refadc_GoodTimeCut.size()));
     return kInitError;
@@ -643,7 +643,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(tdc_offset.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=tdc_offset[0];
     ResetVector(tdc_offset,temp,fNelem);    
-  } else if ( tdc_offset.size() != fNelem ) {
+  } else if ( (int)tdc_offset.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
 	   "%d but got %d",fNelem,int(tdc_offset.size()));
     return kInitError;
@@ -654,7 +654,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(tdc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=tdc_GoodTimeCut[0];
     ResetVector(tdc_GoodTimeCut,temp,fNelem);    
-  } else if ( tdc_GoodTimeCut.size() != fNelem ) {
+  } else if ( (int)tdc_GoodTimeCut.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
 	   "%d but got %d",fNelem,int(tdc_GoodTimeCut.size()));
     return kInitError;
@@ -665,7 +665,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(tdc_cal.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=tdc_cal[0];
     ResetVector(tdc_cal,temp,fNelem);    
-  } else if ( tdc_cal.size() != fNelem ) {
+  } else if ( (int)tdc_cal.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
 	   "%d but got %d",fNelem,int(tdc_cal.size()));
     return kInitError;
@@ -676,7 +676,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(adc_ped.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_ped[0];
     ResetVector(adc_ped,temp,fNelem);    
-  } else if ( adc_ped.size() != fNelem ) {
+  } else if ( (int)adc_ped.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
 	   "%d but got %d",fNelem,int(adc_ped.size()));
     return kInitError;
@@ -687,7 +687,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(adc_gain.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_gain[0];
     ResetVector(adc_gain,temp,fNelem);    
-  } else if ( adc_gain.size() != fNelem ) {
+  } else if ( (int)adc_gain.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.gain specified. Expected "
         "%d but got %d",int(adc_gain.size()),fNelem);
     return kInitError;
@@ -699,7 +699,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Double_t temp=adc_thres[0];
     ResetVector(adc_thres,temp,fNelem);    
     std::cout << "set all elements  thres = " << adc_thres[0] << std::endl;
-  } else if ( adc_thres.size() != fNelem ) {
+  } else if ( (int)adc_thres.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.thres specified. Expected "
         "%d but got %d",int(adc_thres.size()),fNelem);
     return kInitError;
@@ -711,7 +711,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Double_t temp=adc_conv[0];
     ResetVector(adc_conv,temp,fNelem);    
     std::cout << "set all elements  conv = " << adc_conv[0] << std::endl;
-  } else if ( adc_conv.size() != fNelem ) {
+  } else if ( (int)adc_conv.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.conv specified. Expected "
         "%d but got %d",int(adc_conv.size()),fNelem);
     return kInitError;
@@ -724,7 +724,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Double_t temp=adc_AmpToIntRatio[0];
     ResetVector(adc_AmpToIntRatio,temp,fNelem);    
     std::cout << "set all elements  AmpToIntRatio = " << adc_AmpToIntRatio[0] << std::endl;
-  } else if ( adc_AmpToIntRatio.size() != fNelem ) {
+  } else if ( (int)adc_AmpToIntRatio.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.AmpToIntRatio specified. Expected "
         "%d but got %d",int(adc_AmpToIntRatio.size()),fNelem);
     return kInitError;
@@ -736,7 +736,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=adc_NSB[0];
     ResetVector(adc_NSB,temp,fNelem);    
     std::cout << "set all elements  NSB = " << adc_NSB[0] << std::endl;
-  } else if ( adc_NSB.size() != fNelem ) {
+  } else if ( (int)adc_NSB.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.NSB specified. Expected "
         "%d but got %d",int(adc_NSB.size()),fNelem);
     return kInitError;
@@ -748,7 +748,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=adc_NSA[0];
     ResetVector(adc_NSA,temp,fNelem);    
     std::cout << "set all elements  NSA = " << adc_NSA[0] << std::endl;
-  } else if ( adc_NSA.size() != fNelem ) {
+  } else if ( (int)adc_NSA.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.NSA specified. Expected "
         "%d but got %d",int(adc_NSA.size()),fNelem);
     return kInitError;
@@ -760,7 +760,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=adc_NPedBin[0];
     ResetVector(adc_NPedBin,temp,fNelem);    
     std::cout << "set all elements  NPedBin = " << adc_NPedBin[0] << std::endl;
-  } else if ( adc_NPedBin.size() != fNelem ) {
+  } else if ( (int)adc_NPedBin.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.NPedBin specified. Expected "
         "%d but got %d",int(adc_NPedBin.size()),fNelem);
     return kInitError;
@@ -772,7 +772,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     Int_t temp=adc_FixThresBin[0];
     ResetVector(adc_FixThresBin,temp,fNelem);    
     std::cout << "set all elements  FixThresBin = " << adc_FixThresBin[0] << std::endl;
-  } else if ( adc_FixThresBin.size() != fNelem ) {
+  } else if ( (int)adc_FixThresBin.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.FixThresBin specified. Expected "
         "%d but got %d",int(adc_FixThresBin.size()),fNelem);
     return kInitError;
@@ -784,7 +784,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   } else if(adc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_GoodTimeCut[0];
     ResetVector(adc_GoodTimeCut,temp,fNelem);    
-  } else if ( adc_GoodTimeCut.size() != fNelem ) {
+  } else if ( (int)adc_GoodTimeCut.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
 	   "%d but got %d",fNelem,int(adc_GoodTimeCut.size()));
     return kInitError;
@@ -1005,12 +1005,12 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
   ClearEvent();
   //static const char* const here = "Decode()";
   // Loop over modules for the reference time
-  SBSElement *blk = 0;
+  SBSElement *blk = nullptr;
   if (!fDisableRefADC || !fDisableRefTDC) {
-  for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
+  for( UInt_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
     if (!fModuleRefTimeFlag[imod]) continue;
     THaDetMap::Module *d = fDetMap->GetModule( imod );
-    for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
+    for(UInt_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
       if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] == -1) continue;
 	blk = fRefElements[ fRefChanMap[imod][chan-d->lo]];
@@ -1025,13 +1025,13 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
   }
 
   // Loop over all modules decode accordingly
-  blk = 0;
-  for( UShort_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
+  blk = nullptr;
+  for( UInt_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
     THaDetMap::Module *d = fDetMap->GetModule( imod );
-	for(Int_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
+	for(UInt_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       // Get the next available channel, skipping the ones that do not belong
       // to our detector
-      Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
+      UInt_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
       if( chan > d->hi || chan < d->lo || fChanMap[imod][chan-d->lo] == -1 || fChanMap[imod][chan-d->lo] == -1000)
         continue;
        fNhits++;
@@ -1056,8 +1056,8 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
 Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     SBSElement *blk, THaDetMap::Module *d, Int_t chan,Bool_t IsRef)
 {
-  Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
-  if(nhit <= 0  || !WithADC() || !blk)    return 0;
+  UInt_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
+  if(nhit == 0  || !WithADC() || !blk)    return 0;
   // If not a reference element then determine the reference time to use
   Double_t reftime=0; 
   if (!IsRef && !fDisableRefADC && d->refindex>=0) {
@@ -1070,9 +1070,9 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     } else if (fModeADC == SBSModeADC::kADC && refblk->ADC()->HasData()) {
        Int_t nhits = refblk->ADC()->GetNHits(); 
        Double_t MinDiff = 10000.;
-       UInt_t HitIndex = 0;
+       Int_t HitIndex = 0;
        Double_t RefCent = refblk->ADC()->GetGoodTimeCut();
-       for (UInt_t ih=0;ih<nhits;ih++) {
+       for (Int_t ih=0;ih<nhits;ih++) {
 	 if (abs(refblk->ADC()->GetTime(ih).val-RefCent) < MinDiff) {
            HitIndex = ih;
 	   MinDiff = abs(refblk->ADC()->GetTime(ih).val-RefCent);
@@ -1101,7 +1101,7 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
   } else {
     std::vector<Double_t> samples;
     samples.resize(nhit);
-    for(Int_t i = 0; i < nhit; i++) {
+    for(UInt_t i = 0; i < nhit; i++) {
       samples[i] = evdata.GetData(d->crate, d->slot, chan, i);
     }
     blk->Waveform()->Process(samples);
@@ -1120,6 +1120,14 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   Double_t reftime  = 0;
   //
+  std::vector<TDCHits> tdchit;
+  if(fModeTDC == SBSModeTDC::kTDC )  {
+    for(Int_t ihit = 0; ihit < nhit; ihit++) {
+      TDCHits c1 = {evdata.GetRawData(d->crate, d->slot, chan, ihit),evdata.GetData(d->crate, d->slot, chan, ihit)};
+      tdchit.push_back(c1);
+    }
+    std::sort(tdchit.begin(), tdchit.end(), [](const TDCHits& c1, const TDCHits& c2) {return c1.rawtime < c2.rawtime;});
+  }
   //
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
      SBSElement *refblk = fRefElements[d->refindex];
@@ -1130,9 +1138,9 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
        Double_t MinDiff = 10000.;
-       UInt_t HitIndex = 0;
+       Int_t HitIndex = 0;
        Double_t RefCent = refblk->TDC()->GetGoodTimeCut();
-       for (UInt_t ih=0;ih<nhits;ih++) {
+       for (Int_t ih=0;ih<nhits;ih++) {
 	 if (abs(refblk->TDC()->GetData(ih)-RefCent) < MinDiff) {
            HitIndex = ih;
 	   MinDiff = abs(refblk->TDC()->GetData(ih)-RefCent);
@@ -1151,15 +1159,14 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
         if(fModeTDC == SBSModeTDC::kTDCSimple) {
     blk->TDC()->ProcessSimple(elemID,evdata.GetData(d->crate, d->slot, chan, ihit) - reftime,ihit);
 	} else {
-      edge = evdata.GetRawData(d->crate, d->slot, chan, ihit);
+      edge = tdchit[ihit].edge;
       //           std::cout << ihit << " " << evdata.GetData(d->crate, d->slot, chan, ihit) - reftime << " " << edge << std::endl;
     if (edge ==1 && ihit ==0) continue; // skip first hit if trailing edge
     if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
-    blk->TDC()->Process(elemID,
-        evdata.GetData(d->crate, d->slot, chan, ihit) - reftime, edge);
+    blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
   }
   if (!blk->TDC()->HasData()) {
-          Double_t val= evdata.GetData(d->crate, d->slot, chan, 0);
+          Double_t val=tdchit[0].rawtime ;
 	  blk->TDC()->Process(elemID,val - reftime , edge);
 	  /*
             if (nhit==1)  {	 

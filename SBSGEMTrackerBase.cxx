@@ -69,7 +69,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fIsSpectrometerTracker = true; //default to true
   fIsPolarimeterTracker = false;
   fUseOpticsConstraint = false;
-  fUseFrontTrackerConstraint =false;
+  //fUseFrontTrackerConstraint =false;
 
   fPmin_track = 0.5; //GeV
   fPmax_track = 11.0; //GeV
@@ -80,6 +80,15 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fyptarmax_track = 0.25;
   fytarmin_track = -0.3; //m
   fytarmax_track = 0.3;  //m
+
+  fUseSlopeConstraint = false;
+  fxpfpmin = -0.5;
+  fxpfpmax = 0.5;
+  fypfpmin = -0.2;
+  fypfpmax = 0.2;
+  
+  fCommonModePlotsFlag = 0; 
+  fCommonModePlotsFlagIsSet = false;
   
 }
 
@@ -175,7 +184,21 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitV_CM_GOOD.clear();
   fHitV_BUILD_ALL_SAMPLES.clear();
   
+  fHitADCfrac0_MaxUstrip.clear();
+  fHitADCfrac1_MaxUstrip.clear();
+  fHitADCfrac2_MaxUstrip.clear();
+  fHitADCfrac3_MaxUstrip.clear();
+  fHitADCfrac4_MaxUstrip.clear();
+  fHitADCfrac5_MaxUstrip.clear();
+
+  fHitADCfrac0_MaxVstrip.clear();
+  fHitADCfrac1_MaxVstrip.clear();
+  fHitADCfrac2_MaxVstrip.clear();
+  fHitADCfrac3_MaxVstrip.clear();
+  fHitADCfrac4_MaxVstrip.clear();
+  fHitADCfrac5_MaxVstrip.clear();
   
+
   fclustering_done = false;
   ftracking_done = false;
   
@@ -189,7 +212,7 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   fModuleListByLayer.clear();
   //loop on the array of (initialized) modules and fill out missing info:
   
-  for( int imod=0; imod<fModules.size(); imod++ ){
+  for( int imod=0; imod<(int)fModules.size(); imod++ ){
     int layer = fModules[imod]->fLayer;
 
     fLayers.insert( layer );
@@ -208,6 +231,10 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     //moved "zero suppress" flag to GEMModule
     fModules[imod]->fBinSize_efficiency1D = fBinSize_efficiency1D;
     fModules[imod]->fBinSize_efficiency2D = fBinSize_efficiency2D;
+
+    if( fCommonModePlotsFlagIsSet ){
+      fModules[imod]->SetMakeCommonModePlots( fCommonModePlotsFlag );
+    }
   }
 
   fNmodules = fModules.size();
@@ -224,8 +251,7 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   fIndexByLayer.clear();
   
   int layerindex=0;
-  for( auto ilay = fLayers.begin(); ilay != fLayers.end(); ++ilay ){
-    int layer = *ilay;
+  for(int layer : fLayers){
     fLayerByIndex.push_back( layer ); //this is a vector version of the layer list, unless the user has defined something weird, layer[layerindex] = layerindex for layerindex = 0, ..., Nlayers-1
     fIndexByLayer[layer] = layerindex;
     fNumModulesByLayer[layer] = fModuleListByLayer[layer].size();
@@ -239,7 +265,7 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   InitLayerCombos();
   InitGridBins();
 
-  if( fpedfilename != "" ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
+  if( !fpedfilename.empty() ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
     //NOTE: if we load the pedestals from a file formatted in the way the DAQ wants, then we have to assume that SLOT, MPD_ID, and ADC_CH are sufficient to uniquely identify
 
     LoadPedestals( fpedfilename.c_str() );
@@ -587,10 +613,10 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
 
   Long64_t ncombos_all_layers=1;
   
-  for( int imodule=0; imodule<fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
+  for( int imodule=0; imodule<(int)fModules.size(); imodule++ ){ //loop over all the 2D hits in all modules (track search region was already enforced in hit_reconstruction)
     int layer = fIndexByLayer[fModules[imodule]->fLayer];
 
-    int n2Dhits_mod = fModules[imodule]->fN2Dhits; 
+    int n2Dhits_mod = fModules[imodule]->fN2Dhits;
     
     for( int ihit=0; ihit<n2Dhits_mod; ihit++ ){
       sbsgemhit_t hittemp = fModules[imodule]->fHits[ihit];
@@ -606,8 +632,8 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
     }
   }
 
-  for( auto ilay=layers_with_2Dhits.begin(); ilay != layers_with_2Dhits.end(); ++ilay ){
-    ncombos_all_layers *= N2Dhits_layer[*ilay];
+  for(int layer : layers_with_2Dhits){
+    ncombos_all_layers *= N2Dhits_layer[layer];
   }
 
   return ncombos_all_layers;
@@ -623,6 +649,7 @@ Long64_t SBSGEMTrackerBase::InitFreeHitList(){
   
   Nfreehits_binxy_layer.clear();
   freehitlist_binxy_layer.clear();
+  freehitlist_goodxy.clear();
 
   Long64_t Ncombos=1;
 
@@ -787,7 +814,7 @@ void SBSGEMTrackerBase::hit_reconstruction(){
 void SBSGEMTrackerBase::find_tracks(){ 
 
   //should this method invoke clear()? Yes: Clear() just clears out all the track arrays. It is assumed that this method will only be called once per event.
-  //Although that is probably not correct; it might be called as many as two times. Anyway, for now, let's use it, might need to revisit later:
+  //Although that is probably not correct; it might be called as many as two times or perhaps once per cluster (to be developed later). Anyway, for now, let's use it, might need to revisit later:
   Clear();
   //std::cout << "[SBSGEMTrackerBase::find_tracks]: finished clearing track arrays..." << std::endl;
   
@@ -803,7 +830,7 @@ void SBSGEMTrackerBase::find_tracks(){
   //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
 
   //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
-  Long64_t Ncombos_allhits_all_layers = InitHitList();
+  /*Long64_t Ncombos_allhits_all_layers = */InitHitList();
 
   
   //std::cout << 
@@ -812,7 +839,7 @@ void SBSGEMTrackerBase::find_tracks(){
   // 	    << layers_with_2Dhits.size() << ", total hit combinations = " << Ncombos_allhits_all_layers << std::endl;
   //At this stage the static "hit lists" that we need for the tracking are initialized. Let's get started:
   
-  if( layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
+  if( (int)layers_with_2Dhits.size() >= fMinHitsOnTrack ){ //Then we have enough layers to do tracking:
     //bool foundtrack = true; rendered unnecessary by the removal of the outermost, redundant while loop:
       
     int nhitsrequired = layers_with_2Dhits.size(); //initially we favor tracks with the largest possible number of hits; if we fail to find a track at this hit requirement, we decrement the number of required hits as long as it exceeds the minimum
@@ -846,7 +873,7 @@ void SBSGEMTrackerBase::find_tracks(){
       // 		<< ", number of layers with unused hits, ntracks = " 
       // 		<< layerswithfreehits.size() << ", " << fNtracks_found << ", free hit combinations = " << Ncombos_free << std::endl;
       
-      if( layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
+      if( (int)layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
 	//The basic algorithm should do the following:
 
 	// 1. Loop over all possible layer combinations for which the number of layers is equal to the current minimum hit requirement:
@@ -873,7 +900,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	//Let's carry around the track fitting residuals so that we don't have to repeat the calculation when adding the fitted track with best chi2 to the track arrays:
 	vector<double> uresidbest, vresidbest;
 	  
-	for( int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
+	for( unsigned int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
 
 	  // std::cout << "layer combo index, list of layers = "
 	  // 	    << icombo << ", ";
@@ -906,7 +933,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	  // std::cout << "minlayer, maxlayer, ncombos_minmax = " << minlayer << ", "
 	  // 	    << maxlayer << ", " << ncombos_minmax << std::endl;
 	  
-	  if( layerstotest.size() < nhitsrequired ){
+	  if( (int)layerstotest.size() < nhitsrequired ){
 	    //skip this layer combination if any layers lack free hits at the current minimum hit requirement:
 	    continue;
 	  }
@@ -1011,7 +1038,16 @@ void SBSGEMTrackerBase::find_tracks(){
 	      }
 
 	      if( !constraint_check ) continue;
-	       
+
+	      //If using slope constraint, ignore pairs of hits that would give slope outside the allowed range
+	      //along X or Y:
+	      bool slope_check = true;
+	      if( fUseSlopeConstraint ){
+		slope_check = ( fxpfpmin <= xptrtemp && xptrtemp <= fxpfpmax &&
+				fypfpmin <= yptrtemp && yptrtemp <= fypfpmax );
+	      }
+
+	      if( !slope_check ) continue;
 	      
 	      //Next we will project the track to the average Z coordinate of each layer in "otherlayers" and check for hits in nearby grid bins:
 
@@ -1092,7 +1128,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		    
 		    if( binx >= 0 && binx < fGridNbinsX_layer[layer] &&
 			biny >= 0 && biny < fGridNbinsY_layer[layer] ) { 
-		      for( int khit=0; khit<freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
+		      for( int khit=0; khit<(int)freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
 			//this step can be computationally expensive:
 			freehitlist_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
 		      }
@@ -1181,7 +1217,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		    //Fit a track to the current hit combination:
 		    //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
 		    FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
-		  
+
 		    //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
 		  
 		    if( firstgoodcombo || chi2ndftemp < minchi2 ){
@@ -1219,7 +1255,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
 		    int layerk = *klay;
 		    
-		    for( int khit=0; khit<freehitlist_goodxy[layerk].size(); khit++ ){
+		    for( int khit=0; khit<(int)freehitlist_goodxy[layerk].size(); khit++ ){
 		      int hitk = freehitlist_goodxy[layerk][khit];
 
 		      int modk = modindexhit2D[layerk][hitk];
@@ -1276,12 +1312,67 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	  //We treat all layer combinations at the same minimum hit requirement on an equal footing as far as track-finding is concerned:
 	if( !firstgoodcombo && minchi2 < fTrackChi2Cut ){ //then we found at least one candidate track:
-	  foundtrack = true;
+	  //check optics and other constraints:
 
+	  //double xtrtemp = besttrack[0];
+	  //double ytrtemp = besttrack[1];
+	  //double xptrtemp = besttrack[2];
+	  //double yptrtemp = besttrack[3];
+
+	  TVector3 TrackPosTemp( besttrack[0], besttrack[1], 0.0 );
+	  TVector3 TrackDirTemp( besttrack[2], besttrack[3], 1.0 );
+	  TrackDirTemp = TrackDirTemp.Unit(); 
+
+	  bool goodoptics = true;
+	  if( fIsSpectrometerTracker && fUseOpticsConstraint ){
+	    goodoptics = PassedOpticsConstraint( TrackPosTemp, TrackDirTemp );
+	  }
+	  
+	  //If using search region constraint, ignore tracks that don't give straight-line track parameters consistent with the constraint:
+	  bool constraint_check = true;
+	  if( fUseConstraint ){
+	    constraint_check = CheckConstraint( besttrack[0], besttrack[1], besttrack[2], besttrack[3] );
+	  }
+		    
+	  //If using slope constraint, ignore tracks that would give slope outside the allowed range
+	  //along X or Y:
+	  bool slope_check = true;
+	  if( fUseSlopeConstraint ){
+	    slope_check = ( fxpfpmin <= besttrack[2] && besttrack[2] <= fxpfpmax &&
+			    fypfpmin <= besttrack[3] && besttrack[3] <= fypfpmax );
+	  }
+	  
+	  foundtrack = goodoptics && constraint_check && slope_check;
+	  
 	  // "AddTrack" takes care of incrementing fNtracks_found
 	  //Changed method name to "AddNewTrack to avoid conflict with THaTrackingDetector::AddTrack
-	  AddNewTrack( besthitcombo, besttrack, minchi2, uresidbest, vresidbest );
+	  
+	  Int_t nHighQualityHits = 0;
+	  //For three-hit tracks, we require ALL three hits to be "high-quality" hits: 
+	  //if( besthitcombo.size() == 3 ){
+	  for( auto ilayer = besthitcombo.begin(); ilayer != besthitcombo.end(); ++ilayer ){
+	    int layer = ilayer->first;
+	    int hitidx = ilayer->second;
 	    
+	    int module = modindexhit2D[layer][hitidx];
+	    int iclust = clustindexhit2D[layer][hitidx];
+	    
+	    if( fModules[module]->fHits[iclust].highquality ) nHighQualityHits++;
+
+	  }
+	  
+	  if( besthitcombo.size() == 3 ){
+	    foundtrack = foundtrack && nHighQualityHits >= 3;
+	  }
+
+	  // Special treatment and extra hit/track quality cuts for 3-hit tracks:
+	  // In particular, require at least 2x2 cluster size, good ADC correlation for all 3 hits on the track, 
+	  // And also check agreement of hit times with each other:
+	  
+
+	  if( foundtrack ){
+	    AddNewTrack( besthitcombo, besttrack, minchi2, uresidbest, vresidbest );
+	  }
 	}
 	  
       } else {
@@ -1332,34 +1423,14 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       sbsgemcluster_t *uclustinfo = &(fModules[module]->fUclusters[hitinfo->iuclust]);
       sbsgemcluster_t *vclustinfo = &(fModules[module]->fVclusters[hitinfo->ivclust]);
 
+      int ntimesamples = fModules[module]->fN_MPD_TIME_SAMP;
+
+      UInt_t hitidx_umax = uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo];
+      UInt_t hitidx_vmax = vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo];
+      
       fHitModule.push_back( module );
       fHitLayer.push_back( layer );
       //
-      fHitNstripsU.push_back( uclustinfo->nstrips );
-      fHitUstripMax.push_back( uclustinfo->istripmax );
-      fHitUstripLo.push_back( uclustinfo->istriplo );
-      fHitUstripHi.push_back( uclustinfo->istriphi );
-
-      //Also set the "trackindex" variable for all strips on this track:
-      for( int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
-	fModules[module]->fStripTrackIndex[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = itrack;
-	fModules[module]->fStripOnTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
-	fModules[module]->fStripUonTrack[uclustinfo->hitindex[istrip-uclustinfo->istriplo]] = 1;
-      }
-      
-      //
-      fHitNstripsV.push_back( vclustinfo->nstrips );
-      fHitVstripMax.push_back( vclustinfo->istripmax );
-      fHitVstripLo.push_back( vclustinfo->istriplo );
-      fHitVstripHi.push_back( vclustinfo->istriphi );
-      //
-
-      //Also set the "trackindex" variable for all strips on this track:
-      for( int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
-	fModules[module]->fStripTrackIndex[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = itrack;
-	fModules[module]->fStripOnTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
-	fModules[module]->fStripVonTrack[vclustinfo->hitindex[istrip-vclustinfo->istriplo]] = 1;
-      }
       
       fHitUlocal.push_back( hitinfo->uhit );
       fHitVlocal.push_back( hitinfo->vhit );
@@ -1379,12 +1450,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitUADC.push_back( uclustinfo->clusterADCsum );
       fHitVADC.push_back( vclustinfo->clusterADCsum );
       fHitADCavg.push_back( 0.5*( fHitUADC.back() + fHitVADC.back() ) );
-
+      
       fHitUADCmaxclustsample.push_back( uclustinfo->ADCsamples[uclustinfo->isampmax] );
       fHitVADCmaxclustsample.push_back( vclustinfo->ADCsamples[vclustinfo->isampmax] );
-      
-      UInt_t hitidx_umax = uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo];
-      UInt_t hitidx_vmax = vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo];
       
       fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_umax] );
       fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_vmax] );
@@ -1419,7 +1487,118 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );
       fHitCorrCoeffMaxStrip.push_back( hitinfo->corrcoeff_strip );
 
+      fHitNstripsU.push_back( uclustinfo->nstrips );
+      fHitUstripMax.push_back( uclustinfo->istripmax );
+      fHitUstripLo.push_back( uclustinfo->istriplo );
+      fHitUstripHi.push_back( uclustinfo->istriphi );
+
+      //
+      fHitNstripsV.push_back( vclustinfo->nstrips );
+      fHitVstripMax.push_back( vclustinfo->istripmax );
+      fHitVstripLo.push_back( vclustinfo->istriplo );
+      fHitVstripHi.push_back( vclustinfo->istriphi );
+      //
+      
+      
+      
+      //Also set the "trackindex" variable and other properties for strips on this track:
+      for( unsigned int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
+
+	int hitidx_i = uclustinfo->hitindex[istrip-uclustinfo->istriplo];
+	
+	fModules[module]->fStripTrackIndex[hitidx_i] = itrack;
+	fModules[module]->fStripOnTrack[hitidx_i] = 1;
+	fModules[module]->fStripUonTrack[hitidx_i] = 1;
+
+	bool ismaxstrip = (istrip == uclustinfo->istripmax);
+
+	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( hitidx_i, ismaxstrip );
+	//Fill strip time difference and corr. coefficient: 
+	fModules[module]->fStripTdiff[hitidx_i] = fModules[module]->fTmean[hitidx_i] - fHitTavg.back();
+
+	
+	
+	double ccor_temp;
+	if( ismaxstrip ){ //for the max. strip, calculate corr. coeff with the cluster-summed ADC samples:
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   uclustinfo->ADCsamples );
+	} else { //for other strips, calculate corr. coeff. with the max strip:
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   fModules[module]->fADCsamples[hitidx_umax] );
+	}
+	fModules[module]->fStripCorrCoeff[hitidx_i] = ccor_temp;
+	
+      }
+      
+      
+
+      //Also set the "trackindex" variable and other properties for all strips on this track:
+      for( unsigned int istrip=vclustinfo->istriplo; istrip<=vclustinfo->istriphi; istrip++ ){
+	int hitidx_i = vclustinfo->hitindex[istrip - vclustinfo->istriplo];
+	
+	fModules[module]->fStripTrackIndex[hitidx_i] = itrack;
+	fModules[module]->fStripOnTrack[hitidx_i] = 1;
+	fModules[module]->fStripVonTrack[hitidx_i] = 1;
+
+	bool ismaxstrip = (istrip == vclustinfo->istripmax);
+
+	fModules[module]->fill_ADCfrac_vs_time_sample_goodstrip( vclustinfo->hitindex[istrip-vclustinfo->istriplo], ismaxstrip );
+	fModules[module]->fStripTdiff[hitidx_i] = fModules[module]->fTmean[hitidx_i] - fHitTavg.back();
+
+	double ccor_temp;
+	if( ismaxstrip ){
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   vclustinfo->ADCsamples );
+	} else {
+	  ccor_temp = fModules[module]->CorrCoeff( ntimesamples,
+						   fModules[module]->fADCsamples[hitidx_i],
+						   fModules[module]->fADCsamples[hitidx_vmax] );
+	}
+
+	fModules[module]->fStripCorrCoeff[hitidx_i] = ccor_temp;
+      }
+ 
+	  //hard-coded limit of 6 APV25 samples for output:
+      //int ntimesamples = 6; 
+      
+      double ADCfrac_maxUstrip[ntimesamples];
+      double ADCfrac_maxVstrip[ntimesamples]; 
+     
+      
+      
+      
+      double ADCsum_maxUstrip = fModules[module]->fADCsums[hitidx_umax];
+      double ADCsum_maxVstrip = fModules[module]->fADCsums[hitidx_vmax];
+      
+      for( int isamp=0; isamp<ntimesamples; isamp++ ){
+	ADCfrac_maxUstrip[isamp] = 0.0;
+	ADCfrac_maxVstrip[isamp] = 0.0;
+	if( isamp < fModules[module]->fN_MPD_TIME_SAMP ){
+	  ADCfrac_maxUstrip[isamp] = fModules[module]->fADCsamples[hitidx_umax][isamp]/ADCsum_maxUstrip;
+	  ADCfrac_maxVstrip[isamp] = fModules[module]->fADCsamples[hitidx_vmax][isamp]/ADCsum_maxVstrip;
+	}
+      }
+      
+      fHitADCfrac0_MaxUstrip.push_back( ADCfrac_maxUstrip[0] );
+      fHitADCfrac1_MaxUstrip.push_back( ADCfrac_maxUstrip[1] );
+      fHitADCfrac2_MaxUstrip.push_back( ADCfrac_maxUstrip[2] );
+      fHitADCfrac3_MaxUstrip.push_back( ADCfrac_maxUstrip[3] );
+      fHitADCfrac4_MaxUstrip.push_back( ADCfrac_maxUstrip[4] );
+      fHitADCfrac5_MaxUstrip.push_back( ADCfrac_maxUstrip[5] );
+      
+      fHitADCfrac0_MaxVstrip.push_back( ADCfrac_maxVstrip[0] );
+      fHitADCfrac1_MaxVstrip.push_back( ADCfrac_maxVstrip[1] );
+      fHitADCfrac2_MaxVstrip.push_back( ADCfrac_maxVstrip[2] );
+      fHitADCfrac3_MaxVstrip.push_back( ADCfrac_maxVstrip[3] );
+      fHitADCfrac4_MaxVstrip.push_back( ADCfrac_maxVstrip[4] );
+      fHitADCfrac5_MaxVstrip.push_back( ADCfrac_maxVstrip[5] );
+
+      
       if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 && itrack == 0 ){
+      //if( fMakeEfficiencyPlots && itrack == 0 ){
 	//fill "did hit" efficiency histos (numerator for efficiency determination):
 	double sdummy;
 	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
@@ -1484,6 +1663,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	  fModules[module]->fTrackPassedThrough = 1;
 	  
 	  if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= minhits && itrack == 0 ){
+	  //if( fMakeEfficiencyPlots && itrack == 0 ){
 
 	    bool constraint_check = true;
 
@@ -1607,7 +1787,7 @@ bool SBSGEMTrackerBase::GetNextCombo( const std::set<int> &layers, std::map<int,
     int nextlayer = *nextlayercounter;
     
     if( layer == nextlayer && !firstcombo ){
-      if( hitcounter[layer]+1 < freehitlist_goodxy[layer].size() ){
+      if( hitcounter[layer]+1 < (int)freehitlist_goodxy[layer].size() ){
 	hitcounter[layer]++;
       } else {
 	//reached last hit in current layer; roll back to first hit in this layer and increment hit counter in next layer:
@@ -1640,8 +1820,8 @@ TVector3 SBSGEMTrackerBase::GetHitPosGlobal( int module, int clustindex ){
   
   //check that module and cluster are in range: these conditions should never evaluate to true, but we want to prevent
   // seg. faults anyway
-  if( module < 0 || module >= fModules.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
-  if( clustindex < 0 || clustindex >= fModules[module]->fHits.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
+  if( module < 0 || module >= (int)fModules.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
+  if( clustindex < 0 || clustindex >= (int)fModules[module]->fHits.size() ) return TVector3(-1.e12, -1.e12, -1.e12);
   
   return TVector3( fModules[module]->fHits[clustindex].xghit,
 		   fModules[module]->fHits[clustindex].yghit,

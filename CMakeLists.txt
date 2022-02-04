@@ -3,7 +3,7 @@
 #
 
 ## Set the default build type
-set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Set build type (Debug is default)")
+set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Set build type (RelWithDebInfo is default)")
 
 set(DEV_WARNING "cmake build of SBS-Offline is still in development. Please test and report issues")
 
@@ -29,8 +29,6 @@ SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_LIBDIR}")
 # add the automatically determined parts of the RPATH
 # which point to directories outside the build tree to the install RPATH
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-#SET(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 # the RPATH to be used when installing, but only if it's not a system directory
 LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_FULL_LIBDIR}" isSystemDir)
@@ -129,6 +127,10 @@ if(UNIX) ## Can be anything from Linux to Mac OS X
   if(APPLE)
     set(MACVERS ON)
     list(APPEND SBSEXTRADEF_LIST MACVERS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
+    if(EXTRAWARN)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
+    endif()
     set(SBS_LINKFLAGS "${SBS_LINKFLAGS} -Wl,-undefined,dynamic_lookup")
   else()
     set(LINUXVERS ON)
@@ -136,7 +138,7 @@ if(UNIX) ## Can be anything from Linux to Mac OS X
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Woverloaded-virtual")
     if(EXTRAWARN AND CMAKE_COMPILER_IS_GNUCXX AND NOT
         CMAKE_CXX_COMPILER_VERSION LESS 4)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-missing-field-initializers")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
     endif()
     if(CXXMAXERRORS GREATER 0)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmax-errors=${CXXMAXERRORS}")

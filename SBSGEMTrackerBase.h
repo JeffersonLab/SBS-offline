@@ -60,6 +60,8 @@ public:
   
   void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
+  void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
+
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
   virtual ~SBSGEMTrackerBase(); 
@@ -70,7 +72,7 @@ protected:
   bool fIsSpectrometerTracker; //default to true:
   bool fIsPolarimeterTracker; 
   bool fUseOpticsConstraint; //default to FALSE:
-  bool fUseFrontTrackerConstraint; //default to FALSE:
+  //bool fUseFrontTrackerConstraint; //default to FALSE:
   
   //1D and 2D clustering: 
   void hit_reconstruction();
@@ -122,8 +124,6 @@ protected:
   void AddNewTrack( const std::map<int,int> &hitcombo, const std::vector<double> &BestTrack, double chi2ndf, const std::vector<double> &uresid, const std::vector<double> &vresid );
 
   void PurgeHits(int itrack);
-
-  
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
@@ -139,6 +139,10 @@ protected:
 
   bool fSubtractPedBeforeCommonMode; //flag only applies to pedestal-mode analysis
   
+  bool fCommonModePlotsFlagIsSet; 
+  int fCommonModePlotsFlag; 
+  //bool fMakeCommonModePlots; //this will get propagated down to the modules
+
   // bool fPedestalsInitialized;
   
   bool fIsMC;
@@ -200,7 +204,13 @@ protected:
   double fPmax_track; //GeV
   double fxptarmin_track, fxptarmax_track;
   double fyptarmin_track, fyptarmax_track;
-  double fytarmin_track, fytarmax_track; 
+  double fytarmin_track, fytarmax_track;
+
+  bool fUseSlopeConstraint;
+  double fxpfpmin, fxpfpmax;
+  double fypfpmin, fypfpmax;
+
+  //FP track cuts: 
   
   Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   
@@ -325,7 +335,21 @@ protected:
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster
   std::vector<double> fHitIsampMaxVstrip; //same but for max strip in cluster
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
-  std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC. 
+  std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC.
+  //For pulse shape studies:
+  std::vector<double> fHitADCfrac0_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac1_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac2_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac3_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac4_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac5_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac0_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac1_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac2_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac3_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac4_MaxVstrip; //time sample 0 of max U strip
+  std::vector<double> fHitADCfrac5_MaxVstrip; //time sample 0 of max U strip
+
   //And I THINK that's all we need to get started!
   std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
   std::vector<UInt_t> fHitU_CM_GOOD;

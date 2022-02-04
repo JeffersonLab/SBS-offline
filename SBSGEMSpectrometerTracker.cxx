@@ -31,6 +31,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fIsSpectrometerTracker = true; //used by tracker base
   fUseOpticsConstraint = false;
   
+  fTestTrackInitialized = false;
+
   fTestTracks = new TClonesArray("THaTrack",1);
 }
 
@@ -62,7 +64,11 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
 
     CompleteInitialization();
 
-    new( (*fTestTracks)[0] ) THaTrack();
+    if( !fTestTrackInitialized ){
+    
+      new( (*fTestTracks)[0] ) THaTrack();
+      fTestTrackInitialized = true;
+    }
     
   } else {
     return kInitError;
@@ -106,6 +112,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int mc_flag = fIsMC ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
+  int useslopeconstraint = fUseSlopeConstraint ? 1 : 0;
   
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
@@ -129,6 +136,19 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
+    { "xptar_min", &fxptarmin_track, kDouble, 0, 1, 1},
+    { "xptar_max", &fxptarmax_track, kDouble, 0, 1, 1},
+    { "yptar_min", &fyptarmin_track, kDouble, 0, 1, 1},
+    { "yptar_max", &fyptarmax_track, kDouble, 0, 1, 1},
+    { "ytar_min", &fytarmin_track, kDouble, 0, 1, 1},
+    { "ytar_max", &fytarmax_track, kDouble, 0, 1, 1},
+    { "pmin", &fPmin_track, kDouble, 0, 1, 1},
+    { "pmax", &fPmax_track, kDouble, 0, 1, 1},
+    { "useslopeconstraint", &useslopeconstraint, kInt, 0, 1, 1 },
+    { "xpfp_min", &fxpfpmin, kDouble, 0, 1, 1 },
+    { "xpfp_max", &fxpfpmax, kDouble, 0, 1, 1 },
+    { "ypfp_min", &fypfpmin, kDouble, 0, 1, 1 },
+    { "ypfp_max", &fypfpmax, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -150,8 +170,12 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 
+  fUseSlopeConstraint = (useslopeconstraint != 0 );
+  
   //std::cout << "pedestal file name = " << fpedfilename << std::endl;
   
+  fUseOpticsConstraint = (useopticsconstraint != 0 );
+
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
@@ -488,6 +512,18 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.CM_GOOD_V", "Enable CM flag for max V strip in this hit", "fHitV_CM_GOOD" },
     { "hit.BUILD_ALL_SAMPLES_U", "Enable CM flag for max U strip in this hit", "fHitU_BUILD_ALL_SAMPLES" },
     { "hit.BUILD_ALL_SAMPLES_V", "Enable CM flag for max V strip in this hit", "fHitV_BUILD_ALL_SAMPLES" },
+    { "hit.ADCfrac0_Umax", "Max U strip ADC0/ADCsum", "fHitADCfrac0_MaxUstrip" },
+    { "hit.ADCfrac1_Umax", "Max U strip ADC1/ADCsum", "fHitADCfrac1_MaxUstrip" },
+    { "hit.ADCfrac2_Umax", "Max U strip ADC2/ADCsum", "fHitADCfrac2_MaxUstrip" },
+    { "hit.ADCfrac3_Umax", "Max U strip ADC3/ADCsum", "fHitADCfrac3_MaxUstrip" },
+    { "hit.ADCfrac4_Umax", "Max U strip ADC4/ADCsum", "fHitADCfrac4_MaxUstrip" },
+    { "hit.ADCfrac5_Umax", "Max U strip ADC5/ADCsum", "fHitADCfrac5_MaxUstrip" },
+    { "hit.ADCfrac0_Vmax", "Max V strip ADC0/ADCsum", "fHitADCfrac0_MaxVstrip" },
+    { "hit.ADCfrac1_Vmax", "Max V strip ADC1/ADCsum", "fHitADCfrac1_MaxVstrip" },
+    { "hit.ADCfrac2_Vmax", "Max V strip ADC2/ADCsum", "fHitADCfrac2_MaxVstrip" },
+    { "hit.ADCfrac3_Vmax", "Max V strip ADC3/ADCsum", "fHitADCfrac3_MaxVstrip" },
+    { "hit.ADCfrac4_Vmax", "Max V strip ADC4/ADCsum", "fHitADCfrac4_MaxVstrip" },
+    { "hit.ADCfrac5_Vmax", "Max V strip ADC5/ADCsum", "fHitADCfrac5_MaxVstrip" },
     { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
     { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
     { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },
@@ -565,6 +601,10 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 }
 
 bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction ){
+  
+  // std::cout << "[SBSGEMSpectrometerTracker::PassedOpticsConstraint]: Checking target reconstruction" 
+  // 	    << std::endl;
+
   double xptemp = track_direction.X()/track_direction.Z();
   double yptemp = track_direction.Y()/track_direction.Z();
 

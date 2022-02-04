@@ -19,6 +19,7 @@
 #include "TString.h"
 #include <cstring>
 
+class TH1D;
 
 class HCScalerLoc { // Utility class used by SBSScalerEvtHandler
  public:
@@ -40,6 +41,7 @@ public:
 
    Int_t Analyze(THaEvData *evdata);
    Int_t AnalyzeBuffer(UInt_t *rdata, Bool_t onlysync);
+   virtual Int_t Begin( THaRunBase* r=0 );
    virtual EStatus Init( const TDatime& run_time);
    virtual Int_t   ReadDatabase(const TDatime& date );
    virtual Int_t End( THaRunBase* r=0 );
@@ -91,7 +93,15 @@ private:
    std::vector<UInt_t*> fDelayedEvents;
    std::set<UInt_t> fRocSet;
    std::set<UInt_t> fModuleSet;
-
+   
+   TH1D* fIunserVsTime;
+   TH1D* fIu1VsTime;
+   TH1D* fIunewVsTime;
+   TH1D* fIdnewVsTime;
+   TH1D* fId1VsTime;
+   TH1D* fId3VsTime;
+   TH1D* fId10VsTime;
+   
    SBSScalerEvtHandler(const SBSScalerEvtHandler& fh);
    SBSScalerEvtHandler& operator=(const SBSScalerEvtHandler& fh);
 

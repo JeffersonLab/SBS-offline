@@ -79,12 +79,12 @@ Bool_t SBSDecodeF1TDCModule::IsSlot(UInt_t rdata)
 Int_t SBSDecodeF1TDCModule::GetData(Int_t chan, Int_t hit) const
 {
   Int_t idx = chan*MAXHIT + hit;
-  if (idx < 0 || idx > MAXHIT*fNumChan*nF1) return 0;
+  if (idx < 0 || idx > Int_t(MAXHIT*fNumChan*nF1)) return 0;
   return fTdcData[idx];
 }
 
 Int_t SBSDecodeF1TDCModule::GetNumHits(Int_t chan) {
-  if (chan < 0 || chan > nF1*fNumChan) return -1;
+  if (chan < 0 || chan > Int_t(nF1*fNumChan)) return -1;
   return fNumHits[chan];
 }
 
@@ -94,8 +94,8 @@ void SBSDecodeF1TDCModule::Clear(const Option_t* opt) {
   //memset(fNumHits, 0, fNumChan*sizeof(Int_t));
 //  std::fill(fTdcData.begin(), fTdcData.end(), 0);
 //  std::fill(fNumHits.begin(), fNumHits.end(), 0);
-  for(Int_t i=0; i<fTdcData.size(); i++) fTdcData[i]=0;
-  for(Int_t i=0; i<fNumHits.size(); i++) fNumHits[i]=0;
+  for(int & datum : fTdcData) datum=0;
+  for(int & numhit : fNumHits) numhit=0;
 }
 
 UInt_t SBSDecodeF1TDCModule::LoadSlot( THaSlotData *sldat, const UInt_t *evbuffer, UInt_t pos, UInt_t len) {
@@ -175,7 +175,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 	 Int_t chn = (*loc)&0x7;
 	 Int_t chip = ((*loc>>3))&0x7;
 	 Int_t ixor = ((*loc>>6))&0x1;
-	 Int_t ievnum = ((*loc>>16))&0x3F;
+	 //Int_t ievnum = ((*loc>>16))&0x3F;
 	 Int_t itrigFIFOoverflow = ((*loc>>2))&0x1;
 	 if(fDebug > 1 && fDebugFile!=0)
 	    *fDebugFile<< "[" << (loc-evbuffer) << "] header/trailer  0x"
@@ -244,7 +244,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 	      }
               // For now, only load data when our slot number matches that of
               // the base class
-              if(fSlot == f1slot) {
+              if((Int_t)fSlot == f1slot) {
                 raw_cor =  raw-trigTime;
                 if(raw<trigTime) // That means the roll-over already happened
                   raw_cor += (pow(2,16)-1);
@@ -255,7 +255,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 		  if((*loc)!=0xf1daffff && nF1>0 && f1slot!=30) { // Make sure memory is allocated to save data
 		    Int_t chSlot = idxSlot*fNumChan + chan;
 	        Int_t idx = chSlot*MAXHIT + fNumHits[chSlot]; // multiple hits, multiple slots 
-	        if (idx >= 0 && idx < MAXHIT*nF1*fNumChan  && fNumHits[chSlot]<MAXHIT) fTdcData[idx] = raw;
+	        if (idx >= 0 && idx < Int_t(MAXHIT*nF1*fNumChan)  && fNumHits[chSlot]<MAXHIT) fTdcData[idx] = raw;
 		    if(fNumHits[chSlot]>=MAXHIT) cout << "F1TDC warning: more than " << MAXHIT << " hits in channel " << chan << " / slot " << f1slot << ". Not taking last hit(s), although counting them." << endl;
 		    (fNumHits[chSlot])++;
 //cout << "chSlot=" << chSlot << " - lastSlot=" << lastSlot << " - nF1=" << nF1 << " -- ch=" << chan << " - word=0x" << hex << (*loc) << dec << " - raw=" << raw << endl;

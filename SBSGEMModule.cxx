@@ -7,6 +7,8 @@
 #include "TRotation.h"
 #include "TH1D.h"
 #include "TH2D.h"
+#include "TF1.h"
+#include "TGraphErrors.h"
 #include "TClonesArray.h"
 #include <algorithm>
 #include <iomanip>
@@ -45,6 +47,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCommonModeMinStripsInRange = 10;
   fMakeCommonModePlots = false;
   fCommonModePlotsInitialized = false;
+  fCommonModePlots_DBoverride = false;
 
   fMakeEventInfoPlots = false;
   fEventInfoPlotsInitialized = false;
@@ -56,9 +59,10 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fN_MPD_TIME_SAMP = 6;
   fMPDMAP_ROW_SIZE = 9;
 
+  //We should probably get rid of this as it's not used, only leads to confusion:
   fNumberOfChannelInFrame = 129;
 
-  fSamplePeriod = 25.0; //nanoseconds:
+  fSamplePeriod = 24.0; //nanoseconds:
 
   fSigma_hitshape = 0.0004; //0.4 mm
   // for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
@@ -115,9 +119,34 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //Number of sigmas for defining common-mode max for online zero suppression
   fCommonModeRange_nsigma = 5.0;
 
-  fSuppressFirstLast = true; // suppress strips peaking in first or last time sample:
+  fSuppressFirstLast = 0; // suppress strips peaking in first or last time sample by default:
+  //fUseStripTimingCuts = false;
+
+  fStripTau = 56.0; //ns, default value. Eventually load this from DB. This is not actually used as of yet.
   fUseStripTimingCuts = false;
+  fUseTSchi2cut = false;
+  fStripMaxTcut_central = 87.0; //ns
+  fStripMaxTcut_width = 25.0; //ns
+  fStripAddTcut_width = 25.0; //ns
+  fStripAddCorrCoeffCut = 0.5;
+  fStripTSchi2Cut = 10.0; //not yet clear what is a good value for this.
+
+  fGoodStrip_TSfrac_mean.resize( fN_MPD_TIME_SAMP );
+  fGoodStrip_TSfrac_sigma.resize( fN_MPD_TIME_SAMP );
+
+  //Define some defaults for these:
+  double fracmean_default[6] = {0.055, 0.135, 0.203, 0.224, 0.208, 0.174};
+  double fracsigma_default[6] = {0.034, 0.039, 0.019, 0.021, 0.032, 0.035};
+
+  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+    if( isamp < fN_MPD_TIME_SAMP && isamp < 6 ){
+      fGoodStrip_TSfrac_mean[isamp] = fracmean_default[isamp];
+      fGoodStrip_TSfrac_sigma[isamp] = fracsigma_default[isamp];
+    }
+  }
   
+  fPulseShapeInitialized = false;
+
   return;
 }
 
@@ -139,6 +168,9 @@ SBSGEMModule::~SBSGEMModule() {
   //     delete fStrip;
   //     fStrip = NULL;
   // }
+  if( fStripTimeFunc ){
+    delete fStripTimeFunc;
+  }
 
   return;
 }
@@ -182,6 +214,13 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   int eventinfoplots_flag = fMakeEventInfoPlots ? 1 : 0;
 
+  int usestriptimingcuts = fUseStripTimingCuts ? 1 : 0;
+  int useTSchi2cut = fUseTSchi2cut ? 1 : 0;
+  int suppressfirstlast = fSuppressFirstLast;
+
+  std::vector<double> TSfrac_mean_temp;
+  std::vector<double> TSfrac_sigma_temp;
+  
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
     { "apvmap",         &fAPVmapping,    kUInt, 0, 1, 1}, //optional, allow search up the tree if all modules in a setup have the same APV mapping
@@ -237,6 +276,15 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "chan_event_count", &fChan_MPD_EventCount, kUInt, 0, 1, 1},
     { "pedsub_online", &fPedSubFlag, kInt, 0, 1, 1},
     { "max2Dhits", &fMAX2DHITS, kUInt, 0, 1, 1}, //optional, search up tree
+    { "usestriptimingcut", &usestriptimingcuts, kInt, 0, 1, 1 },
+    { "useTSchi2cut", &useTSchi2cut, kInt, 0, 1, 1 },
+    { "maxstrip_t0", &fStripMaxTcut_central, kDouble, 0, 1, 1 },
+    { "maxstrip_tcut", &fStripMaxTcut_width, kDouble, 0, 1, 1 },
+    { "addstrip_tcut", &fStripAddTcut_width, kDouble, 0, 1, 1 },
+    { "addstrip_ccor_cut", &fStripAddCorrCoeffCut, kDouble, 0, 1, 1 },
+    { "goodstrip_TSfrac_mean", &TSfrac_mean_temp, kDoubleV, 0, 1, 1 },
+    { "goodstrip_TSfrac_sigma", &TSfrac_sigma_temp, kDoubleV, 0, 1, 1 },
+    { "suppressfirstlast", &suppressfirstlast, kInt, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -246,15 +294,25 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     return status;
   }
 
-  fMakeCommonModePlots = cmplots_flag != 0;
+  if( !fCommonModePlots_DBoverride ) fMakeCommonModePlots = cmplots_flag != 0;
   fZeroSuppress = zerosuppress_flag != 0;
   fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
 
   fMakeEventInfoPlots = eventinfoplots_flag != 0;
+
+  fUseStripTimingCuts = usestriptimingcuts != 0;
+  fUseTSchi2cut = useTSchi2cut != 0;
+
+  fSuppressFirstLast = suppressfirstlast; 
+
+  if( fUseTSchi2cut && TSfrac_mean_temp.size() == fN_MPD_TIME_SAMP && TSfrac_sigma_temp.size() == fN_MPD_TIME_SAMP ){
+    fGoodStrip_TSfrac_mean = TSfrac_mean_temp;
+    fGoodStrip_TSfrac_sigma = TSfrac_sigma_temp;
+  }
   
   //  std::cout << "After loadDB, fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
  
-  if( fAPVmapping < SBSGEM::kINFN || fAPVmapping > SBSGEM::kMC ) {
+  if( /*fAPVmapping < SBSGEM::kINFN ||*/ fAPVmapping > SBSGEM::kMC ) {
     std::cout << "Warning in SBSGEMModule::Decode for module " << GetParent()->GetName() << "." << GetName() << ": invalid APV mapping choice, defaulting to UVA X/Y." << std::endl
 	      << " Analysis results may be incorrect" << std::endl;
     fAPVmapping = SBSGEM::kUVA_XY;
@@ -436,7 +494,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fADCsamples.resize( nstripsmax );
   fRawADCsamples.resize( nstripsmax );
   //The lines below are problematic and unnecessary
-  for( int istrip=0; istrip<nstripsmax; istrip++ ){
+  for( unsigned int istrip=0; istrip<nstripsmax; istrip++ ){
     fADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
     fRawADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
   }
@@ -451,6 +509,10 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fADCmax.resize( nstripsmax );
   fTmean.resize( nstripsmax );
   fTsigma.resize( nstripsmax );
+  fStripTdiff.resize( nstripsmax );
+  fStripTSchi2.resize( nstripsmax );
+  fStripCorrCoeff.resize( nstripsmax );
+  fStripTfit.resize( nstripsmax );
   fTcorr.resize( nstripsmax );
   //Storing these by individual strip is redundant but convenient:
   fStrip_ENABLE_CM.resize( nstripsmax );
@@ -469,14 +531,14 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   // NOT loaded from the DB and/or they are loaded with the wrong size:
   if( fCommonModeMeanU.size() != fNAPVs_U ){
     fCommonModeMeanU.resize( fNAPVs_U );
-    for( int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
+    for( unsigned int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
       fCommonModeMeanU[iAPV] = 0.0;
     }
   }
 
   if( fCommonModeRMSU.size() != fNAPVs_U ){
     fCommonModeRMSU.resize( fNAPVs_U );
-    for( int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
+    for( unsigned int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
       fCommonModeRMSU[iAPV] = 10.0;
     }
   }
@@ -485,14 +547,14 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   // NOT loaded from the DB and/or they were loaded with the wrong size:
   if( fCommonModeMeanV.size() != fNAPVs_V ){
     fCommonModeMeanV.resize( fNAPVs_V );
-    for( int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
+    for( unsigned int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
       fCommonModeMeanV[iAPV] = 0.0;
     }
   }
 
   if( fCommonModeRMSV.size() != fNAPVs_V ){
     fCommonModeRMSV.resize( fNAPVs_V );
-    for( int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
+    for( unsigned int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
       fCommonModeRMSV[iAPV] = 10.0;
     }
   }
@@ -501,25 +563,25 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   //wrong size: 
   if( fUgain.size() != fNAPVs_U ){
     fUgain.resize(fNAPVs_U);
-    for( int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
+    for( unsigned int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
       fUgain[iAPV] = 1.0;
     }
   }
 
   //Multiply in Module gain:
-  for( int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
+  for( unsigned int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
     fUgain[iAPV] *= fModuleGain;
   }
   
 
   if( fVgain.size() != fNAPVs_V ){
     fVgain.resize(fNAPVs_V);
-    for( int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
+    for( unsigned int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
       fVgain[iAPV] = 1.0;
     }
   }
 
-  for( int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
+  for( unsigned int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
     fVgain[iAPV] *= fModuleGain;
   }
 
@@ -664,6 +726,12 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   
   VarDef varstrip[] = {
     { "strip.nstripsfired", "Number of strips fired", kUInt, 0, &fNstrips_hit },
+    { "strip.nstrips_keep", "Number of fired strips passing basic timing cuts", kUInt, 0, &fNstrips_keep },
+    { "strip.nstrips_keepU", "Number of U/X strips passing basic timing cuts", kUInt, 0, &fNstrips_keepU },
+    { "strip.nstrips_keepV", "Number of V/Y strips passing basic timing cuts", kUInt, 0, &fNstrips_keepV },
+    { "strip.nstrips_keep_lmax", "Number of strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmax },
+    { "strip.nstrips_keep_lmaxU", "Number of U/X strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmaxU },
+    { "strip.nstrips_keep_lmaxV", "Number of V/Y strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmaxV },
     { "strip.istrip", "strip index", kUInt, 0, &(fStrip[0]), &fNstrips_hit },
     { "strip.IsU", "U strip?", kUInt, 0, &(fStripIsU[0]), &fNstrips_hit },
     { "strip.IsV", "V strip?", kUInt, 0, &(fStripIsV[0]), &fNstrips_hit },
@@ -675,6 +743,10 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.Tmean", "ADC-weighted mean strip time", kDouble, 0, &(fTmean[0]), &fNstrips_hit },
     { "strip.Tsigma", "ADC-weighted rms strip time", kDouble, 0, &(fTsigma[0]), &fNstrips_hit },
     { "strip.Tcorr", "Corrected strip time", kDouble, 0, &(fTcorr[0]), &fNstrips_hit },
+    { "strip.Tfit", "Fitted strip time", kDouble, 0, &(fStripTfit[0]), &fNstrips_hit },
+    { "strip.Tdiff", "time diff. wrt max strip in cluster (or perhaps cluster tmean)", kDouble, 0, &(fStripTdiff[0]), &fNstrips_hit },
+    { "strip.TSchi2", "chi2 of strip pulse shape (time samples) wrt average good strip pulse shape", kDouble, 0, &(fStripTSchi2[0]), &fNstrips_hit },
+    { "strip.CorrCoeff", "Correlation coefficient of strip wrt max strip on cluster (or perhaps cluster tmean)", kDouble, 0, &(fStripCorrCoeff[0]), &fNstrips_hit },
     { "strip.itrack", "Index of track containing this strip (-1 if not on any track)", kInt, 0, &(fStripTrackIndex[0]), &fNstrips_hit },
     { "strip.ontrack", "Is this strip on any track (0/1)?", kUInt, 0, &(fStripOnTrack[0]), &fNstrips_hit },
     { "strip.ADCavg", "average of ADC samples on a strip", kDouble, 0, &(fStripADCavg[0]), &fNstrips_hit },
@@ -761,6 +833,7 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
 
   RVarDef varmisc[] = {
     {"ontrack", "Track passed through this module", "fTrackPassedThrough" },
+    {"layer", "Layer number of this module", "fLayer" },
     { nullptr },
   };
 
@@ -784,6 +857,17 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fIsDecoded = false;
 
   fTrackPassedThrough = 0;
+
+  //numbers of strips passing basic zero suppression thresholds and timing cuts:
+  fNstrips_keep = 0;
+  fNstrips_keepU = 0;
+  fNstrips_keepV = 0;
+  //numbers of strips passing basic zero suppression thresholds, timing cuts, and higher max. sample and strip sum thresholds for
+  // local max:
+  fNstrips_keep_lmax = 0;
+  fNstrips_keep_lmaxU = 0;
+  fNstrips_keep_lmaxV = 0;
+  
   
   fNclustU = 0;
   fNclustV = 0;
@@ -894,8 +978,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     //std::cout << "nhits_timestamp_low = " << nhits_timestamp_low << std::endl;
     
     if( nhits_timestamp_low > 0 && nhits_timestamp_high == nhits_timestamp_low && nhits_event_count == nhits_timestamp_low ){
-      for( int ihit=0; ihit<nhits_timestamp_low; ihit++ ){
-	int fiber = evdata.GetRawData( it->crate, it->slot, fChan_TimeStamp_low, ihit );
+      for( unsigned int ihit=0; ihit<nhits_timestamp_low; ihit++ ){
+	unsigned int fiber = evdata.GetRawData( it->crate, it->slot, fChan_TimeStamp_low, ihit );
 	if( fiber == it->mpd_id ){ //this is the channel we want: 
 	  UInt_t Tlow = evdata.GetData( it->crate, it->slot, fChan_TimeStamp_low, ihit );
 	  UInt_t Thigh = evdata.GetData( it->crate, it->slot, fChan_TimeStamp_high, ihit );
@@ -956,19 +1040,19 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     UInt_t cm_flags=4*CM_OUT_OF_RANGE + 2*CM_ENABLED + BUILD_ALL_SAMPLES;
     UInt_t nhits_cm_flag=evdata.GetNumHits( it->crate, it->slot, fChan_CM_flags );
     
-    bool cm_flags_found = false;
+    //bool cm_flags_found = false;
       
     if( nhits_cm_flag > 0 ){
       
       // If applicable, find the common-mode/zero-suppression settings loaded from the raw data for this APV:
       // In principle in the SSP/VTP event format, there should be exactly one "hit" per APV in this "channel":
-      for( int ihit=0; ihit<nhits_cm_flag; ihit++ ){ 
-	int chan_temp = evdata.GetRawData( it->crate, it->slot, fChan_CM_flags, ihit );
+      for( unsigned int ihit=0; ihit<nhits_cm_flag; ihit++ ){
+        int chan_temp = evdata.GetRawData( it->crate, it->slot, fChan_CM_flags, ihit );
 	if( chan_temp == effChan ){ //assume that this is only filled once per MPD per event, and exit the loop when we find this MPD:
 	  // std::cout << "Before decoding cm flags, CM_ENABLED, BUILD_ALL_SAMPLES = " << CM_ENABLED << ", "
 	  // 	    << BUILD_ALL_SAMPLES << std::endl;
 	  cm_flags = evdata.GetData( it->crate, it->slot, fChan_CM_flags, ihit );
-	  cm_flags_found = true;
+	  //cm_flags_found = true;
 	  break;
 	}
       }
@@ -1029,7 +1113,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
     if( nsamp > 0 ){
       
-      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
+      //      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
       
       // std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
@@ -1170,7 +1254,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//sums over time samples
 	double ADCsum_temp = 0.0;
 	double maxADC = 0.0;
-	UShort_t iSampMax = -1;
+	Int_t iSampMax = -1;
 	
 	//crude timing calculations:
 	double Tsum = 0.0;
@@ -1247,7 +1331,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //assert( ((UInt_t) fNch) < fMPDmap.size()*fN_APV25_CHAN );
 	  //assert( fNstrips_hit < fMPDmap.size()*fN_APV25_CHAN );
 	}
-	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
+	//	assert(strip>=0); // Make sure we don't end up with negative strip numbers!
 	// Zero suppression based on third time sample only?
 	//Maybe better to do based on max ADC sample:
 
@@ -1315,17 +1399,26 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// this amounts to using a higher effective threshold than cutting on the max ADC sample would have been:
 	//fThresholdStripSum is in many respects redundant with fZeroSuppressRMS
 	if(!fZeroSuppress ||
-	   ( ADCsum_temp/double(fN_MPD_TIME_SAMP) > fZeroSuppressRMS*rmstemp &&
-	     maxADC > fThresholdSample && ADCsum_temp > fThresholdStripSum ) ){ //Default threshold is 5-sigma!
+	   ( ADCsum_temp/double(fN_MPD_TIME_SAMP) > fZeroSuppressRMS*rmstemp ) ){ //Default threshold is 5-sigma!
 	  //Increment hit count and populate decoded data structures:
-	  //Theshold on the max. sample is also not used in the standalone decoder, but for sufficiently low values should be redundant with the
+	 
 	  //threshold on the average ADC
 	  
+	  //Slight reorganization: compute Tmean and Tsigma before applying gain correction:
+	  //(since these sums were computed using the uncorrected ADC samples)
+	  double Tmean_temp = Tsum/ADCsum_temp; 
+	  double Tsigma_temp = sqrt( T2sum/ADCsum_temp - pow( Tmean_temp,2) );
+
 	  //NOW apply gain correction:
 	  //Don't apply any gain correction if we are doing pedestal mode analysis:
-	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	    if( !fPedestalMode ) ADCtemp[isamp] /= gaintemp;
+	  if( !fPedestalMode ){ //only apply gain correction if we aren't in pedestal-mode:
+	    for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	      ADCtemp[isamp] /= gaintemp;
+	    }
+	    maxADC /= gaintemp;
+	    ADCsum_temp /= gaintemp;
 	  }
+
 	  
 	  //  ADCsum_temp /= gaintemp;
 	
@@ -1338,6 +1431,37 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  fStrip[fNstrips_hit] = strip;
 	  fAxis[fNstrips_hit] = axis;
 	  
+	  fKeepStrip[fNstrips_hit] = true;
+	  //fStripKeep[fNstrips_hit] = 1;
+	  //	  fMaxSamp.push_back( iSampMax );
+	  fMaxSamp[fNstrips_hit] = iSampMax;
+
+	  //if( fSuppressFirstLast && (iSampMax == 0 || iSampMax+1 == fN_MPD_TIME_SAMP ) ){
+	  // fSuppressFirstLast:
+	  // 0 = allow peaking in first or last sample
+	  // 1 = suppress peaking in first and last sample
+	  // -1 = suppress peaking in first sample only (or other negative number)
+	  // -2 = suppress peaking in last sample only:
+	  if( fSuppressFirstLast != 0 ){
+	    bool peakfirst = iSampMax == 0;
+	    bool peaklast = iSampMax+1 == fN_MPD_TIME_SAMP;
+	    
+	    if( peakfirst ){
+	      if( fSuppressFirstLast > 0 || fSuppressFirstLast != -2 ){
+		fKeepStrip[fNstrips_hit] = false;
+	      }
+	    } else if( peaklast ){
+	      if( fSuppressFirstLast > 0 || fSuppressFirstLast == -2 ){
+		fKeepStrip[fNstrips_hit] = false;
+	      }
+	    }
+	  }
+
+	  if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
+	    fKeepStrip[fNstrips_hit] = false;
+	    //fStripKeep[fNstrips_hit] = 0;
+	  }
+
 	  //std::cout << "axis, Int_t(axis) = " << axis << ", " << Int_t(axis) << std::endl;
 	  //fStripAxis.push_back( Int_t(axis) );
 	  // fADCsamples.push_back( ADCtemp ); //pedestal-subtracted
@@ -1350,37 +1474,42 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    //fRawADCsamples1D.push_back( rawADCtemp[isamp] );
 	    fADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = ADCtemp[isamp];
 	    fRawADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = rawADCtemp[isamp];
+
+	    if( fKeepStrip[fNstrips_hit] && hADCfrac_vs_timesample_allstrips != NULL ){
+	      hADCfrac_vs_timesample_allstrips->Fill( isamp, ADCtemp[isamp]/ADCsum_temp );
+	    }
 	  }
 	  //fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
 	  fStripTrackIndex[fNstrips_hit] = -1;
 	  fStripOnTrack[fNstrips_hit] = 0;
 	  
 	  //	  fKeepStrip.push_back( true ); //keep all strips by default
-	  fKeepStrip[fNstrips_hit] = true;
-	  //	  fMaxSamp.push_back( iSampMax );
-	  fMaxSamp[fNstrips_hit] = iSampMax;
-
-	  if( fSuppressFirstLast && (iSampMax == 0 || iSampMax+1 == fN_MPD_TIME_SAMP ) ){
-	    fKeepStrip[fNstrips_hit] = false;
-    
-	  }
 	  
-	  if( !fPedestalMode ) maxADC /= gaintemp;
 	  
 	  //	  fADCmax.push_back( maxADC );
 	  fADCmax[fNstrips_hit] = maxADC; 
 	  //	  fTmean.push_back( Tsum/ADCsum_temp );
-	  fTmean[fNstrips_hit] = Tsum/ADCsum_temp; 
+	  fTmean[fNstrips_hit] = Tmean_temp;
 	  //  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
-	  fTsigma[fNstrips_hit] = sqrt( T2sum/ADCsum_temp - pow( fTmean[fNstrips_hit], 2 ) );
+	  fTsigma[fNstrips_hit] = Tsigma_temp;
 	  //fTcorr.push_back( fTmean.back() ); //don't apply any corrections for now
+
+	  fStripTSchi2[fNstrips_hit] = StripTSchi2(fNstrips_hit);
+
+	  if( fUseTSchi2cut && fStripTSchi2[fNstrips_hit] > fStripTSchi2Cut ){
+	    fKeepStrip[fNstrips_hit] = false;
+	  }
+	  
+	  fStripTdiff[fNstrips_hit] = -1000.; //This will become meaningful only at the clustering stage
+	  fStripCorrCoeff[fNstrips_hit] = -1000.; //This will become meaningful only at the clustering stage
 	  fTcorr[fNstrips_hit] = fTmean[fNstrips_hit];
+
+	  //fStripTfit[fNstrips_hit] = FitStripTime( fNstrips_hit, rmstemp*2.45 );
+	  fStripTfit[fNstrips_hit] = fTmean[fNstrips_hit];
 
 	  fStrip_ENABLE_CM[fNstrips_hit] = CM_ENABLED;
 	  fStrip_CM_GOOD[fNstrips_hit] = !CM_OUT_OF_RANGE;
 	  fStrip_BUILD_ALL_SAMPLES[fNstrips_hit] = BUILD_ALL_SAMPLES;
-	  
-	  if( !fPedestalMode ) ADCsum_temp /= gaintemp;
 
 	  //  fADCsums.push_back( ADCsum_temp ); //sum of all (pedestal-subtracted) samples
 	  fADCsums[fNstrips_hit] = ADCsum_temp;
@@ -1405,10 +1534,24 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //      if( axis == SBSGEM::kVaxis ) fVstripIndex[strip] = fNstrips_hit;
 
 	  //std::cout << "starting pedestal histograms..." << std::endl;
-	  
+
+	  if( fKeepStrip[fNstrips_hit] ){
+	    fNstrips_keep++;
+	    fNstrips_keepU += isU;
+	    fNstrips_keepV += isV;
+	    if( fADCmax[fNstrips_hit] >= fThresholdSample && fADCsums[fNstrips_hit] >= fThresholdStripSum ){
+	      fNstrips_keep_lmax++;
+	      fNstrips_keep_lmaxU += isU;
+	      fNstrips_keep_lmaxV += isV;
+	    }
+	    
+	  }
 	  
 	  
 	  fNstrips_hit++;
+
+	  
+	  
 	} //check if passed zero suppression cuts
       } //end loop over strips on this APV card
     } //end if( nsamp > 0 )
@@ -1617,13 +1760,18 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       sumright = fADCsums[hitindex[strip+1]];
     }
 
-    if( sumstrip >= sumleft && sumstrip >= sumright ){ //new local max:
+    //apply additional thresholds on max. sample and strip sum for local maxima:
+    //If a strip is not a local max, the threshold is just 5sigma above the noise 
+    //from decoding
+    if( sumstrip >= sumleft && sumstrip >= sumright && 
+	sumstrip >= fThresholdStripSum &&
+	fADCmax[hitindex[strip]] >= fThresholdSample ){ //new local max:
       islocalmax[strip] = true;
       localmaxima.insert( strip );
     } 
   } // end loop over list of strips along this axis:
 
-  //cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
+  //  cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
   
   vector<int> peakstoerase; 
 
@@ -1695,10 +1843,11 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   }
 
   //Erase "insignificant" peaks (those in contiguous grouping with higher peak with prominence below thresholds):
-  for( int ipeak=0; ipeak<peakstoerase.size(); ipeak++ ){
-    localmaxima.erase( peakstoerase[ipeak] );
-    islocalmax[peakstoerase[ipeak]] = false;
+  for(int ipeak : peakstoerase){
+    localmaxima.erase( ipeak );
+    islocalmax[ipeak] = false;
   }
+  
 
   //cout << "After peak erasing, n local maxima = " << localmaxima.size() << endl;
   //for speed/efficiency, resize the cluster array to the theoretical maximum
@@ -1706,22 +1855,61 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   clusters.resize( localmaxima.size() );
   
   //Cluster formation and cluster splitting from remaining local maxima:
-  for( std::set<UShort_t>::iterator i = localmaxima.begin(); i != localmaxima.end(); ++i ){
+  for( auto i = localmaxima.begin(); i != localmaxima.end(); ++i ){
     int stripmax = *i;
     int striplo = stripmax;
     int striphi = stripmax;
     double ADCmax = fADCsums[hitindex[stripmax]];
 
-    while( striplist.find( striplo-1 ) != striplist.end() &&
-	   stripmax - striplo < maxsep ){
-      striplo--;
+    bool found_neighbor_low = true;
+    
+    //while( striplist.find( striplo-1 ) != striplist.end() &&
+    //	   stripmax - striplo < maxsep ){
+    while( found_neighbor_low ){
+      
+      found_neighbor_low = striplist.find( striplo - 1 ) != striplist.end() && stripmax - striplo < maxsep;
+
+      if( found_neighbor_low && fUseStripTimingCuts ){
+	//check time difference and correlation coefficient of the candidate strip
+	//with the max strip:
+	double Tdiff = fTmean[hitindex[striplo-1]] - fTmean[hitindex[stripmax]];
+	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_low = false;
+	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex[striplo-1]], fADCsamples[hitindex[stripmax]] );
+	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_low = false;
+      }
+
+      //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
+      //fails the cuts, stop growing the cluster in this direction
+      
+      if( found_neighbor_low ) striplo--;
     }
 
-    while( striplist.find( striphi+1 ) != striplist.end() &&
-	   striphi - stripmax < maxsep ){
-      striphi++;
-    }
+    // while( striplist.find( striphi+1 ) != striplist.end() &&
+    // 	   striphi - stripmax < maxsep ){
+    //   striphi++;
+    // }
 
+    bool found_neighbor_high = true;
+    
+    while( found_neighbor_high ){
+      
+      found_neighbor_high = striplist.find( striphi + 1 ) != striplist.end() && striphi - stripmax < maxsep;
+
+      if( found_neighbor_high && fUseStripTimingCuts ){
+	//check time difference and correlation coefficient of the candidate strip
+	//with the max strip:
+	double Tdiff = fTmean[hitindex[striphi+1]] - fTmean[hitindex[stripmax]];
+	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_high = false;
+	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex[striphi+1]], fADCsamples[hitindex[stripmax]] );
+	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_high = false;
+      }
+
+      //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
+      //fails the cuts, stop growing the cluster in this direction
+      
+      if( found_neighbor_high ) striphi++;
+    }
+    
     int nstrips = striphi-striplo+1;
 
     double sumx = 0.0, sumx2 = 0.0, sumADC = 0.0, sumt = 0.0, sumt2 = 0.0;
@@ -1827,6 +2015,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   } //end loop on local maxima
 
   clusters.resize(nclust); //just to make sure no pathological behavior later on
+
+  //std::cout << "number of clusters found = " << nclust << std::endl;
   
   filter_1Dhits(SBSGEM::kUaxis);
   filter_1Dhits(SBSGEM::kVaxis);
@@ -1847,8 +2037,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   
   //This routine is simple: just form all possible 2D hits from combining one "U" cluster with one "V" cluster. Here we assume that find_clusters_1D has already
   //been called, if that is NOT the case, then this routine will just do nothing:
-  for( int iu=0; iu<fNclustU; iu++ ){
-    for( int iv=0; iv<fNclustV; iv++ ){
+  for( UInt_t iu=0; iu<fNclustU; iu++ ){
+    for( UInt_t iv=0; iv<fNclustV; iv++ ){
 
       if( fUclusters[iu].keep && fVclusters[iv].keep ){
 	//Initialize sums for computing cluster and strip correlation coefficients:
@@ -1860,6 +2050,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
       
 	//Initialize "keep" to true:
 	hittemp.keep = true;
+	hittemp.highquality = false;
 	hittemp.ontrack = false;
 	hittemp.trackidx = -1;
 	hittemp.iuclust = iu;
@@ -1881,6 +2072,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	hittemp.xhit = XYtemp.X();
 	hittemp.yhit = XYtemp.Y();
 
+	
+	
 	//Check if candidate 2D hit is inside the constraint region before doing anything else:
 	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
 	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax &&
@@ -1909,18 +2102,39 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  hittemp.corrcoeff_clust = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples );
 	
 	  //compute index of strip with max ADC sum within cluster strip array:
-	  int ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
-	  int vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; // 
+	  UInt_t ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
+	  UInt_t vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; //
 	
 	  //compute index of strip with max ADC sum within decoded hit array:
-	  int uhitidx = fUclusters[iu].hitindex[ustripidx]; 
-	  int vhitidx = fVclusters[iv].hitindex[vstripidx];
+	  UInt_t uhitidx = fUclusters[iu].hitindex[ustripidx];
+	  UInt_t vhitidx = fVclusters[iv].hitindex[vstripidx];
 	
 	  hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
-	
+
+	  //A "high-quality" hit is one that passes all the filtering criteria (might add more later):
+	  hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
+	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
+	    fUclusters[iu].clusterADCsum >= fThresholdClusterSum && 
+	    fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
+	    hittemp.corrcoeff_clust >= fCorrCoeffCut &&
+	    hittemp.corrcoeff_strip >= fCorrCoeffCut && 
+	    fabs( hittemp.tdiff ) <= fTimeCutUVdiff; 
+
+	  bool add_hit = true;
+	  //we need special handling if we want to use single-strip clusters: 
+	  if( fUclusters[iu].nstrips == 1 || fVclusters[iv].nstrips == 1 ){
+	    //If EITHER of these clusters is only single-strip, it must pass more stringent requirements to use as a 2D hit candidate:
+	    //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
+	    add_hit = false;
+	    if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
+		hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut ){
+	      add_hit = true;
+	    }
+	  }
+	  
 	  //Okay, that should be everything. Now add it to the 2D hit array:
 	  //fHits.push_back( hittemp );
-	  fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
+	  if( add_hit ) fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
 	  //fN2Dhits++;
 	} //end check that 2D point is inside track search region
       } //end check that both U and V clusters passed filtering criteria:
@@ -1943,7 +2157,6 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   fZeroSuppress = fZeroSuppress && !fPedestalMode; 
   
   //pulled these lines out of the if-block below to avoid code duplication:
-  TString histname,histtitle;
   TString appname = (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName();
   appname.ReplaceAll(".","_");
   appname += "_";
@@ -1957,14 +2170,14 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   if( fMakeEventInfoPlots && !fEventInfoPlotsInitialized ){
     fEventInfoPlotsInitialized = true;
     
-    hMPD_EventCount_Alignment = new TH1D(histname.Format("h%s_MPD_EvCntAlign",detname.Data() ), histtitle.Format("MPD event count diffs, module %s; MPD event count offsets", detname.Data() ), 201, -100.5,100.5 );
+    hMPD_EventCount_Alignment = new TH1D(TString::Format("h%s_MPD_EvCntAlign",detname.Data() ), TString::Format("MPD event count diffs, module %s; MPD event count offsets", detname.Data() ), 201, -100.5,100.5 );
 
     //We should really get the range for the fibers histogram from the MPDmap but we are lazy:
     
-    hMPD_EventCount_Alignment_vs_Fiber = new TH2D(histname.Format("h%s_MPD_EvCntAlign_vs_fiber",detname.Data() ), "; fiber ; MPD event count diff",
+    hMPD_EventCount_Alignment_vs_Fiber = new TH2D(TString::Format("h%s_MPD_EvCntAlign_vs_fiber",detname.Data() ), "; fiber ; MPD event count diff",
 						  33,-0.5,32.5, 201,-100.5,100.5);
 
-    hMPD_FineTimeStamp_vs_Fiber = new TH2D(histname.Format("h%s_MPD_FineTimeStamp_vs_fiber",detname.Data() ), "; fiber ; MPD fine time stamp (ns)",
+    hMPD_FineTimeStamp_vs_Fiber = new TH2D(TString::Format("h%s_MPD_FineTimeStamp_vs_fiber",detname.Data() ), "; fiber ; MPD fine time stamp (ns)",
 					   33,-0.5,32.5,256, -0.5, 1023.5);
   }
   
@@ -1976,15 +2189,15 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     int nbinsx2D = int( round( 1.02*GetXSize() /fBinSize_efficiency2D ) );
     int nbinsy2D = int( round( 1.02*GetYSize() /fBinSize_efficiency2D ) );
     
-    fhdidhitx = new TH1D( histname.Format( "hdidhitx_%s", detname.Data() ), "Local x of hits on good tracks;  x (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
-    fhdidhity = new TH1D( histname.Format( "hdidhity_%s", detname.Data() ), "Local y of hits on good tracks;  y (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
-    fhdidhitxy = new TH2D( histname.Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks; y (m); x (m)",
+    fhdidhitx = new TH1D( TString::Format( "hdidhitx_%s", detname.Data() ), "Local x of hits on good tracks;  x (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhdidhity = new TH1D( TString::Format( "hdidhity_%s", detname.Data() ), "Local y of hits on good tracks;  y (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
+    fhdidhitxy = new TH2D( TString::Format( "hdidhitxy_%s", detname.Data() ), "x vs y of hits on good tracks; y (m); x (m)",
 			   nbinsy2D, -0.51*GetYSize(), 0.51*GetYSize(),
 			   nbinsx2D, -0.51*GetXSize(), 0.51*GetXSize() );
 
-    fhshouldhitx = new TH1D( histname.Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m); x (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
-    fhshouldhity = new TH1D( histname.Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m); y (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
-    fhshouldhitxy = new TH2D( histname.Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m); y(m); x(m",
+    fhshouldhitx = new TH1D( TString::Format( "hshouldhitx_%s", detname.Data() ), "x of good track passing through (m); x (m)", nbinsx1D, -0.51*GetXSize(), 0.51*GetXSize() );
+    fhshouldhity = new TH1D( TString::Format( "hshouldhity_%s", detname.Data() ), "y of good track passing through (m); y (m)", nbinsy1D, -0.51*GetYSize(), 0.51*GetYSize() );
+    fhshouldhitxy = new TH2D( TString::Format( "hshouldhitxy_%s", detname.Data() ), "x vs y of good track passing through (m); y(m); x(m",
 			      nbinsy2D, -0.51*GetYSize(), 0.51*GetYSize(),
 			      nbinsx2D, -0.51*GetXSize(), 0.51*GetXSize() );
 
@@ -2000,26 +2213,26 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     // 3. Add "coarse" strip offsets (common-mode means) back into "common-mode subtracted" ADC 
 
     //U strips:
-    hpedrmsU_distribution = new TH1D( histname.Format( "hpedrmsU_distribution_%s", detname.Data() ), "Pedestal RMS distribution, U strips; Ped. RMS", 500, 0, 100 );
-    hpedmeanU_distribution = new TH1D( histname.Format( "hpedmeanU_distribution_%s", detname.Data() ), "Pedestal mean distribution, U strips; Ped. mean", 500, -500, 500 );
-    hpedrmsU_by_strip = new TH1D( histname.Format( "hpedrmsU_by_strip_%s", detname.Data() ), "Pedestal rms U by strip; strip; ped. RMS", fNstripsU, -0.5, fNstripsU - 0.5 );
-    hpedmeanU_by_strip = new TH1D( histname.Format( "hpedmeanU_by_strip_%s", detname.Data() ), "Pedestal mean U by strip; strip; ped. mean", fNstripsU, -0.5, fNstripsU - 0.5 );
+    hpedrmsU_distribution = new TH1D( TString::Format( "hpedrmsU_distribution_%s", detname.Data() ), "Pedestal RMS distribution, U strips; Ped. RMS", 500, 0, 100 );
+    hpedmeanU_distribution = new TH1D( TString::Format( "hpedmeanU_distribution_%s", detname.Data() ), "Pedestal mean distribution, U strips; Ped. mean", 500, -500, 500 );
+    hpedrmsU_by_strip = new TH1D( TString::Format( "hpedrmsU_by_strip_%s", detname.Data() ), "Pedestal rms U by strip; strip; ped. RMS", fNstripsU, -0.5, fNstripsU - 0.5 );
+    hpedmeanU_by_strip = new TH1D( TString::Format( "hpedmeanU_by_strip_%s", detname.Data() ), "Pedestal mean U by strip; strip; ped. mean", fNstripsU, -0.5, fNstripsU - 0.5 );
 
     //V strips:
-    hpedrmsV_distribution = new TH1D( histname.Format( "hpedrmsV_distribution_%s", detname.Data() ), "Pedestal RMS distribution, V strips; Ped. RMS", 500, 0, 100 );
-    hpedmeanV_distribution = new TH1D( histname.Format( "hpedmeanV_distribution_%s", detname.Data() ), "Pedestal mean distribution, V strips; Ped. mean", 500, -500, 500 );
-    hpedrmsV_by_strip = new TH1D( histname.Format( "hpedrmsV_by_strip_%s", detname.Data() ), "Pedestal rms V by strip; strip; Ped. RMS", fNstripsV, -0.5, fNstripsV - 0.5 );
-    hpedmeanV_by_strip = new TH1D( histname.Format( "hpedmeanV_by_strip_%s", detname.Data() ), "Pedestal mean V by strip; strip; Ped. mean", fNstripsV, -0.5, fNstripsV - 0.5 );
+    hpedrmsV_distribution = new TH1D( TString::Format( "hpedrmsV_distribution_%s", detname.Data() ), "Pedestal RMS distribution, V strips; Ped. RMS", 500, 0, 100 );
+    hpedmeanV_distribution = new TH1D( TString::Format( "hpedmeanV_distribution_%s", detname.Data() ), "Pedestal mean distribution, V strips; Ped. mean", 500, -500, 500 );
+    hpedrmsV_by_strip = new TH1D( TString::Format( "hpedrmsV_by_strip_%s", detname.Data() ), "Pedestal rms V by strip; strip; Ped. RMS", fNstripsV, -0.5, fNstripsV - 0.5 );
+    hpedmeanV_by_strip = new TH1D( TString::Format( "hpedmeanV_by_strip_%s", detname.Data() ), "Pedestal mean V by strip; strip; Ped. mean", fNstripsV, -0.5, fNstripsV - 0.5 );
 
     if( !fPedestalMode ){ //fill the above histograms with the pedestal info loaded from the database:
-      for( int istrip = 0; istrip<fNstripsU; istrip++ ){
+      for( UInt_t istrip = 0; istrip<fNstripsU; istrip++ ){
 	hpedmeanU_distribution->Fill( fPedestalU[istrip] );
 	hpedrmsU_distribution->Fill( fPedRMSU[istrip] );
 	hpedmeanU_by_strip->SetBinContent( istrip+1, fPedestalU[istrip] );
 	hpedrmsU_by_strip->SetBinContent( istrip+1, fPedRMSU[istrip] );	
       }
 
-      for( int istrip=0; istrip<fNstripsV; istrip++ ){
+      for( UInt_t istrip=0; istrip<fNstripsV; istrip++ ){
 	hpedmeanV_distribution->Fill( fPedestalV[istrip] );
 	hpedrmsV_distribution->Fill( fPedRMSV[istrip] );
 	hpedmeanV_by_strip->SetBinContent( istrip+1, fPedestalV[istrip] );
@@ -2029,52 +2242,52 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     }
     
     
-    hrawADCs_by_stripU = new TH2D( histname.Format( "hrawADCs_by_stripU_%s", detname.Data() ), "Raw ADCs by U strip number, no corrections; U/X strip; Raw ADC",
+    hrawADCs_by_stripU = new TH2D( TString::Format( "hrawADCs_by_stripU_%s", detname.Data() ), "Raw ADCs by U strip number, no corrections; U/X strip; Raw ADC",
 				   fNstripsU, -0.5, fNstripsU-0.5,
-				   2048, -0.5, 4095.5 );
-    hrawADCs_by_stripV = new TH2D( histname.Format( "hrawADCs_by_stripV_%s", detname.Data() ), "Raw ADCs by V strip number, no corrections; V/Y strip; Raw ADC",
+				   1024, -0.5, 4095.5 );
+    hrawADCs_by_stripV = new TH2D( TString::Format( "hrawADCs_by_stripV_%s", detname.Data() ), "Raw ADCs by V strip number, no corrections; V/Y strip; Raw ADC",
 				   fNstripsV, -0.5, fNstripsV-0.5,
-				   2048, -0.5, 4095.5 );
+				   1024, -0.5, 4095.5 );
 
-    hcommonmode_subtracted_ADCs_by_stripU = new TH2D( histname.Format( "hpedestalU_%s", detname.Data() ), "ADCs by U strip number, w/common mode correction, no ped. subtraction; U/X strip; ADC - Common-mode",
+    hcommonmode_subtracted_ADCs_by_stripU = new TH2D( TString::Format( "hpedestalU_%s", detname.Data() ), "ADCs by U strip number, w/common mode correction, no ped. subtraction; U/X strip; ADC - Common-mode",
 						      fNstripsU, -0.5, fNstripsU-0.5,
-						      2500, -500.0, 4500.0 );
-    hcommonmode_subtracted_ADCs_by_stripV = new TH2D( histname.Format( "hpedestalV_%s", detname.Data() ), "ADCs by V strip number, w/common mode correction, no ped. subtraction; V/Y strip; ADC - Common-mode",
+						      1250, -500.0, 4500.0 );
+    hcommonmode_subtracted_ADCs_by_stripV = new TH2D( TString::Format( "hpedestalV_%s", detname.Data() ), "ADCs by V strip number, w/common mode correction, no ped. subtraction; V/Y strip; ADC - Common-mode",
 						      fNstripsV, -0.5, fNstripsV-0.5,
-						      2500, -500.0, 4500.0 );
+						      1250, -500.0, 4500.0 );
 
-    hpedestal_subtracted_ADCs_by_stripU = new TH2D( histname.Format( "hADCpedsubU_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by U strip number; U/X strip; ADC - Common-mode - pedestal",
+    hpedestal_subtracted_ADCs_by_stripU = new TH2D( TString::Format( "hADCpedsubU_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by U strip number; U/X strip; ADC - Common-mode - pedestal",
 						    fNstripsU, -0.5, fNstripsU-0.5,
-						    1000,-500.,500. );
-    hpedestal_subtracted_ADCs_by_stripV = new TH2D( histname.Format( "hADCpedsubV_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by V strip number; V/Y strip; ADC - Common-mode - pedestal",
+						    1250,-500.,4500. );
+    hpedestal_subtracted_ADCs_by_stripV = new TH2D( TString::Format( "hADCpedsubV_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by V strip number; V/Y strip; ADC - Common-mode - pedestal",
 						    fNstripsV, -0.5, fNstripsV-0.5,
-						    1000,-500.,500. );
+						    1250,-500.,4500. );
 
-    hpedestal_subtracted_rawADCs_by_stripU = new TH2D( histname.Format( "hrawADCpedsubU_%s", detname.Data() ), "ADCs by U strip, ped-subtracted, no common-mode correction; U/X strip; ADC - pedestal",
+    hpedestal_subtracted_rawADCs_by_stripU = new TH2D( TString::Format( "hrawADCpedsubU_%s", detname.Data() ), "ADCs by U strip, ped-subtracted, no common-mode correction; U/X strip; ADC - pedestal",
 						       fNstripsU, -0.5, fNstripsU-0.5,
-						       2500,-500.,4500. );
-    hpedestal_subtracted_rawADCs_by_stripV = new TH2D( histname.Format( "hrawADCpedsubV_%s", detname.Data() ), "ADCs by V strip, ped-subtracted, no common-mode correction; V/Y strip; ADC - pedestal",
+						       1250,-500.,4500. );
+    hpedestal_subtracted_rawADCs_by_stripV = new TH2D( TString::Format( "hrawADCpedsubV_%s", detname.Data() ), "ADCs by V strip, ped-subtracted, no common-mode correction; V/Y strip; ADC - pedestal",
 						       fNstripsV, -0.5, fNstripsV-0.5,
-						       2500,-500.,4500. );
+						       1250,-500.,4500. );
 
-    hpedestal_subtracted_rawADCsU = new TH1D( histname.Format( "hrawADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/o common-mode correction; ADC - pedestal",
-					      2500, -500.,4500. );
-    hpedestal_subtracted_rawADCsV = new TH1D( histname.Format( "hrawADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/o common-mode correction; ADC - pedestal",
-					      2500, -500.,4500. );
+    hpedestal_subtracted_rawADCsU = new TH1D( TString::Format( "hrawADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/o common-mode correction; ADC - pedestal",
+					      1250, -500.,4500. );
+    hpedestal_subtracted_rawADCsV = new TH1D( TString::Format( "hrawADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/o common-mode correction; ADC - pedestal",
+					      1250, -500.,4500. );
 
-    hpedestal_subtracted_ADCsU = new TH1D( histname.Format( "hADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/common-mode correction; ADC - Common-mode - pedestal",
-					      1000, -500.,500. );
-    hpedestal_subtracted_ADCsV = new TH1D( histname.Format( "hADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/common-mode correction; ADC - Common-mode - pedestal",
-					      1000, -500.,500. );
+    hpedestal_subtracted_ADCsU = new TH1D( TString::Format( "hADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/common-mode correction; ADC - Common-mode - pedestal",
+					      1250, -500.,4500. );
+    hpedestal_subtracted_ADCsV = new TH1D( TString::Format( "hADCpedsubV_allstrips_%s", detname.Data() ), "distribution of ped-subtracted V strip ADCs w/common-mode correction; ADC - Common-mode - pedestal",
+					      1250, -500.,4500. );
 
-    int nAPVs_U = fNstripsU/fN_APV25_CHAN;
-    hcommonmode_mean_by_APV_U = new TH2D( histname.Format( "hCommonModeMean_by_APV_U_%s", detname.Data() ), "distribution of common-mode means for U strip pedestal data; APV card; Common-mode",
+    UInt_t nAPVs_U = fNstripsU/fN_APV25_CHAN;
+    hcommonmode_mean_by_APV_U = new TH2D( TString::Format( "hCommonModeMean_by_APV_U_%s", detname.Data() ), "distribution of common-mode means for U strip pedestal data; APV card; Common-mode",
 					  nAPVs_U, -0.5, nAPVs_U-0.5,  
-					  2048, -0.5, 4095.5 );
-    int nAPVs_V = fNstripsV/fN_APV25_CHAN;
-    hcommonmode_mean_by_APV_V = new TH2D( histname.Format( "hCommonModeMean_by_APV_V_%s", detname.Data() ), "distribution of common-mode means for V strip pedestal data; APV card; Common-mode",
+					  1024, -0.5, 4095.5 );
+    UInt_t nAPVs_V = fNstripsV/fN_APV25_CHAN;
+    hcommonmode_mean_by_APV_V = new TH2D( TString::Format( "hCommonModeMean_by_APV_V_%s", detname.Data() ), "distribution of common-mode means for V strip pedestal data; APV card; Common-mode",
 					  nAPVs_V, -0.5, nAPVs_V-0.5,
-					  2048, -0.5, 4095.5 );
+					  1024, -0.5, 4095.5 );
 
     fPedHistosInitialized = true;
     
@@ -2120,30 +2333,30 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     //std::cout << "SBSGEMModule::Begin: making common-mode histograms for module " << GetName() << std::endl;
     //U strips:
    
-    fCommonModeDistU = new TH2D( histname.Format( "hcommonmodeU_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU = new TH2D( TString::Format( "hcommonmodeU_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistU_Sorting = new TH2D( histname.Format( "hcommonmodeU_sorting_%s", detname.Data() ), "U/X strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU_Sorting = new TH2D( TString::Format( "hcommonmodeU_sorting_%s", detname.Data() ), "U/X strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistU_Danning = new TH2D( histname.Format( "hcommonmodeU_danning_%s", detname.Data() ), "U/X strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU_Danning = new TH2D( TString::Format( "hcommonmodeU_danning_%s", detname.Data() ), "U/X strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
    
-    fCommonModeDiffU = new TH2D( histname.Format( "hcommonmodeU_diff_%s", detname.Data() ), "U/X strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -25.0, 25.0 );
+    fCommonModeDiffU = new TH2D( TString::Format( "hcommonmodeU_diff_%s", detname.Data() ), "U/X strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -25.0, 25.0 );
     
 
     //V strips:
     
-    fCommonModeDistV = new TH2D( histname.Format( "hcommonmodeV_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV = new TH2D( TString::Format( "hcommonmodeV_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistV_Sorting = new TH2D( histname.Format( "hcommonmodeV_sorting_%s", detname.Data() ), "V/Y strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV_Sorting = new TH2D( TString::Format( "hcommonmodeV_sorting_%s", detname.Data() ), "V/Y strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDistV_Danning = new TH2D( histname.Format( "hcommonmodeV_danning_%s", detname.Data() ), "V/Y strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV_Danning = new TH2D( TString::Format( "hcommonmodeV_danning_%s", detname.Data() ), "V/Y strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDiffV = new TH2D( histname.Format( "hcommonmodeV_diff_%s", detname.Data() ), "V/Y strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -25.0,25.0 );
+    fCommonModeDiffV = new TH2D( TString::Format( "hcommonmodeV_diff_%s", detname.Data() ), "V/Y strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -25.0,25.0 );
     
 
     // fCommonModeDistU->Print();
@@ -2158,8 +2371,23 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     fCommonModePlotsInitialized = true;
   }
 
+  //The following histograms we more or less always want: 
+  if( !fPulseShapeInitialized ){
+    hADCfrac_vs_timesample_allstrips = new TH2D( TString::Format( "h%s_ADCfrac_vs_timesample_all", detname.Data() ), "All strips ; Time sample ; ADC_{i}/ADCsum", fN_MPD_TIME_SAMP, -0.5, fN_MPD_TIME_SAMP-0.5, 200, 0.0, 1.0 );
+    hADCfrac_vs_timesample_goodstrips = new TH2D( TString::Format( "h%s_ADCfrac_vs_timesample_good", detname.Data() ), "Strips on good tracks ; Time sample ; ADC_{i}/ADCsum", fN_MPD_TIME_SAMP, -0.5, fN_MPD_TIME_SAMP-0.5, 200, 0.0, 1.0 );
+		
+    hADCfrac_vs_timesample_maxstrip = new TH2D( TString::Format( "h%s_ADCfrac_vs_timesample_max", detname.Data() ), "Max strip in cluster on track; Time sample ; ADC_{i}/ADCsum", fN_MPD_TIME_SAMP, -0.5, fN_MPD_TIME_SAMP-0.5, 200, 0.0, 1.0 );
+
+    fPulseShapeInitialized = true;
+  }
+
   //  std::cout << "fCommonModePlotsInitialized = " << fCommonModePlotsInitialized << std::endl;
     
+  //if( !fStripTimeFunc ){
+  fStripTimeFunc = new TF1( TString::Format("StripPulseShape_%s",detname.Data() ),
+			    "std::max(0.0,[0]*exp(1.0)*(x-[1])/[2]*exp(-(x-[1])/[2]))",0.,fN_MPD_TIME_SAMP * fSamplePeriod );
+  //  }
+
   return 0;
 }
 
@@ -2184,7 +2412,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   hpedrmsV_by_strip->Reset();
   
   //start with pedestals;
-  for( int iu = 0; iu<fNstripsU; iu++ ){
+  for( UInt_t iu = 0; iu<fNstripsU; iu++ ){
     TH1D *htemp = hcommonmode_subtracted_ADCs_by_stripU->ProjectionY( "htemp", iu+1,iu+1 );
     
     fPedestalU[iu] = htemp->GetMean();
@@ -2202,7 +2430,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
     htemp->Delete();
   }
 
-  for( int iv = 0; iv<fNstripsV; iv++ ){
+  for( UInt_t iv = 0; iv<fNstripsV; iv++ ){
     TH1D *htemp = hcommonmode_subtracted_ADCs_by_stripV->ProjectionY( "htemp", iv+1, iv+1 );
     fPedestalV[iv] = htemp->GetMean();
     fPedRMSV[iv] = htemp->GetRMS() / sqrt( double( fN_MPD_TIME_SAMP ) );
@@ -2225,7 +2453,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   TString header;
   header.Form( "%s.%s.%s.pedu = ", appname.Data(), detname.Data(), modname.Data() );
   dbfile << std::endl << header << std::endl;
-  for( int iu=0; iu<fNstripsU; iu++ ){
+  for( UInt_t iu=0; iu<fNstripsU; iu++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", fPedestalU[iu] );
     dbfile << sentry;
@@ -2237,7 +2465,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   header.Form( "%s.%s.%s.rmsu = ", appname.Data(), detname.Data(), modname.Data() );
   dbfile << std::endl << header << std::endl;
 
-  for( int iu=0; iu<fNstripsU; iu++ ){
+  for( UInt_t iu=0; iu<fNstripsU; iu++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", fPedRMSU[iu] );
     dbfile << sentry;
@@ -2248,7 +2476,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
 
   header.Form( "%s.%s.%s.pedv = ", appname.Data(), detname.Data(), modname.Data() );
   dbfile << std::endl << header << std::endl;
-  for( int iv=0; iv<fNstripsV; iv++ ){
+  for( UInt_t iv=0; iv<fNstripsV; iv++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", fPedestalV[iv] );
     dbfile << sentry;
@@ -2260,7 +2488,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   header.Form( "%s.%s.%s.rmsv = ", appname.Data(), detname.Data(), modname.Data() );
   dbfile << std::endl << header << std::endl;
 
-  for( int iv=0; iv<fNstripsV; iv++ ){
+  for( UInt_t iv=0; iv<fNstripsV; iv++ ){
     TString sentry;
     sentry.Form( "  %15.5g ", fPedRMSV[iv] );
     dbfile << sentry;
@@ -2506,14 +2734,24 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     fCommonModeDiffV->Write(0,kOverwrite);
   }
     
+  if( fPulseShapeInitialized ){
+    hADCfrac_vs_timesample_allstrips->Write(0,kOverwrite);
+    hADCfrac_vs_timesample_goodstrips->Write(0,kOverwrite);
+    hADCfrac_vs_timesample_maxstrip->Write(0,kOverwrite);
+  }
+
+  //if( fStripTimeFunc ) 
+
+  //delete fStripTimeFunc;
+
   return 0;
 }
 
 //utility method to calculate correlation coefficient of U and V samples: 
-Double_t SBSGEMModule::CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples ){
+Double_t SBSGEMModule::CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples ){
   Double_t sumu=0.0, sumv=0.0, sumu2=0.0, sumv2=0.0, sumuv=0.0;
 
-  if ( Usamples.size() < nsamples || Vsamples.size() < nsamples ){
+  if ( (int)Usamples.size() < nsamples || (int)Vsamples.size() < nsamples ){
     return -10.0; //nonsense value, correlation coefficient by definition is -1 < c < 1
   }
   
@@ -2632,9 +2870,9 @@ void SBSGEMModule::filter_2Dhits(){
   //First U/V time difference:
   bool passed[fN2Dhits];
   int ngood = 0;
-  for( int ipass=0; ipass<2; ipass++ ){
+  for( UInt_t ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
-    for( int ihit=0; ihit<fN2Dhits; ihit++ ){
+    for( UInt_t ihit=0; ihit<fN2Dhits; ihit++ ){
       if( ipass == 0 ){
 	passed[ihit] = fHits[ihit].keep && fabs( fHits[ihit].tdiff ) <= fTimeCutUVdiff;
 	if( passed[ihit] ) ngood++;
@@ -2648,9 +2886,9 @@ void SBSGEMModule::filter_2Dhits(){
 
   //Second: Cluster Correlation Coefficient:
   ngood = 0;
-  for( int ipass=0; ipass<2; ipass++ ){
+  for( UInt_t ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
-    for( int ihit=0; ihit<fN2Dhits; ihit++ ){
+    for( UInt_t ihit=0; ihit<fN2Dhits; ihit++ ){
       if( ipass == 0 ){
 	passed[ihit] = fHits[ihit].keep &&  fHits[ihit].corrcoeff_clust >= fCorrCoeffCut;
 	if( passed[ihit] ) ngood++;
@@ -2664,9 +2902,9 @@ void SBSGEMModule::filter_2Dhits(){
   
   //Third: ADC asymmetry:
   ngood = 0;
-  for( int ipass=0; ipass<2; ipass++ ){
+  for( UInt_t ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
-    for( int ihit=0; ihit<fN2Dhits; ihit++ ){
+    for( UInt_t ihit=0; ihit<fN2Dhits; ihit++ ){
       if( ipass == 0 ){
 	passed[ihit] = fHits[ihit].keep && fabs( fHits[ihit].ADCasym ) <= fADCasymCut;
 	if( passed[ihit] ) ngood++;
@@ -2678,8 +2916,6 @@ void SBSGEMModule::filter_2Dhits(){
     }
   }
 
-  //other criteria could include correlation coefficient, time sample peaking, etc. 
-  
 }
 
 double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo ){
@@ -2736,6 +2972,8 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
 	if( iter > 0 ) {
 	  maxtemp = cm_temp + fZeroSuppressRMS*rmstemp*fRMS_ConversionFactor; //2.45 = sqrt(6), don't want to calculate sqrt every time
 	  mintemp = 0.0;
+	  //experimental: 
+	  //mintemp = cm_temp - fZeroSuppressRMS*cm_rms;
 	}
 	
 	if( ADCtemp >= mintemp && ADCtemp <= maxtemp ){
@@ -2773,9 +3011,82 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
   }
 }
 
-void SBSGEMModule::InitAPVMAP(){
-  APVMAP.clear();
+void SBSGEMModule::fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool ismax ){
+  if( hitindex < 0 || hitindex >= fNstrips_hit ) return;
+  if( hADCfrac_vs_timesample_goodstrips == NULL ) return;
+  if( hADCfrac_vs_timesample_maxstrip == NULL ) return;
 
+  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+    hADCfrac_vs_timesample_goodstrips->Fill( isamp, fADCsamples[hitindex][isamp]/fADCsums[hitindex] );
+    if( ismax ){
+      hADCfrac_vs_timesample_maxstrip->Fill( isamp, fADCsamples[hitindex][isamp]/fADCsums[hitindex] );
+    }
+  }
+}
+
+//This function calculates the chi2 of a vector of time samples with respect to the "Good Strip" averages:
+double SBSGEMModule::StripTSchi2( int hitindex ){
+  if( hitindex < 0 || hitindex > fNstrips_hit ) return -1.;
+  double chi2 = 0.0;
+  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+    chi2 += pow( (fADCsamples[hitindex][isamp] / fADCsums[hitindex] - fGoodStrip_TSfrac_mean[isamp])/fGoodStrip_TSfrac_sigma[isamp], 2 );
+  }
+  return chi2;
+}
+
+//Experimental, not used for now:
+double SBSGEMModule::FitStripTime( int striphitindex, double RMS ){
+  if( striphitindex < 0 || striphitindex > fNstrips_hit ) return -1000.0;
+ 
+  double Ttest_min = -fN_MPD_TIME_SAMP * fSamplePeriod; 
+  double Ttest_max = fN_MPD_TIME_SAMP * fSamplePeriod;
+  double Tstep = fSamplePeriod/25.0; //scan t0 in 1 ns steps
+
+  //fStripTimeFunc
+  // fStripTimeFunc->FixParameter(2,fStripTau);
+  // fStripTimeFunc->SetParameter(1,fTmean[striphitindex]);
+  // fStripTimeFunc->FixParameter(0,fADCmax[striphitindex])
+
+  //int isampmax = fMaxSamp[striphitindex];
+  double ADCmax = fADCmax[striphitindex];
+
+  double minchi2 = 0.0;
+  bool first = true;
+
+  double Tbest = 0.0;
+
+  double Ttest = Ttest_min; 
+  while( Ttest < Ttest_max ){
+    
+    double chi2 = 0.0;
+    for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+      double Tsamp = fSamplePeriod * (isamp + 0.5);
+
+      double ADCtheory = ADCmax*exp(1.0)/fStripTau * (Tsamp - Ttest) * exp(-(Tsamp-Ttest)/fStripTau ); 
+      chi2 += pow( (ADCtheory - fADCsamples[striphitindex][isamp])/RMS, 2 );
+    }
+
+    if ( first || chi2 < minchi2 ){
+      minchi2 = chi2;
+      Tbest = Ttest;
+      first = false;
+    }
+    Ttest += Tstep;
+  }
+ 
+  
+
+  //TGraph *gtemp = new TGraphErrors(fN_MPD_TIME_SAMP, xtemp, ytemp, extemp, eytemp);
+  //gtemp->Fit(fStripTimeFunc,"SQ0");
+
+  //std::cout << "Strip tmean, tfit = " << fTmean[striphitindex] << ", " << Tbest << std::endl;
+  // 	    << " +/- " << fStripTimeFunc->GetParError(1) << std::endl;
+
+  //return fStripTimeFunc->GetParameter(1);
+  return Tbest;
+}
+
+void SBSGEMModule::InitAPVMAP(){
   APVMAP[SBSGEM::kINFN].resize(fN_APV25_CHAN);
   APVMAP[SBSGEM::kUVA_XY].resize(fN_APV25_CHAN);
   APVMAP[SBSGEM::kUVA_UV].resize(fN_APV25_CHAN);

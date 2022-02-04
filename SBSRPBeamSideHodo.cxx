@@ -26,13 +26,13 @@ SBSRPBeamSideHodo::SBSRPBeamSideHodo( const char* name, const char* description,
 Int_t SBSRPBeamSideHodo::ReadDatabase( const TDatime& date )
 {
   // We can use this name here for logs
-  static const char* const here = "ReadDatabase()";
+  //static const char* const here = "ReadDatabase()";
 
   // If we want to add any new variables, uncomment the following and add
   // the new variables we want to read from the database
   FILE* file = OpenFile( date );
   if( !file ) return kFileError;
-  Int_t err;
+  //Int_t err;
 
   // Make sure to call parent class so that the generic variables can be read
   return SBSGenericDetector::ReadDatabase(date);

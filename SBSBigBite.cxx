@@ -38,6 +38,8 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   fBackConstraintWidthY = 1.5;
   fFrontConstraintX0 = 0.0;
   fFrontConstraintY0 = 0.0;
+  fBackConstraintX0 = 0.0;
+  fBackConstraintY0 = 0.0;
   fTrackGrinchClusCorr_0 = 0.0;
   fTrackGrinchClusCorr_1 = 0.0;
   fTrackGrinchClusCorr_Sigma = 1.5;
@@ -69,7 +71,13 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
 
   InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
   
-  //Default 
+  // Define our own PID parameters (undo what THaSpectrometer has set up)
+  SBSBigBite::DefinePidParticles();
+
+  // Enable PID calculations (call CalcPID)
+  SetPID(true);
+
+  //Default
   
   
   // Constructor. Defines standard detectors
@@ -96,7 +104,7 @@ SBSBigBite::~SBSBigBite()
 void SBSBigBite::Clear( Option_t *opt )
 {
   THaSpectrometer::Clear(opt);
-  f_xtg_exp.clear();
+  //  f_xtg_exp.clear();
   fEpsEtotRatio.clear();
   fEtot.clear();
   fEtotPratio.clear();
@@ -109,8 +117,21 @@ void SBSBigBite::Clear( Option_t *opt )
   fProbaPi.clear();
 }
 
+//_____________________________________________________________________________
+void SBSBigBite::DefinePidParticles()
+{
+  // Define the default set of PID particles:
+  //  electron, pion
+
+  fPidParticles->Delete();    //make sure array is empty
+
+  AddPidParticle( "e",  "electron",   0.511e-3, -1 );
+  AddPidParticle( "pi", "pion",   0.139, -1 );
+}
+
+//_____________________________________________________________________________
 Int_t SBSBigBite::ReadRunDatabase( const TDatime &date ){
-  const char* const here = "SBSBigBite::ReadRunDatabase()";
+  //const char* const here = "SBSBigBite::ReadRunDatabase()";
 
   Int_t err = THaSpectrometer::ReadRunDatabase( date );
   if( err ) return err;
@@ -178,6 +199,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 1, 0},
     { "frontconstraint_x0", &fFrontConstraintX0, kDouble, 0, 1, 0},
     { "frontconstraint_y0", &fFrontConstraintY0, kDouble, 0, 1, 0},
+    { "backconstraint_x0", &fBackConstraintX0, kDouble, 0, 1, 0},
+    { "backconstraint_y0", &fBackConstraintY0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_const", &fTrackGrinchClusCorr_0, kDouble, 0, 1, 0},
     { "trackgrinchcorr_slope", &fTrackGrinchClusCorr_1, kDouble, 0, 1, 0},
     { "trackgrinchcorr_sigma", &fTrackGrinchClusCorr_Sigma, kDouble, 0, 1, 0},
@@ -230,7 +253,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   if(!nontrackdet)fPID = false;
 
   if(fOpticsOrder>=0){
-    int nterms = 0;
+    unsigned int nterms = 0;
     
     for(int i = 0; i<=fOpticsOrder; i++){ //x 
       for( int j=0; j<=fOpticsOrder-i; j++){ //y
@@ -249,7 +272,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     
     //we expect 9 parameters per line: four coefficients plus five exponents:
 
-    int nparams = 9*nterms;
+    unsigned int nparams = 9*nterms;
 
     if(nparams!=optics_param.size()){
       std::cerr << "Warning: mismatch between " << optics_param.size()
@@ -270,7 +293,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     f_ol.resize(nterms);
     f_om.resize(nterms);
     
-    for(int i=0; i<nterms; i++){
+    for(unsigned int i=0; i<nterms; i++){
       fb_xptar[i] = optics_param[9*i];
       fb_yptar[i] = optics_param[9*i+1];
       fb_ytar[i] = optics_param[9*i+2];
@@ -304,12 +327,12 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_pi_PSSH_table.clear();
   
   if(!pssh_pidproba.empty()){
-    int npts = pssh_pidproba.size()/3;
+    unsigned int npts = pssh_pidproba.size()/3;
     fEpsEtotRatio_table.resize(npts);
     fProba_e_PSSH_table.resize(npts);
     fProba_pi_PSSH_table.resize(npts);
     
-    for(int i = 0; i<npts; i++){
+    for(unsigned int i = 0; i<npts; i++){
       fEpsEtotRatio_table[i] = pssh_pidproba[3*i];
       fProba_e_PSSH_table[i] = pssh_pidproba[3*i+1];
       fProba_pi_PSSH_table[i] = pssh_pidproba[3*i+2];
@@ -322,12 +345,12 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_pi_PCAL_table.clear();
   
   if(!pcal_pidproba.empty()){
-    int npts = pcal_pidproba.size()/3;
+    unsigned int npts = pcal_pidproba.size()/3;
     fEtotPratio_table.resize(npts);
     fProba_e_PCAL_table.resize(npts);
     fProba_pi_PCAL_table.resize(npts);
     
-    for(int i = 0; i<npts; i++){
+    for(unsigned int i = 0; i<npts; i++){
       fEtotPratio_table[i] = pcal_pidproba[3*i];
       fProba_e_PCAL_table[i] = pcal_pidproba[3*i+1];
       fProba_pi_PCAL_table[i] = pcal_pidproba[3*i+2];
@@ -338,19 +361,19 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   fProba_e_GRINCH_table.clear();
   fProba_pi_GRINCH_table.clear();
   
-  if(!grinch_pidproba.empty() && fP_table.size()){
-    int n_ppts = 2+fP_table.size();
-    int npts = grinch_pidproba.size()/(n_ppts);
+  if(!grinch_pidproba.empty() && !fP_table.empty()){
+    unsigned int n_ppts = 2+fP_table.size();
+    unsigned int npts = grinch_pidproba.size()/(n_ppts);
     fNGRINCHPMTs_table.resize(npts);
     fProba_e_GRINCH_table.resize(npts);
     fProba_pi_GRINCH_table.resize(fP_table.size());
-    for(int j = 0; j<fP_table.size(); j++){
+    for(unsigned int j = 0; j<fP_table.size(); j++){
       fProba_pi_GRINCH_table[j].resize(npts);
     }
-    for(int i = 0; i<npts; i++){
+    for(unsigned int i = 0; i<npts; i++){
       fNGRINCHPMTs_table[i] = grinch_pidproba[n_ppts*i];
       fProba_e_GRINCH_table[i] = grinch_pidproba[n_ppts*i+1];
-      for(int j = 0; j<fP_table.size(); j++){
+      for(unsigned int j = 0; j<fP_table.size(); j++){
 	fProba_pi_GRINCH_table[j][i] = grinch_pidproba[n_ppts*i+2+j];
       }
     }
@@ -370,7 +393,7 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   // removing all that stuff since apparently I'm not able to code properly...
 
   RVarDef beamtrackvars[] = {
-    { "tr.tg_x", "track constraint y", "f_xtg_exp" },
+    { "tr.tg_x", "target x", "fTracks.THaTrack.fTX" },
     { nullptr }
   };
   DefineVarsFromList( beamtrackvars, mode );
@@ -464,22 +487,24 @@ Int_t SBSBigBite::CoarseReconstruct()
 	sumweights_x = 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	sumweights_y = 1.;
 	//cout << BBTotalShower->GetShower()->GetECorrected() << endl;
-	for(int i = 0; i<ShowerClusters.size(); i++){
+	for(unsigned int i = 0; i<ShowerClusters.size(); i++){
 	  Etot = ShowerClusters[i]->GetE();
 	  npts = 1;
 	  x_bcp = ShowerClusters[i]->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
 	  y_bcp = ShowerClusters[i]->GetY();
 	  
-	  if(BBTotalShower->PSMatchClusIdx(i)<PreShowerClusters.size()){
+	  if(BBTotalShower->PSMatchClusIdx(i)<(int)PreShowerClusters.size()){
 	    Etot+= PreShowerClusters[BBTotalShower->PSMatchClusIdx(i)]->GetE();
 	    fEpsEtotRatio.push_back(EpsEtotRatio);
 	    fEtot.push_back(Etot);
 
 	    x_bcp/=sumweights_x;
 	    y_bcp/=sumweights_y;
+
+	    double Efudge = Etot * fECaloFudgeFactor;
 	    
-	    double dx = (Etot*fECaloFudgeFactor*fOpticsAngle - fPtheta_00000 + x_bcp * (Etot*fECaloFudgeFactor*fXptar_10000-fPtheta_10000)) /
-	      (-fPtheta_10000*z_bcp+fPtheta_00100+Etot*(fXptar_10000*z_bcp+1-fXptar_00100));
+	    double dx = (Efudge*fOpticsAngle - fPtheta_00000 + x_bcp * (Efudge*fXptar_10000-fPtheta_10000)) /
+	      (-fPtheta_10000*z_bcp+fPtheta_00100+Efudge*(fXptar_10000*z_bcp+1-fXptar_00100));
 	    double dy = y_bcp*fb_ytar[3]/(fb_ytar[3]*z_bcp-fb_ytar[10]);
 	    
 	    z_fcp = 0;
@@ -605,8 +630,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	
 	fFrontConstraintX.push_back(x_fcp + fFrontConstraintX0);
 	fFrontConstraintY.push_back(y_fcp + fFrontConstraintY0);
-	fBackConstraintX.push_back(x_bcp);
-	fBackConstraintY.push_back(y_bcp);
+	fBackConstraintX.push_back(x_bcp + fBackConstraintX0);
+	fBackConstraintY.push_back(y_bcp + fBackConstraintY0);
 	
 	// std::cout << "Front constraint point x, y, z: " 
 	// 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
@@ -619,7 +644,7 @@ Int_t SBSBigBite::CoarseReconstruct()
 	    SBSGEMSpectrometerTracker* BBGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
 	    //std::cout << "setting constraints for tracks" << std::endl;
 	    BBGEM->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
-	    BBGEM->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
+	    BBGEM->SetBackConstraintPoint(x_bcp + fBackConstraintX0, y_bcp + fBackConstraintY0, z_bcp);
 	    BBGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
 					   fFrontConstraintWidthY);
 	    BBGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
@@ -726,7 +751,7 @@ Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
 void SBSBigBite::CalcOpticsCoords( THaTrack* track )
 {
   Double_t x_fp, y_fp, xp_fp, yp_fp;
-  Double_t px, py, pz;// NB: not the actual momentum!
+  //Double_t px, py, pz;// NB: not the actual momentum!
   
   x_fp = track->GetX();
   y_fp = track->GetY();
@@ -838,7 +863,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //}
   //cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
 
-  double vx, vy, vz, px, py, pz;
+  double /*vx, vy, vz, */px, py, pz;
   double p_fit, xptar_fit, yptar_fit, ytar_fit, xtar;
   xtar = 0.0;
   double thetabend_fit;
@@ -929,7 +954,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     }
     //cout << var->GetName() << endl;
   }
-  f_xtg_exp.push_back(xtar);
+  //  f_xtg_exp.push_back(xtar);
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
@@ -981,7 +1006,7 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
       
       //x, y of track at z = Z_hodoscope
       double x_track = the_track->GetX(TH->GetOrigin().Z());
-      double y_track = the_track->GetY(TH->GetOrigin().Z());
+      //double y_track = the_track->GetY(TH->GetOrigin().Z());
       //cout << x_track << " " << y_track << endl;
       // Not sure what to use for the hodoscope. 
       // Perhaps we'd have to complete the class with a cluster
@@ -1001,7 +1026,7 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
       double Z_cst =  BBTotalShower->GetShower()->GetOrigin().Z();
       //check that the track we consider is consistent with the calorimeter constraint 
       int i_match = -1;
-      for(int i = 0; i<fEtot.size(); i++){
+      for(int i = 0; i<(int)fEtot.size(); i++){
 	/*
 	cout << "back X: " << fBackConstraintX[i]-fBackConstraintWidthX 
 	     << " <? " << the_track->GetX(Z_cst) << " <? " 
@@ -1067,12 +1092,9 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
      fBackConstraintX.size()==0 || fBackConstraintY.size()==0)return;
   
   //particles: 0: electron, 1: pion
-  //detectors: 0: ps/sh
-  THaPIDinfo* pidinfo = new THaPIDinfo(2, 2);
-  pidinfo->SetDefaultPriors();
-  
-  the_track->SetPIDinfo(pidinfo);
-  
+  //detectors: 0: calo, 1: GRINCH
+  auto* pidinfo = the_track->GetPIDinfo();
+
   double eproba, piproba;
   
   TIter next( fNonTrackingDetectors );
@@ -1085,7 +1107,7 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       double Z_cst =  BBTotalShower->GetShower()->GetOrigin().Z();
       //check that the track we consider is consistent with the calorimeter constraint 
       int i_match = -1;
-      for(int i = 0; i<fEtot.size(); i++){
+      for(int i = 0; i<(int)fEtot.size(); i++){
 	if(fBackConstraintX[i]-fBackConstraintWidthX < the_track->GetX(Z_cst) &&  
 	   the_track->GetX(Z_cst) < fBackConstraintX[i]+fBackConstraintWidthX && 
 	   fBackConstraintY[i]-fBackConstraintWidthY < the_track->GetY(Z_cst) &&  
@@ -1101,8 +1123,8 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       proba_pcal(fEtot[i_match]/the_track->GetP(), pr1, pr2);
       eproba*=pr1;
       piproba*=pr2;
-      the_track->GetPIDinfo()->SetProb(0, 0, eproba);
-      the_track->GetPIDinfo()->SetProb(0, 1, piproba);
+      pidinfo->SetProb(0, 0, eproba);
+      pidinfo->SetProb(0, 1, piproba);
     }//end if(inheritsfrom(SBSBBTotalShower))
     
     // then, GRINCH PID
@@ -1135,11 +1157,11 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       }
       
       proba_grinch(NGRINCHPMTs_match, the_track->GetP(), eproba, piproba);
-      the_track->GetPIDinfo()->SetProb(1, 0, eproba);
-      the_track->GetPIDinfo()->SetProb(1, 1, piproba);
+      pidinfo->SetProb(1, 0, eproba);
+      pidinfo->SetProb(1, 1, piproba);
     }
     
-    the_track->GetPIDinfo()->CombinePID();
+    pidinfo->CombinePID();
     
     // cout << " Eps/Etot = " << fEpsEtotRatio[the_track->GetIndex()] 
     // 	 << " Etot/p = " << fEtot[the_track->GetIndex()]/the_track->GetP()
@@ -1153,8 +1175,8 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
     // 	 << the_track->GetPIDinfo()->GetProb(1, 1) << " "
     // 	 << the_track->GetPIDinfo()->GetCombinedProb(1) << endl;
     
-    fProbaE.push_back(the_track->GetPIDinfo()->GetCombinedProb(0));
-    fProbaPi.push_back(the_track->GetPIDinfo()->GetCombinedProb(1));
+    fProbaE.push_back(pidinfo->GetCombinedProb(0));
+    fProbaPi.push_back(pidinfo->GetCombinedProb(1));
     
   }
 }

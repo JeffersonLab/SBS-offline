@@ -42,6 +42,7 @@
 #include "THaEvData.h"
 #include "THaVarList.h"
 #include "THaString.h"
+#include "THaAnalyzer.h"
 
 #include "GenScaler.h"
 #include "Scaler3800.h"
@@ -112,6 +113,40 @@ LHRSScalerEvtHandler::~LHRSScalerEvtHandler()
 Int_t LHRSScalerEvtHandler::End( THaRunBase* r)
 {
   if (fScalerTree) fScalerTree->Write();
+  //Insert here the addition of summary filling
+  THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
+  if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
+    const char* summaryfilename = analyzer->GetSummaryFileName();
+    cout << "LHRSScalerEvtHandler Summary in " << summaryfilename << endl;
+    if( strcmp(summaryfilename,"")!=0  ) {
+      ofstream ostr(summaryfilename, std::ofstream::app);
+      if( ostr ) {
+	// Write to file via cout
+	//streambuf* cout_buf = cout.rdbuf();
+	//cout.rdbuf(ostr.rdbuf());
+	TDatime now;
+	ostr << "LHRS scalers Summary " //<< fRun->GetNumber()
+	     << " completed " << now.AsString()
+	     << endl << " count " << evcount << endl
+	     << endl;
+
+	for (UInt_t i = 0; i < scalerloc.size(); i++) {
+	  TString name = scalerloc[i]->name; 
+	  //tinfo = name + "/D";
+	  //fScalerTree->Branch(name.Data(), &dvars[i], tinfo.Data(), 4000);
+	  ostr << " Scaler " << name.Data() <<  " value: " << dvars[i] << endl;
+	}	
+	//std::vector<Decoder::GenScaler*> scalers;
+	//std::vector<ScalerVar*> scalerloc;
+	ostr << endl;
+	
+	//cout.rdbuf(cout_buf);
+	ostr.close();
+	
+      }
+      
+    }
+  }
   return 0;
 }
 //______________________________________________________________________________
@@ -208,6 +243,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
     nskip = 1;
     itimeout=0;
     NScalers = scalers.size();
+    if (fDebugFile)*fDebugFile << "**** NUM SCALERS = " << NScalers << std::endl;
     for (UInt_t j=0; j<NScalers; j++) {
        // bump pointer until scaler found, and don't decode if already found for this event.
        if (scalerloc[j]->found) continue;
@@ -225,15 +261,14 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
           }
        }
        found1:
-           if(p==pstop && ifound==0) break;
-            if(fDebugFile) *fDebugFile << "\n[LHRSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
-           nskip = scalers[j]->Decode(p);
-           if (fDebugFile && nskip > 1) {
-               *fDebugFile << "\n===== Scaler # "<<j<<"     fName = "<<fName<<"   nskip = "<<nskip<<endl;
-               scalers[j]->DebugPrint(fDebugFile);
-	       // scalers[j]->DoPrint(); 
-           }
-           if (nskip > 1) goto continue1;
+	    if(p==pstop && ifound==0) break;
+             if (fDebugFile)*fDebugFile << "\n[LHRSScalerEvtHandler::Analyze]: FOUND EVENT 140!" << std::endl;
+	    nskip = scalers[j]->Decode(p);
+	    if (fDebugFile && nskip > 1) {
+		    *fDebugFile << "\n===== Scaler # "<<j<<"     fName = "<<fName<<"   nskip = "<<nskip<<endl;
+		    scalers[j]->DebugPrint(fDebugFile);
+	    }
+	    if (nskip > 1) goto continue1;
     }
     continue1:
        p = p + nskip;
@@ -805,11 +840,12 @@ void LHRSScalerEvtHandler::DefVars()
 Int_t LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_int){
    // loop through the message (msg) and convert into data words 
    // - input:  a char array to parse (i.e., scaler data)  
-   // - output: number of words, std::string array (word) and int array (word_int)     
-   char data[200],subword[200];
-   sprintf(data,"");
-   sprintf(subword,"");
-
+   // - output: std::string array (word) and int array (word_int)     
+   char data[200];
+   strcpy(data,"");
+  
+   char *pEnd;
+ 
    // std::cout << "Message to decode: " << std::endl;
    // std::cout << msg << std::endl;
 
@@ -819,30 +855,18 @@ Int_t LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_i
    int j=0;
    int length = strlen(msg);
    for(int i=0;i<length;i++){
-     if(msg[i]=='\n'){
-        // now have a full word
-	word[j] = data;
-	// determine if this is the header
-	for(int k=0;k<3;k++){
-	   sprintf(subword,"%s%c",subword,data[k]);
-	}
-	myStr = subword;
-	if(myStr.compare("abc")==0){
-	   // this is the header -- convert to base 16 int (hex) 
-	   word_int[j] = std::strtoul(data,&pEnd,16);
-	}else{
-           // these are the counts -- convert to base 10 int 
-	   word_int[j] = std::strtoul(data,&pEnd,10);
-	}
-	// increment the index on the word array
-	j++;
-	// empty the constructed word 
-	sprintf(data,"");
-	sprintf(subword,"");
-     }else{
-	// not a new line, build the word  
-	sprintf(data,"%s%c",data,msg[i]);
-     }
+      if(msg[i]=='\n'){
+      	// now have a full word
+      	word[j]     = data;
+        word_int[j] = std::strtol(data,&pEnd,16);  // base 16 (hex)
+      	// increment the index on the word array
+      	j++;
+      	// empty the constructed word 
+      	strcpy(data,"");
+      }else{
+      	// not a new line, build the word  
+      	sprintf(data,"%s%c",data,msg[i]);
+      }
    }
 
    return j; // return the number of words 

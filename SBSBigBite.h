@@ -19,7 +19,7 @@ public:
   virtual Int_t	CoarseTrack();
   virtual Int_t	Reconstruct();
   virtual Int_t	Track();
-  virtual Int_t       CalcPID();
+  virtual Int_t CalcPID();
    
   virtual Int_t FindVertices( TClonesArray& tracks );
   virtual Int_t TrackCalc();
@@ -38,7 +38,8 @@ protected:
   virtual Int_t ReadDatabase( const TDatime& date );
   virtual Int_t ReadRunDatabase( const TDatime& date );
   virtual Int_t DefineVariables( EMode mode = kDefine );
-    
+  virtual void  DefinePidParticles();
+
   void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
   void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords
   void CalcTrackTiming( THaTrack* the_track );
@@ -106,7 +107,7 @@ protected:
   Double_t fYtar_01000;
   Double_t fYtar_00010;
 
-  std::vector<double> f_xtg_exp;
+  //std::vector<double> f_xtg_exp;
 
 
   Double_t fFrontConstraintWidthX;
@@ -117,7 +118,11 @@ protected:
   //so we can center the peaks at zero, tighten up the windows, 
   //and get tracking to run faster until things are better calibrated:
   Double_t fFrontConstraintX0;
-  Double_t fFrontConstraintY0; 
+  Double_t fFrontConstraintY0;
+  //Might as well add back constraint offsets as well to account for a possible mismatch between 
+  //shower cluster position and track position:
+  Double_t fBackConstraintX0; 
+  Double_t fBackConstraintY0;
 
     
   //for output only... Vectors instead?

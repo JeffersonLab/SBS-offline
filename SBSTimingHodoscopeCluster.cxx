@@ -60,15 +60,21 @@ Bool_t SBSTimingHodoscopeCluster::AddElement(SBSTimingHodoscopeBar* bar) {
   //returns *true* if the element can be added to the cluster
   //returns *false* otherwise
   if (fMult<fNMaxElements) {
+    //Add a criterion to reduce the time
     fElements.push_back(bar);
     fMult = fElements.size();
     //recompute the avergae of time, positions, and time over threshold
-    //Should we use a weighted average? Perhaps not until we better understand the relation
+    //Should we use a weighted average? using time over threshold.
     //between ToT and amplitude:
-    fXmean = (fXmean*(fMult-1)+bar->GetElementPos())/fMult;
-    fYmean = (fYmean*(fMult-1)+bar->GetHitPos())/fMult;
-    fTmean = (fTmean*(fMult-1)+bar->GetMeanTime())/fMult;
-    fToTmean = (fToTmean*(fMult-1)+bar->GetMeanToT())/fMult;
+    double sumtotmean_prev = fToTmean*(fMult-1);
+    fToTmean = (fToTmean*(fMult-1)+bar->GetMeanToT());
+    fXmean = (fXmean*sumtotmean_prev+bar->GetElementPos()*bar->GetMeanToT())/fToTmean;
+    fYmean = (fYmean*sumtotmean_prev+bar->GetHitPos()*bar->GetMeanToT())/fToTmean;
+    fTmean = (fTmean*sumtotmean_prev+bar->GetMeanTime()*bar->GetMeanToT())/fToTmean;
+    fToTmean/= fMult;
+    //fXmean = (fXmean*(fMult-1)+bar->GetElementPos())/fMult;
+    //fYmean = (fYmean*(fMult-1)+bar->GetHitPos())/fMult;
+    //fTmean = (fTmean*(fMult-1)+bar->GetMeanTime())/fMult;
     //we might want to see later for ToT weighted quantities
     //replace max element if the new element is the maximum one
     if(bar->GetMeanToT()>fMaxElement->GetMeanToT()){

@@ -57,6 +57,7 @@ struct SBSCalBlocks {
 struct SBSCalorimeterOutput {
   std::vector<Double_t> e;   //< []
   std::vector<Double_t> atime;   //< []
+  std::vector<Double_t> tdctime;   //< []
   std::vector<Double_t> e_c;   //< []
   std::vector<Double_t> x;   //< []
   std::vector<Double_t> y;   //< []
@@ -85,6 +86,7 @@ public:
   // Get information from the main cluster
   Double_t GetE();             //< Main cluster energy
   Double_t GetAtime();         //< Main cluster ADC time of max block
+  Double_t GetTDCtime();         //< Main cluster ADC time of max block
   Double_t GetECorrected();    //< Main cluster corrected energy
   Double_t GetX();             //< Main cluster energy average x
   Double_t GetY();             //< Main cluster energy average y
@@ -133,6 +135,9 @@ protected:
 
   // Clusters for this event
   std::vector<SBSCalorimeterCluster*> fClusters; // Cluster
+
+  Double_t fEmin_clusSeed; //< Minimum energy to be the seed of a cluster
+
   Double_t    fEmin;         //< Minimum energy for a cluster center
   Double_t    fXmax_dis;         //< maximum X distance from a cluster center
   Double_t    fYmax_dis;         //< maximum Y distance from a cluster center
@@ -177,6 +182,10 @@ inline Double_t SBSCalorimeter::GetE() {
 
 inline Double_t SBSCalorimeter::GetAtime() {
   return GetVVal(fMainclus.atime);
+}
+
+inline Double_t SBSCalorimeter::GetTDCtime() {
+  return GetVVal(fMainclus.tdctime);
 }
 
 inline Double_t SBSCalorimeter::GetECorrected() {

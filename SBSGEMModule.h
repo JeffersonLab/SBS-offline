@@ -5,6 +5,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <array>
 
 //using namespace std;
 
@@ -13,6 +14,7 @@ class THaEvData;
 class THaRunBase;
 class TH1D;
 class TH2D;
+class TF1;
 class TClonesArray;
 
 namespace SBSGEM {
@@ -39,9 +41,10 @@ struct sbsgemhit_t { //2D reconstructed hits
   //Track info:
   Bool_t keep;     //Should this cluster be considered for tracking? We use this variable to implement "cluster quality" cuts (thresholds, XY ADC and time correlation, etc.)
   Bool_t ontrack;  //Is this cluster on any track?
+  Bool_t highquality; //is this a "high quality" hit?
   Int_t trackidx; //Index of track containing this cluster (within the array of tracks found by the parent SBSGEMTracker
-  Int_t iuclust;  //Index in (1D) U cluster array of the "U" cluster used to define this 2D hit.
-  Int_t ivclust;  //Index in (1D) V cluster array of the "V" cluster used to define this 2D hit.
+  UInt_t iuclust;  //Index in (1D) U cluster array of the "U" cluster used to define this 2D hit.
+  UInt_t ivclust;  //Index in (1D) V cluster array of the "V" cluster used to define this 2D hit.
   
   //Strip info: should we store a list of strips? We shouldn't need to if the clustering algorithm requires all strips in a cluster to be contiguous:
   //Some of this information is probably redundant with 1D clustering results stored in sbsgemcluster_t, but it may or may not be more efficient to store a copy here:
@@ -137,6 +140,8 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
+  void SetMakeCommonModePlots( int cmplots=0 ){ fMakeCommonModePlots = cmplots != 0; fCommonModePlots_DBoverride = true; }
+  
   //Don't call this method directly, it is called by find_2Dhits. Call that instead:
   void find_clusters_1D(SBSGEM::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
   void find_2Dhits(); // Version with no arguments assumes no constraint points
@@ -152,8 +157,9 @@ class SBSGEMModule : public THaSubDetector {
   void filter_2Dhits(); 
   
   //Utility function to calculate correlation coefficient between U and V time samples:
-  Double_t CorrCoeff( int nsamples, std::vector<double> Usamples, std::vector<double> Vsamples );
-
+  Double_t CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples );
+  Double_t StripTSchi2( int hitindex );
+  
   //Utility functions to compute "module local" X and Y coordinates from U and V (strip coordinates) to "transport" coordinates (x,y) and vice-versa:
   TVector2 UVtoXY( TVector2 UV );
   TVector2 XYtoUV( TVector2 XY );
@@ -165,6 +171,12 @@ class SBSGEMModule : public THaSubDetector {
 
   double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
   
+  void fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool max=false );
+
+  double FitStripTime( int striphitindex, double RMS=20.0 ); // "dumb" fit method 
+
+  TF1 *fStripTimeFunc;
+
   bool fIsDecoded;
   
   //UShort_t GetLayer() const { return fLayer; }
@@ -181,9 +193,9 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
-  UInt_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
+  SBSGEM::APVmap_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
 
-  std::map<UInt_t, std::vector<UInt_t> > APVMAP;
+  std::array<std::vector<UInt_t>, 4 > APVMAP;
 
   void InitAPVMAP();
   
@@ -224,13 +236,23 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 
                      // 1 = pedestal subtraction WAS done online, even for full readout events, only subtract the common-mode
 
-  Bool_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
+  Int_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
   Bool_t fUseStripTimingCuts; // Apply strip timing cuts:
   
-  
+
+  Double_t fStripTau; //time constant for strip timing fit
   Double_t fStripMaxTcut_central, fStripMaxTcut_width; // Strip timing cuts for local maximum used to seed cluster
   Double_t fStripAddTcut_width; //Time cut for adding strips to a cluster
+  Double_t fStripAddCorrCoeffCut; //cut on correlation coefficient for adding neighboring strips to a cluster.
+  
+  //These are database parameters used to reject out-of-time background strips:
+  bool fUseTSchi2cut;
+  std::vector<double> fGoodStrip_TSfrac_mean;  //should have same dimension as number of APV25 time samples:
+  std::vector<double> fGoodStrip_TSfrac_sigma; //
 
+  Double_t fStripTSchi2Cut;
+  
+  
   //In principle we will eventually also require some time walk corrections
   
   //Strip cuts: 
@@ -248,6 +270,13 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fChan_TimeStamp_high;
   UInt_t fChan_MPD_EventCount;
   
+  //Trigger/reference time information: 
+  UInt_t fCrate_RefTime; 
+  UInt_t fSlot_RefTime; 
+  UInt_t fChan_RefTime; 
+  Double_t fRefTime_GoodTimeCut;
+  Double_t fRefTime_CAL; 
+
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   //Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
@@ -284,6 +313,15 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fNstrips_hitU; //total number of U strips fired
   UInt_t fNstrips_hitV; //total number of V strips fired
 
+  // Number of strips passing basic zero suppression thresholds:
+  UInt_t fNstrips_keep;
+  UInt_t fNstrips_keepU;
+  UInt_t fNstrips_keepV;
+  //Number of strips passing "local max" thresholds:
+  UInt_t fNstrips_keep_lmax;
+  UInt_t fNstrips_keep_lmaxU;
+  UInt_t fNstrips_keep_lmaxV; 
+  
   UInt_t fTrackPassedThrough; //flag to indicate track passed through module:
   
   //Map strip indices in this array:
@@ -304,15 +342,20 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripOnTrack; //Is this strip on any track?
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<bool> fKeepStrip; //keep this strip?
+  //std::vector<Int_t> fStripKeep; //Strip passes timing cuts (and part of a cluster)?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
+  std::vector<Double_t> fStripTfit; //Dumb strip fit:
+  std::vector<Double_t> fStripTdiff; //strip time diff wrt max strip in cluster
+  std::vector<Double_t> fStripTSchi2; //strip time-sample chi2 wrt "good" pulse shape
+  std::vector<Double_t> fStripCorrCoeff; //strip correlation coeff wrt max strip in cluster 
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
   std::vector<UInt_t> fStrip_ENABLE_CM; //Flag to indicate whether CM was done online or offline for this strip
   std::vector<UInt_t> fStrip_CM_GOOD; //Flag to indicate whether online CM succeeded
   std::vector<UInt_t> fStrip_BUILD_ALL_SAMPLES; //Flag to indicate whether online zero suppression was enabled 
-
+  
   //because the cut definition machinery sucks, let's define some more booleans:
   std::vector<UInt_t> fStripUonTrack;
   std::vector<UInt_t> fStripVonTrack;
@@ -431,6 +474,7 @@ class SBSGEMModule : public THaSubDetector {
        
   Bool_t fIsMC;//we kinda want this guy no matter what don't we...
 
+
   //Efficiency histograms:
   TH1D *fhdidhitx;
   TH1D *fhdidhity;
@@ -449,6 +493,8 @@ class SBSGEMModule : public THaSubDetector {
   bool fEfficiencyInitialized;
   bool fMakeCommonModePlots; //diagnostic plots for offline common-mode stuff: default = false;
   bool fCommonModePlotsInitialized;
+  bool fCommonModePlots_DBoverride;
+
 
   bool fMakeEventInfoPlots;
   bool fEventInfoPlotsInitialized;
@@ -507,6 +553,14 @@ class SBSGEMModule : public THaSubDetector {
   TH1D *hMPD_EventCount_Alignment;
   TH2D *hMPD_EventCount_Alignment_vs_Fiber;
   TH2D *hMPD_FineTimeStamp_vs_Fiber; 
+  
+  //Pulse-shape diagnostics:
+
+  bool fPulseShapeInitialized; 
+
+  TH2D *hADCfrac_vs_timesample_allstrips; //All fired strips
+  TH2D *hADCfrac_vs_timesample_goodstrips;  //strips on good tracks
+  TH2D *hADCfrac_vs_timesample_maxstrip; //max strip in cluster on good track
   
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;
