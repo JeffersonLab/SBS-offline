@@ -175,6 +175,8 @@ class SBSGEMModule : public THaSubDetector {
 
   double FitStripTime( int striphitindex, double RMS=20.0 ); // "dumb" fit method 
 
+  void UpdateRollingCommonModeAverage(int iapv, double CM_sample);
+  
   TF1 *fStripTimeFunc;
 
   bool fIsDecoded;
@@ -193,6 +195,14 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
+  // vectors to keep track of rolling common-mode mean and RMS, using sorting method.
+  // These will follow the same ordering as fMPDmap:
+  //std::vector<Double_t> fCommonModeRollingFirstEvent_by_APV; //need to keep track of first event in the rolling average for updating the calculation:
+  std::vector<std::deque<Double_t> > fCommonModeResultContainer_by_APV;
+  std::vector<Double_t> fCommonModeRollingAverage_by_APV;
+  std::vector<Double_t> fCommonModeRollingRMS_by_APV;
+  std::vector<UInt_t> fNeventsRollingAverage_by_APV;
+  
   SBSGEM::APVmap_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
 
   std::array<std::vector<UInt_t>, 4 > APVMAP;
@@ -220,7 +230,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fEventCount_by_APV; //MPD event counter by APV:
   std::vector<double> fTimeStamp_ns_by_APV; //Coarse time stamp - T0 + fine time stamp % 6
   
-  ////
+  //What should we use to hold the rolling average of common-mode means?
   
   Bool_t fPedestalMode;
   //Bool_t fPedestalsInitialized;
@@ -254,6 +264,13 @@ class SBSGEMModule : public THaSubDetector {
   
   
   //In principle we will eventually also require some time walk corrections
+
+  Bool_t fMeasureCommonMode; //Default = false; use full-readout events to measure the common-mode mean and rms in real time
+  UInt_t fNeventsCommonModeLookBack; // number of events to use for rolling average; default = 100
+
+  Bool_t fCorrectCommonMode; //Default = false; use rolling common-mode mean and calculated common-mode values to detect a condition where negative pulses bias the common-mode down and attempt to correct it.
+  UInt_t fCorrectCommonModeMinStrips;
+  Double_t fCorrectCommonMode_Nsigma;
   
   //Strip cuts: 
   
@@ -269,6 +286,7 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fChan_TimeStamp_low;
   UInt_t fChan_TimeStamp_high;
   UInt_t fChan_MPD_EventCount;
+  UInt_t fChan_MPD_Debug;
   
   //Trigger/reference time information: 
   UInt_t fCrate_RefTime; 
@@ -415,6 +433,8 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeRMSU;
   std::vector<Double_t> fCommonModeRMSV;
 
+  
+  
   double fCommonModeRange_nsigma; //default = 5
   
   ///////////////////////////////////////////////////////////////////////////////////////////////////

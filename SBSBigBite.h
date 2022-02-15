@@ -86,7 +86,19 @@ protected:
   
   //TRotation fOpt2DetRot;// transformation from optics (ideal) to detector (actual)
   //TRotation fDet2OptRot;// transformation from detector (actual) to optics (ideal)
-   
+
+  UInt_t fPrecon_flag; //Indicate which momentum reconstruction formalism we are using:
+  // 0 (default) = expansion of p*thetabend vs fp x, y, x' y'
+  // 1 = expansion as p*thetabend = pth(firstorder) * ( 1 + delta ), where
+  // delta is expanded in terms of fp variables and p*thbend(firstorder) = A*(1+(B+C*magdist)*xptarget)
+
+  // Parameters of (optional) first-order model for BigBite momentum reconstruction:
+  // (p * thetabend)_1st_order = A*( 1 + (B+C*magdist)*xptarget);
+  // (p * thetabend) = (p*thetabend)_1st_order * ( 1 + delta ); here delta is an expansion in terms of focal-plane variables:
+  Double_t fA_pth1; // default value (from simulation) is 0.28615 * 0.97
+  Double_t fB_pth1; // default value (from simulation) is 0.1976
+  Double_t fC_pth1; // default value (from simulation) is 0.4764
+  
   int fOpticsOrder;
   std::vector<double> fb_xptar;
   std::vector<double> fb_yptar;
@@ -102,6 +114,7 @@ protected:
   Double_t fPtheta_00000;
   Double_t fPtheta_10000;
   Double_t fPtheta_00100;
+  //Double_t fXptar_00000;
   Double_t fXptar_10000;
   Double_t fXptar_00100;
   Double_t fYtar_01000;
