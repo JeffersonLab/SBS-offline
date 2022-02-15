@@ -214,7 +214,7 @@ namespace SBSData {
     fSamples.pulse.integral.raw = sum;
     fSamples.pulse.integral.val = (sum-sped)*fSamples.cal;
     fSamples.pulse.time.raw = FineTime;
-    fSamples.pulse.time.val = (FineTime)*fSamples.tcal;
+    fSamples.pulse.time.val = (FineTime)*fSamples.tcal + fSample.timeoffset;
     fSamples.pulse.amplitude.raw = max;
     fSamples.pulse.amplitude.val = (max-fSamples.ped)*fSamples.acal;
     if (max==0) fSamples.pulse.amplitude.val=max;
