@@ -60,6 +60,8 @@ public:
   
   void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
+  void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
+
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
   virtual ~SBSGEMTrackerBase(); 
@@ -137,6 +139,10 @@ protected:
 
   bool fSubtractPedBeforeCommonMode; //flag only applies to pedestal-mode analysis
   
+  bool fCommonModePlotsFlagIsSet; 
+  int fCommonModePlotsFlag; 
+  //bool fMakeCommonModePlots; //this will get propagated down to the modules
+
   // bool fPedestalsInitialized;
   
   bool fIsMC;

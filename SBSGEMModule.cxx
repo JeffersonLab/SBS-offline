@@ -47,6 +47,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCommonModeMinStripsInRange = 10;
   fMakeCommonModePlots = false;
   fCommonModePlotsInitialized = false;
+  fCommonModePlots_DBoverride = false;
 
   fMakeEventInfoPlots = false;
   fEventInfoPlotsInitialized = false;
@@ -118,7 +119,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //Number of sigmas for defining common-mode max for online zero suppression
   fCommonModeRange_nsigma = 5.0;
 
-  fSuppressFirstLast = true; // suppress strips peaking in first or last time sample by default:
+  fSuppressFirstLast = 0; // suppress strips peaking in first or last time sample by default:
   //fUseStripTimingCuts = false;
 
   fStripTau = 56.0; //ns, default value. Eventually load this from DB. This is not actually used as of yet.
@@ -215,7 +216,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   int usestriptimingcuts = fUseStripTimingCuts ? 1 : 0;
   int useTSchi2cut = fUseTSchi2cut ? 1 : 0;
-  int suppressfirstlast = fSuppressFirstLast ? 1 : 0;
+  int suppressfirstlast = fSuppressFirstLast;
 
   std::vector<double> TSfrac_mean_temp;
   std::vector<double> TSfrac_sigma_temp;
@@ -293,7 +294,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     return status;
   }
 
-  fMakeCommonModePlots = cmplots_flag != 0;
+  if( !fCommonModePlots_DBoverride ) fMakeCommonModePlots = cmplots_flag != 0;
   fZeroSuppress = zerosuppress_flag != 0;
   fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
 
@@ -302,7 +303,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fUseStripTimingCuts = usestriptimingcuts != 0;
   fUseTSchi2cut = useTSchi2cut != 0;
 
-  fSuppressFirstLast = suppressfirstlast != 0; 
+  fSuppressFirstLast = suppressfirstlast; 
 
   if( fUseTSchi2cut && TSfrac_mean_temp.size() == fN_MPD_TIME_SAMP && TSfrac_sigma_temp.size() == fN_MPD_TIME_SAMP ){
     fGoodStrip_TSfrac_mean = TSfrac_mean_temp;
@@ -1435,9 +1436,25 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //	  fMaxSamp.push_back( iSampMax );
 	  fMaxSamp[fNstrips_hit] = iSampMax;
 
-	  if( fSuppressFirstLast && (iSampMax == 0 || iSampMax+1 == fN_MPD_TIME_SAMP ) ){
-	    fKeepStrip[fNstrips_hit] = false;
-	    //fStripKeep[fNstrips_hit] = 0;
+	  //if( fSuppressFirstLast && (iSampMax == 0 || iSampMax+1 == fN_MPD_TIME_SAMP ) ){
+	  // fSuppressFirstLast:
+	  // 0 = allow peaking in first or last sample
+	  // 1 = suppress peaking in first and last sample
+	  // -1 = suppress peaking in first sample only (or other negative number)
+	  // -2 = suppress peaking in last sample only:
+	  if( fSuppressFirstLast != 0 ){
+	    bool peakfirst = iSampMax == 0;
+	    bool peaklast = iSampMax+1 == fN_MPD_TIME_SAMP;
+	    
+	    if( peakfirst ){
+	      if( fSuppressFirstLast > 0 || fSuppressFirstLast != -2 ){
+		fKeepStrip[fNstrips_hit] = false;
+	      }
+	    } else if( peaklast ){
+	      if( fSuppressFirstLast > 0 || fSuppressFirstLast == -2 ){
+		fKeepStrip[fNstrips_hit] = false;
+	      }
+	    }
 	  }
 
 	  if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){

@@ -87,6 +87,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fypfpmin = -0.2;
   fypfpmax = 0.2;
   
+  fCommonModePlotsFlag = 0; 
+  fCommonModePlotsFlagIsSet = false;
   
 }
 
@@ -229,6 +231,10 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     //moved "zero suppress" flag to GEMModule
     fModules[imod]->fBinSize_efficiency1D = fBinSize_efficiency1D;
     fModules[imod]->fBinSize_efficiency2D = fBinSize_efficiency2D;
+
+    if( fCommonModePlotsFlagIsSet ){
+      fModules[imod]->SetMakeCommonModePlots( fCommonModePlotsFlag );
+    }
   }
 
   fNmodules = fModules.size();
@@ -643,6 +649,7 @@ Long64_t SBSGEMTrackerBase::InitFreeHitList(){
   
   Nfreehits_binxy_layer.clear();
   freehitlist_binxy_layer.clear();
+  freehitlist_goodxy.clear();
 
   Long64_t Ncombos=1;
 
