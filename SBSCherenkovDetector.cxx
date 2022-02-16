@@ -171,6 +171,13 @@ Int_t SBSCherenkovDetector::Decode( const THaEvData& evdata )
 Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
 {
   //
+  if(fDebug)cout << "Begin Coarse Process" << endl;
+  if( fDoBench ) fBench->Begin("CoarseProcess");
+ 
+  SBSGenericDetector::CoarseProcess(tracks);
+  
+  if( fDoBench ) fBench->Stop("CoarseProcess");
+  if(fDebug)cout << "End Coarse Process" << endl;
   return 0;
 }
 
