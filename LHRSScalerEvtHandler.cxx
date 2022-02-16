@@ -841,11 +841,10 @@ Int_t LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_i
    // loop through the message (msg) and convert into data words 
    // - input:  a char array to parse (i.e., scaler data)  
    // - output: std::string array (word) and int array (word_int)     
-   char data[200];
+   char data[250];
    strcpy(data,"");
   
-   char *pEnd;
- 
+   // char *pEnd;
    // std::cout << "Message to decode: " << std::endl;
    // std::cout << msg << std::endl;
 
@@ -878,12 +877,31 @@ Int_t LHRSScalerEvtHandler::ReadDatabase(const TDatime& date){
    prefix[1]='\0';
    fNumBCMs = 0;
 
-#ifdef HALLCPARM
-   DBRequest list[]={
-     {"NumBCMs",&fNumBCMs, kInt, 0, 1},
-     {0}
+// #ifdef HALLCPARM
+
+   DBRequest list [] = {
+      {"NumBCMs",&fNumBCMs,kInt,0,1},
+      {0}
    };
-   gHcParms->LoadParmValues((DBRequest*)&list, prefix);
+
+  TString sname = "db_LeftBCM.dat";
+  std::cout << "Trying to load database file " << sname << std::endl;
+
+  FILE *file = Podd::OpenDBFile(sname.Data(), date);
+  // FILE* file = OpenFile( date );
+   if( !file )
+      return kInitError;
+
+   Int_t err = kOK;
+
+   if(!err){
+      err = LoadDB( file, date,list,fPrefix);
+   }
+   // DBRequest list[]={
+   //    {"NumBCMs",&fNumBCMs, kInt, 0, 1},
+   //    {0}
+   // };
+   // gHcParms->LoadParmValues((DBRequest*)&list, prefix);
    std::cout << "[LHRSScalerEvtHandler::ReadDatabase]: Number of BCMs = " << fNumBCMs << std::endl;
 
    if(fNumBCMs>0) {
@@ -909,14 +927,20 @@ Int_t LHRSScalerEvtHandler::ReadDatabase(const TDatime& date){
        fBCM_SatOffset[i]=0.;
        fBCM_SatQuadratic[i]=0.;
      }
-     gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
+     err = LoadDB(file,date,list2,fPrefix);
+     // gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
      std::vector<string> bcm_names = Podd::vsplit(bcm_namelist);
      for(Int_t i=0;i<fNumBCMs;i++) {
-       fBCM_Name.push_back(bcm_names[i]+".scal");
+       fBCM_Name.push_back(bcm_names[i]);
        fBCM_delta_charge[i]=0.;
      }
+     // print what we have
+     std::cout << "LOADED FROM DATABASE: " << std::endl;
+     for(Int_t i=0;i<fNumBCMs;i++){
+	std::cout << Form("%s: offset = %.3lf Hz, gain = %.3lf Hz/uA",fBCM_Name[i].c_str(),fBCM_Offset[i],fBCM_Gain[i]) << std::endl;
+     }
    }
-#endif
+// #endif
 
    fTotalTime=0.;
    fPrevTotalTime=0.;
