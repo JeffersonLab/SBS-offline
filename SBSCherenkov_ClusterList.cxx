@@ -1,0 +1,286 @@
+//*-- Author :    Ole Hansen   26 March 2001; completed by Guido Urciuoli;
+//*-- last change: 9 January 2004.
+
+//////////////////////////////////////////////////////////////////////////
+//
+// SBSCherenkov_ClusterList
+//
+//////////////////////////////////////////////////////////////////////////
+
+
+#include "SBSCherenkov_ClusterList.h"
+#include "TClonesArray.h"
+#include "TMath.h"
+
+#include <fstream>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+
+using namespace std;
+
+//_____________________________________________________________________________
+Int_t SBSCherenkov_Hit::Compare( const TObject* theOtherHit ) const
+{
+  if (fADC < static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fADC)
+    return -1;
+  if (fADC > static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fADC)
+    return +1;
+  else
+    return 0;
+}
+
+//_____________________________________________________________________________
+void SBSCherenkov_Hit::Show(FILE * fout1, FILE* fout2) 
+{
+  // FIXME comment on fprintf(fout1...) should be changed accordingly 
+  // when ntuple will be created 
+  fprintf(fout2," PMT num ");
+  fprintf(fout2,"%4d",fPMTNum);
+  fprintf(fout2," Row, Col ");
+  fprintf(fout2,"%4d,%4d",fRow,fCol);
+  fprintf(fout2," ; X, Y ");
+  fprintf(fout2,"%4f,%4f",fX,fY);
+  fprintf(fout2,"; fADC = ");
+  fprintf(fout2,"%4d",fADC);
+  fprintf(fout2,"; fTDC_r, fTDC_f ");
+  fprintf(fout2,"%4d,%4d",fTDC_r, fTDC_f);
+  fprintf(fout2,"\n");
+  //  Show(fout1);
+}
+
+void SBSCherenkov_Hit::Show(FILE * fout1) 
+{
+  // FIXME comment on fprintf(fout1...) should be changed accordingly 
+  // when ntuple will be created
+  fprintf(fout1," %4d",fPMTNum);
+  fprintf(fout1," %4d %4d",fRow,fCol);
+  fprintf(fout1,"% 4f %4f",fX,fY);
+  fprintf(fout1," %4d \n",fADC);
+  fprintf(fout1," %4d %4d \n",fTDC_r, fTDC_f);
+}
+
+
+//=============================================================================
+// SBSCherenkov_Cluster
+//=============================================================================
+
+//_____________________________________________________________________________
+SBSCherenkov_Cluster::SBSCherenkov_Cluster() : // f(0)
+  fXcenter(0), fYcenter(0),
+  fXcenter_w(0), fYcenter_w(0), fCharge(0),
+  fMeanRisingTime(0), fMeanFallingTime(0),
+  fRisingTimeRMS(0), fFallingTimeRMS(0),
+  fTrackMatch(false), fTrack(0)
+{
+  fHitList = new TList(); 
+}
+
+//_____________________________________________________________________________
+SBSCherenkov_Cluster::SBSCherenkov_Cluster( const SBSCherenkov_Cluster& rhs ) : // f(rhs.f)
+  TObject(rhs), fXcenter(rhs.fXcenter), fYcenter(rhs.fYcenter),
+  fXcenter_w(rhs.fXcenter_w), fYcenter_w(rhs.fYcenter_w), fCharge(rhs.fCharge), 
+  fMeanRisingTime(rhs.fMeanRisingTime), fMeanFallingTime(rhs.fMeanFallingTime),
+  fRisingTimeRMS(rhs.fRisingTimeRMS), fFallingTimeRMS(rhs.fFallingTimeRMS),
+  fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack)
+{
+  fHitList = new TList();
+  if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+    TIter next( rhs.fHitList );
+    while( SBSCherenkov_Hit* pHit = static_cast<SBSCherenkov_Hit*>( next() ))
+      fHitList->AddLast(pHit);
+  }
+}
+
+//_____________________________________________________________________________
+SBSCherenkov_Cluster& SBSCherenkov_Cluster::operator=( const SBSCherenkov_Cluster& rhs ) // f = rhs.f;
+{
+  // Assignment operator
+  if( this != &rhs ) {
+    fXcenter = rhs.fXcenter;
+    fYcenter = rhs.fYcenter;
+    fXcenter_w = rhs.fXcenter_w;
+    fYcenter_w = rhs.fYcenter_w;
+    fCharge = rhs.fCharge;
+    fMeanRisingTime = rhs.fMeanRisingTime;
+    fMeanFallingTime = rhs.fMeanFallingTime;
+    fRisingTimeRMS = rhs.fRisingTimeRMS;
+    fFallingTimeRMS = rhs.fFallingTimeRMS;
+    fTrackMatch = rhs.fTrackMatch;
+    fTrack = rhs.fTrack;
+    
+    if( !fHitList )
+      fHitList = new TList;
+    else
+      fHitList->Clear("nodelete");
+    if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+      TIter next( rhs.fHitList ); 
+      while( SBSCherenkov_Hit* pHit = static_cast<SBSCherenkov_Hit*>( next() ))
+	fHitList->AddLast(pHit);
+    }
+  }
+  return *this;
+}
+
+//_____________________________________________________________________________
+void SBSCherenkov_Cluster::MergeCluster( const SBSCherenkov_Cluster& rhs )
+{//adds the cluster in argument to the cluster which the method is applied to 
+  if( !fHitList ) fHitList = new TList;
+  Int_t list1size = fHitList->GetSize();
+  Int_t list2size = 0;
+  
+  if(list1size==0){
+    *this = rhs;
+    //return *this;
+  }
+  
+  if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
+    list2size = rhs.fHitList->GetSize();
+    TIter next( rhs.fHitList ); 
+    while( SBSCherenkov_Hit* pHit = static_cast<SBSCherenkov_Hit*>( next() ))
+      fHitList->AddLast(pHit);
+  }
+  
+  if(list2size==0)return;// return *this;
+  
+  fXcenter = (fXcenter*((Double_t)(list1size))+ rhs.fXcenter*((Double_t)(list2size)))/
+    ((Double_t)(list1size+list2size));
+  fYcenter = (fYcenter*((Double_t)(list1size))+ rhs.fYcenter*((Double_t)(list2size)))/
+    ((Double_t)(list1size+list2size));
+  
+  fXcenter_w = (fXcenter_w*fCharge+rhs.fXcenter_w*rhs.fCharge)/(fCharge+rhs.fCharge);
+  fYcenter_w = (fYcenter_w*fCharge+rhs.fYcenter_w*rhs.fCharge)/(fCharge+rhs.fCharge);
+  
+  fCharge += rhs.fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)list1size)+rhs.fMeanRisingTime*((Double_t)list2size))/
+    ((Double_t)(list1size+list2size));
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)list1size)+rhs.fMeanFallingTime*((Double_t)list2size))/
+    ((Double_t)(list1size+list2size));
+  
+  fRisingTimeRMS = sqrt( (pow(fRisingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fRisingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  fFallingTimeRMS = sqrt( (pow(fFallingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fFallingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  //return *this;
+}
+
+//_____________________________________________________________________________
+void SBSCherenkov_Cluster::Clear( Option_t* opt ) // f = 0;
+{
+  //Reset the cluster to an empty state.
+
+  //Don't delete the hits, just clear the internal list.
+  if( fHitList ) 
+    fHitList->Clear("nodelete");
+
+  // Full clear
+  if( opt && opt[0] == 'F' ) {
+    fXcenter = 0;
+    fYcenter = 0;
+    fXcenter_w = 0;
+    fYcenter_w = 0;
+    fCharge = 0;
+    fMeanRisingTime = 0;
+    fMeanFallingTime = 0;
+    fRisingTimeRMS = 0;
+    fFallingTimeRMS = 0;
+    fTrackMatch = false;
+    fTrack = 0;
+  } else {
+    // Fast clear for clearing TClonesArrays of clusters
+    // Needs to be deleted since a TList allocates memory
+    // FIXME: performance issue?
+    delete fHitList;
+    fHitList = 0;
+  }  
+}
+
+//_____________________________________________________________________________
+void SBSCherenkov_Cluster::Insert( SBSCherenkov_Hit* theHit )
+{
+  //Add a hit to the cluster
+    
+  if( !fHitList ) fHitList = new TList;
+  fHitList->AddLast( theHit );
+  
+  Int_t listnewsize = fHitList->GetSize();
+  fXcenter = (fXcenter*((Double_t)(listnewsize-1))+theHit->GetX())/((Double_t)listnewsize);
+  fYcenter = (fYcenter*((Double_t)(listnewsize-1))+theHit->GetY())/((Double_t)listnewsize);
+  
+  fXcenter_w = fXcenter_w*fCharge;
+  fYcenter_w = fYcenter_w*fCharge;
+  fCharge+= theHit->GetADC();
+  fXcenter_w+= theHit->GetADC()*theHit->GetX();
+  fYcenter_w+= theHit->GetADC()*theHit->GetY();
+  fXcenter_w = fXcenter_w/fCharge;
+  fYcenter_w = fYcenter_w/fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_r())/((Double_t)listnewsize);
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_f())/((Double_t)listnewsize);
+  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_r(), 2))/
+  			((Double_t)listnewsize));
+  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_f(), 2))/
+  			 ((Double_t)listnewsize));
+}
+
+//_____________________________________________________________________________
+void SBSCherenkov_Cluster::Remove( SBSCherenkov_Hit* theHit )
+{
+  
+  if( !fHitList ) return;//if list does not exist, nothing to do
+  if(fHitList->IndexOf(theHit)<0) return;//if hit not in list, nothing to do
+    
+  Int_t listnewsize = fHitList->GetSize();
+  fXcenter = (fXcenter*((Double_t)(listnewsize+1))-theHit->GetX())/((Double_t)listnewsize);
+  fYcenter = (fYcenter*((Double_t)(listnewsize+1))-theHit->GetY())/((Double_t)listnewsize);
+  
+  fXcenter_w = fXcenter_w*fCharge;
+  fYcenter_w = fYcenter_w*fCharge;
+  fCharge-= theHit->GetADC();
+  fXcenter_w-= theHit->GetADC()*theHit->GetX();
+  fYcenter_w-= theHit->GetADC()*theHit->GetY();
+  fXcenter_w = fXcenter_w/fCharge;
+  fYcenter_w = fYcenter_w/fCharge;
+  
+  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_r())/((Double_t)listnewsize);
+  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_f())/((Double_t)listnewsize);
+  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_r(), 2))/
+  			((Double_t)listnewsize));
+  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_f(), 2))/
+  			 ((Double_t)listnewsize));
+}
+
+//_____________________________________________________________________________
+Bool_t SBSCherenkov_Cluster::IsNeighbor(const SBSCherenkov_Hit* theHit, Float_t par)
+{
+  //cout << "SBSCherenkov_Cluster::IsNeighbor: " << endl;
+  //cout << fHitList << endl;
+  Float_t dx,dy,dist2;
+  if( !fHitList )//{
+    return 0;
+  //}else{cout << " size ? " << fHitList->GetLast()+1 << endl;}
+  TIter next( fHitList );
+
+  //if(theHit){
+  //cout << " theHit pos " << theHit->GetX() << " " << theHit->GetY() << endl;
+  //}else{cout << "SBSCherenkov_Cluster::IsNeighbor : theHit is 0" << endl; }
+  while( SBSCherenkov_Hit* pHit = static_cast<SBSCherenkov_Hit*>( next() )) {
+    if(pHit){
+      //cout << " pHit pos: " <<endl;
+      //cout << pHit->GetX() << endl; 
+      dx   = theHit->GetX() - pHit->GetX();
+      //cout<< " " << pHit->GetY() << endl;
+      dy   = theHit->GetY() - pHit->GetY();
+      dist2 = dx*dx + dy*dy;
+      assert(dist2>=0);
+      if( sqrt(dist2)<par )
+	return true;
+    }
+  }
+  return false;
+}
+
+//_____________________________________________________________________________
+ClassImp(SBSCherenkov_Hit)
+ClassImp(SBSCherenkov_Cluster)
+
+
