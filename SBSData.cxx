@@ -30,7 +30,7 @@ namespace SBSData {
     // convert to pC, assume tcal is in ns, and 50ohm resistance
     Double_t pC_Conv = fADC.tcal/50.;
     Double_t PedVal = ped*GetChanTomV();
-    Double_t TimeVal= time*fADC.tcal/64.;
+    Double_t TimeVal= time*fADC.tcal/64. + fADC.timeoffset;
     Double_t IntRaw=  integral*GetChanTomV()*pC_Conv;
     Double_t IntVal=  (IntRaw-PedVal*(GetNSA()+GetNSB()+1)*pC_Conv)*GetGain();
     Double_t AmpRaw=  amp*GetChanTomV();
@@ -214,7 +214,7 @@ namespace SBSData {
     fSamples.pulse.integral.raw = sum;
     fSamples.pulse.integral.val = (sum-sped)*fSamples.cal;
     fSamples.pulse.time.raw = FineTime;
-    fSamples.pulse.time.val = (FineTime)*fSamples.tcal + fSample.timeoffset;
+    fSamples.pulse.time.val = (FineTime)*fSamples.tcal + fSamples.timeoffset;
     fSamples.pulse.amplitude.raw = max;
     fSamples.pulse.amplitude.val = (max-fSamples.ped)*fSamples.acal;
     if (max==0) fSamples.pulse.amplitude.val=max;

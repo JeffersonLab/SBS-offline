@@ -411,7 +411,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     vr.push_back({ "adc.gain",     &adc_gain,   kDoubleV, 0, 1 });
     vr.push_back({ "adc.conv",     &adc_conv,   kDoubleV, 0, 1 });
     vr.push_back({ "adc.thres",     &adc_thres,   kDoubleV, 0, 1 });
-    vr.push_back({ "adc.timeoffset",     &adc_timeoffseet,   kDoubleV, 0, 1 });
+    vr.push_back({ "adc.timeoffset",     &adc_timeoffset,   kDoubleV, 0, 1 });
     vr.push_back({ "adc.AmpToIntRatio",     &adc_AmpToIntRatio,   kDoubleV, 0, 1 });
     vr.push_back({ "adc.FixThresBin",     &adc_FixThresBin,   kIntV, 0, 1 });
     vr.push_back({ "adc.NSB",     &adc_NSB,   kIntV, 0, 1 });
@@ -845,7 +845,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 		SBSData::ADC *fadc=e->ADC();
 		fadc->SetADCParam(adc_conv[k],adc_NSB[k],adc_NSA[k],adc_NPedBin[k],adc_GoodTimeCut[k]);
 	        fadc->SetAmpCal(adc_AmpToIntRatio[k]*adc_gain[k]);
-	      fadc->SetTrigCal(1.);
+		fadc->SetTrigCal(1.);
+		fadc->SetTimeOffset(adc_timeoffset[k]);
 	      }
             }
           }

@@ -29,6 +29,7 @@ namespace SBSData {
     Double_t tcal; //< Calibration constant for TDC value
     Double_t acal; //< Calibration constant for ADC amplitude (peak)
     Double_t trigcal; //< ratio Trig amp to FADC amp
+    Double_t timeoffset; //<  time offset (ns) for ADC time
     UInt_t NSB; //< Programmed # of samples before threshold in FADC
     UInt_t NSA; //< Programmed # of samples after threshold in FADC
     Int_t NPedBin; //< Programmed # of samples used in pedestal average in FADC
@@ -49,7 +50,7 @@ namespace SBSData {
     Double_t tcal; //< Calibration constant for TDC value
     Double_t acal; //< Calibration constant for ADC amplitude (peak)
     Double_t trigcal; //< ratio Trig amp to FADC amp
-    Double_t timeoffset; //<  time offset (ns) fro ADC time
+    Double_t timeoffset; //<  time offset (ns) for ADC time
     UInt_t FixThresBin; //<Fixed Threshold Bin when no peak found
     UInt_t NSB; //<Number of bins before Threshold Bin integrate when Threshold Bin found
     UInt_t NSA; //<Number of bins after Threshold Bin integrate when Threshold Bin found
@@ -95,6 +96,7 @@ namespace SBSData {
       Double_t GetGoodTimeCut()              const { return fADC.GoodTimeCut;}
       Double_t GetAmpCal()                  const { return fADC.acal; }
       Double_t GetTrigCal()                  const { return fADC.trigcal; }
+      Double_t GetTimeOffset()                  const { return fADC.timeoffset; }
       UInt_t GetNSA()                      const { return fADC.NSA; }
       UInt_t GetNSB()                      const { return fADC.NSB; }
       Int_t GetNPedBin()                      const { return fADC.NPedBin; }
@@ -121,6 +123,7 @@ namespace SBSData {
       void SetGoodTimeCut(Double_t var) { fADC.GoodTimeCut = var; }
       void SetAmpCal(Double_t var) { fADC.acal = var; }
       void SetTrigCal(Double_t var) { fADC.trigcal = var; }
+      void SetTimeOffset(Double_t var) { fADC.timeoffset = var; }
       void SetGoodHit(Int_t i) { fADC.good_hit = i; }
       void SetChanTomV(Double_t var) { fADC.ChanTomV = var; }
       void SetADCParam(Double_t i1,Int_t i2,Int_t i3, Int_t i4,Double_t i5) { fADC.ChanTomV=i1;fADC.NSB=i2;fADC.NSA=i3;fADC.NPedBin=i4;fADC.GoodTimeCut=i5;}
