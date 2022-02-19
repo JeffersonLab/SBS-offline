@@ -929,10 +929,12 @@ Int_t LHRSScalerEvtHandler::ReadDatabase(const TDatime& date){
      }
      err = LoadDB(file,date,list2,fPrefix);
      // gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
+     string myStr;
      std::vector<string> bcm_names = Podd::vsplit(bcm_namelist);
      for(Int_t i=0;i<fNumBCMs;i++) {
-       fBCM_Name.push_back(bcm_names[i]);
-       fBCM_delta_charge[i]=0.;
+	myStr = "Left.bcm." + bcm_names[i] + ".current";
+	fBCM_Name.push_back(myStr);
+	fBCM_delta_charge[i]=0.;
      }
      // print what we have
      std::cout << "LOADED FROM DATABASE: " << std::endl;
