@@ -249,7 +249,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
                 if(raw<trigTime) // That means the roll-over already happened
                   raw_cor += (pow(2,16)-1);
 		// if(raw<trigTime) std::cout << " chan = " << chan << " raw " << raw << " raw_cor  " << raw_cor << " trig time =  " << trigTime << std::endl; 
-	      /*Int_t status = */sldat->loadData("tdc",chan,raw_cor,raw);
+		/*Int_t status = */sldat->loadData("tdc",chan,raw_cor,0); // set LE
               }
 
 		  if((*loc)!=0xf1daffff && nF1>0 && f1slot!=30) { // Make sure memory is allocated to save data

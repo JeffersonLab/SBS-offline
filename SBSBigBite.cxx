@@ -78,7 +78,11 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   SetPID(true);
 
   //Default
-  
+  fPrecon_flag = 0;
+
+  fA_pth1 = 0.28615 * 0.97;
+  fB_pth1 = 0.1976;
+  fC_pth1 = 0.4764;
   
   // Constructor. Defines standard detectors
   //The standard BigBite detector package in the 12 GeV/SBS era will include:
@@ -208,6 +212,10 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "pcalPIDprobatable",    &pcal_pidproba, kDoubleV,  0, 1, 0},
     { "grinchPIDpbins",    &fP_table, kDoubleV,  0, 1, 0},
     { "grinchPIDprobatable",    &grinch_pidproba, kDoubleV,  0, 1, 0},
+    { "preconflag", &fPrecon_flag, kUInt, 0, 1, 1 },
+    { "A_pth1", &fA_pth1, kDouble, 0, 1, 1 },
+    { "B_pth1", &fB_pth1, kDouble, 0, 1, 1 },
+    { "C_pth1", &fC_pth1, kDouble, 0, 1, 1 },
     {0}
   };
     
@@ -585,9 +593,18 @@ Int_t SBSBigBite::CoarseReconstruct()
 
 	double Efudge = Etot * fECaloFudgeFactor;
 	
-	double xp_bcp = ( fPtheta_00000 + fPtheta_10000 * x_bcp - Efudge * ( fOpticsAngle + fXptar_10000 * x_bcp ) ) /
-	  ( Efudge * (fXptar_00100 - 1.0 - fXptar_10000*z_bcp) + fPtheta_10000 * z_bcp - fPtheta_00100 );
-	
+	double xp_bcp;
+	if( fPrecon_flag != 1 ){
+	  xp_bcp = ( fPtheta_00000 + fPtheta_10000 * x_bcp - Efudge * ( fOpticsAngle + fXptar_10000 * x_bcp ) ) /
+	    ( Efudge * (fXptar_00100 - 1.0 - fXptar_10000*z_bcp) + fPtheta_10000 * z_bcp - fPtheta_00100 );
+	} else { //Using alternate formalism. In this case, the formula differs a fair bit:
+	  double Mthx = fXptar_10000;
+	  double Mthxp = fXptar_00100;
+	 
+	  xp_bcp = ( Efudge * ( fOpticsAngle + Mthx * x_bcp ) - fA_pth1*(1.0 + (fB_pth1 + fC_pth1*fMagDist)*Mthx * x_bcp ) ) /
+	    (fA_pth1*(fB_pth1+fC_pth1*fMagDist)*(Mthxp - z_bcp * Mthx) + Efudge*(1.0 + Mthx * z_bcp - Mthxp) );
+       
+	}
 	// The dy equation is correct under the assumption ytarget = 0: can we refine?
 	// double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
 	// (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
@@ -924,8 +941,15 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //   phat_fp_fit.Z() * spec_zaxis_fp;
   
   //thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
+
+  if( fPrecon_flag != 1 ){
+    p_fit = pthetabend_fit/thetabend_fit;
+  } else {
+    double delta = pthetabend_fit;
+    double p_firstorder = fA_pth1 * ( 1.0 + (fB_pth1 + fC_pth1*fMagDist)*xptar_fit ) / thetabend_fit;
+    p_fit = p_firstorder * (1.0 + delta);
+  }
   
-  p_fit = pthetabend_fit/thetabend_fit;
   vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
   
   pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1.) );

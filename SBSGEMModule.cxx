@@ -88,11 +88,18 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fMakeEfficiencyPlots = true;
   fEfficiencyInitialized = false;
 
-  fChan_CM_flags = 512; //default to 512:
-  fChan_TimeStamp_low = 513;
-  fChan_TimeStamp_high = 514;
-  fChan_MPD_EventCount = 515;
+  // We want to change the default values for these dummy channels to accommodate up to 40 MPDs per VTP:
+  // fChan_CM_flags = 512; //default to 512:
+  // fChan_TimeStamp_low = 513;
+  // fChan_TimeStamp_high = 514;
+  // fChan_MPD_EventCount = 515;
+  // fChan_MPD_Debug = 516;
 
+  fChan_CM_flags = 640; //default to 512:
+  fChan_TimeStamp_low = 641;
+  fChan_TimeStamp_high = 642;
+  fChan_MPD_EventCount = 643;
+  fChan_MPD_Debug = 644;
   
   UInt_t MAXNSAMP_PER_APV = fN_APV25_CHAN * fN_MPD_TIME_SAMP;
   //arrays to hold raw data from one APV card:
@@ -147,6 +154,13 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   
   fPulseShapeInitialized = false;
 
+  fMeasureCommonMode = true;
+  fNeventsCommonModeLookBack = 100;
+
+  fCorrectCommonMode = false;
+  fCorrectCommonModeMinStrips = 20;
+  fCorrectCommonMode_Nsigma = 5.0;
+  
   return;
 }
 
@@ -217,7 +231,10 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   int usestriptimingcuts = fUseStripTimingCuts ? 1 : 0;
   int useTSchi2cut = fUseTSchi2cut ? 1 : 0;
   int suppressfirstlast = fSuppressFirstLast;
+  int usecommonmoderollingaverage = fMeasureCommonMode ? 1 : 0;
 
+  int correctcommonmode = fCorrectCommonMode ? 1 : 0;
+  
   std::vector<double> TSfrac_mean_temp;
   std::vector<double> TSfrac_sigma_temp;
   
@@ -285,6 +302,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "goodstrip_TSfrac_mean", &TSfrac_mean_temp, kDoubleV, 0, 1, 1 },
     { "goodstrip_TSfrac_sigma", &TSfrac_sigma_temp, kDoubleV, 0, 1, 1 },
     { "suppressfirstlast", &suppressfirstlast, kInt, 0, 1, 1 },
+    { "use_commonmode_rolling_average", &usecommonmoderollingaverage, kInt, 0, 1, 1 },
+    { "commonmode_nevents_lookback", &fNeventsCommonModeLookBack, kUInt, 0, 1, 1 },
+    { "correct_common_mode", &correctcommonmode, kInt, 0, 1, 1 },
+    { "correct_common_mode_minstrips", &fCorrectCommonModeMinStrips, kUInt, 0, 1, 1 },
+    { "correct_common_mode_nsigma", &fCorrectCommonMode_Nsigma, kDouble, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -305,6 +327,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fSuppressFirstLast = suppressfirstlast; 
 
+  fMeasureCommonMode = usecommonmoderollingaverage != 0;
+  fCorrectCommonMode = correctcommonmode != 0;
+  
   if( fUseTSchi2cut && TSfrac_mean_temp.size() == fN_MPD_TIME_SAMP && TSfrac_sigma_temp.size() == fN_MPD_TIME_SAMP ){
     fGoodStrip_TSfrac_mean = TSfrac_mean_temp;
     fGoodStrip_TSfrac_sigma = TSfrac_sigma_temp;
@@ -354,6 +379,12 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fMPDmap.clear();
   
   Int_t nentry = fChanMapData.size()/fMPDMAP_ROW_SIZE;
+
+  fCommonModeResultContainer_by_APV.resize( nentry );
+  fCommonModeRollingAverage_by_APV.resize( nentry );
+  fCommonModeRollingRMS_by_APV.resize( nentry );
+  fNeventsRollingAverage_by_APV.resize( nentry );
+  
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
     mpdmap_t thisdata;
     thisdata.crate  = fChanMapData[0+mapline*fMPDMAP_ROW_SIZE];
@@ -394,6 +425,12 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fTcoarse_by_APV.push_back( 0 );
     fTfine_by_APV.push_back( 0 );
     fTimeStamp_ns_by_APV.push_back( 0 );
+
+    //fCommonModeRollingFirstEvent_by_APV[mapline] = 0.0;
+    fCommonModeResultContainer_by_APV[mapline].resize( fNeventsCommonModeLookBack*fN_MPD_TIME_SAMP );
+    fCommonModeRollingAverage_by_APV[mapline] = 0.0;
+    fCommonModeRollingRMS_by_APV[mapline] = 10.0;
+    fNeventsRollingAverage_by_APV[mapline] = 0; //Really will be the number of time samples = 6 * number of events
   }
 
   //if a different number of decode map entries is counted than the expectation based on the number of strips, 
@@ -925,6 +962,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   vector<Int_t> &rawADC = fRawADC_APV;
   vector<Double_t> &pedsubADC = fPedSubADC_APV; //ped-subtracted, not necessarily common-mode subtracted
   vector<Double_t> &commonModeSubtractedADC = fCommonModeSubtractedADC_APV;
+
+  
   
   //resize all the "decoded strip" arrays to their maximum possible values for this module:
   //we need to do this event-by-event, because we shrink the size of the arrays to fNstrips_hit after decoding to prevent
@@ -958,6 +997,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   // fVstripIndex.clear();
   //This could be written more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it too much:
 
+  //Now, how are we going to implement any kind of common-mode "sag" correction?
+  // 1. It has to be optional
+  // 2. It will probably require some new optional user-adjustable database parameters to control the behavior.
+  // 3. We will want to keep track of the mean of the "sorting-method" common-mode calculation for the full-readout events; specifically a
+  //    rolling average over the previous, say, 100 full readout events? Then the error of this calculation will be the RMS over 10.
+  //    we can make the size of the "look-back" window user-adjustable. For a trigger rate of 3 kHz, 10,000 /100 = 100 = ~3 s of data taking
+  // 4. For online zero-suppressed events, we want to check if the calculated common-mode is less than some number of standard deviations below the common-mode rolling mean, and if there is a sufficient number of strips with raw ADC within +/- some number of standard deviations of the rolling common-mode mean, then we re-calculate the common-mode and correct the ADC values accordingly before we pass them to the cluster-finding routines.
+  
   //Do we need to loop on all APV cards? maybe not,
   int apvcounter=0;
 
@@ -970,7 +1017,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     //mpd_id is not necessarily equal to slot, but that seems to be the convention in many cases
     // Find channel for this crate/slot
 
-    //First get time stamp info:
+    // TO-DO: rewrite this "time stamp" part of the code more efficiently, by somehow pulling it outside the loop over APVs, since the time stamp is
+    // really per-MPD, not per-APV. This is unnecessarily repeated analysis for up to 16 times per MPD.
+    // Note that we don't use the information in the analysis in any way so far.
+    // on the other hand, the decode map is organized by APV card, so it is difficult to imagine how we would restructure this part of the code
+    // since otherwise we don't know which crate/slot to look in.
+    // First get time stamp info:
     UInt_t nhits_timestamp_low = evdata.GetNumHits( it->crate, it->slot, fChan_TimeStamp_low );
     UInt_t nhits_timestamp_high = evdata.GetNumHits( it->crate, it->slot, fChan_TimeStamp_high );
     UInt_t nhits_event_count = evdata.GetNumHits( it->crate, it->slot, fChan_MPD_EventCount );
@@ -1058,11 +1110,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       }
     }
 
+    
+    
+
     //The proper logic of common-mode calculation/subtraction and zero suppression is as follows:
     // 1. If CM_ENABLED is true, we never calculate the common-mode ourselves, it has already been subtracted from the data:
     // 2. If BUILD_ALL_SAMPLES is false, then online zero suppression is enabled. We can, in addition, apply our own higher thresholds if we want:
     // 3. If CM_ENABLED is true, the pedestal has also been subtracted, so we don't subtract it again.
-    // 4. If CM_ENABLED is false, we need to subtract the pedestals AND calculate and subtract the common-mode:
+    // 4. If CM_ENABLED is false, we need to subtract the pedestals (maybe) AND calculate and subtract the common-mode:
     // 5. If BUILD_ALL_SAMPLES is false then CM_ENABLED had better be true!
     // 6. If CM_OUT_OF_RANGE is true then BUILD_ALL_SAMPLES must be true and CM_ENABLED
     //    must be false!
@@ -1087,6 +1142,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       //This should have already been done online:
       CM_ENABLED = false; 
     }
+
+    
     
     //Int_t nchan = evdata.GetNumChan( it->crate, it->slot ); //this could be made faster
 
@@ -1107,7 +1164,52 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       CM_ENABLED = true;
       BUILD_ALL_SAMPLES = false;
     }
+
+    //Let's see if we can actually decode the MPD debug headers:
+    UInt_t nhits_MPD_debug = 0;
+
+    //Let's store here in temporary arrays the calculated common-mode values decoded from the MPD debug headers for events with online zero suppression:
     
+    UInt_t CMcalc[fN_MPD_TIME_SAMP];
+    Int_t CMcalc_signed[fN_MPD_TIME_SAMP];
+    
+    
+    if( CM_ENABLED ){ //try to decode MPD debug headers and see if the results make any sense:
+      nhits_MPD_debug = evdata.GetNumHits( it->crate, it->slot, fChan_MPD_Debug );
+
+      if( nhits_MPD_debug > 0 ){ //we expect to get three words per APV card:
+	UInt_t wcount=0;
+
+	UInt_t MPDdebugwords[3];
+	
+	for( unsigned int ihit=0; ihit<nhits_MPD_debug; ihit++ ){
+	  UInt_t chan_temp = evdata.GetRawData( it->crate, it->slot, fChan_MPD_Debug, ihit );
+	  UInt_t word_temp = evdata.GetData( it->crate, it->slot, fChan_MPD_Debug, ihit );
+	  if( chan_temp == effChan && wcount < 3 ){
+	    MPDdebugwords[wcount++] = word_temp;
+	  }
+	  if( wcount == 3 ) break; //if we found all 3 MPD debug words for this channel, exit the loop
+
+	}
+	if( wcount == 3 ){ //Then let's decode the debug headers:
+	  
+	  for( unsigned int iw=0; iw<3; iw++ ){
+	    CMcalc[2*iw] = ( MPDdebugwords[iw] & 0xFFF ) | ( ( MPDdebugwords[iw] & 0x1000 ) ? 0xFFFFF000 : 0x0 );
+	    CMcalc[2*iw+1] = ( (MPDdebugwords[iw]>>13) & 0xFFF ) | ( ( (MPDdebugwords[iw]>>13) & 0x1000 ) ? 0xFFFFF000 : 0x0 );
+	    CMcalc_signed[2*iw] = Int_t( CMcalc[2*iw] );
+	    CMcalc_signed[2*iw+1] = Int_t( CMcalc[2*iw+1] );
+	  }
+
+	  //
+	  // for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	  //   std::cout << "MPD debug words for APV in (crate,slot,effChan)=(" << it->crate << ", " << it->slot << ", " << effChan << "): time sample " << isamp
+	  // 	      << ", online calculated common-mode = " << CMcalc_signed[isamp] << std::endl;
+	  // }
+	}
+      }
+      
+    }
+      
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
 
     
@@ -1120,9 +1222,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       // 		<< it->adc_id << ", " << nstrips << std::endl;
 
       double commonMode[fN_MPD_TIME_SAMP];
-	
+
+      double CommonModeCorrection[fN_MPD_TIME_SAMP]; //possible correction to apply, initialize to zero:
+      
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	commonMode[isamp] = 0.0;
+	CommonModeCorrection[isamp] = 0.0;
       }
       
       if( !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN ){ //then two loops over the data are necessary, first one to calculate common-mode:
@@ -1214,14 +1319,63 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    } else if( !fPedestalMode ) { //if not doing diagnostic plots, just calculate whichever way the user wanted:
 	      
 	      commonMode[isamp] = GetCommonMode( isamp, fCommonModeFlag, *it );
+
 	      
 	    }
 	    //std::cout << "effChan, isamp, Common-mode = " << effChan << ", " << isamp << ", " << commonMode[isamp] << std::endl;
+
+	    //Now handle rolling average common-mode calculation:
+
+	    UpdateRollingCommonModeAverage(apvcounter,commonMode[isamp]);
+	    
 	    
 	  } //loop over time samples
+	  
 	} //check if conditions are satisfied to require offline common-mode calculation
       } //End check !CM_ENABLED && BUILD_ALL_SAMPLES
 
+    
+      if( CM_ENABLED && fCorrectCommonMode ){
+	// Under certain conditions we want to attempt to correct the ADC values for all strips on an APV card using either
+	// the rolling average over a certain number of previous events, or the CM mean from the database.
+	// There are two conditions that must be satisfied to attempt correcting the ADC values for an event:
+	// 1) The online calculated CM must be more than some number of std. deviations below the "expected" CM according to the rolling average
+	// 2) The number of strips with ADC values within some number of std. deviations of the "expected" CM must exceed some threshold to allow us to
+	//    to obtain a new estimate of the "true" common-mode for that event
+	// If both 1) and 2) are satisfied,
+
+	//First loop over the samples: 
+	
+	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	  double CM_meas = CMcalc_signed[isamp];
+	  double CM_expect_mean, CM_expect_rms;
+	  if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvcounter] >= std::min(UInt_t(100),fNeventsCommonModeLookBack*fN_MPD_TIME_SAMP) ){
+	    //If we have a critical mass of events in the rolling CM average for this to be a reliable estimate, use it: 
+	    CM_expect_mean = fCommonModeRollingAverage_by_APV[apvcounter];
+	    CM_expect_rms = fCommonModeRollingRMS_by_APV[apvcounter]; 
+	  } else { //use database value:
+	    UInt_t postemp = fMPDmap[apvcounter].pos;
+	    UInt_t axistemp = fMPDmap[apvcounter].axis;
+
+	    CM_expect_mean = (axistemp == SBSGEM::kUaxis) ? fCommonModeMeanU[postemp] : fCommonModeMeanV[postemp];
+	    CM_expect_rms = (axistemp == SBSGEM::kUaxis) ? fCommonModeRMSU[postemp] : fCommonModeRMSV[postemp];		
+	  }
+
+	  if( CM_meas < CM_expect_mean - fCorrectCommonMode_Nsigma * CM_expect_rms ){
+	    // The online common mode appears to have a large negative bias relative to the expectation. 
+	    // Try to correct the common-mode. To calculate the correction requires us to loop on all the strips on this APV that passed
+	    // online zero suppression.
+	    // The simplest approach is just to take a simple average of all the strips within +/- some number of standard deviations of the
+	    // *EXPECTED* common-mode mean, but this is a biased approach. We can also implement some form of sorting or "Danning-like" approach for calculating
+	    // the common-mode correction.
+	    UInt_t NstripsInRange = 0;
+	    
+	    
+	  }
+	  
+	}
+	
+      }
       
       //std::cout << "finished common mode " << std::endl;
       // Last loop over all the strips and samples in the data and populate/calculate global variables that are passed to track-finding:
@@ -1243,7 +1397,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    
 	    rawADC[iraw] = Int_t(ADC);
 	    pedsubADC[iraw] = double(ADC) - ped;
-	    commonModeSubtractedADC[iraw] = double(ADC) - ped;
+	    commonModeSubtractedADC[iraw] = double(ADC) - ped;	    
 	  }
 	}
 	
@@ -3127,4 +3281,86 @@ void SBSGEMModule::InitAPVMAP(){
   // }
   // std::cout << endl;
   
+}
+
+void SBSGEMModule::UpdateRollingCommonModeAverage( int iapv, double CM_sample ){
+  //This gets called for each time sample for each APV or each full readout event or whenever BUILD_ALL_SAMPLES is true and CM_ENABLED is false:
+  //There are two cases to handle:
+  // 1) before the container is full, meaning less than fN_MPD_TIME_SAMP*fNeventsCommonModeLookBack have been added. In this case we increment everything.
+  // 2) after the container is full, meaning the earliest sample needs to roll off the average and one new sample has to be added at the end.
+  
+  UInt_t N = fNeventsRollingAverage_by_APV[iapv];
+  UInt_t Nmax = fN_MPD_TIME_SAMP*fNeventsCommonModeLookBack;
+  
+  double sum, sum2;
+
+  UInt_t pos = fMPDmap[iapv].pos;
+  UInt_t axis = fMPDmap[iapv].axis;
+
+  double cm_mean_from_DB = (axis == SBSGEM::kUaxis) ? fCommonModeMeanU[pos] : fCommonModeMeanV[pos];
+  double cm_rms_from_DB = (axis == SBSGEM::kUaxis) ? fCommonModeRMSU[pos] : fCommonModeRMSV[pos];   
+  
+  //std::cout << "Updating rolling average common mode from full readout events for module " << GetName() << " iapv = " << iapv << std::endl;
+  
+  if( N < Nmax ){
+    //before reaching the size of the look back window, we just add the common-mode samples onto the end of the array
+
+    fCommonModeResultContainer_by_APV[iapv][N] = CM_sample;
+
+    if( N == 0 ){ //First sample, initialize all sums/averages:
+      fCommonModeRollingAverage_by_APV[iapv] = CM_sample;
+      fCommonModeRollingRMS_by_APV[iapv] = 0.0;
+      sum = CM_sample;
+      sum2 = pow(CM_sample,2);
+    } else { //Second and subsequent samples: increment sums, recalculate
+      double oldavg = fCommonModeRollingAverage_by_APV[iapv];
+      double oldrms = fCommonModeRollingRMS_by_APV[iapv];
+      
+      sum = N*oldavg + CM_sample;
+      sum2 = N * (pow(oldrms,2) + pow(oldavg,2)) + pow(CM_sample,2);
+
+      double newavg = sum/double(N+1);
+      double newrms = sqrt( sum2/double(N+1) - pow(newavg,2) );
+
+      fCommonModeRollingAverage_by_APV[iapv] = newavg;
+      fCommonModeRollingRMS_by_APV[iapv] = newrms;
+    }
+
+    // std::cout << "(N, average, rms)=(" << N << ", " << fCommonModeRollingAverage_by_APV[iapv]
+    // 	      << ", " << fCommonModeRollingRMS_by_APV[iapv] << ")" << std::endl;
+    fNeventsRollingAverage_by_APV[iapv] = N+1;
+  
+  } else {
+      
+    //grab the earliest sample in the rolling average:
+    double oldfirstsample = fCommonModeResultContainer_by_APV[iapv].front();
+    
+    //The net result of the following two operations should be to keep the container size the same:
+    fCommonModeResultContainer_by_APV[iapv].pop_front(); //remove oldest sample
+    fCommonModeResultContainer_by_APV[iapv].push_back( CM_sample ); //Insert newest sample at the end
+    //we only need to update the calculation for the fact that the
+    //earliest sample rolled off and a new sample was added: 
+    double oldavg = fCommonModeRollingAverage_by_APV[iapv];
+    double oldsum = oldavg * Nmax;
+
+    double oldrms = fCommonModeRollingRMS_by_APV[iapv];
+    // RMS^2 = sum^2/N - avg^2 --> sum^2 = N * (RMS^2 + avg^2)
+    double oldsum2 = Nmax * ( pow(oldrms,2) + pow(oldavg,2) );
+
+    //double lastsample = fCommonModeResultContainer_by_APV[iapv].back();
+    double lastsample = CM_sample;
+    
+    double newsum = oldsum - oldfirstsample + lastsample;
+    double newsum2 = oldsum2 - pow(oldfirstsample,2) + pow(lastsample,2);
+
+    double newavg = newsum/double( Nmax );
+    double newrms = sqrt( newsum2/double( Nmax ) - pow(newavg,2) );
+    
+    fCommonModeRollingAverage_by_APV[iapv] = newavg;
+    fCommonModeRollingRMS_by_APV[iapv] = newrms;
+
+    // std::cout << "(N, DB average, old average, new average, DB rms, old rms, new rms)=(" << N << ", " << cm_mean_from_DB << ", " << oldavg
+    // 	      << ", " << newavg << ", " << cm_rms_from_DB << ", " << oldrms << ", " << newrms << ")" << std::endl;
+
+  }
 }
