@@ -245,7 +245,6 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
       
     }
   }
-
   
   return 0;
 }
@@ -257,13 +256,37 @@ Int_t SBSScalerEvtHandler::ReadDatabase(const TDatime& date )
   prefix[0]='g';
   prefix[1]='\0';
   fNumBCMs = 0;
-#ifdef HALLCPARM
-  DBRequest list[]={
-    {"NumBCMs",&fNumBCMs, kInt, 0, 1},
-    {0}
+// #ifdef HALLCPARM
+
+  DBRequest list [] = { 
+     {"NumBCMs",&fNumBCMs,kInt,0,1}, 
+     {0} 
   };
-  gHcParms->LoadParmValues((DBRequest*)&list, prefix);
-  cout << " NUmber of BCMs = " << fNumBCMs << endl;
+     
+  TString sname = "db_sbsBCM.dat"; 
+  std::cout << "Trying to load database file " << sname << std::endl;
+
+  // FILE* file = OpenFile( date );
+  FILE *file = Podd::OpenDBFile(sname.Data(), date);
+
+  if( !file ){
+     std::cout << "*** ERROR! Cannot load DB file! ***" << std::endl;
+     return kInitError;
+  }
+
+  Int_t err = kOK; 
+
+  if(!err){
+     err = LoadDB( file, date,list,fPrefix);
+     if(err!=0) std::cout << "*** ERROR! Cannot load DB! ***" << std::endl;
+  }
+
+  // DBRequest list[]={
+  //   {"NumBCMs",&fNumBCMs, kInt, 0, 1},
+  //   {0}
+  // };
+  // gHcParms->LoadParmValues((DBRequest*)&list, prefix);
+  cout << " Number of BCMs = " << fNumBCMs << endl;
   
   if(fNumBCMs > 0) {
     fBCM_Gain = new Double_t[fNumBCMs];
@@ -273,13 +296,13 @@ Int_t SBSScalerEvtHandler::ReadDatabase(const TDatime& date )
     fBCM_delta_charge= new Double_t[fNumBCMs];
     string bcm_namelist;
     DBRequest list2[]={
-      {"BCM_Gain",      fBCM_Gain,         kDouble, (UInt_t) fNumBCMs},
-      {"BCM_Offset",     fBCM_Offset,       kDouble,(UInt_t) fNumBCMs},
-      {"BCM_SatQuadratic",     fBCM_SatQuadratic,       kDouble,(UInt_t) fNumBCMs,1},
-      {"BCM_SatOffset",     fBCM_SatOffset,       kDouble,(UInt_t) fNumBCMs,1},
-      {"BCM_Names",     &bcm_namelist,       kString},
-      {"BCM_Current_threshold",     &fbcm_Current_Threshold,       kDouble,0, 1},
-      {"BCM_Current_threshold_index",     &fbcm_Current_Threshold_Index,       kInt,0,1},
+      {"BCM_Names"                  , &bcm_namelist,                 kString},
+      {"BCM_Gain"                   , fBCM_Gain,                     kDouble,  (UInt_t) fNumBCMs},
+      {"BCM_Offset"                 , fBCM_Offset,                   kDouble,  (UInt_t) fNumBCMs},
+      {"BCM_SatQuadratic"           , fBCM_SatQuadratic,             kDouble,  (UInt_t) fNumBCMs,1},
+      {"BCM_SatOffset"              , fBCM_SatOffset,                kDouble,  (UInt_t) fNumBCMs,1},
+      {"BCM_Current_threshold"      , &fbcm_Current_Threshold,       kDouble,  0 , 1},
+      {"BCM_Current_threshold_index", &fbcm_Current_Threshold_Index, kInt   ,  0 , 1},
       {0}
     };
     fbcm_Current_Threshold = 0.0;
@@ -288,14 +311,22 @@ Int_t SBSScalerEvtHandler::ReadDatabase(const TDatime& date )
       fBCM_SatOffset[i]=0.;
       fBCM_SatQuadratic[i]=0.;
     }
-    gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
+    err = LoadDB(file,date,list2,fPrefix); 
+    // gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
+    string myStr;
     vector<string> bcm_names = Podd::vsplit(bcm_namelist);
     for(Int_t i=0;i<fNumBCMs;i++) {
-      fBCM_Name.push_back(bcm_names[i]+".scal");
-      fBCM_delta_charge[i]=0.;
+       myStr = "sbs.bcm." + bcm_names[i] + ".current"; 
+       fBCM_Name.push_back(myStr);
+       fBCM_delta_charge[i]=0.;
+    }
+    // print what we have
+    std::cout << "LOADED FROM DATABASE: " << std::endl; 
+    for(Int_t i=0;i<fNumBCMs;i++){
+       std::cout << Form("%s: offset = %.3lf Hz, gain = %.3lf Hz/uA",fBCM_Name[i].c_str(),fBCM_Offset[i],fBCM_Gain[i]) << std::endl; 
     }
   }
-#endif
+// #endif
   fTotalTime=0.;
   fPrevTotalTime=0.;
   fDeltaTime=-1.;
@@ -797,7 +828,7 @@ THaAnalysisObject::EStatus SBSScalerEvtHandler::Init(const TDatime& date)
     delete [] *it;
   fDelayedEvents.clear();
 
-  cout << "Howdy !  We are initializing SBSScalerEvtHandler !!   name =   "
+  cout << "Initializing SBSScalerEvtHandler; name = "
         << fName << endl;
 
   if(eventtypes.size()==0) {

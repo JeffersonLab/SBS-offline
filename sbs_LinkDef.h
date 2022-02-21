@@ -75,5 +75,7 @@
 #pragma link C++ class SBSRaster+; 
 #pragma link C++ class SBSBPM+;
 #pragma link C++ class LHRSScalerEvtHandler+;  
-#pragma link C++ class SBSScalerEvtHandler+;  
+#pragma link C++ class SBSScalerEvtHandler+; 
+#pragma link C++ class SBSScalerHelicity+;  
+#pragma link C++ class SBSScalerHelicityReader+;  
 #endif
