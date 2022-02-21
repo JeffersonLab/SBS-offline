@@ -100,6 +100,22 @@ Int_t SBSCherenkovDetector::ReadDatabase( const TDatime& date )
   }
   fIsInit = false;
 
+  fAmpToTCoeff.clear();
+  std::vector<Double_t> amp_tot_coeffs;
+  DBRequest config_request[] = {
+    { "amp_tot_coeffs",        &amp_tot_coeffs,   kDoubleV, 0, true }, 
+    { 0 } ///< Request must end in a NULL
+  };
+  err = LoadDB( fi, date, config_request, fPrefix );
+  
+  if(amp_tot_coeffs.size()>0){
+    for(int i = 0; i<amp_tot_coeffs.size(); i++){
+      fAmpToTCoeff.push_back(amp_tot_coeffs[i]);
+    }
+  }else{
+    fAmpToTCoeff.push_back(1.0);
+  }
+  
   fIsInit = true;
   
   fclose(fi);
@@ -114,20 +130,19 @@ Int_t SBSCherenkovDetector::DefineVariables( EMode mode )
   if( mode == kDefine && fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
 
-  // //Hits hits
-  // RVarDef var1[] = {
-  //   { "nhits",      " number of PMT hits", "GetNumHits()"                    },
-  //   { "hit.pmtnum", " Hit PMT num",        "fHits.SBSCherenkov_Hit.GetPMTNum()" },
-  //   { "hit.xhit",   " PMT hit X",          "fHits.SBSCherenkov_Hit.GetX()"      },
-  //   { "hit.yhit",   " PMT hit y",          "fHits.SBSCherenkov_Hit.GetY()"      },
-  //   { "hit.row",    " PMT hit row",        "fHits.SBSCherenkov_Hit.GetRow()"    },
-  //   { "hit.col",    " PMT hit column",     "fHits.SBSCherenkov_Hit.GetCol()"    },
-  //   { "hit.adc",    " PMT hit ADC",        "fHits.SBSCherenkov_Hit.GetADC()"    },
-  //   { "hit.tdc_r",  " PMT hit TDC rise",   "fHits.SBSCherenkov_Hit.GetTDC_r()"  },
-  //   { "hit.tdc_f",  " PMT hit TDC fall",   "fHits.SBSCherenkov_Hit.GetTDC_f()"  },
-  //   { 0 }
-  // };
-  // DefineVarsFromList( var1, mode, "" );// (re)define path here...
+  //Hits hits
+  RVarDef var1[] = {
+    { "nhits",      " number of PMT hits", "GetNumHits()"                       },
+    { "hit.pmtnum", " Hit PMT num",        "fHits.SBSCherenkov_Hit.GetPMTNum()" },
+    { "hit.xhit",   " PMT hit X",          "fHits.SBSCherenkov_Hit.GetX()"      },
+    { "hit.yhit",   " PMT hit y",          "fHits.SBSCherenkov_Hit.GetY()"      },
+    { "hit.row",    " PMT hit row",        "fHits.SBSCherenkov_Hit.GetRow()"    },
+    { "hit.col",    " PMT hit column",     "fHits.SBSCherenkov_Hit.GetCol()"    },
+    { "hit.amp",    " PMT hit ampliutude", "fHits.SBSCherenkov_Hit.GetAmp()"    },
+    { "hit.time",   " PMT hit time",       "fHits.SBSCherenkov_Hit.GetTime()"   },
+    { 0 }
+  };
+  DefineVarsFromList( var1, mode, "" );// (re)define path here...
   
   // RVarDef var2[] = {
   //   { "nclus",        " number of GRINCH PMT clusters",  "GetNumClusters()"                                 },
@@ -175,6 +190,33 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
   if( fDoBench ) fBench->Begin("CoarseProcess");
  
   SBSGenericDetector::CoarseProcess(tracks);
+
+  double amp, x, y;
+
+  for(int k = 0; k<fNGoodTDChits; k++){
+    if(fHit_tmin<=fGood.t[k] && 
+       fGood.t[k]<=fHit_tmax){
+      SBSCherenkov_Hit* the_hit = new SBSCherenkov_Hit();
+      the_hit->SetPMTNum(fGood.TDCelemID[k]);
+      the_hit->SetRow(fGood.TDCrow[k]);
+      the_hit->SetCol(fGood.TDCcol[k]);
+      the_hit->SetTime(fGood.t[k]);
+      
+      x = (fElements[fGood.TDCelemID[k]])->GetX();
+      y = (fElements[fGood.TDCelemID[k]])->GetY();
+      if(k<fAmpToTCoeff.size()){
+	amp = fGood.t_ToT[k]*fAmpToTCoeff[k];
+      }else{// we should be guaranteed that the array has at least one element
+	amp = fGood.t_ToT[k]*fAmpToTCoeff[0];
+      }
+      
+      the_hit->SetX(x);
+      the_hit->SetY(y);
+      the_hit->SetAmp(amp);
+      
+      
+    }
+  }
   
   if( fDoBench ) fBench->Stop("CoarseProcess");
   if(fDebug)cout << "End Coarse Process" << endl;

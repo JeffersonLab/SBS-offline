@@ -77,6 +77,11 @@ protected:
   //Int_t   MatchClustersWithTracks( TClonesArray& tracks );
   //Int_t   CleanClustersWithTime();
 
+  double fHit_tmin;
+  double fHit_tmax;
+
+  std::vector<Double_t> fAmpToTCoeff;
+  
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
 

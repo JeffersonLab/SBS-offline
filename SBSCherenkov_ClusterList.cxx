@@ -11,6 +11,7 @@
 #include "SBSCherenkov_ClusterList.h"
 #include "TClonesArray.h"
 #include "TMath.h"
+#include <DataType.h>
 
 #include <fstream>
 #include <cstdio>
@@ -20,16 +21,38 @@
 using namespace std;
 
 //_____________________________________________________________________________
+SBSCherenkov_Hit::SBSCherenkov_Hit(): 
+  fPMTNum(-1), fRow(-1), fCol(-1), 
+  //fTDC(-1), fToT(-1), fADC(-1),
+  fX(kBig), fY(kBig), fTime(kBig), fAmp(kBig)
+  //fFlag(0), fVeto(0) 
+{
+} 
+
+//_____________________________________________________________________________
+SBSCherenkov_Hit::SBSCherenkov_Hit( Int_t pmtnum, Int_t i, Int_t j, 
+				    Float_t x, Float_t y, Float_t t, Float_t a ):
+  fPMTNum(pmtnum), fRow(i), fCol(j), 
+  //fTDC(TDC), fToT(ToT), fADC(ADC), 
+  fX(x), fY(y), fTime(t), fAmp(a)
+  //fFlag(0), fVeto(0), tdcr_set(false), tdcf_set(false) 
+{
+}
+
+//_____________________________________________________________________________
 Int_t SBSCherenkov_Hit::Compare( const TObject* theOtherHit ) const
 {
-  if (fADC < static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fADC)
+  if (fTime < static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fTime ||
+      fAmp < static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fAmp)
     return -1;
-  if (fADC > static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fADC)
+  if (fTime > static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fTime ||
+      fAmp > static_cast<const SBSCherenkov_Hit*>( theOtherHit )->fAmp)
     return +1;
   else
     return 0;
 }
 
+/*
 //_____________________________________________________________________________
 void SBSCherenkov_Hit::Show(FILE * fout1, FILE* fout2) 
 {
@@ -41,10 +64,10 @@ void SBSCherenkov_Hit::Show(FILE * fout1, FILE* fout2)
   fprintf(fout2,"%4d,%4d",fRow,fCol);
   fprintf(fout2," ; X, Y ");
   fprintf(fout2,"%4f,%4f",fX,fY);
+  fprintf(fout2,"; fTDC, fToT ");
+  fprintf(fout2,"%4d,%4d",fTDC, fToT);
   fprintf(fout2,"; fADC = ");
   fprintf(fout2,"%4d",fADC);
-  fprintf(fout2,"; fTDC_r, fTDC_f ");
-  fprintf(fout2,"%4d,%4d",fTDC_r, fTDC_f);
   fprintf(fout2,"\n");
   //  Show(fout1);
 }
@@ -56,10 +79,10 @@ void SBSCherenkov_Hit::Show(FILE * fout1)
   fprintf(fout1," %4d",fPMTNum);
   fprintf(fout1," %4d %4d",fRow,fCol);
   fprintf(fout1,"% 4f %4f",fX,fY);
-  fprintf(fout1," %4d \n",fADC);
-  fprintf(fout1," %4d %4d \n",fTDC_r, fTDC_f);
+  fprintf(fout1," %4d %4d \n",fTime, fAmp);
+  //fprintf(fout1," %4d \n",fADC);
 }
-
+*/
 
 //=============================================================================
 // SBSCherenkov_Cluster
@@ -69,8 +92,8 @@ void SBSCherenkov_Hit::Show(FILE * fout1)
 SBSCherenkov_Cluster::SBSCherenkov_Cluster() : // f(0)
   fXcenter(0), fYcenter(0),
   fXcenter_w(0), fYcenter_w(0), fCharge(0),
-  fMeanRisingTime(0), fMeanFallingTime(0),
-  fRisingTimeRMS(0), fFallingTimeRMS(0),
+  fMeanTime(0), fMeanAmp(0),
+  fTimeRMS(0), fAmpRMS(0),
   fTrackMatch(false), fTrack(0)
 {
   fHitList = new TList(); 
@@ -80,8 +103,8 @@ SBSCherenkov_Cluster::SBSCherenkov_Cluster() : // f(0)
 SBSCherenkov_Cluster::SBSCherenkov_Cluster( const SBSCherenkov_Cluster& rhs ) : // f(rhs.f)
   TObject(rhs), fXcenter(rhs.fXcenter), fYcenter(rhs.fYcenter),
   fXcenter_w(rhs.fXcenter_w), fYcenter_w(rhs.fYcenter_w), fCharge(rhs.fCharge), 
-  fMeanRisingTime(rhs.fMeanRisingTime), fMeanFallingTime(rhs.fMeanFallingTime),
-  fRisingTimeRMS(rhs.fRisingTimeRMS), fFallingTimeRMS(rhs.fFallingTimeRMS),
+  fMeanTime(rhs.fMeanTime), fMeanAmp(rhs.fMeanAmp),
+  fTimeRMS(rhs.fTimeRMS), fAmpRMS(rhs.fAmpRMS),
   fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack)
 {
   fHitList = new TList();
@@ -102,10 +125,10 @@ SBSCherenkov_Cluster& SBSCherenkov_Cluster::operator=( const SBSCherenkov_Cluste
     fXcenter_w = rhs.fXcenter_w;
     fYcenter_w = rhs.fYcenter_w;
     fCharge = rhs.fCharge;
-    fMeanRisingTime = rhs.fMeanRisingTime;
-    fMeanFallingTime = rhs.fMeanFallingTime;
-    fRisingTimeRMS = rhs.fRisingTimeRMS;
-    fFallingTimeRMS = rhs.fFallingTimeRMS;
+    fMeanTime = rhs.fMeanTime;
+    fMeanAmp = rhs.fMeanAmp;
+    fTimeRMS = rhs.fTimeRMS;
+    fAmpRMS = rhs.fAmpRMS;
     fTrackMatch = rhs.fTrackMatch;
     fTrack = rhs.fTrack;
     
@@ -153,13 +176,13 @@ void SBSCherenkov_Cluster::MergeCluster( const SBSCherenkov_Cluster& rhs )
   
   fCharge += rhs.fCharge;
   
-  fMeanRisingTime = (fMeanRisingTime*((Double_t)list1size)+rhs.fMeanRisingTime*((Double_t)list2size))/
+  fMeanTime = (fMeanTime*((Double_t)list1size)+rhs.fMeanTime*((Double_t)list2size))/
     ((Double_t)(list1size+list2size));
-  fMeanFallingTime = (fMeanFallingTime*((Double_t)list1size)+rhs.fMeanFallingTime*((Double_t)list2size))/
+  fMeanAmp = (fMeanAmp*((Double_t)list1size)+rhs.fMeanAmp*((Double_t)list2size))/
     ((Double_t)(list1size+list2size));
   
-  fRisingTimeRMS = sqrt( (pow(fRisingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fRisingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
-  fFallingTimeRMS = sqrt( (pow(fFallingTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fFallingTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  fTimeRMS = sqrt( (pow(fTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  fAmpRMS = sqrt( (pow(fAmpRMS, 2)*((Double_t)list1size) + pow(rhs.fAmpRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
   //return *this;
 }
 
@@ -179,10 +202,10 @@ void SBSCherenkov_Cluster::Clear( Option_t* opt ) // f = 0;
     fXcenter_w = 0;
     fYcenter_w = 0;
     fCharge = 0;
-    fMeanRisingTime = 0;
-    fMeanFallingTime = 0;
-    fRisingTimeRMS = 0;
-    fFallingTimeRMS = 0;
+    fMeanTime = 0;
+    fMeanAmp = 0;
+    fTimeRMS = 0;
+    fAmpRMS = 0;
     fTrackMatch = false;
     fTrack = 0;
   } else {
@@ -208,17 +231,17 @@ void SBSCherenkov_Cluster::Insert( SBSCherenkov_Hit* theHit )
   
   fXcenter_w = fXcenter_w*fCharge;
   fYcenter_w = fYcenter_w*fCharge;
-  fCharge+= theHit->GetADC();
-  fXcenter_w+= theHit->GetADC()*theHit->GetX();
-  fYcenter_w+= theHit->GetADC()*theHit->GetY();
+  fCharge+= theHit->GetAmp();
+  fXcenter_w+= theHit->GetAmp()*theHit->GetX();
+  fYcenter_w+= theHit->GetAmp()*theHit->GetY();
   fXcenter_w = fXcenter_w/fCharge;
   fYcenter_w = fYcenter_w/fCharge;
   
-  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_r())/((Double_t)listnewsize);
-  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize-1))+theHit->GetTDC_f())/((Double_t)listnewsize);
-  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_r(), 2))/
+  fMeanTime = (fMeanTime*((Double_t)(listnewsize-1))+theHit->GetTime())/((Double_t)listnewsize);
+  fMeanAmp = (fMeanAmp*((Double_t)(listnewsize-1))+theHit->GetAmp())/((Double_t)listnewsize);
+  fTimeRMS = sqrt((pow(fTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTime(), 2))/
   			((Double_t)listnewsize));
-  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTDC_f(), 2))/
+  fAmpRMS = sqrt((pow(fAmpRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetAmp(), 2))/
   			 ((Double_t)listnewsize));
 }
 
@@ -235,17 +258,17 @@ void SBSCherenkov_Cluster::Remove( SBSCherenkov_Hit* theHit )
   
   fXcenter_w = fXcenter_w*fCharge;
   fYcenter_w = fYcenter_w*fCharge;
-  fCharge-= theHit->GetADC();
-  fXcenter_w-= theHit->GetADC()*theHit->GetX();
-  fYcenter_w-= theHit->GetADC()*theHit->GetY();
+  fCharge-= theHit->GetAmp();
+  fXcenter_w-= theHit->GetAmp()*theHit->GetX();
+  fYcenter_w-= theHit->GetAmp()*theHit->GetY();
   fXcenter_w = fXcenter_w/fCharge;
   fYcenter_w = fYcenter_w/fCharge;
   
-  fMeanRisingTime = (fMeanRisingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_r())/((Double_t)listnewsize);
-  fMeanFallingTime = (fMeanFallingTime*((Double_t)(listnewsize+1))-theHit->GetTDC_f())/((Double_t)listnewsize);
-  fRisingTimeRMS = sqrt((pow(fRisingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_r(), 2))/
+  fMeanTime = (fMeanTime*((Double_t)(listnewsize+1))-theHit->GetTime())/((Double_t)listnewsize);
+  fMeanAmp = (fMeanAmp*((Double_t)(listnewsize+1))-theHit->GetAmp())/((Double_t)listnewsize);
+  fTimeRMS = sqrt((pow(fTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTime(), 2))/
   			((Double_t)listnewsize));
-  fFallingTimeRMS = sqrt((pow(fFallingTimeRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetTDC_f(), 2))/
+  fAmpRMS = sqrt((pow(fAmpRMS, 2)*((Double_t)(listnewsize+1))-pow(theHit->GetAmp(), 2))/
   			 ((Double_t)listnewsize));
 }
 

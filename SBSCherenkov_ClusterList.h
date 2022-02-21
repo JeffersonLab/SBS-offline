@@ -24,59 +24,62 @@ class TClonesArray;
 class SBSCherenkov_Hit : public TObject {
 
  public:
- SBSCherenkov_Hit() 
-   : fFlag(0), fVeto(0) {}
- SBSCherenkov_Hit( Int_t pmtnum, Int_t TDC_r, Int_t TDC_f, Int_t ADC, Int_t i, Int_t j, 
-		Float_t x, Float_t y ) :
-  fPMTNum(pmtnum), fTDC_r(TDC_r), fTDC_f(TDC_f), fADC(ADC), 
-    fRow(i), fCol(j), fX(x), fY(y), fFlag(0),
-    fVeto(0), tdcr_set(false), tdcf_set(false) {}
+  SBSCherenkov_Hit(); 
+  SBSCherenkov_Hit( Int_t pmtnum, Int_t i, Int_t j, //Int_t TDC, Int_t ToT
+		    Float_t x, Float_t y, Float_t t, Float_t a );
   virtual ~SBSCherenkov_Hit() {}
   
-  void       Show(FILE * fout1);
-  void       Show(FILE * fout1, FILE * fout2);
+  //void       Show(FILE * fout1);
+  //void       Show(FILE * fout1, FILE * fout2);
   
   Int_t      GetPMTNum()   const {return fPMTNum;}
-  Float_t    GetX()        const {return fX;}
-  Float_t    GetY()        const {return fY;}
   Int_t      GetRow()      const {return fRow;}
   Int_t      GetCol()      const {return fCol;}
-  Int_t      GetADC()      const {return fADC;}
-  Int_t      GetTDC_r()    const {return fTDC_r;}
-  Int_t      GetTDC_f()    const {return fTDC_f;}
-  Int_t      GetFlag()     const {return fFlag;}
-  Int_t      GetVeto()     const {return fVeto;} 
+  //Int_t      GetTDC()      const {return fTDC;}
+  //Int_t      GetToT()      const {return fToT;}
+  //Int_t      GetADC()      const {return fADC;}
+  Float_t    GetX()        const {return fX;}
+  Float_t    GetY()        const {return fY;}
+  Float_t    GetTime()     const {return fTime;}
+  Float_t    GetAmp()      const {return fAmp;}
+  //Int_t      GetFlag()     const {return fFlag;}
+  //Int_t      GetVeto()     const {return fVeto;}
+  
   void       SetPMTNum( Int_t pmtnum ) {fPMTNum = pmtnum;}
-  void       SetX( Float_t x )         {fX = x;}
-  void       SetY( Float_t y )         {fY = y;}
   void       SetRow( Int_t i )         {fRow = i;}
   void       SetCol( Int_t j )         {fCol = j;}
-  void       SetADC( Int_t ADC )       {fADC = ADC;}
-  void       SetTDC_r( Int_t TDC_r )   {fTDC_r = TDC_r;}
-  void       SetTDC_f( Int_t TDC_f )   {fTDC_f = TDC_f;}
-  void       SetFlag( Int_t Flag )     {fFlag = Flag;}
-  void       SetVeto( Int_t Veto )     {fVeto = Veto;}
+  //void       SetTDC( Int_t TDC )       {fTDC = TDC;}
+  //void       SetToT( Int_t ToT )       {fToT = ToT;}
+  //void       SetADC( Int_t ADC )       {fADC = ADC;}
+  void       SetX( Float_t x )         {fX = x;}
+  void       SetY( Float_t y )         {fY = y;}
+  void       SetTime( Float_t t )      {fTime = t;}
+  void       SetAmp( Float_t a )       {fAmp = a;}
+  //void       SetFlag( Int_t Flag )     {fFlag = Flag;}
+  //void       SetVeto( Int_t Veto )     {fVeto = Veto;}
 
   virtual Int_t   Compare( const TObject* ) const;
   virtual Bool_t  IsSortable() const { return kTRUE; }
   
-  Bool_t     TDC_risSet() {return tdcr_set;}
-  Bool_t     TDC_fisSet() {return tdcf_set;}
+  //Bool_t     TDC_risSet() {return tdcr_set;}
+  //Bool_t     TDC_fisSet() {return tdcf_set;}
 
 private:
   Int_t     fPMTNum; // Hit PMT number
-  Int_t     fTDC_r;  // Hit rise time TDC
-  Int_t     fTDC_f;  // Hit fall time TDC
-  Int_t     fADC;    // Hit ADC /!\ deduced from TDC values
   Int_t     fRow;      // Hit row number in PMT matrix
   Int_t     fCol;      // Hit column number in PMT matrix
+  //Int_t     fTDC;  // Hit rise time TDC
+  //Int_t     fToT;  // Hit time over threshold
+  //Int_t     fADC;    // Hit ADC (if available)
   Float_t   fX;      // Hit X position in PMT matrix
   Float_t   fY;      // Hit Y position in PMT matrix
-  Int_t     fFlag;   // ?
-  Int_t     fVeto;   // ?
+  Float_t   fTime;      // Time from TDC
+  Float_t   fAmp;      // Amplitude from ADC or ToT
+  //Int_t     fFlag;   // ?
+  //Int_t     fVeto;   // ?
   
-  Bool_t tdcr_set;// lead TDC is set
-  Bool_t tdcf_set;// fall TDC is set
+  //Bool_t tdcr_set;// lead TDC is set
+  //Bool_t tdcf_set;// fall TDC is set
   
   ClassDef(SBSCherenkov_Hit,0)   //A hit in the RICH
 };
@@ -111,10 +114,10 @@ class SBSCherenkov_Cluster : public TObject {
   Float_t GetYcenter_w() const  { return fYcenter_w; }
   Float_t GetCharge()  const     { return fCharge; }
   
-  Float_t GetMeanRisingTime() const { return fMeanRisingTime; }
-  Float_t GetMeanFallingTime() const { return fMeanFallingTime; }
-  Float_t GetRisingTimeRMS() const    { return fRisingTimeRMS; }
-  Float_t GetFallingTimeRMS() const    { return fFallingTimeRMS; }
+  Float_t GetMeanTime() const { return fMeanTime; }
+  Float_t GetMeanAmp() const { return fMeanAmp; }
+  Float_t GetTimeRMS() const  { return fTimeRMS; }
+  Float_t GetAmpRMS() const  { return fAmpRMS; }
 
   THaTrack* GetTrack() const            { return fTrack; }
 
@@ -124,10 +127,10 @@ class SBSCherenkov_Cluster : public TObject {
   void    SetYcenter_w(Float_t ycenter_w)   { fYcenter_w = ycenter_w; }
   void    SetCharge(Float_t charge)          { fCharge = charge; }
   
-  void    SetMeanRisingTime(Float_t meanrisingtime)  { fMeanRisingTime = meanrisingtime; }
-  void    SetMeanFallingTime(Float_t meanfallingtime) { fMeanFallingTime = meanfallingtime; }
-  void    SetRisingTimeRMS(Float_t risingtimerms)      { fRisingTimeRMS = risingtimerms; }
-  void    SetFallingTimeRMS(Float_t fallingtimerms)     { fFallingTimeRMS = fallingtimerms; }
+  void    SetMeanTime(Float_t meantdc) { fMeanTime = meantdc; }
+  void    SetMeanAmp(Float_t meantot) { fMeanAmp = meantot; }
+  void    SetTimeRMS(Float_t tdcrms)   { fTimeRMS = tdcrms; }
+  void    SetAmpRMS(Float_t totrms)   { fAmpRMS = totrms; }
   
   void    SetTrack( THaTrack* track ) { fTrack = track; }
 
@@ -142,11 +145,11 @@ class SBSCherenkov_Cluster : public TObject {
   Float_t    fYcenter_w; // Weighted Y mean : (Sum of y*adc)/(sum adc) of all hits in the list
   Float_t    fCharge;    // Sum of ADCs
   
-  Float_t    fMeanRisingTime;  // Mean rising time of all hits in the list
-  Float_t    fMeanFallingTime; // Mean falling time of all hits in the list
-  Float_t    fRisingTimeRMS;   // Rising time RMS of all hits in the list
-  Float_t    fFallingTimeRMS;  // Falling time RMS of all hits in the list
-  
+  Float_t    fMeanTime;   // Mean rising time of all hits in the list
+  Float_t    fMeanAmp;   // Mean time over threshold of all hits in the list
+  Float_t    fTimeRMS;    // Rising time RMS of all hits in the list
+  Float_t    fAmpRMS;    // time-over-threshold RMS of all hits in the list
+
   Bool_t     fTrackMatch;// true if a track can be matched to the cluster
   THaTrack*  fTrack;     // Track best associated with this cluster
   
