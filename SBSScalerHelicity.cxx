@@ -60,6 +60,7 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
    for (UInt_t j=0; j<32; j++){
       fScalerCumulative[j] = 0;
    }
+   fFADCQrtHel = 0;
 }
 //_____________________________________________________________________________
 SBSScalerHelicity::~SBSScalerHelicity()
@@ -195,29 +196,58 @@ Int_t SBSScalerHelicity::Begin( THaRunBase* )
    TString branchInfo;
 
    int j=0;
-   const int NB = 49;
+   const int NB = 130;
    TString branchName[NB];
    branchName[0]  = Form("%s.error.code"           ,armName.Data());
    branchName[1]  = Form("%s.ring.seed"            ,armName.Data());
    branchName[2]  = Form("%s.ring.seedReported"    ,armName.Data());
    branchName[3]  = Form("%s.ring.seedActual"      ,armName.Data());
    branchName[4]  = Form("%s.ring.phaseReported"   ,armName.Data());
-   branchName[5]  = Form("%s.ring.polarityReported",armName.Data());
-   branchName[6]  = Form("%s.ring.polarityActual"  ,armName.Data());
-   branchName[7]  = Form("%s.ring.U3Plus"          ,armName.Data());
-   branchName[8]  = Form("%s.ring.U3Minus"         ,armName.Data());
-   branchName[9]  = Form("%s.ring.T3Plus"          ,armName.Data());
-   branchName[10] = Form("%s.ring.T3Minus"         ,armName.Data());
-   branchName[11] = Form("%s.ring.T5Plus"          ,armName.Data());
-   branchName[12] = Form("%s.ring.T5Minus"         ,armName.Data());
-   branchName[13] = Form("%s.ring.T10Plus"         ,armName.Data());
-   branchName[14] = Form("%s.ring.T10Minus"        ,armName.Data());
-   branchName[15] = Form("%s.ring.TimePlus"        ,armName.Data());
-   branchName[16] = Form("%s.ring.TimeMinus"       ,armName.Data());
+   //   branchName[5]  = Form("%s.ring.polarityReported",armName.Data());
+   //   branchName[6]  = Form("%s.ring.polarityActual"  ,armName.Data());
+   branchName[5]  = Form("%s.ring.UnewPlus"        ,armName.Data());
+   branchName[6] = Form("%s.ring.UnewMinus"        ,armName.Data());
+   branchName[7]  = Form("%s.ring.DnewPlus"        ,armName.Data());
+   branchName[8]  = Form("%s.ring.DnewMinus"       ,armName.Data());
+   branchName[9] = Form("%s.ring.U1Plus"           ,armName.Data());
+   branchName[10] = Form("%s.ring.U1Minus"         ,armName.Data());
+   branchName[11] = Form("%s.ring.D1Plus"          ,armName.Data());
+   branchName[12] = Form("%s.ring.D1Minus"         ,armName.Data());
+   branchName[13] = Form("%s.ring.D3Plus"          ,armName.Data());
+   branchName[14] = Form("%s.ring.D3Minus"         ,armName.Data());
+   branchName[15] = Form("%s.ring.D10Plus"         ,armName.Data());
+   branchName[16] = Form("%s.ring.D10Minus"        ,armName.Data());
 
    for(int i=0;i<32;i++){
       j = 17 + i;
       branchName[j] = Form("%s.cumulative.Ch%d",armName.Data(),i);
+   }
+
+   branchName[49] = Form("%s.hel.ErrorCode"        ,armName.Data());
+   branchName[50] = Form("%s.hel.EvtNum"           ,armName.Data());
+   branchName[51] = Form("%s.hel.PattNum"          ,armName.Data());
+   branchName[52] = Form("%s.hel.PattPhase"        ,armName.Data());
+   branchName[53] = Form("%s.hel.PatternSeed"      ,armName.Data());
+   branchName[54] = Form("%s.hel.PatternPolarity"  ,armName.Data());
+   branchName[55] = Form("%s.hel.EvtPolarity"      ,armName.Data());
+   branchName[56] = Form("%s.hel.ReportedQrtHel"   ,armName.Data());
+
+   branchName[57] = Form("%s.ring.FinalQrtHel"     ,armName.Data());
+   branchName[58] = Form("%s.ring.FinalEvtNum"     ,armName.Data());
+   branchName[59] = Form("%s.ring.FinalPatNum"     ,armName.Data());
+   branchName[60] = Form("%s.ring.FinalSeed"       ,armName.Data());
+
+   branchName[61] = Form("%s.fadc.ReportedHelicity",armName.Data());
+   branchName[62] = Form("%s.fadc.PatternSync"     ,armName.Data());
+   branchName[63] = Form("%s.fadc.TSettle"         ,armName.Data());
+   branchName[64] = Form("%s.fadc.ReportedQrtHel"  ,armName.Data());
+
+   branchName[65] = Form("%s.ring.PattPhase"       ,armName.Data());
+
+   for(int i=0;i<32;i++){
+      j = 66 + 2*i;
+      branchName[j]   = Form("%s.Yield.Ch%d",armName.Data(),i);
+      branchName[j+1] = Form("%s.Diff.Ch%d",armName.Data(),i);
    }
 
    if(!fHelScalerTree){
@@ -262,7 +292,55 @@ Int_t SBSScalerHelicity::Begin( THaRunBase* )
 	 j = 17 + i; 
 	 branchInfo = Form("%s/L",branchName[j].Data()); 
 	 fHelScalerTree->Branch(branchName[j].Data(),&fScalerCumulative[i],branchInfo.Data()); 
-      } 
+      }
+      branchInfo = Form("%s/i",branchName[49].Data());
+      fHelScalerTree->Branch(branchName[49].Data(),&fHelErrorCond,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[50].Data());
+      fHelScalerTree->Branch(branchName[50].Data(),&fNumEvents,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[51].Data());
+      fHelScalerTree->Branch(branchName[51].Data(),&fNumPatterns,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[52].Data());
+      fHelScalerTree->Branch(branchName[52].Data(),&fPatternPhase,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[53].Data());
+      fHelScalerTree->Branch(branchName[53].Data(),&fSeedValue,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[54].Data());
+      fHelScalerTree->Branch(branchName[54].Data(),&fPatternHel,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[55].Data());
+      fHelScalerTree->Branch(branchName[55].Data(),&fEventPolarity,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[56].Data());
+      fHelScalerTree->Branch(branchName[56].Data(),&fReportedQrtHel,branchInfo.Data());
+
+      branchInfo = Form("%s/i",branchName[57].Data());
+      fHelScalerTree->Branch(branchName[57].Data(),&fRingFinalQrtHel,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[58].Data());
+      fHelScalerTree->Branch(branchName[58].Data(),&fRingFinalEvtNum,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[59].Data());
+      fHelScalerTree->Branch(branchName[59].Data(),&fRingFinalPatNum,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[60].Data());
+      fHelScalerTree->Branch(branchName[60].Data(),&fRingFinalSeed,branchInfo.Data());
+
+      branchInfo = Form("%s/i",branchName[61].Data());
+      fHelScalerTree->Branch(branchName[61].Data(),&fFADCHelicity,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[62].Data());
+      fHelScalerTree->Branch(branchName[62].Data(),&fFADCPatSync,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[63].Data());
+      fHelScalerTree->Branch(branchName[63].Data(),&fFADCTSettle,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[64].Data());
+      fHelScalerTree->Branch(branchName[64].Data(),&fFADCQrtHel,branchInfo.Data());
+
+      branchInfo = Form("%s/i",branchName[65].Data());
+      fHelScalerTree->Branch(branchName[65].Data(),&fRingPattPhase,branchInfo.Data());
+
+      for(int i=0;i<32;i++){
+	j = 66 + 2*i;
+	branchInfo = Form("%s/L",branchName[j].Data()); 
+	fHelScalerTree->Branch(branchName[j].Data(),&fScalerYield[i],branchInfo.Data());
+	j = 66 + 2*i + 1;
+	branchInfo = Form("%s/L",branchName[j].Data()); 
+	fHelScalerTree->Branch(branchName[j].Data(),&fScalerDiff[i],branchInfo.Data());
+      }
+
+
    }
 
    return 0;
