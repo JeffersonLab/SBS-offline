@@ -192,11 +192,16 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
   SBSGenericDetector::CoarseProcess(tracks);
 
   double amp, x, y;
-
+  
+  Int_t nHit = 0;
+  SBSCherenkov_Hit* the_hit = nullptr;
+  
   for(int k = 0; k<fNGoodTDChits; k++){
     if(fHit_tmin<=fGood.t[k] && 
        fGood.t[k]<=fHit_tmax){
-      SBSCherenkov_Hit* the_hit = new SBSCherenkov_Hit();
+      
+      the_hit = new( (*fHits)[nHit++] ) SBSCherenkov_Hit();
+      
       the_hit->SetPMTNum(fGood.TDCelemID[k]);
       the_hit->SetRow(fGood.TDCrow[k]);
       the_hit->SetCol(fGood.TDCcol[k]);
@@ -213,8 +218,6 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
       the_hit->SetX(x);
       the_hit->SetY(y);
       the_hit->SetAmp(amp);
-      
-      
     }
   }
   
