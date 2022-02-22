@@ -198,7 +198,7 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
  
   SBSGenericDetector::CoarseProcess(tracks);
 
-  double t, amp, x, y;
+  double amp, x, y;
   double tmin, tmax;
   
   Int_t nHit = 0;
@@ -207,7 +207,6 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
   for(int k = 0; k<fNGoodTDChits; k++){
     tmin = -fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
     tmax = +fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
-    t = fGood.t[k]+fElements[fGood.TDCelemID[k]]->TDC()->GetOffset();
     
     if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
       the_hit = new( (*fHits)[nHit++] ) SBSCherenkov_Hit();
@@ -230,6 +229,7 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
       the_hit->SetAmp(amp);
     }
   }
+  //clustering to be done by dereived class...
   
   if( fDoBench ) fBench->Stop("CoarseProcess");
   if(fDebug)cout << "End Coarse Process" << endl;
@@ -240,36 +240,8 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
 //_____________________________________________________________________________
 Int_t SBSCherenkovDetector::FineProcess( TClonesArray& tracks )
 {
-  if(fDebug)cout << "Begin Fine Process" << endl;
-  // The main RICH processing method. Here we
-  //  
-  // - Identify clusters
-  // - Attempt to match a traceto these
-  // - Calculate particle probabilities
-
-  if( !fIsInit ) return -255;
-
-  // Clusters reconstructed here
-  if( FindClusters() == 0 ) { 
-    return -1;
-  }
-  
-  if(fDebug)cout << "DoTimeFitter ? " << fDoTimeFilter << " Tracks::GetLast ? " << tracks.GetLast() << endl;
-
-  // if( fDoResolve )
-  //   ResolveClusters();
-  //cout<<"stay and stop here!!!"<<endl;
-  if( fDoBench ) fBench->Begin("FineProcess");
-
-  //if(fDoTimeFilter) CleanClustersWithTime();
-  
-  // Clusters matched with tracks here (obviously if there are any tracks to match)
-  if(tracks.GetLast()>0){
-    //MatchClustersWithTracks(tracks);
-  }
-  
-  if( fDoBench ) fBench->Stop("FineProcess");
-  if(fDebug)cout << "Done fine process " << endl;
+  // fine processing like association with tracks belong to 
+  // derived classes such as SBSGRINCH
   return 0;
 }
 
@@ -283,34 +255,6 @@ void SBSCherenkovDetector::DeleteClusters()
   //fResolvedClusters->Clear("C");
   return;
 }
-
-//__________________________________________________________________________
-Int_t SBSCherenkovDetector::FindClusters()
-{
-  DeleteClusters();
-
-  if( fDoBench ) fBench->Begin("FindClusters");
-
-  Int_t nClust = GetNumClusters();
-  
-  if(fDebug)cout << "Finished clustering " << endl;
-  if( fDoBench ) fBench->Stop("FindClusters");
-  return nClust;
-}
-
-//_____________________________________________________________________________
-// Int_t SBSCherenkovDetector::MatchClustersWithTracks( TClonesArray& tracks )
-// {
-//   Int_t Nassociated = 0;
-//   return(Nassociated);
-// }
-
-// //__________________________________________________________________________
-// Int_t SBSCherenkovDetector::CleanClustersWithTime()// pass as an option...
-// {
-  
-//   return(1);
-// }
 
 //_____________________________________________________________________________
 void SBSCherenkovDetector::PrintBenchmarks() const

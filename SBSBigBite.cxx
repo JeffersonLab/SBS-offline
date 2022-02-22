@@ -1154,6 +1154,7 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
     // then, GRINCH PID
     // match a GRINCH cluster to a track:
     // again, the grinch has to be found for anything to be done.
+    //cout << "find SBSGRINCH detector" << endl;
     if(theNonTrackDetector->InheritsFrom("SBSGRINCH")){
       SBSGRINCH* GRINCH = reinterpret_cast<SBSGRINCH*>(theNonTrackDetector);
       
@@ -1163,13 +1164,13 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       //the_track->GetPhi()*GRINCH->GetOrigin().Z();
       
       //cout << "x, y track = " << x_track << ", " 
-      //<< the_track->GetY()+the_track->GetPhi()*GRINCH->GetZ() << endl;
+      //   << the_track->GetY(GRINCH->GetOrigin().Z()) << endl;
       
       //cout << GRINCH->GetNumClusters() << " GRINCH clusters " << endl;
       int NGRINCHPMTs_match = 0;
       
       for(int i = 0; i<GRINCH->GetNumClusters(); i++){
-	SBSGRINCH_Cluster* gc_clus = GRINCH->GetCluster(i);
+	SBSCherenkov_Cluster* gc_clus = GRINCH->GetCluster(i);
 	//cout << "N hits = " << gc_clus->GetNHits() << endl;
 	//cout << "x,y grinch " << gc_clus->GetXcenter() << ", "
 	//   << gc_clus->GetYcenter() << endl;
@@ -1181,8 +1182,10 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       }
       
       proba_grinch(NGRINCHPMTs_match, the_track->GetP(), eproba, piproba);
-      pidinfo->SetProb(1, 0, eproba);
-      pidinfo->SetProb(1, 1, piproba);
+      //cout << eproba << " " << piproba << endl;
+      //commented out while I figure what is wrong.
+      //pidinfo->SetProb(1, 0, eproba);
+      //pidinfo->SetProb(1, 1, piproba);
     }
     
     pidinfo->CombinePID();

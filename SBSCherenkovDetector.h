@@ -20,12 +20,6 @@
 class THaTrack;
 class THaBenchmark;
 
-const double m_el = 0.5110034e-3; // electron mas in GeV
- const double m_pi = 139.57018e-3; // pion mass in GeV
-// const double m_pi = 0.5110034e-3; // FC: NOT TRUE, JUST FOR TESTING!
-const double m_ka = 493.677e-3;   // kaon mass in GeV
-const double m_pr = 938.272e-3;   // proton mass in GeV
-
 class SBSCherenkovDetector : public SBSGenericDetector {
   
 public:
@@ -73,7 +67,7 @@ protected:
   THaBenchmark*  fBench;           //Counters for timing statistics
   
   void    DeleteClusters();
-  Int_t   FindClusters();
+  //virtual Int_t   FindClusters(){return 0;};
   //Int_t   MatchClustersWithTracks( TClonesArray& tracks );
   //Int_t   CleanClustersWithTime();
 
@@ -85,7 +79,7 @@ protected:
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
 
-private:
+  //private:
   
   bool fMCdata;// easy way to enable/disable the use of MC data.
   
