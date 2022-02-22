@@ -67,7 +67,7 @@ protected:
   THaBenchmark*  fBench;           //Counters for timing statistics
   
   void    DeleteClusters();
-  //virtual Int_t   FindClusters(){return 0;};
+  virtual Int_t   FindClusters(){return 0;};
   //Int_t   MatchClustersWithTracks( TClonesArray& tracks );
   //Int_t   CleanClustersWithTime();
 
