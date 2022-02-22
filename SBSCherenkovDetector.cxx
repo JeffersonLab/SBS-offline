@@ -100,17 +100,39 @@ Int_t SBSCherenkovDetector::ReadDatabase( const TDatime& date )
   }
   fIsInit = false;
 
+  fHit_tmin.clear();
+  fHit_tmax.clear();
   fAmpToTCoeff.clear();
+
+  std::vector<Double_t> hit_tmin;
+  std::vector<Double_t> hit_tmax;
   std::vector<Double_t> amp_tot_coeffs;
+
   DBRequest config_request[] = {
-    { "hit_mintime",           &fHit_tmin,   kDouble, 0, true }, 
-    { "hit_maxtime",           &fHit_tmax,   kDouble, 0, true }, 
+    { "hit_mintime",           &hit_tmin,   kDoubleV, 0, false }, 
+    { "hit_maxtime",           &hit_tmax,   kDoubleV, 0, false }, 
     { "amp_tot_coeffs",        &amp_tot_coeffs,   kDoubleV, 0, true }, 
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( fi, date, config_request, fPrefix );
   
-  if(amp_tot_coeffs.size()>0){
+  if(hit_tmin.size()==fNelem){
+    for(int i = 0; i<hit_tmin.size(); i++){
+      fHit_tmin.push_back(hit_tmin[i]);
+    }
+  }else{
+    fHit_tmin.push_back(hit_tmin[0]);
+  }
+  
+  if(hit_tmax.size()==fNelem){
+    for(int i = 0; i<hit_tmax.size(); i++){
+      fHit_tmax.push_back(hit_tmax[i]);
+    }
+  }else{
+    fHit_tmax.push_back(hit_tmax[0]);
+  }
+
+  if(amp_tot_coeffs.size()==fNelem){
     for(int i = 0; i<amp_tot_coeffs.size(); i++){
       fAmpToTCoeff.push_back(amp_tot_coeffs[i]);
     }
@@ -198,14 +220,24 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
   SBSGenericDetector::CoarseProcess(tracks);
 
   double amp, x, y;
+  double tmin, tmax;
   
   Int_t nHit = 0;
   SBSCherenkov_Hit* the_hit = nullptr;
-  
+    
   for(int k = 0; k<fNGoodTDChits; k++){
-    if(fHit_tmin<=fGood.t[k] && 
-       fGood.t[k]<=fHit_tmax){
-      
+    if(fHit_tmin.size()==fNelem){
+      tmin = fHit_tmin[fGood.TDCelemID[k]];
+    }else{
+      tmin = fHit_tmin[0];
+    }
+    if(fHit_tmax.size()==fNelem){
+      tmax = fHit_tmax[fGood.TDCelemID[k]];
+    }else{
+      tmax = fHit_tmax[0];
+    }
+    
+    if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
       the_hit = new( (*fHits)[nHit++] ) SBSCherenkov_Hit();
       
       the_hit->SetPMTNum(fGood.TDCelemID[k]);

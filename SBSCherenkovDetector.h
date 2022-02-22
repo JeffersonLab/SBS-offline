@@ -77,8 +77,8 @@ protected:
   //Int_t   MatchClustersWithTracks( TClonesArray& tracks );
   //Int_t   CleanClustersWithTime();
 
-  double fHit_tmin;
-  double fHit_tmax;
+  std::vector<Double_t> fHit_tmin;
+  std::vector<Double_t> fHit_tmax;
 
   std::vector<Double_t> fAmpToTCoeff;
   
