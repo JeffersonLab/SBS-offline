@@ -100,17 +100,20 @@ Int_t SBSCherenkovDetector::ReadDatabase( const TDatime& date )
   }
   fIsInit = false;
 
-  fAmpToTCoeff.clear();
+  std::vector<Double_t> xpos,ypos;
   std::vector<Double_t> amp_tot_coeffs;
 
   DBRequest config_request[] = {
-    //{ "hit_mintime",           &fHit_tmin,   kDouble, 0, false }, 
+    { "xpos", &xpos,    kDoubleV, 0, 1 },
+    { "ypos", &ypos,    kDoubleV, 0, 1 },
+   //{ "hit_mintime",           &fHit_tmin,   kDouble, 0, false }, 
     //{ "hit_maxtime",           &fHit_tmax,   kDouble, 0, false }, 
     { "amp_tot_coeffs",        &amp_tot_coeffs,   kDoubleV, 0, true }, 
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( fi, date, config_request, fPrefix );
   
+  fAmpToTCoeff.clear();
   if(int(amp_tot_coeffs.size())==fNelem){
     for(size_t i = 0; i<amp_tot_coeffs.size(); i++){
       fAmpToTCoeff.push_back(amp_tot_coeffs[i]);
@@ -118,6 +121,28 @@ Int_t SBSCherenkovDetector::ReadDatabase( const TDatime& date )
   }else{
     fAmpToTCoeff.push_back(1.0);
   }
+  
+  
+  if (!xpos.empty()) {
+    if ((int)xpos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+	fElements[ne]->SetX(xpos[ne]);
+      }
+    } else {
+      std::cout << "  vector too small " << xpos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
+  //
+  if (!ypos.empty()) {
+    if ((int)ypos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+	fElements[ne]->SetY(ypos[ne]);
+      }
+    } else {
+      std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
+  
   
   fIsInit = true;
   
