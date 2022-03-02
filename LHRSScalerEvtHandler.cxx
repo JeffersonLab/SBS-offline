@@ -81,7 +81,7 @@ LHRSScalerEvtHandler::LHRSScalerEvtHandler(const char *name, const char* descrip
     dvars(0),fScalerTree(0),fUseFirstEvent(kTRUE),
     fClockChan(-1),fClockFreq(-1),fLastClock(0),fClockOverflows(0),
     fTotalTime(0),fPrevTotalTime(0),fDeltaTime(-1),
-    dvarsFirst(0),dvars_prev_read(0),
+    dvarsFirst(0),dvars_prev_read(0),fPhysicsEventNumber(-1),
     fNumBCMs(0),fbcm_Current_Threshold_Index(0),fbcm_Current_Threshold(0),
     fBCM_Gain(0),fBCM_Offset(0),fBCM_SatOffset(0),fBCM_SatQuadratic(0),fBCM_delta_charge(0)
 {
@@ -184,6 +184,9 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
     tinfo = name + "/D";
     fScalerTree->Branch(name.Data(), &evcount, tinfo.Data(), 4000);
 
+    // create the physics event number branch 
+    fScalerTree->Branch("evnum",&fPhysicsEventNumber,"evnum/L");
+
     for (UInt_t i = 0; i < scalerloc.size(); i++) {
       name = scalerloc[i]->name; 
       tinfo = name + "/D";
@@ -202,6 +205,9 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   }
 
   if (fDebugFile) *fDebugFile<<"\n\nLHRSScalerEvtHandler :: Debugging event type "<<dec<<evdata->GetEvType()<<endl<<endl;
+
+  // get the physics event number 
+  fPhysicsEventNumber = evdata->GetEvNum(); 
 
   // local copy of data
   // NOTE: event is ASCII, not 32-bit binary! We need to convert ASCII to 32-bit binary  
@@ -231,7 +237,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   UInt_t *p     = A;  
   UInt_t *pstop = p + ndata - 4;  
 
-  char msg[200];  
+  // char msg[200];  
 
   AnalyzeBuffer(ndata,rdata); 
 
@@ -611,7 +617,7 @@ Int_t LHRSScalerEvtHandler::AnalyzeBuffer(Int_t ndata,UInt_t *rdata){
    char *pc      = (char *)P;
    int NWORDS    = ParseData(pc,word,A);
    UInt_t *p     = A;  
-   UInt_t *pstop = p + *p - 4;
+   // UInt_t *pstop = p + *p - 4;
     
    char msg[200];  
 

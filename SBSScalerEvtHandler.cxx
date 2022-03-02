@@ -79,7 +79,7 @@ SBSScalerEvtHandler::SBSScalerEvtHandler(const char *name, const char* descripti
     fNormSlot(-1),
     dvars(0),dvars_prev_read(0), dvarsFirst(0), fScalerTree(0), fUseFirstEvent(kTRUE),
     fOnlySyncEvents(kFALSE), fOnlyBanks(kFALSE), fDelayedType(-1),
-    fClockChan(-1), fLastClock(0), fClockOverflows(0)
+    fClockChan(-1), fLastClock(0), fClockOverflows(0),fPhysicsEventNumber(-1)
 {
   fRocSet.clear();
   fModuleSet.clear();
@@ -136,7 +136,7 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
     AnalyzeBuffer(rdata,kFALSE);
   }
   if (fDebugFile) *fDebugFile << "scaler tree ptr  "<<fScalerTree<<endl;
-  evNumber += 1;
+  // evNumber += 1;
   evNumberR = evNumber;
   if (fScalerTree) fScalerTree->Fill();
 
@@ -351,7 +351,7 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
   Int_t lfirst=1;
 
   if(evdata->GetEvNum() > 0) {
-    evNumber=evdata->GetEvNum();
+    evNumber  = evdata->GetEvNum();
     evNumberR = evNumber;
   }
   if ( !IsMyEvent(evdata->GetEvType()) ) return -1;
@@ -385,9 +385,12 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
     tinfo = name + "/D";
     fScalerTree->Branch(name.Data(), &evcountR, tinfo.Data(), 4000);
  
-   name = "evNumber";
+    name = "evNumber";
     tinfo = name + "/D";
     fScalerTree->Branch(name.Data(), &evNumberR, tinfo.Data(), 4000);
+
+    // create a branch for the physics event number
+    fScalerTree->Branch("evnum",&fPhysicsEventNumber,"evnum/L");
 
     for (size_t i = 0; i < scalerloc.size(); i++) {
       name = scalerloc[i]->name;
@@ -396,6 +399,9 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
     }
 
   }  // if (lfirst && !fScalerTree)
+
+  // get the physics event number 
+  fPhysicsEventNumber = evdata->GetEvNum();
 
   UInt_t *rdata = (UInt_t*) evdata->GetRawDataBuffer();
 
