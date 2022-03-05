@@ -43,7 +43,7 @@ The folder $SBS/lib contains the shared library that must be loaded (or linked t
 
 The folder $SBS/run_replay_here contains the "magic" .rootrc file that performs several functions. 
 
-If you run ```shell analyzer``` from $SBS/run_replay_here (or any other folder to which $SBS/run_replay_here/.rootrc has been copied), then the following steps will happen when you start analyzer/root: 
+If you run ```analyzer``` from $SBS/run_replay_here (or any other folder to which $SBS/run_replay_here/.rootrc has been copied), then the following steps will happen when you start analyzer/root: 
 * **$SBS/etc/rootlogon.C** will be executed, automating the loading of libsbs.so and addition of $SBS/include to ROOT's include path.
 * If $SBS_REPLAY was defined prior to the cmake build of SBS-offline, it will add **$SBS_REPLAY/replay**, **$SBS_REPLAY/scripts**, and **$SBS_REPLAY/onlineGUIconfig** to ROOT's macro path. This means that if macro.C exists in any of these folders, then you can do .x macro.C or .L macro.C from any directory containing a copy of $SBS/run_replay_here/.rootrc
 
