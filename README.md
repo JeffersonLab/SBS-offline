@@ -7,7 +7,7 @@ ROOT version 6
 cmake version 3.X or higher
 Podd version 1.6 and above
 
-How to build:
+**Recommended build procedure**:
 
 Prior to building SBS-offline, it is optional, but highly recommended, that https://github.com/JeffersonLab/SBS-replay already be installed and that the environment variable SBS_REPLAY already be set to point to the top-level SBS-replay directory. This enables the convenience features for adding $SBS_REPLAY/replay and $SBS_REPLAY/scripts to ROOT's macro path, among other things.
 
