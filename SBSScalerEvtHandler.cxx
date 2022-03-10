@@ -79,7 +79,7 @@ SBSScalerEvtHandler::SBSScalerEvtHandler(const char *name, const char* descripti
     fNormSlot(-1),
     dvars(0),dvars_prev_read(0), dvarsFirst(0), fScalerTree(0), fUseFirstEvent(kTRUE),
     fOnlySyncEvents(kFALSE), fOnlyBanks(kFALSE), fDelayedType(-1),
-    fClockChan(-1), fLastClock(0), fClockOverflows(0)
+    fClockChan(-1), fLastClock(0), fClockOverflows(0),fPhysicsEventNumber(-1)
 {
   fRocSet.clear();
   fModuleSet.clear();
@@ -116,12 +116,12 @@ Int_t SBSScalerEvtHandler::Begin( THaRunBase* rb )
 {
   THaEvtTypeHandler::Begin( rb );
   fIunserVsTime = new TH1D("fIunserVsTime", ";time (s);", 5000, 0, 5000);
-  fIu1VsTime = new TH1D("fIu1VsTime", ";time (s);", 5000, 0, 5000);
-  fIunewVsTime = new TH1D("fIunewVsTime", ";time (s);", 5000, 0, 5000);
-  fIdnewVsTime = new TH1D("fIdnewVsTime", ";time (s);", 5000, 0, 5000);
-  fId1VsTime = new TH1D("fId1VsTime", ";time (s);", 5000, 0, 5000);
-  fId3VsTime = new TH1D("fId3VsTime", ";time (s);", 5000, 0, 5000);
-  fId10VsTime = new TH1D("fId10VsTime", ";time (s);", 5000, 0, 5000);
+  fIu1VsTime    = new TH1D("fIu1VsTime", ";time (s);", 5000, 0, 5000);
+  fIunewVsTime  = new TH1D("fIunewVsTime", ";time (s);", 5000, 0, 5000);
+  fIdnewVsTime  = new TH1D("fIdnewVsTime", ";time (s);", 5000, 0, 5000);
+  fId1VsTime    = new TH1D("fId1VsTime", ";time (s);", 5000, 0, 5000);
+  fId3VsTime    = new TH1D("fId3VsTime", ";time (s);", 5000, 0, 5000);
+  fId10VsTime   = new TH1D("fId10VsTime", ";time (s);", 5000, 0, 5000);
   return 0;
 }
 
@@ -136,7 +136,7 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
     AnalyzeBuffer(rdata,kFALSE);
   }
   if (fDebugFile) *fDebugFile << "scaler tree ptr  "<<fScalerTree<<endl;
-  evNumber += 1;
+  // evNumber += 1;
   evNumberR = evNumber;
   if (fScalerTree) fScalerTree->Fill();
 
@@ -150,13 +150,13 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
   double Ntrigs, NtrigsA, Time, BeamCurrent, BeamCharge, LiveTime;
   double clk_cnt = 0, clk_rate = 0, edtm_cnt = 0, unew_cnt = 0, d3_cnt = 0, d10_cnt = 0;
   
-  if(fIunserVsTime!=NULL)fIunserVsTime->Write( 0, kOverwrite );
-  if(fIu1VsTime!=NULL)fIu1VsTime->Write( 0, kOverwrite );
-  if(fIunewVsTime!=NULL)fIunewVsTime->Write( 0, kOverwrite );
-  if(fIdnewVsTime!=NULL)fIdnewVsTime->Write( 0, kOverwrite );
-  if(fId1VsTime!=NULL)fId1VsTime->Write( 0, kOverwrite );
-  if(fId3VsTime!=NULL)fId3VsTime->Write( 0, kOverwrite );
-  if(fId10VsTime!=NULL)fId10VsTime->Write( 0, kOverwrite );
+  if(fIunserVsTime!=NULL) fIunserVsTime->Write( 0, kOverwrite );
+  if(fIu1VsTime!=NULL)    fIu1VsTime->Write( 0, kOverwrite );
+  if(fIunewVsTime!=NULL)  fIunewVsTime->Write( 0, kOverwrite );
+  if(fIdnewVsTime!=NULL)  fIdnewVsTime->Write( 0, kOverwrite );
+  if(fId1VsTime!=NULL)    fId1VsTime->Write( 0, kOverwrite );
+  if(fId3VsTime!=NULL)    fId3VsTime->Write( 0, kOverwrite );
+  if(fId10VsTime!=NULL)   fId10VsTime->Write( 0, kOverwrite );
   
   THaAnalyzer* analyzer = THaAnalyzer::GetInstance();
   if(analyzer!=nullptr){// check that the analyzer actually exists... otherwise, skip
@@ -245,7 +245,6 @@ Int_t SBSScalerEvtHandler::End( THaRunBase* )
       
     }
   }
-
   
   return 0;
 }
@@ -257,13 +256,37 @@ Int_t SBSScalerEvtHandler::ReadDatabase(const TDatime& date )
   prefix[0]='g';
   prefix[1]='\0';
   fNumBCMs = 0;
-#ifdef HALLCPARM
-  DBRequest list[]={
-    {"NumBCMs",&fNumBCMs, kInt, 0, 1},
-    {0}
+// #ifdef HALLCPARM
+
+  DBRequest list [] = { 
+     {"NumBCMs",&fNumBCMs,kInt,0,1}, 
+     {0} 
   };
-  gHcParms->LoadParmValues((DBRequest*)&list, prefix);
-  cout << " NUmber of BCMs = " << fNumBCMs << endl;
+     
+  TString sname = "db_sbsBCM.dat"; 
+  std::cout << "Trying to load database file " << sname << std::endl;
+
+  // FILE* file = OpenFile( date );
+  FILE *file = Podd::OpenDBFile(sname.Data(), date);
+
+  if( !file ){
+     std::cout << "*** ERROR! Cannot load DB file! ***" << std::endl;
+     return kInitError;
+  }
+
+  Int_t err = kOK; 
+
+  if(!err){
+     err = LoadDB( file, date,list,fPrefix);
+     if(err!=0) std::cout << "*** ERROR! Cannot load DB! ***" << std::endl;
+  }
+
+  // DBRequest list[]={
+  //   {"NumBCMs",&fNumBCMs, kInt, 0, 1},
+  //   {0}
+  // };
+  // gHcParms->LoadParmValues((DBRequest*)&list, prefix);
+  cout << " Number of BCMs = " << fNumBCMs << endl;
   
   if(fNumBCMs > 0) {
     fBCM_Gain = new Double_t[fNumBCMs];
@@ -273,13 +296,13 @@ Int_t SBSScalerEvtHandler::ReadDatabase(const TDatime& date )
     fBCM_delta_charge= new Double_t[fNumBCMs];
     string bcm_namelist;
     DBRequest list2[]={
-      {"BCM_Gain",      fBCM_Gain,         kDouble, (UInt_t) fNumBCMs},
-      {"BCM_Offset",     fBCM_Offset,       kDouble,(UInt_t) fNumBCMs},
-      {"BCM_SatQuadratic",     fBCM_SatQuadratic,       kDouble,(UInt_t) fNumBCMs,1},
-      {"BCM_SatOffset",     fBCM_SatOffset,       kDouble,(UInt_t) fNumBCMs,1},
-      {"BCM_Names",     &bcm_namelist,       kString},
-      {"BCM_Current_threshold",     &fbcm_Current_Threshold,       kDouble,0, 1},
-      {"BCM_Current_threshold_index",     &fbcm_Current_Threshold_Index,       kInt,0,1},
+      {"BCM_Names"                  , &bcm_namelist,                 kString},
+      {"BCM_Gain"                   , fBCM_Gain,                     kDouble,  (UInt_t) fNumBCMs},
+      {"BCM_Offset"                 , fBCM_Offset,                   kDouble,  (UInt_t) fNumBCMs},
+      {"BCM_SatQuadratic"           , fBCM_SatQuadratic,             kDouble,  (UInt_t) fNumBCMs,1},
+      {"BCM_SatOffset"              , fBCM_SatOffset,                kDouble,  (UInt_t) fNumBCMs,1},
+      {"BCM_Current_threshold"      , &fbcm_Current_Threshold,       kDouble,  0 , 1},
+      {"BCM_Current_threshold_index", &fbcm_Current_Threshold_Index, kInt   ,  0 , 1},
       {0}
     };
     fbcm_Current_Threshold = 0.0;
@@ -288,14 +311,22 @@ Int_t SBSScalerEvtHandler::ReadDatabase(const TDatime& date )
       fBCM_SatOffset[i]=0.;
       fBCM_SatQuadratic[i]=0.;
     }
-    gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
+    err = LoadDB(file,date,list2,fPrefix); 
+    // gHcParms->LoadParmValues((DBRequest*)&list2, prefix);
+    string myStr;
     vector<string> bcm_names = Podd::vsplit(bcm_namelist);
     for(Int_t i=0;i<fNumBCMs;i++) {
-      fBCM_Name.push_back(bcm_names[i]+".scal");
-      fBCM_delta_charge[i]=0.;
+       myStr = "sbs.bcm." + bcm_names[i] + ".current"; 
+       fBCM_Name.push_back(myStr);
+       fBCM_delta_charge[i]=0.;
+    }
+    // print what we have
+    std::cout << "LOADED FROM DATABASE: " << std::endl; 
+    for(Int_t i=0;i<fNumBCMs;i++){
+       std::cout << Form("%s: offset = %.3lf Hz, gain = %.3lf Hz/uA",fBCM_Name[i].c_str(),fBCM_Offset[i],fBCM_Gain[i]) << std::endl; 
     }
   }
-#endif
+// #endif
   fTotalTime=0.;
   fPrevTotalTime=0.;
   fDeltaTime=-1.;
@@ -320,7 +351,7 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
   Int_t lfirst=1;
 
   if(evdata->GetEvNum() > 0) {
-    evNumber=evdata->GetEvNum();
+    evNumber  = evdata->GetEvNum();
     evNumberR = evNumber;
   }
   if ( !IsMyEvent(evdata->GetEvType()) ) return -1;
@@ -354,9 +385,12 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
     tinfo = name + "/D";
     fScalerTree->Branch(name.Data(), &evcountR, tinfo.Data(), 4000);
  
-   name = "evNumber";
+    name = "evNumber";
     tinfo = name + "/D";
     fScalerTree->Branch(name.Data(), &evNumberR, tinfo.Data(), 4000);
+
+    // create a branch for the physics event number
+    fScalerTree->Branch("evnum",&fPhysicsEventNumber,"evnum/L");
 
     for (size_t i = 0; i < scalerloc.size(); i++) {
       name = scalerloc[i]->name;
@@ -365,6 +399,9 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
     }
 
   }  // if (lfirst && !fScalerTree)
+
+  // get the physics event number 
+  fPhysicsEventNumber = evdata->GetEvNum();
 
   UInt_t *rdata = (UInt_t*) evdata->GetRawDataBuffer();
 
@@ -409,15 +446,15 @@ Int_t SBSScalerEvtHandler::Analyze(THaEvData *evdata)
 	}
 	
       }
-      Time = clk_rate/clk_rate;
+      Time = clk_cnt/clk_rate;
       
-      if(fIunserVsTime!=NULL && Time>0)fIunserVsTime->Fill(Time, unser_rate);
-      if(fIu1VsTime!=NULL && Time>0)fIu1VsTime->Fill(Time, u1_rate);
-      if(fIunewVsTime!=NULL && Time>0)fIunewVsTime->Fill(Time, unew_rate);
-      if(fIdnewVsTime!=NULL && Time>0)fIdnewVsTime->Fill(Time, dnew_rate);
-      if(fId1VsTime!=NULL && Time>0)fId1VsTime->Fill(Time, d1_rate);
-      if(fId3VsTime!=NULL && Time>0)fId3VsTime->Fill(Time, d3_rate);
-      if(fId10VsTime!=NULL && Time>0)fId10VsTime->Fill(Time, d10_rate);
+      if(fIunserVsTime!=NULL && Time>0) fIunserVsTime->Fill(Time, unser_rate);
+      if(fIu1VsTime!=NULL    && Time>0) fIu1VsTime->Fill(Time, u1_rate);
+      if(fIunewVsTime!=NULL  && Time>0) fIunewVsTime->Fill(Time, unew_rate);
+      if(fIdnewVsTime!=NULL  && Time>0) fIdnewVsTime->Fill(Time, dnew_rate);
+      if(fId1VsTime!=NULL    && Time>0) fId1VsTime->Fill(Time, d1_rate);
+      if(fId3VsTime!=NULL    && Time>0) fId3VsTime->Fill(Time, d3_rate);
+      if(fId10VsTime!=NULL   && Time>0) fId10VsTime->Fill(Time, d10_rate);
     }
     return ret;
 
@@ -797,7 +834,7 @@ THaAnalysisObject::EStatus SBSScalerEvtHandler::Init(const TDatime& date)
     delete [] *it;
   fDelayedEvents.clear();
 
-  cout << "Howdy !  We are initializing SBSScalerEvtHandler !!   name =   "
+  cout << "Initializing SBSScalerEvtHandler; name = "
         << fName << endl;
 
   if(eventtypes.size()==0) {
