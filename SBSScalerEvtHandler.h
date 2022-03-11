@@ -90,6 +90,7 @@ private:
    Int_t fClockChan;
    UInt_t fLastClock;
    Int_t fClockOverflows;
+   Long64_t fPhysicsEventNumber;
    std::vector<UInt_t*> fDelayedEvents;
    std::set<UInt_t> fRocSet;
    std::set<UInt_t> fModuleSet;

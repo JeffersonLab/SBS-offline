@@ -81,7 +81,7 @@ LHRSScalerEvtHandler::LHRSScalerEvtHandler(const char *name, const char* descrip
     dvars(0),fScalerTree(0),fUseFirstEvent(kTRUE),
     fClockChan(-1),fClockFreq(-1),fLastClock(0),fClockOverflows(0),
     fTotalTime(0),fPrevTotalTime(0),fDeltaTime(-1),
-    dvarsFirst(0),dvars_prev_read(0),
+    dvarsFirst(0),dvars_prev_read(0),fPhysicsEventNumber(-1),
     fNumBCMs(0),fbcm_Current_Threshold_Index(0),fbcm_Current_Threshold(0),
     fBCM_Gain(0),fBCM_Offset(0),fBCM_SatOffset(0),fBCM_SatQuadratic(0),fBCM_delta_charge(0)
 {
@@ -184,6 +184,9 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
     tinfo = name + "/D";
     fScalerTree->Branch(name.Data(), &evcount, tinfo.Data(), 4000);
 
+    // create the physics event number branch 
+    fScalerTree->Branch("evnum",&fPhysicsEventNumber,"evnum/L");
+
     for (UInt_t i = 0; i < scalerloc.size(); i++) {
       name = scalerloc[i]->name; 
       tinfo = name + "/D";
@@ -202,6 +205,9 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   }
 
   if (fDebugFile) *fDebugFile<<"\n\nLHRSScalerEvtHandler :: Debugging event type "<<dec<<evdata->GetEvType()<<endl<<endl;
+
+  // get the physics event number 
+  fPhysicsEventNumber = evdata->GetEvNum(); 
 
   // local copy of data
   // NOTE: event is ASCII, not 32-bit binary! We need to convert ASCII to 32-bit binary  
@@ -231,7 +237,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   UInt_t *p     = A;  
   UInt_t *pstop = p + ndata - 4;  
 
-  char msg[200];  
+  // char msg[200];  
 
   AnalyzeBuffer(ndata,rdata); 
 
@@ -354,7 +360,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   fLastClock     = thisClock;
   fPrevTotalTime = fTotalTime;
 
-  UInt_t scalerData=0,diff=0;
+  UInt_t scalerData=0;
 
   Double_t rate=0;
   Double_t scal_current=0;
@@ -489,9 +495,9 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
               nscal++;
            }
            if(scalerloc[ivar]->ikind==IRATE){
-	      scalerData = scalers[idx]->GetData(ichan);
-	      rate       = 0; 
-              diff       = 0;
+	      scalerData  = scalers[idx]->GetData(ichan);
+	      rate        = 0; 
+              UInt_t diff = 0;
               if(scalerData<scal_prev_read[nscal-1]){
                 if(scal_prev_read[nscal-1]>kMaxUInt){
                    diff = (kMaxUInt-(scal_prev_read[nscal-1] - 1)) + scalerData;
@@ -520,6 +526,57 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
                              << " dtime = " << fDeltaTime << " rate = " << rate << std::endl;
               }
            }
+	   if(scalerloc[ivar]->ikind == ICURRENT || scalerloc[ivar]->ikind == ICHARGE)
+	   {
+	      Int_t bcm_ind=-1;
+	      for(Int_t itemp =0; itemp<fNumBCMs;itemp++)
+	      {
+		 size_t match = string(scalerloc[ivar]->name.Data()).find(string(fBCM_Name[itemp]));
+		 if (match!=string::npos)
+		 {
+		    bcm_ind=itemp;
+		 }
+	      }
+	      if (scalerloc[ivar]->ikind == ICURRENT) {
+		 dvars[ivar]=0;
+		 if (bcm_ind != -1) {
+		    UInt_t scaldata = scalers[idx]->GetData(ichan);
+		    UInt_t diff;
+		    if(scaldata < scal_prev_read[nscal-1]) {
+		       diff = (kMaxUInt-(scal_prev_read[nscal-1] - 1)) + scaldata;
+		    } else {
+		       diff = scaldata - scal_prev_read[nscal-1];
+		    }
+		    dvars[ivar]=0.;
+		    if (fDeltaTime>0) {
+		       Double_t cur_temp=(diff/fDeltaTime-fBCM_Offset[bcm_ind])/fBCM_Gain[bcm_ind];
+		       cur_temp=cur_temp+fBCM_SatQuadratic[bcm_ind]*TMath::Power(TMath::Max(cur_temp-fBCM_SatOffset[bcm_ind],0.0),2.);
+
+		       dvars[ivar]=cur_temp;
+		    }
+		 }
+		 if (bcm_ind == fbcm_Current_Threshold_Index) scal_current= dvars[ivar];
+	      }
+	      if (scalerloc[ivar]->ikind == ICHARGE) {
+		 if (bcm_ind != -1) {
+		    UInt_t scaldata = scalers[idx]->GetData(ichan);
+		    UInt_t diff;
+		    if(scaldata < scal_prev_read[nscal-1]) {
+		       diff = (kMaxUInt-(scal_prev_read[nscal-1] - 1)) + scaldata;
+		    } else {
+		       diff = scaldata - scal_prev_read[nscal-1];
+		    }
+		    fBCM_delta_charge[bcm_ind]=0;
+		    if (fDeltaTime>0)  {
+		       Double_t cur_temp=(diff/fDeltaTime-fBCM_Offset[bcm_ind])/fBCM_Gain[bcm_ind];
+		       cur_temp=cur_temp+fBCM_SatQuadratic[bcm_ind]*TMath::Power(TMath::Max(cur_temp-fBCM_SatOffset[bcm_ind],0.0),2.);
+		       fBCM_delta_charge[bcm_ind]=fDeltaTime*cur_temp;
+		    }
+		    dvars[ivar]+=fBCM_delta_charge[bcm_ind];
+		 }
+	      }
+	   }
+	   if (fDebugFile) *fDebugFile << "   dvars  "<<scalerloc[ivar]->ikind<<"  "<<dvars[ivar]<<endl;
 	}
      } // end of evcount if-else  
      // if(fDebugFile) *fDebugFile << "ivar " << ivar << " counts = " << scalerData << " rate = " << rate << std::endl;
@@ -560,7 +617,7 @@ Int_t LHRSScalerEvtHandler::AnalyzeBuffer(Int_t ndata,UInt_t *rdata){
    char *pc      = (char *)P;
    int NWORDS    = ParseData(pc,word,A);
    UInt_t *p     = A;  
-   UInt_t *pstop = p + *p - 4;
+   // UInt_t *pstop = p + *p - 4;
     
    char msg[200];  
 
@@ -841,10 +898,10 @@ Int_t LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_i
    // loop through the message (msg) and convert into data words 
    // - input:  a char array to parse (i.e., scaler data)  
    // - output: std::string array (word) and int array (word_int)     
-   char data[250];
+   char data[200],subword[200];
    strcpy(data,"");
-  
-   // char *pEnd;
+   strcpy(subword,"");
+
    // std::cout << "Message to decode: " << std::endl;
    // std::cout << msg << std::endl;
 
@@ -855,16 +912,28 @@ Int_t LHRSScalerEvtHandler::ParseData(char *msg,std::string *word,UInt_t *word_i
    int length = strlen(msg);
    for(int i=0;i<length;i++){
       if(msg[i]=='\n'){
-      	// now have a full word
-      	word[j]     = data;
-        word_int[j] = std::strtol(data,&pEnd,16);  // base 16 (hex)
-      	// increment the index on the word array
-      	j++;
-      	// empty the constructed word 
-      	strcpy(data,"");
+	 // now have a full word
+	 word[j]     = data;
+	 // determine if this is the header
+	 for(int k=0;k<3;k++){
+	    sprintf(subword,"%s%c",subword,data[k]);
+	 }
+	 myStr = subword;
+	 if(myStr.compare("abc")==0){
+	    // this is the header
+	    word_int[j] = std::strtoul(data,&pEnd,16);
+	 }else{
+	    // this is the scaler counts
+	    word_int[j] = std::strtoul(data,&pEnd,10);
+	 }
+	 // increment the index on the word array
+	 j++;
+	 // empty the constructed word 
+	 strcpy(data,"");
+	 strcpy(subword,"");
       }else{
-      	// not a new line, build the word  
-      	sprintf(data,"%s%c",data,msg[i]);
+	 // not a new line, build the word  
+	 sprintf(data,"%s%c",data,msg[i]);
       }
    }
 
