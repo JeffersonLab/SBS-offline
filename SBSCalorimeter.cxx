@@ -41,8 +41,9 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
   fMaxNclus(10), fConst(1.0), fSlope(0.0), fAccCharge(0.0), fDataOutputLevel(1000)
 {
   // Constructor.
-  fEmin = 0.001; // 1 MeV minimum energy to be in cluster  
+  fEmin = 0.001; // 1 MeV minimum energy to be in cluster (Hit threshold)  
   fEmin_clusSeed = 0.001; // 1 MeV minimum energy to be the seed of a cluster
+  fEmin_clusTotal = 0.001; // Minimum total cluster energy is 1 MeV
   fXmax_dis = .30; // Maximum X (m) distance from cluster center to be included in cluster
   fYmax_dis = .30; // Maximum Y (m) distance from cluster center to be included in cluster
   fRmax_dis = .30; // Maximum Radius (m) from cluster center to be included in cluster
@@ -92,6 +93,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   DBRequest config_request[] = {
     { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
     { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, false }, ///< minimum cluster seed energy
+    { "emin_clTotal", &fEmin_clusTotal, kDouble, 0, false }, ///< minimum total cluster energy
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
@@ -389,6 +391,9 @@ Int_t SBSCalorimeter::FindClusters()
 	  NSize--;
 	}
       }
+
+      // Adding total cluster energy threshold
+      if ( (cluster->GetE())<fEmin_clusTotal ) fClusters.pop_back();
 
     } else break;
   }
