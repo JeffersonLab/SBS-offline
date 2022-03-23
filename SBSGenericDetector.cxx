@@ -1016,8 +1016,6 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
 {
   // Decode data
 
-  // Clear last event
-  ClearEvent();
   //static const char* const here = "Decode()";
   // Loop over modules for the reference time
   SBSElement *blk = nullptr;
@@ -1201,29 +1199,11 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 }
 
 //_____________________________________________________________________________
-void SBSGenericDetector::ClearEvent()
+void SBSGenericDetector::Clear( Option_t* opt )
 {
   // Call our version in case sub-classes have re-implemented it
-  SBSGenericDetector::ClearOutputVariables();
-  fNhits = 0;
-  fNRefhits = 0;
-  fNGoodTDChits = 0;
-  fNGoodADChits = 0;
-  fCoarseProcessed = 0;
-  fFineProcessed = 0;
-  for( auto& element: fElements ) {
-    element->ClearEvent();
-  }
-  for( auto& refElement: fRefElements ) {
-    refElement->ClearEvent();
-  }
-}
-
-//_____________________________________________________________________________
-void SBSGenericDetector::Clear(Option_t* opt)
-{
-  // Call our version in case sub-classes have re-implemented it
-  SBSGenericDetector::ClearOutputVariables();
+  THaNonTrackingDetector::Clear(opt);
+  ClearOutputVariables();
   fNhits = 0;
   fNRefhits = 0;
   fNGoodTDChits = 0;
@@ -1231,10 +1211,10 @@ void SBSGenericDetector::Clear(Option_t* opt)
   fCoarseProcessed = false;
   fFineProcessed = false;
   for( auto& element: fElements ) {
-    element->ClearEvent();
+    element->Clear();
   }
   for( auto& refElement: fRefElements ) {
-    refElement->ClearEvent();
+    refElement->Clear();
   }
 }
 
@@ -1655,6 +1635,7 @@ Int_t SBSGenericDetector::FineProcess(TClonesArray&)//tracks)
   return 0;
 }
 
+//_____________________________________________________________________________
 void SBSGenericDetector::ClearOutputVariables()
 {
   fGood.clear();

@@ -69,17 +69,17 @@ Int_t SBSCHAnalyzer::DefineVariables( EMode mode )
 }
 
 /*
- * ClearEvent()
+ * Clear()
  * called at the end of every event
  */
-void SBSCHAnalyzer::ClearEvent()
+void SBSCHAnalyzer::Clear( Option_t* opt )
 {
   // If we defined any new variables that we need to clear prior to the next event
   // clear them here:
   // fExample = 0.0;
 
-  // Make sure to call parent class's ClearEvent() also!
-  SBSGenericDetector::ClearEvent();
+  // Make sure to call parent class's Clear() also!
+  SBSGenericDetector::Clear(opt);
 }
 
 /*

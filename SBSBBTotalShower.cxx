@@ -151,15 +151,16 @@ exit:
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 {
-  ClearEvent();
   fShower->Decode(evdata);
   fPreShower->Decode(evdata);
   return 0;
 }
 //_____________________________________________________________________________
-void SBSBBTotalShower::ClearEvent() {
-  fShower->ClearEvent();
-  fPreShower->ClearEvent();
+void SBSBBTotalShower::Clear( Option_t* opt )
+{
+  SBSCalorimeter::Clear(opt);
+  fShower->Clear(opt);
+  fPreShower->Clear(opt);
   fSHclusPSclusIDmap.clear();
 }
 
@@ -355,7 +356,7 @@ void SBSBBTotalShower::SetApparatus( THaApparatus* app )
 
 void SBSBBTotalShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {
-    ClearEvent();
+  Clear();
     /*
   fNclust = 0;
     fE = double(E);

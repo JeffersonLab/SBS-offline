@@ -817,7 +817,8 @@ namespace Decoder {
     return 0;
   }
   
-  void MPDModule::Clear(const Option_t *opt) {
+  void MPDModule::Clear(const Option_t* opt) {
+    VmeModule::Clear(opt);
     // fNumHits = 0;
     // for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
     // for (Int_t i=0; i<fNumADC*fNumSample; i++) { 

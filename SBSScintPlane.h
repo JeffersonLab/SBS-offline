@@ -83,6 +83,7 @@ public:
 	virtual ~SBSScintPlane();
 	virtual Int_t        InitOutput( THaOutput* output );
 
+        virtual void       Clear( Option_t* opt="" );
 	virtual Int_t      Decode( const THaEvData& );
 	virtual EStatus    Init( const TDatime& run_time); 
 	virtual Int_t      CoarseProcess( TClonesArray& tracks );
@@ -238,7 +239,6 @@ protected:
     Bool_t  fTooManyErrRefCh;       //flag whether there are too much error reference
 
 
-	void           ClearEvent();
 	void           DeleteArrays();
 	virtual Int_t  ReadDatabase( const TDatime& date );
 	virtual Int_t  DefineVariables( EMode mode = kDefine );

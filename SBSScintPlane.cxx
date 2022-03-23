@@ -1449,11 +1449,11 @@ void SBSScintPlane::DeleteArrays()
 }
 
 //_____________________________________________________________________________
-inline 
-void SBSScintPlane::ClearEvent()
+void SBSScintPlane::Clear( Option_t* opt )
 {
     // Reset per-event data.
 
+  THaSubDetector::Clear(opt);
 #if 0
     const char cBig = 198;
 
@@ -1561,8 +1561,6 @@ Int_t SBSScintPlane::Decode( const THaEvData& evdata )
     // Decode scintillator data, correct TDC times and ADC amplitudes, and copy
     // the data to the local data members.
     static const char *here="Decode()";
-
-    ClearEvent();
 
     fEventCount++;
 

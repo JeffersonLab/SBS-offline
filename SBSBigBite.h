@@ -13,7 +13,7 @@ public:
   SBSBigBite( const char *name, const char *description );
   virtual ~SBSBigBite();
     
-  virtual void             Clear( Option_t* opt="");
+  virtual void  Clear( Option_t* opt="");
   
   virtual Int_t	CoarseReconstruct();
   virtual Int_t	CoarseTrack();

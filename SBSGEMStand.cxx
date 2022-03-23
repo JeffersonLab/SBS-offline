@@ -106,8 +106,9 @@ Int_t SBSGEMStand::Begin( THaRunBase* run ){
 }
 
 void SBSGEMStand::Clear( Option_t *opt ){
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
-        (*it)->Clear(opt);
+  THaTrackingDetector::Clear(opt);
+  for (auto* plane : fPlanes ){
+        plane->Clear(opt);
     }
 
     return;

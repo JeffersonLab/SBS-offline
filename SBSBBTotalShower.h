@@ -41,7 +41,8 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
 		    const char* preshower_name, const char* description = "",
 		    THaApparatus* a = NULL );
   virtual ~SBSBBTotalShower();
-  
+
+  virtual void       Clear( Option_t* opt="" );
   virtual Int_t      Decode( const THaEvData& );
   virtual Int_t      CoarseProcess( TClonesArray& tracks );
   virtual Int_t      FineProcess( TClonesArray& tracks );
@@ -82,7 +83,6 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   //key = SH cluster ID, value = PS cluster ID;
   std::vector<int> fSHclusPSclusIDmap;
   
-  void           ClearEvent();
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
   virtual Bool_t  IsPid()      { return true; }

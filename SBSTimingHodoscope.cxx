@@ -866,10 +866,10 @@ Double_t SBSTimingHodoscope::TimeWalk(Double_t time, Double_t tot, Double_t time
   return tcorr;
  }
 /*
- * ClearEvent()
+ * Clear()
  * called at the end of every event
  */
-void SBSTimingHodoscope::ClearEvent()
+void SBSTimingHodoscope::Clear( Option_t* opt )
 {
   // If we defined any new variables that we need to clear prior to the next event
   // clear them here:
@@ -909,8 +909,8 @@ void SBSTimingHodoscope::ClearEvent()
   ClearHodoOutput(fMainClusBars);
   ClearHodoOutput(fOutClus);
   
-  // Make sure to call parent class's ClearEvent() also!
-  SBSGenericDetector::ClearEvent();
+  // Make sure to call parent class's Clear() also!
+  SBSGenericDetector::Clear(opt);
 }
 
 void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)

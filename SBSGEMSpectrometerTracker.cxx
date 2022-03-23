@@ -291,6 +291,7 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ) {
 }
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
+  THaTrackingDetector::Clear(opt);
   SBSGEMTrackerBase::Clear();
 
   for( auto& module: fModules ) {

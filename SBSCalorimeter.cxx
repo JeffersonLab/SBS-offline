@@ -60,8 +60,6 @@ SBSCalorimeter::~SBSCalorimeter()
     RemoveVariables();
   //  if( fIsInit ) {
   //  }
-
-  ClearEvent();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -277,14 +275,15 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
 }
 
 //_____________________________________________________________________________
-void SBSCalorimeter::ClearEvent()
+void SBSCalorimeter::Clear( Option_t* opt )
 {
-  SBSGenericDetector::ClearEvent();
+  SBSGenericDetector::Clear(opt);
   ClearOutputVariables();
   DeleteContainer(fClusters);
   fGoodBlocks.clear();
   fBlockSet.clear();
 }
+
 //_____________________________________________________________________________
 Int_t SBSCalorimeter::MakeGoodBlocks()
 {

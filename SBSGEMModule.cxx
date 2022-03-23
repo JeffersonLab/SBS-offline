@@ -945,8 +945,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   // fTmean.clear();
   // fTsigma.clear();
   // fTcorr.clear();
-  
-  return;
+
+  THaSubDetector::Clear(opt);
 }
 
 Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){

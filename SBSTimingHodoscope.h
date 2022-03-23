@@ -41,7 +41,7 @@ public:
   virtual Int_t   CoarseProcess( TClonesArray& tracks );
   virtual Int_t   FineProcess( TClonesArray& tracks );
   /* virtual Int_t   FindGoodHit(SBSElement *element); */
-  virtual void    ClearEvent();
+  virtual void    Clear( Option_t* opt="" );
   // new functions
   Int_t   ConstructHodoscope();
   Double_t TimeWalk(Double_t time, Double_t tot, Double_t timewalk0, Double_t timewalk1);

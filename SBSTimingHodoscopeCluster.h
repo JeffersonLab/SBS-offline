@@ -40,7 +40,7 @@ public:
 
     Bool_t AddElement(SBSTimingHodoscopeBar* bar);
 
-    void ClearEvent();
+    virtual void Clear( Option_t* opt="" );
 
 private:
 

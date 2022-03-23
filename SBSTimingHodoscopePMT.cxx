@@ -15,11 +15,11 @@ SBSTimingHodoscopePMT::SBSTimingHodoscopePMT( SBSElement* element, Double_t walk
 }
 
 //_____________________________________________________________________________
-SBSTimingHodoscopePMT::~SBSTimingHodoscopePMT() {
-  ClearEvent();
-}
+SBSTimingHodoscopePMT::~SBSTimingHodoscopePMT() = default;
+
 //_____________________________________________________________
-void SBSTimingHodoscopePMT::ClearEvent() {
+void SBSTimingHodoscopePMT::Clear( Option_t* )
+{
   // fPMTElement = 0;
   fTimeWalkParameter0 = 0.0;
   fTimeWalkParameter1 = 0.0;

@@ -41,7 +41,7 @@ public:
 	void SetBarOff( Int_t baroff ) {fBarOff=baroff;}
 	/* void SetLPMT( SBSTimingHodoscopePMT* leftpmt) {fLPMT=leftpmt;} */
 	/* void SetRPMT( SBSTimingHodoscopePMT* rightpmt) {fRPMT=rightpmt;} */
-	void ClearEvent();
+	virtual void Clear( Option_t* opt="" );
 	
 	double GetMeanTime(){return fMeanTime;};
 	double GetTimeDiff(){return fTimeDiff;};

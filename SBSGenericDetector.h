@@ -127,8 +127,6 @@ public:
   virtual ~SBSGenericDetector();
 
   virtual void Clear( Option_t* opt="" );
-  virtual void ClearEvent();
-  virtual void ClearOutputVariables();
 
   void SetModeADC(SBSModeADC::Mode mode);
   void SetModeTDC(SBSModeTDC::Mode mode) { fModeTDC = mode; }
@@ -219,8 +217,12 @@ protected:
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
 
+private:
+  void ClearOutputVariables();
+
   ClassDef(SBSGenericDetector,0)     //Generic shower detector class
 };
+
 /*inline Int_t SBSGenericDetector::blkidx(Int_t row, Int_t col, Int_t layer)
 {
   return fNlayers*(fNcols[row]*row + col) + layer;

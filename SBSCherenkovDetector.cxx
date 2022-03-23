@@ -201,8 +201,6 @@ Int_t SBSCherenkovDetector::Decode( const THaEvData& evdata )
   }
   if( !fIsInit ) return -255;
   if( !evdata.IsPhysicsTrigger() ) return -1;
-
-  Clear();
   
   if( fDoBench ) fBench->Begin("Decode");
   

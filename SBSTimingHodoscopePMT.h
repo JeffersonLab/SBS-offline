@@ -35,7 +35,7 @@ public:
   void SetBarNum(Int_t barnum) {fBarNum=barnum;}
   void SetSide(Int_t side) {fSide=side;}
   void SetId(Int_t id) {fId=id;}
-  void ClearEvent();
+  void Clear( Option_t* opt="" );
 
  /* private:  */
  protected:

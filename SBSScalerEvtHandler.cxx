@@ -811,7 +811,7 @@ Int_t SBSScalerEvtHandler::AnalyzeBuffer(UInt_t* rdata, Bool_t onlysync)
   //
   for (size_t j=0; j<scal_prev_read.size(); j++) scal_prev_read[j]=scal_present_read[j];
   //  
-  for (size_t j=0; j<scalers.size(); j++) scalers[j]->Clear("");
+  for (auto & scaler : scalers) scaler->Clear();
   
   return 1;
 }

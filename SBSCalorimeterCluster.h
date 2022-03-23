@@ -52,7 +52,7 @@ public:
 
     void AddElement(SBSElement* block);
 
-    void ClearEvent();
+    virtual void Clear( Option_t* opt="" );
 
 private:
 
