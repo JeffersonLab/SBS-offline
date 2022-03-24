@@ -151,8 +151,8 @@ SBSBBShower::~SBSBBShower()
 }
 
 void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
-{  
-  ClearEvent();
+{
+  Clear();
   SBSCalorimeterCluster *cluster = new SBSCalorimeterCluster(fNclublk);
   cluster->SetE(E);
   cluster->SetX(x);
@@ -217,9 +217,9 @@ void SBSBBShower::SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax
   fMultClus = false;
 }
 
-void SBSBBShower::ClearEvent()
+void SBSBBShower::Clear( Option_t* opt )
 {
-  SBSCalorimeter::ClearEvent();
+  SBSCalorimeter::Clear(opt);
 
   fEres = fXres = fYres = 0.0;
   fE_cl_res.clear();

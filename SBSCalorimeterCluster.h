@@ -15,7 +15,7 @@ class SBSCalorimeterCluster : public TObject {
 public:
 
     SBSCalorimeterCluster();
-    SBSCalorimeterCluster(Int_t nmaxblk);
+    explicit SBSCalorimeterCluster(Int_t nmaxblk);
     SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block);
     virtual ~SBSCalorimeterCluster();
 
@@ -48,11 +48,11 @@ public:
     SBSElement* GetElement(UInt_t i);
     std::vector<SBSElement*>& GetElements() {return fElements;}
 
-    Int_t GetSize() {return fMult;}
+    Int_t GetSize() const {return fMult;}
 
     void AddElement(SBSElement* block);
 
-    void ClearEvent();
+    virtual void Clear( Option_t* opt="" );
 
 private:
 

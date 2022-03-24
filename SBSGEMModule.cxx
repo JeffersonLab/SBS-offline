@@ -186,11 +186,9 @@ SBSGEMModule::~SBSGEMModule() {
   //     delete fStrip;
   //     fStrip = NULL;
   // }
-  if( fStripTimeFunc ){
-    delete fStripTimeFunc;
-  }
 
-  return;
+  delete fStripTimeFunc;
+
 }
 
 Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
@@ -945,8 +943,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   // fTmean.clear();
   // fTsigma.clear();
   // fTcorr.clear();
-  
-  return;
+
+  THaSubDetector::Clear(opt);
 }
 
 Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){

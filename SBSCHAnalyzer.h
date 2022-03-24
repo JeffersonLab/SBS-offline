@@ -24,7 +24,7 @@ public:
   virtual Int_t   CoarseProcess( TClonesArray& tracks );
   virtual Int_t   FineProcess( TClonesArray& tracks );
   virtual Int_t   FindGoodHit(SBSElement *element);
-  virtual void ClearEvent();
+  virtual void    Clear( Option_t* opt="" );
 
   ClassDef(SBSCHAnalyzer,5)  // Describes scintillator plane with F1TDC as a detector
 };

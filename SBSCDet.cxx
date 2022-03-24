@@ -72,7 +72,7 @@ ClassImp(SBSCDet)
 
 //____________________________________________________________________________
 SBSCDet::SBSCDet( const char* name, const char* description,
-								   THaApparatus* apparatus) :
+                  THaApparatus* apparatus) :
 THaNonTrackingDetector(name,description,apparatus)
 {
 
@@ -1573,11 +1573,11 @@ void SBSCDet::DeleteArrays()
 }
 
 //_____________________________________________________________________________
-inline 
-void SBSCDet::ClearEvent()
+void SBSCDet::Clear( Option_t* opt )
 {
 	// Reset per-event data.
 
+  THaNonTrackingDetector::Clear(opt);
 #if 0
 	const char cBig = 198;
 
@@ -1692,8 +1692,6 @@ Int_t SBSCDet::Decode( const THaEvData& evdata )
 	// Decode scintillator data, correct TDC times and ADC amplitudes, and copy
 	// the data to the local data members.
 	static const char *here="Decode()";
-
-	ClearEvent();
 
 	fEventCount++;
 

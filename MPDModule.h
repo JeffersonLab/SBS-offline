@@ -36,7 +36,7 @@ namespace Decoder {
 
   public:
 
-    MPDModule() {};
+    MPDModule() = default;
     MPDModule(Int_t crate, Int_t slot);
     virtual ~MPDModule();
 
@@ -46,7 +46,7 @@ namespace Decoder {
     virtual UInt_t GetData( UInt_t adc, UInt_t sample, UInt_t chan) const;
     virtual void Init();
     virtual void Init( const char *configstr );
-    virtual void Clear(const Option_t *opt);
+    virtual void Clear(const Option_t *opt="");
     virtual Int_t Decode(const UInt_t *p); // { return 0; };
     
     /*

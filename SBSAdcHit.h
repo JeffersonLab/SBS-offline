@@ -14,8 +14,10 @@
 class SBSAdcHit : public TObject {
   
  public:
-  SBSAdcHit(SBSScintPMT* pmt=NULL, Int_t rawampl=0); 
-  virtual ~SBSAdcHit() {}
+  explicit SBSAdcHit(SBSScintPMT* pmt=nullptr, Int_t rawampl=0);
+  virtual ~SBSAdcHit() = default;
+
+  virtual void Clear(Option_t *s="");
 
   SBSScintPMT* GetPMT() const { return (SBSScintPMT*)fPMT.GetObject(); }
   Int_t GetRawAmpl() const {return fRawAmpl;}
@@ -32,7 +34,6 @@ class SBSAdcHit : public TObject {
   Bool_t IsSortable() const { return kTRUE; }
 
   Int_t  Compare(const TObject* obj) const;
-  void Clear(Option_t *s="");
 
  protected:
 

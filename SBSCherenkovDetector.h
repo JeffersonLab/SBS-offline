@@ -14,7 +14,7 @@
 #include "SBSCherenkov_ClusterList.h"
 #include "TBits.h"
 #include "TClonesArray.h"
-#include <stdint.h>
+#include <cstdint>
 #include <map>
 
 class THaTrack;
@@ -24,8 +24,8 @@ class SBSCherenkovDetector : public SBSGenericDetector {
   
 public:
 
-  SBSCherenkovDetector( const char* name, const char* description="", 
-	   THaApparatus* apparatus=NULL );
+  explicit SBSCherenkovDetector( const char* name, const char* description="",
+	   THaApparatus* apparatus=nullptr );
   virtual ~SBSCherenkovDetector();
   
   virtual void         Clear( Option_t* opt="" );

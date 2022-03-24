@@ -30,8 +30,8 @@ ClassImp(SBSBBTotalShower)
 //_____________________________________________________________________________
 SBSBBTotalShower::SBSBBTotalShower( const char* name, const char* description,
                                    THaApparatus* apparatus ) :
-SBSCalorimeter(name,description,apparatus), 
-  fShower(NULL), fPreShower(NULL), fMaxDx(0.4), fMaxDy(0.4)
+  SBSCalorimeter(name,description,apparatus),
+  fShower(nullptr), fPreShower(nullptr), fMaxDx(0.4), fMaxDy(0.4)
 //fE(0.0), fX(0.0), fY(0.0)//, fID(NULL)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -52,7 +52,7 @@ SBSBBTotalShower::SBSBBTotalShower( const char* name,
                                    const char* description,
                                    THaApparatus* apparatus ) :
   SBSCalorimeter(name,description,apparatus),
-  fShower(NULL), fPreShower(NULL),fMaxDx(0.4), fMaxDy(0.4)
+  fShower(nullptr), fPreShower(nullptr),fMaxDx(0.4), fMaxDy(0.4)
   //fE(0.0), fX(0.0), fY(0.0)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -146,20 +146,20 @@ void SBSBBTotalShower::Setup( const char* name,
 exit:
     delete [] subname;
     delete [] desc;
-    return;
 }
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 {
-  ClearEvent();
   fShower->Decode(evdata);
   fPreShower->Decode(evdata);
   return 0;
 }
 //_____________________________________________________________________________
-void SBSBBTotalShower::ClearEvent() {
-  fShower->ClearEvent();
-  fPreShower->ClearEvent();
+void SBSBBTotalShower::Clear( Option_t* opt )
+{
+  SBSCalorimeter::Clear(opt);
+  fShower->Clear(opt);
+  fPreShower->Clear(opt);
   fSHclusPSclusIDmap.clear();
 }
 
@@ -348,14 +348,13 @@ void SBSBBTotalShower::SetApparatus( THaApparatus* app )
     SBSCalorimeter::SetApparatus( app );
     fShower->SetApparatus( app );
     fPreShower->SetApparatus( app );
-    return;
 }
 
 //_____________________________________________________________________________
 
 void SBSBBTotalShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {
-    ClearEvent();
+  Clear();
     /*
   fNclust = 0;
     fE = double(E);

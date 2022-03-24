@@ -52,14 +52,14 @@ SBSDecodeF1TDCModule::~SBSDecodeF1TDCModule() = default;
 void SBSDecodeF1TDCModule::CommonInit() {
   //fTdcData = new Int_t[NTDCCHAN*MAXHIT];
   //fNumHits = new Int_t[NTDCCHAN*MAXHIT];
-  fDebugFile=0;
+  fDebugFile=nullptr;
   //fDebugFile = new std::ofstream("hcal_tdc_test_decoder.log");
   Clear();
   IsInit = kTRUE;
   nF1=0;
   F1slots.resize(50);
-  for(size_t i = 0; i < F1slots.size(); i++) {
-    F1slots[i] = 0;
+  for(int & F1slot : F1slots) {
+    F1slot = 0;
   }
   //F1slots = new Int_t[50];
   //memset(F1slots, 0, 50*sizeof(Int_t));
