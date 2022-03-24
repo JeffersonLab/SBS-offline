@@ -35,8 +35,8 @@ class SBSCalorimeter;
 class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   
  public:
-  SBSBBTotalShower( const char* name, const char* description = "",
-		    THaApparatus* a = NULL );
+  explicit SBSBBTotalShower( const char* name, const char* description = "",
+		    THaApparatus* a = nullptr );
   SBSBBTotalShower( const char* name, const char* shower_name,
 		    const char* preshower_name, const char* description = "",
 		    THaApparatus* a = NULL );

@@ -122,8 +122,8 @@ class SBSGenericDetector : public THaNonTrackingDetector {
   //class SBSGenericDetector : public THaShower {
 
 public:
-  SBSGenericDetector( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+  explicit SBSGenericDetector( const char* name, const char* description = "",
+                               THaApparatus* a = nullptr);
   virtual ~SBSGenericDetector();
 
   virtual void Clear( Option_t* opt="" );

@@ -19,7 +19,7 @@ class SBSScintHit : public TObject {
     
   SBSScintHit(const SBSScintBar* bar,Int_t planenum, Int_t barnum, 
 	      Double_t ypos, Double_t Tof, Double_t HitEnergy, Double_t Tdiff);   
-  SBSScintHit(const SBSScintHit* pScHit = 0);
+  explicit SBSScintHit(const SBSScintHit* pScHit = nullptr);
   SBSScintHit(const SBSScintHit* pScHit, Int_t clusternum);
   SBSScintHit(const SBSScintHit* pScHit, Int_t planenum, Int_t barnum_nd);
 

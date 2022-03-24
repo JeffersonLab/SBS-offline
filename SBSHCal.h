@@ -13,8 +13,8 @@
 
 class SBSHCal : public SBSCalorimeter {
 public:
-  SBSHCal( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+  explicit SBSHCal( const char* name, const char* description = "",
+                    THaApparatus* a = nullptr);
   virtual ~SBSHCal();
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  Decode( const THaEvData& evdata );

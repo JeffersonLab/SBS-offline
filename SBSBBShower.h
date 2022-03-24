@@ -13,8 +13,8 @@
 
 class SBSBBShower : public SBSCalorimeter {
 public:
-  SBSBBShower( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+  explicit SBSBBShower( const char* name, const char* description = "",
+                        THaApparatus* a = nullptr);
   virtual ~SBSBBShower();
 
   // Standard apparatus re-implemented functions

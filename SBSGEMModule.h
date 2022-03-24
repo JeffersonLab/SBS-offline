@@ -124,8 +124,8 @@ struct sbsgemcluster_t {  //1D clusters;
 class SBSGEMModule : public THaSubDetector {
  public:
 
-  SBSGEMModule( const char *name, const char *description = "",
-		THaDetectorBase* parent = 0 );
+  explicit SBSGEMModule( const char *name, const char *description = "",
+                         THaDetectorBase* parent = nullptr );
 
   virtual ~SBSGEMModule();
 

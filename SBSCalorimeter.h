@@ -74,8 +74,8 @@ typedef std::vector<SBSBlockSet> SBSBlockSetList;
 class SBSCalorimeter : public SBSGenericDetector {
 
 public:
-  SBSCalorimeter( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+  explicit SBSCalorimeter( const char* name, const char* description = "",
+      THaApparatus* a = nullptr);
   virtual ~SBSCalorimeter();
 
   virtual void Clear( Option_t* opt="" );

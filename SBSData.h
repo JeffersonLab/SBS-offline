@@ -195,8 +195,9 @@ namespace SBSData {
   // Samples (e.g. ADC Waveform data)
   class Waveform {
     public:
-      Waveform(Double_t ped = 0.0, Double_t gain = 1.0, Double_t ChanTomV = 0.48828,Double_t GoodTimeCut = 1.0, Double_t tcal = 4.0);
-      virtual ~Waveform() {};
+      explicit Waveform( Double_t ped = 0.0, Double_t gain = 1.0, Double_t ChanTomV = 0.48828,
+                       Double_t GoodTimeCut = 1.0, Double_t tcal = 4.0 );
+      virtual ~Waveform() = default;;
 
       // Getters
       Double_t GetPed()         const { return fSamples.ped; }

@@ -15,7 +15,7 @@ class SBSCalorimeterCluster : public TObject {
 public:
 
     SBSCalorimeterCluster();
-    SBSCalorimeterCluster(Int_t nmaxblk);
+    explicit SBSCalorimeterCluster(Int_t nmaxblk);
     SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block);
     virtual ~SBSCalorimeterCluster();
 

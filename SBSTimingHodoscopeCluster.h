@@ -15,7 +15,7 @@ class SBSTimingHodoscopeCluster : public TObject {
 public:
 
     SBSTimingHodoscopeCluster();
-    SBSTimingHodoscopeCluster(Int_t nmaxblk);
+    explicit SBSTimingHodoscopeCluster(Int_t nmaxblk);
     SBSTimingHodoscopeCluster(Int_t nmaxblk, SBSTimingHodoscopeBar* bar);
     virtual ~SBSTimingHodoscopeCluster();
 
