@@ -155,8 +155,8 @@ public:
   virtual SBSElement* MakeElement(Double_t x, Double_t y, Double_t z, Int_t row,
       Int_t col, Int_t layer, Int_t id = 0);
   
-  Double_t SizeRow(){ return fSizeRow; };
-  Double_t SizeCol(){ return fSizeCol; };
+  Double_t SizeRow() const { return fSizeRow; };
+  Double_t SizeCol() const { return fSizeCol; };
   
 protected:
 

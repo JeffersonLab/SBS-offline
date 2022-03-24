@@ -43,13 +43,13 @@ public:
 	/* void SetRPMT( SBSTimingHodoscopePMT* rightpmt) {fRPMT=rightpmt;} */
 	virtual void Clear( Option_t* opt="" );
 	
-	double GetMeanTime(){return fMeanTime;};
-	double GetTimeDiff(){return fTimeDiff;};
-	double GetMeanToT(){return fMeanToT;};
-	double GetHitPos(){return fHitPos;};
-	double GetElementPos(){return fElementPos;};
-	SBSData::TDCHit GetLeftHit(){return fLeftHit;};
-	SBSData::TDCHit GetRightHit(){return fRightHit;};
+	double GetMeanTime() const {return fMeanTime;};
+	double GetTimeDiff() const {return fTimeDiff;};
+	double GetMeanToT() const {return fMeanToT;};
+	double GetHitPos() const {return fHitPos;};
+	double GetElementPos() const {return fElementPos;};
+	SBSData::TDCHit GetLeftHit() const {return fLeftHit;};
+	SBSData::TDCHit GetRightHit() const {return fRightHit;};
 
 	void SetMeanTime(double val){fMeanTime = val;};
 	void SetTimeDiff(double val){fTimeDiff = val;};

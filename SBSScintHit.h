@@ -26,19 +26,19 @@ class SBSScintHit : public TObject {
   virtual ~SBSScintHit();
 
   SBSScintBar* GetScintBar() const { return (SBSScintBar*)fScBar.GetObject(); }
-  Int_t GetPlaneNum() {return fPlaneNum;}
-  Int_t GetBarNum() {return fBarNum;}
-  Int_t GetBarNum_nd() {return fBarNum_nd;}
+  Int_t GetPlaneNum() const {return fPlaneNum;}
+  Int_t GetBarNum() const {return fBarNum;}
+  Int_t GetBarNum_nd() const {return fBarNum_nd;}
   
-  Double_t GetHitXPos() {return fHitXPos;}
-  Double_t GetHitYPos() {return fHitYPos;}
-  Double_t GetHitZPos() {return fHitZPos;}
+  Double_t GetHitXPos() const {return fHitXPos;}
+  Double_t GetHitYPos() const {return fHitYPos;}
+  Double_t GetHitZPos() const {return fHitZPos;}
   
-  Double_t GetHitTOF() {return fHitTOF;}
-  Double_t GetHitEdep() {return fHitEdep;}
-  Double_t GetHitTdiff() {return fTdiff;}
-  Int_t GetOrder() {return fOrder;}
-  Int_t GetClusterNum() {return fClusterNum;}
+  Double_t GetHitTOF() const {return fHitTOF;}
+  Double_t GetHitEdep() const {return fHitEdep;}
+  Double_t GetHitTdiff() const {return fTdiff;}
+  Int_t GetOrder() const {return fOrder;}
+  Int_t GetClusterNum() const {return fClusterNum;}
 
   void SetScintBar(SBSScintBar* bar) {fScBar=bar;}
   void SetPlaneNum(Int_t planenum) {fPlaneNum=planenum;}

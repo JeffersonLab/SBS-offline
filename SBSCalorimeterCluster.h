@@ -48,7 +48,7 @@ public:
     SBSElement* GetElement(UInt_t i);
     std::vector<SBSElement*>& GetElements() {return fElements;}
 
-    Int_t GetSize() {return fMult;}
+    Int_t GetSize() const {return fMult;}
 
     void AddElement(SBSElement* block);
 

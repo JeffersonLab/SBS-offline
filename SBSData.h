@@ -199,26 +199,26 @@ namespace SBSData {
       virtual ~Waveform() {};
 
       // Getters
-      Double_t GetPed()  const { return fSamples.ped; }
-      Double_t GetGain() const { return fSamples.cal; }
-      Double_t GetThres() const { return fSamples.thres; }
-      Double_t GetChanTomV() const { return fSamples.ChanTomV; }
-      Double_t GetAmpCal() const { return fSamples.acal; }
-      Double_t GetTrigCal() const { return fSamples.trigcal; }
-      Double_t GetTimeOffset() const { return fSamples.timeoffset; }
-      UInt_t GetFixThresBin() const { return fSamples.FixThresBin; }
-      UInt_t GetNSB() const { return fSamples.NSB; }
-      UInt_t GetNSA() const { return fSamples.NSA; }
-      UInt_t GetNPedBin() const { return fSamples.NPedBin; }
-      Double_t GetGoodTimeCut()              const { return fSamples.GoodTimeCut;}
-      Int_t GetGoodHitIndex()            const { return fSamples.good_hit; }
+      Double_t GetPed()         const { return fSamples.ped; }
+      Double_t GetGain()        const { return fSamples.cal; }
+      Double_t GetThres()       const { return fSamples.thres; }
+      Double_t GetChanTomV()    const { return fSamples.ChanTomV; }
+      Double_t GetAmpCal()      const { return fSamples.acal; }
+      Double_t GetTrigCal()     const { return fSamples.trigcal; }
+      Double_t GetTimeOffset()  const { return fSamples.timeoffset; }
+      UInt_t GetFixThresBin()   const { return fSamples.FixThresBin; }
+      UInt_t GetNSB()           const { return fSamples.NSB; }
+      UInt_t GetNSA()           const { return fSamples.NSA; }
+      UInt_t GetNPedBin()       const { return fSamples.NPedBin; }
+      Double_t GetGoodTimeCut() const { return fSamples.GoodTimeCut;}
+      Int_t GetGoodHitIndex()   const { return fSamples.good_hit; }
       std::vector<Double_t>& GetDataRaw() { return fSamples.samples_raw; }
       std::vector<Double_t>& GetData() { return fSamples.samples; }
-      PulseADCData GetPulse() { return fSamples.pulse; }
-      SingleData GetIntegral()   { return fSamples.pulse.integral; }
-      SingleData GetTime()   { return fSamples.pulse.time; }
-      SingleData GetAmplitude()   { return fSamples.pulse.amplitude; }
-      Double_t GetTimeData()         const { return fSamples.pulse.time.val; }
+      PulseADCData GetPulse()   const { return fSamples.pulse; }
+      SingleData GetIntegral()  const { return fSamples.pulse.integral; }
+      SingleData GetTime()      const { return fSamples.pulse.time; }
+      SingleData GetAmplitude() const { return fSamples.pulse.amplitude; }
+      Double_t GetTimeData()    const { return fSamples.pulse.time.val; }
 
       // Setters
       void SetValTime(Double_t var)  { fSamples.pulse.time.val = var; }
@@ -236,7 +236,7 @@ namespace SBSData {
       virtual void Process(std::vector<Double_t> &var);
 
       // Do we have samples data for this event?
-      Bool_t HasData() { return fHasData; }
+      Bool_t HasData() const { return fHasData; }
 
       // Clear event
       virtual void Clear();
