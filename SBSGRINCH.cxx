@@ -152,7 +152,7 @@ Int_t SBSGRINCH::CoarseProcess( TClonesArray& tracks )
   // add clustering here: hits have been filtered by SBSCherenkovDetector::CoarseProcess()
   // clustering ought to be coded in function "FindClusters" below
   
-  int err = FindClusters();
+  /*int err = */FindClusters();
   
   if( fDoBench ) fBench->Stop("CoarseProcess");
   if(fDebug)cout << "End Coarse Process" << endl;

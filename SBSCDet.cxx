@@ -72,7 +72,7 @@ ClassImp(SBSCDet)
 
 //____________________________________________________________________________
 SBSCDet::SBSCDet( const char* name, const char* description,
-								   THaApparatus* apparatus) :
+                  THaApparatus* apparatus) :
 THaNonTrackingDetector(name,description,apparatus)
 {
 

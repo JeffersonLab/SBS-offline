@@ -241,7 +241,7 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
       
       x = (fElements[fGood.TDCelemID[k]])->GetX();
       y = (fElements[fGood.TDCelemID[k]])->GetY();
-      if(k<fAmpToTCoeff.size()){
+      if(k<(int)fAmpToTCoeff.size()){
 	amp = fGood.t_ToT[k]*fAmpToTCoeff[k];
       }else{// we should be guaranteed that the array has at least one element
 	amp = fGood.t_ToT[k]*fAmpToTCoeff[0];
@@ -276,7 +276,6 @@ void SBSCherenkovDetector::DeleteClusters()
   if(fDebug)cout << "Clear Clusters" << endl;
   fClusters->Clear("C");
   //fResolvedClusters->Clear("C");
-  return;
 }
 
 //_____________________________________________________________________________
@@ -294,7 +293,6 @@ void SBSCherenkovDetector::PrintBenchmarks() const
   
   //cout << endl << "Breakdown of time spent in FineProcess:" << endl;
   
-  return;
 }
 
 ClassImp(SBSCherenkovDetector)

@@ -30,8 +30,8 @@ ClassImp(SBSBBTotalShower)
 //_____________________________________________________________________________
 SBSBBTotalShower::SBSBBTotalShower( const char* name, const char* description,
                                    THaApparatus* apparatus ) :
-SBSCalorimeter(name,description,apparatus), 
-  fShower(NULL), fPreShower(NULL), fMaxDx(0.4), fMaxDy(0.4)
+  SBSCalorimeter(name,description,apparatus),
+  fShower(nullptr), fPreShower(nullptr), fMaxDx(0.4), fMaxDy(0.4)
 //fE(0.0), fX(0.0), fY(0.0)//, fID(NULL)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -52,7 +52,7 @@ SBSBBTotalShower::SBSBBTotalShower( const char* name,
                                    const char* description,
                                    THaApparatus* apparatus ) :
   SBSCalorimeter(name,description,apparatus),
-  fShower(NULL), fPreShower(NULL),fMaxDx(0.4), fMaxDy(0.4)
+  fShower(nullptr), fPreShower(nullptr),fMaxDx(0.4), fMaxDy(0.4)
   //fE(0.0), fX(0.0), fY(0.0)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -146,7 +146,6 @@ void SBSBBTotalShower::Setup( const char* name,
 exit:
     delete [] subname;
     delete [] desc;
-    return;
 }
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
@@ -349,7 +348,6 @@ void SBSBBTotalShower::SetApparatus( THaApparatus* app )
     SBSCalorimeter::SetApparatus( app );
     fShower->SetApparatus( app );
     fPreShower->SetApparatus( app );
-    return;
 }
 
 //_____________________________________________________________________________

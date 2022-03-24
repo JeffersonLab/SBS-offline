@@ -14,7 +14,7 @@
 #include "SBSCherenkov_ClusterList.h"
 #include "TBits.h"
 #include "TClonesArray.h"
-#include <stdint.h>
+#include <cstdint>
 #include <map>
 
 class THaTrack;

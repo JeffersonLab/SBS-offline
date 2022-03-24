@@ -36,7 +36,7 @@ namespace Decoder {
 
   public:
 
-    MPDModule() {};
+    MPDModule() = default;
     MPDModule(Int_t crate, Int_t slot);
     virtual ~MPDModule();
 

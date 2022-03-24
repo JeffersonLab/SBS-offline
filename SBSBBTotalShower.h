@@ -39,7 +39,7 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
 		    THaApparatus* a = nullptr );
   SBSBBTotalShower( const char* name, const char* shower_name,
 		    const char* preshower_name, const char* description = "",
-		    THaApparatus* a = NULL );
+		    THaApparatus* a = nullptr );
   virtual ~SBSBBTotalShower();
 
   virtual void       Clear( Option_t* opt="" );

@@ -36,7 +36,7 @@ namespace Decoder {
 
   public:
 
-    MPDModuleVMEv4() {};
+    MPDModuleVMEv4() = default;
     MPDModuleVMEv4(Int_t crate, Int_t slot);
     virtual ~MPDModuleVMEv4();
 

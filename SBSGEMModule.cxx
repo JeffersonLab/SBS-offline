@@ -186,11 +186,9 @@ SBSGEMModule::~SBSGEMModule() {
   //     delete fStrip;
   //     fStrip = NULL;
   // }
-  if( fStripTimeFunc ){
-    delete fStripTimeFunc;
-  }
 
-  return;
+  delete fStripTimeFunc;
+
 }
 
 Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){

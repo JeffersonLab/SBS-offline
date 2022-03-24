@@ -15,7 +15,7 @@
 /* #include "TObject.h" */
 #include "SBSElement.h"
 
-class SBSTimingHodoscopePMT{
+class SBSTimingHodoscopePMT {
 
 public:
   SBSTimingHodoscopePMT( SBSElement* element, Double_t walkpar0, Double_t walkpar1,Int_t barnum, Int_t side, Int_t id );
