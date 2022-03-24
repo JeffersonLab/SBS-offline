@@ -68,6 +68,9 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   // Parameters
   Double_t    fMaxDx;       // Maximum dx between shower and preshower centers
   Double_t    fMaxDy;       // Maximum dx between shower and preshower centers
+  Double_t    fTotalSum_Threshold; //Software threshold for shower and (matched) pre-shower cluster energies
+
+  Int_t       fPassedThreshold; //variable to indicate whether we were over threshold:
   /*
   // Per event data
   Int_t       fNclust;      // Number of clusters

@@ -13,8 +13,10 @@
 
 class SBSBBShower : public SBSCalorimeter {
 public:
+
   explicit SBSBBShower( const char* name, const char* description = "",
                         THaApparatus* a = nullptr);
+
   virtual ~SBSBBShower();
 
   // Standard apparatus re-implemented functions
@@ -25,8 +27,10 @@ public:
   virtual void   MakeCluster(Int_t nblk_size,SBSElement* blk);
   virtual void   MakeCluster(Int_t nblk_size);
   virtual void   AddToCluster(Int_t nc,SBSElement* blk);
-  virtual void MakeMainCluster();
+
+  virtual void MakeMainCluster(Int_t icl=0); 
   virtual void Clear( Option_t* opt="" );
+
 
   Int_t GetRowMax() {return GetRow();}
   Int_t GetColMax() {return GetCol();}

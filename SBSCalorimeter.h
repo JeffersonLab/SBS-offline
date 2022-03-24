@@ -122,6 +122,8 @@ protected:
   Int_t  fNclubr;       ///< Max number of row-blocks composing a cluster
   Int_t  fNclubc;       ///< Max number of col-blocks composing a cluster
 
+  Int_t fBestClusterIndex; //Index of best cluster in the array.
+  
   // Mapping (see also fDetMap)
 
   SBSCalBlocks fGoodBlocks; // < Good block structure for tree output

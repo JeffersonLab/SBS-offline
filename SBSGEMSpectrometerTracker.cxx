@@ -291,7 +291,9 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ) {
 }
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
+  
   THaTrackingDetector::Clear(opt);
+
   SBSGEMTrackerBase::Clear();
 
   for( auto& module: fModules ) {
@@ -576,24 +578,30 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
     //std::cout << "SBSGEMSpectrometerTracker::FineTrack..."; 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;
-    find_tracks();
 
-    //We don't necessarily know 
+    //Is using a constraint, only attempt tracking if constraints have actually been initialized with info from external detectors:
+    fConstraintInitialized = fConstraintPoint_Front_IsInitialized && fConstraintPoint_Back_IsInitialized &&
+      fConstraintWidth_Front_IsInitialized && fConstraintWidth_Back_IsInitialized;
+
+    if( fConstraintInitialized ){
+      find_tracks();
+
+      //We don't necessarily know 
     
-    for( int itrack=0; itrack<fNtracks_found; itrack++ ){
-      //AddTrack returns a pointer to the created THaTrack:
-      THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
+      for( int itrack=0; itrack<fNtracks_found; itrack++ ){
+	//AddTrack returns a pointer to the created THaTrack:
+	THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
 
-      int ndf = 2*fNhitsOnTrack[itrack]-4;
-      double chi2 = fChi2Track[itrack]*ndf;
+	int ndf = 2*fNhitsOnTrack[itrack]-4;
+	double chi2 = fChi2Track[itrack]*ndf;
       
-      Track->SetChi2( chi2, ndf );
+	Track->SetChi2( chi2, ndf );
 
-      int index = tracks.GetLast();
-      Track->SetIndex( index );
+	int index = tracks.GetLast();
+	Track->SetIndex( index );
       
+      }
     }
-
     //std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
   }

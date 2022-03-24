@@ -893,6 +893,9 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
 void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more things too
   // Modify this a little bit so we only clear out the "hit counters", not necessarily the
   // arrays themselves, to make the decoding more efficient:
+
+  THaSubDetector::Clear(opt);
+  
   fNstrips_hit = 0;
   fNstrips_hitU = 0;
   fNstrips_hitV = 0;
@@ -1459,7 +1462,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    
 	    rawADC[iraw] = Int_t(ADC);
 	    pedsubADC[iraw] = double(ADC) - ped;
-	    commonModeSubtractedADC[iraw] = double(ADC) - ped + CommonModeCorrection[isamp]; //common-mode correction will be zero unless the above conditions are met!	    
+	    commonModeSubtractedADC[iraw] = double(ADC) - ped + CommonModeCorrection[isamp]; //common-mode correction will be zero unless a correction was calculated (see above)    
 	  }
 	}
 	

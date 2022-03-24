@@ -1202,8 +1202,10 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 void SBSGenericDetector::Clear( Option_t* opt )
 {
   // Call our version in case sub-classes have re-implemented it
+
   THaNonTrackingDetector::Clear(opt);
   ClearOutputVariables();
+
   fNhits = 0;
   fNRefhits = 0;
   fNGoodTDChits = 0;
