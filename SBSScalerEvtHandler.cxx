@@ -86,6 +86,7 @@ SBSScalerEvtHandler::SBSScalerEvtHandler(const char *name, const char* descripti
   scal_prev_read.clear();
   scal_present_read.clear();
   scal_overflows.clear();
+  fHistosInitialized = false;
 }
 
 SBSScalerEvtHandler::~SBSScalerEvtHandler()
@@ -115,13 +116,16 @@ SBSScalerEvtHandler::~SBSScalerEvtHandler()
 Int_t SBSScalerEvtHandler::Begin( THaRunBase* rb )
 {
   THaEvtTypeHandler::Begin( rb );
-  fIunserVsTime = new TH1D("fIunserVsTime", ";time (s);", 5000, 0, 5000);
-  fIu1VsTime    = new TH1D("fIu1VsTime", ";time (s);", 5000, 0, 5000);
-  fIunewVsTime  = new TH1D("fIunewVsTime", ";time (s);", 5000, 0, 5000);
-  fIdnewVsTime  = new TH1D("fIdnewVsTime", ";time (s);", 5000, 0, 5000);
-  fId1VsTime    = new TH1D("fId1VsTime", ";time (s);", 5000, 0, 5000);
-  fId3VsTime    = new TH1D("fId3VsTime", ";time (s);", 5000, 0, 5000);
-  fId10VsTime   = new TH1D("fId10VsTime", ";time (s);", 5000, 0, 5000);
+  if( !fHistosInitialized ){
+    fHistosInitialized = true;
+    fIunserVsTime = new TH1D("fIunserVsTime", ";time (s);", 5000, 0, 5000);
+    fIu1VsTime    = new TH1D("fIu1VsTime", ";time (s);", 5000, 0, 5000);
+    fIunewVsTime  = new TH1D("fIunewVsTime", ";time (s);", 5000, 0, 5000);
+    fIdnewVsTime  = new TH1D("fIdnewVsTime", ";time (s);", 5000, 0, 5000);
+    fId1VsTime    = new TH1D("fId1VsTime", ";time (s);", 5000, 0, 5000);
+    fId3VsTime    = new TH1D("fId3VsTime", ";time (s);", 5000, 0, 5000);
+    fId10VsTime   = new TH1D("fId10VsTime", ";time (s);", 5000, 0, 5000);
+  }
   return 0;
 }
 

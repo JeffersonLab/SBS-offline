@@ -518,7 +518,8 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
     }// with adc
   }// bar loop
 
-
+  DoClustering();
+  
   fCoarseProcessed = 1;
   return 0;
 }
@@ -534,7 +535,10 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   // Clustering here? 
   // Wait, if I understand the code, 
   // the way the information is stored in the vectors is by increasing index always.
-  /*int nclusters = */DoClustering();
+  /*int nclusters = */
+
+  //Moved "DoClustering() call to CoarseProcess, so we can use it in track search constraint calculation
+  //DoClustering();
 
   //fill output here:
   //if(fDataOutputLevel>1){
