@@ -107,6 +107,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   cout << "Read SBSSimDecoder variables " << endl;
   
   RVarDef vars[] = {
+    {"mc_sigma",   "MC cross section",   "fSigma"},
+    {"mc_omega",   "MC phase spece generation",   "fOmega"},
     {"mc_epx",   "MC electron momentum x",   "fEPx"},
     {"mc_epy",   "MC electron momentum y",   "fEPy"},
     {"mc_epz",   "MC electron momentum z",   "fEPz"},
@@ -208,6 +210,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
   
+  fSigma = simEvent->Tgmn->ev_sigma;
+  fOmega = simEvent->Tgmn->ev_solang;
   fEPx = simEvent->Tgmn->ev_epx;
   fEPy = simEvent->Tgmn->ev_epy;
   fEPz = simEvent->Tgmn->ev_epz;
@@ -1223,6 +1227,7 @@ void SBSSimDecoder::ChanToROC(const std::string& detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
+  assert(h_chan<fInvDetMap.at(detname).size());
   
   if(fDebug>3){
     std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
