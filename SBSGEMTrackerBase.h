@@ -10,6 +10,7 @@
 #include "TVector2.h"
 //#include <THaTrackingDetector.h>
 
+
 //class THaRunBase;
 //class THaApparatus;
 //class THaEvData;
@@ -74,6 +75,8 @@ protected:
   bool fUseOpticsConstraint; //default to FALSE:
   //bool fUseFrontTrackerConstraint; //default to FALSE:
   
+  bool fNegSignalStudy;
+
   //1D and 2D clustering: 
   void hit_reconstruction();
   //track-finding: 
@@ -81,7 +84,7 @@ protected:
 
   // Fill arrays of "good" hits (hits that end up on fitted tracks)
   void fill_good_hit_arrays();
-  
+
   //Utility methods: initialization:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void LoadPedestals(const char *fname);
@@ -90,6 +93,7 @@ protected:
   void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
   void CalcEfficiency(); //essentially, divide "did hit/should hit" histograms
 
+  void PrintNegEvents( const char *fname );
   void PrintGeometry( const char *fname );
   
   Long64_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
@@ -366,9 +370,23 @@ protected:
 
   std::vector<int> fNstripsU_layer;
   std::vector<int> fNstripsV_layer;
+  std::vector<int> fNstripsU_layer_neg;
+  std::vector<int> fNstripsV_layer_neg;
+  std::vector<int> fNstripsU_layer_neg_hit;
+  std::vector<int> fNstripsV_layer_neg_hit;
+  std::vector<int> fNstripsU_layer_neg_miss;
+  std::vector<int> fNstripsV_layer_neg_miss;
   std::vector<int> fNclustU_layer;
   std::vector<int> fNclustV_layer;
+  std::vector<int> fNclustU_layer_neg;
+  std::vector<int> fNclustV_layer_neg;
   std::vector<int> fN2Dhit_layer;
+
+  std::vector<int> neg_event;
+  std::vector<int> neg_MPD;
+  std::vector<int> neg_APV;
+  std::vector<int> neg_strip;
+  std::vector<int> is_neg;
 
   //"did hit" and "should hit" by module (numerators and denominators for efficiency determination)
   std::vector<int> fDidHit_Module;
@@ -389,6 +407,24 @@ protected:
   TClonesArray *hefficiency_x_layer;
   TClonesArray *hefficiency_y_layer;
   TClonesArray *hefficiency_xy_layer;
+
+  TClonesArray *hdidnothit_x_layer;
+  TClonesArray *hdidnothit_y_layer;
+
+  TClonesArray *hdidhit_fullreadout_x_layer;
+  TClonesArray *hdidhit_fullreadout_y_layer;
+
+  TClonesArray *hneghit_x_layer;
+  TClonesArray *hneghit_y_layer;
+
+  TClonesArray *hneghit1D_x_layer;
+  TClonesArray *hneghit1D_y_layer;
+
+  TClonesArray *hneghit_good_x_layer;
+  TClonesArray *hneghit_good_y_layer;
+
+  TClonesArray *hneghit_good1D_x_layer;
+  TClonesArray *hneghit_good1D_y_layer;
 
   double fBinSize_efficiency2D; //Efficiency bin sizes for 1D and 2D plots
   double fBinSize_efficiency1D; //define bin size for efficiency plots (assume equal bin width along X and Y, default to 1 cm)

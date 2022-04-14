@@ -99,6 +99,11 @@ struct sbsgemcluster_t {  //1D clusters;
   Double_t t_sigma; //unclear what we might use this for
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
   std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
+  UInt_t rawstrip; //Raw APV strip number before decoding 
+  UInt_t rawMPD; //Raw MPD number before decoding 
+  UInt_t rawAPV; //Raw APV number before decoding 
+  bool isneg; //Cluster is from negative strips
+  bool isnegontrack; //Cluster is from negative strips
   bool keep;
 };
 
@@ -240,6 +245,9 @@ class SBSGEMModule : public THaSubDetector {
   
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
+  
+  Bool_t fNegSignalStudy;
+
   //Moved to the MPD module class:
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
   
@@ -328,9 +336,13 @@ class SBSGEMModule : public THaSubDetector {
   //BASIC DECODED STRIP HIT INFO:
   //By the time the information is populated here, the ADC values are already assumed to be pedestal/common-mode subtracted and/or zero-suppressed as appropriate:
   Int_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
+  Int_t fNstrips_hit_pos; //total Number of strips fired after positive zero suppression
+  Int_t fNstrips_hit_neg; //total Number of strips fired after negative zero suppression
   Int_t fNdecoded_ADCsamples; //= fNstrips_hit * fN_MPD_TIME_SAMP
   UInt_t fNstrips_hitU; //total number of U strips fired
   UInt_t fNstrips_hitV; //total number of V strips fired
+  UInt_t fNstrips_hitU_neg; //total number of U strips fired negative
+  UInt_t fNstrips_hitV_neg; //total number of V strips fired negative
 
   // Number of strips passing basic zero suppression thresholds:
   UInt_t fNstrips_keep;
@@ -359,8 +371,19 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripIsU; // is this a U strip? 0/1
   std::vector<UInt_t> fStripIsV; // is this a V strip? 0/1
   std::vector<UInt_t> fStripOnTrack; //Is this strip on any track?
+  std::vector<UInt_t> fStripIsNeg; //Is this strip negative?
+  std::vector<UInt_t> fStripIsNegU; //Is this strip negative?
+  std::vector<UInt_t> fStripIsNegV; //Is this strip negative?
+  std::vector<UInt_t> fStripIsNegOnTrack; //Is this strip negative and on a track?
+  std::vector<UInt_t> fStripIsNegOnTrackU; //Is this strip negative and on a track?
+  std::vector<UInt_t> fStripIsNegOnTrackV; //Is this strip negative and on a track?
+  std::vector<UInt_t> fStripRaw; //Raw strip numbers on track?
+  std::vector<UInt_t> fStripEvent; //strip raw info
+  std::vector<UInt_t> fStripMPD; //strip raw info
+  std::vector<UInt_t> fStripADC_ID; //strip raw info
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<bool> fKeepStrip; //keep this strip?
+  std::vector<bool> fNegStrip; //Does this strip pass negative zero suppression? - neg pulse study
   //std::vector<Int_t> fStripKeep; //Strip passes timing cuts (and part of a cluster)?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
@@ -383,6 +406,10 @@ class SBSGEMModule : public THaSubDetector {
 
   UInt_t fNclustU; // number of U clusters found
   UInt_t fNclustV; // number of V clusters found
+  UInt_t fNclustU_pos; // number of positive U clusters found
+  UInt_t fNclustV_pos; // number of positive V clusters found
+  UInt_t fNclustU_neg; // number of negative U clusters found
+  UInt_t fNclustV_neg; // number of negative V clusters found
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
 

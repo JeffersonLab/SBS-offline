@@ -27,6 +27,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fPedestalMode = false;
   fSubtractPedBeforeCommonMode = false;
   fPedMode_DBoverride = false; //Only if the user script invokes the SetPedestalMode method do we override the database value:
+
+  fNegSignalStudy = false;
   
   fIsSpectrometerTracker = true; //used by tracker base
   fUseOpticsConstraint = false;
@@ -113,6 +115,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
   int useslopeconstraint = fUseSlopeConstraint ? 1 : 0;
+
+  int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
@@ -132,6 +136,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "useopticsconstraint", &useopticsconstraint, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
+    { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
@@ -167,6 +172,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     fSubtractPedBeforeCommonMode = ( pedestalmode_flag < 0 );
   }
   
+  fNegSignalStudy = negsignalstudy_flag != 0;
+
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 
@@ -325,7 +332,15 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
   UInt_t runnum = run->GetNumber(); 
+
+  TString fname_neg_events;
   
+  fname_neg_events.Form("GEM_neg_on_track_run%d.dat",runnum);
+
+  if(fNegSignalStudy)
+    PrintNegEvents(fname_neg_events.Data());
+
+
   //To automate the printing out of pedestals for database and DAQ, 
   if( fPedestalMode ){
     TString fname_dbase, fname_daq, fname_cmr, fname_dbcm;
@@ -394,6 +409,24 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     hefficiency_y_layer->Compress();
     hefficiency_xy_layer->Compress();
 
+    hdidnothit_x_layer->Compress();
+    hdidnothit_y_layer->Compress();
+
+    hdidhit_fullreadout_x_layer->Compress();
+    hdidhit_fullreadout_y_layer->Compress();
+
+    hneghit_x_layer->Compress();
+    hneghit_y_layer->Compress();
+
+    hneghit1D_x_layer->Compress();
+    hneghit1D_y_layer->Compress();
+
+    hneghit_good_x_layer->Compress();
+    hneghit_good_y_layer->Compress();
+
+    hneghit_good1D_x_layer->Compress();
+    hneghit_good1D_y_layer->Compress();
+
     hdidhit_x_layer->Write(0,kOverwrite);
     hdidhit_y_layer->Write(0,kOverwrite);
     hdidhit_xy_layer->Write(0,kOverwrite);
@@ -405,6 +438,24 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     hefficiency_x_layer->Write(0,kOverwrite);
     hefficiency_y_layer->Write(0,kOverwrite);
     hefficiency_xy_layer->Write(0,kOverwrite);
+
+    hdidnothit_x_layer->Write(0,kOverwrite);
+    hdidnothit_y_layer->Write(0,kOverwrite);
+
+    hdidhit_fullreadout_x_layer->Write(0,kOverwrite);
+    hdidhit_fullreadout_y_layer->Write(0,kOverwrite);
+
+    hneghit_x_layer->Write(0,kOverwrite);
+    hneghit_y_layer->Write(0,kOverwrite);
+
+    hneghit1D_x_layer->Write(0,kOverwrite);
+    hneghit1D_y_layer->Write(0,kOverwrite);
+
+    hneghit_good_x_layer->Write(0,kOverwrite);
+    hneghit_good_y_layer->Write(0,kOverwrite);
+
+    hneghit_good1D_x_layer->Write(0,kOverwrite);
+    hneghit_good1D_y_layer->Write(0,kOverwrite);
   }
 
   if( fDumpGeometryInfo ){ //Print out geometry info for alignment:
@@ -530,9 +581,19 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "nlayershituv", "number of layers with at least one 2D hit", "fNlayers_hitUV" },
     { "nstripsu_layer", "total number of U strips fired by layer", "fNstripsU_layer" },
     { "nstripsv_layer", "total number of V strips fired by layer", "fNstripsV_layer" },
+    { "nstripsu_layer_neg", "total number of negative U strips fired by layer", "fNstripsU_layer_neg" },
+    { "nstripsv_layer_neg", "total number of negative V strips fired by layer", "fNstripsV_layer_neg" },
+    { "nstripsu_layer_neg_miss", "total U strips near track by layer with hits not found", "fNstripsU_layer_neg_miss" },
+    { "nstripsv_layer_neg_miss", "total V strips near track by layer with hits notfound", "fNstripsV_layer_neg_miss" },
+    { "nstripsu_layer_neg_hit", "total U strips near track by layer with hits found", "fNstripsU_layer_neg_hit" },
+    { "nstripsv_layer_neg_hit", "total V strips near track by layer with hits found", "fNstripsV_layer_neg_hit" },
     { "nclustu_layer", "total number of U clusters by layer", "fNclustU_layer" },
     { "nclustv_layer", "total number of V clusters by layer", "fNclustV_layer" },
+    { "nclustu_layer_neg", "total number of negative U clusters by layer", "fNclustU_layer_neg" },
+    { "nclustv_layer_neg", "total number of negative V clusters by layer", "fNclustV_layer_neg" },
     { "n2Dhit_layer", "total_number of 2D hits by layer", "fN2Dhit_layer" },
+    { "nclustu_layer_miss", "total number of U clusters by layer in a module missing hits", "fNclustU_layer_miss" },
+    { "nclustv_layer_miss", "total number of V clusters by layer in a module missing hits", "fNclustV_layer_miss" },
     { nullptr }
   };
   DefineVarsFromList( vars, mode );

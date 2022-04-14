@@ -29,6 +29,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fZeroSuppress    = kTRUE;
   fZeroSuppressRMS = 5.0; //threshold in units of RMS:
 
+  fNegSignalStudy = kFALSE;
+
   fPedestalMode = kFALSE;
   fPedHistosInitialized = kFALSE;
 
@@ -224,6 +226,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   int cmplots_flag = fMakeCommonModePlots ? 1 : 0;
   int zerosuppress_flag = fZeroSuppress ? 1 : 0;
+  int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   int onlinezerosuppress_flag = fOnlineZeroSuppression ? 1 : 0;
 
   int eventinfoplots_flag = fMakeEventInfoPlots ? 1 : 0;
@@ -274,6 +277,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "sigmahitshape", &fSigma_hitshape, kDouble, 0, 1, 1}, //(optional): width parameter for cluster-splitting algorithm
     { "zerosuppress", &zerosuppress_flag, kUInt, 0, 1, 1}, //(optional, search): toggle offline zero suppression (default = true).
     { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1, 1}, //(optional, search):
+    { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "onlinezerosuppress", &onlinezerosuppress_flag, kUInt, 0, 1, 1}, //(optional, search)
     { "commonmode_meanU", &fCommonModeMeanU, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_meanV", &fCommonModeMeanV, kDoubleV, 0, 1, 0}, //(optional, don't search)
@@ -319,6 +323,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   if( !fCommonModePlots_DBoverride ) fMakeCommonModePlots = cmplots_flag != 0;
   fZeroSuppress = zerosuppress_flag != 0;
   fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
+
+  fNegSignalStudy = negsignalstudy_flag != 0;
 
   fMakeEventInfoPlots = eventinfoplots_flag != 0;
 
@@ -540,6 +546,16 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fStripIsU.resize( nstripsmax );
   fStripIsV.resize( nstripsmax );
   fStripOnTrack.resize( nstripsmax );
+  fStripIsNeg.resize( nstripsmax );
+  fStripIsNegU.resize( nstripsmax );
+  fStripIsNegV.resize( nstripsmax );
+  fStripIsNegOnTrack.resize( nstripsmax );
+  fStripIsNegOnTrackU.resize( nstripsmax );
+  fStripIsNegOnTrackV.resize( nstripsmax );
+  fStripRaw.resize( nstripsmax );
+  fStripEvent.resize( nstripsmax );
+  fStripMPD.resize( nstripsmax );
+  fStripADC_ID.resize( nstripsmax );
   fStripTrackIndex.resize( nstripsmax );
   fKeepStrip.resize( nstripsmax );
   fMaxSamp.resize( nstripsmax );
@@ -762,7 +778,8 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   
   
   VarDef varstrip[] = {
-    { "strip.nstripsfired", "Number of strips fired", kUInt, 0, &fNstrips_hit },
+    { "strip.nstripsfired", "Number of strips fired", kUInt, 0, &fNstrips_hit_pos },
+    { "strip.nstripsfired_neg", "Number of strips fired negative", kUInt, 0, &fNstrips_hit_neg },
     { "strip.nstrips_keep", "Number of fired strips passing basic timing cuts", kUInt, 0, &fNstrips_keep },
     { "strip.nstrips_keepU", "Number of U/X strips passing basic timing cuts", kUInt, 0, &fNstrips_keepU },
     { "strip.nstrips_keepV", "Number of V/Y strips passing basic timing cuts", kUInt, 0, &fNstrips_keepV },
@@ -786,6 +803,12 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.CorrCoeff", "Correlation coefficient of strip wrt max strip on cluster (or perhaps cluster tmean)", kDouble, 0, &(fStripCorrCoeff[0]), &fNstrips_hit },
     { "strip.itrack", "Index of track containing this strip (-1 if not on any track)", kInt, 0, &(fStripTrackIndex[0]), &fNstrips_hit },
     { "strip.ontrack", "Is this strip on any track (0/1)?", kUInt, 0, &(fStripOnTrack[0]), &fNstrips_hit },
+    { "strip.isnegative", "Is this strip passing negative zero suppression?", kUInt, 0, &(fStripIsNeg[0]), &fNstrips_hit },
+    { "strip.isnegativeU", "Is this strip passing negative zero suppression on U axis?", kUInt, 0, &(fStripIsNegU[0]), &fNstrips_hit },
+    { "strip.isnegativeV", "Is this strip passing negative zero suppression on V axis?", kUInt, 0, &(fStripIsNegV[0]), &fNstrips_hit },
+    { "strip.isnegontrack", "Is this strip passing negative zero suppression on a track?", kUInt, 0, &(fStripIsNegOnTrack[0]), &fNstrips_hit },
+    { "strip.isnegontrackU", "Is this strip passing negative zero suppression on a track on U axis?", kUInt, 0, &(fStripIsNegOnTrackU[0]), &fNstrips_hit },
+    { "strip.isnegontrackV", "Is this strip passing negative zero suppression on a track on V axis?", kUInt, 0, &(fStripIsNegOnTrackV[0]), &fNstrips_hit },
     { "strip.ADCavg", "average of ADC samples on a strip", kDouble, 0, &(fStripADCavg[0]), &fNstrips_hit },
     { "strip.ENABLE_CM", "online common-mode enabled?", kUInt, 0, &(fStrip_ENABLE_CM[0]), &fNstrips_hit },
     { "strip.CM_GOOD", "common-mode out of range? (online failed)", kUInt, 0, &(fStrip_CM_GOOD[0]), &fNstrips_hit },
@@ -822,16 +845,22 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   
 
   RVarDef varclust[] = {
-    { "clust.nclustu",   "Number of clusters in u",   "fNclustU" },
+    { "clust.nclustu",   "Number of clusters in u",   "fNclustU_pos" },
+    { "clust.nclustu_neg",   "Number of clusters in u that are negative",   "fNclustU_neg" },
     { "clust.clustu_strips",   "u clusters strip multiplicity",   "fUclusters.nstrips" },
     { "clust.clustu_pos",   "u clusters position",   "fUclusters.hitpos_mean" },
     { "clust.clustu_adc",   "u clusters adc sum",   "fUclusters.clusterADCsum" },
     { "clust.clustu_time",   "u clusters time",   "fUclusters.t_mean" },
-    { "clust.nclustv",   "Number of clusters in v",   "fNclustV" },
+    { "clust.nclustv",   "Number of clusters in v",   "fNclustV_pos" },
+    { "clust.nclustv_neg",   "Number of clusters in v that are negative",   "fNclustV_neg" },
     { "clust.clustv_strips",   "v clusters strip multiplicity",   "fVclusters.nstrips" },
     { "clust.clustv_pos",   "v clusters position",   "fVclusters.hitpos_mean" },
     { "clust.clustv_adc",   "v clusters adc sum",   "fVclusters.clusterADCsum" },
     { "clust.clustv_time",   "v clusters time",   "fVclusters.t_mean" },
+    { "clust.isnegativeU",   "Is cluster negative?",   "fUclusters.isneg" },
+    { "clust.isnegativeV",   "Is cluster negative?",   "fVclusters.isneg" },
+    { "clust.isnegontrackU",   "Is cluster negative and on a track?",   "fUclusters.isnegontrack" },
+    { "clust.isnegontrackV",   "Is cluster negative and on a track?",   "fVclusters.isnegontrack" },
     { nullptr },
   };
 
@@ -890,6 +919,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fNstrips_hit = 0;
   fNstrips_hitU = 0;
   fNstrips_hitV = 0;
+  fNstrips_hitU_neg = 0;
+  fNstrips_hitV_neg = 0;
   fNdecoded_ADCsamples = 0;
   fIsDecoded = false;
 
@@ -908,6 +939,10 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   
   fNclustU = 0;
   fNclustV = 0;
+  fNclustU_pos = 0;
+  fNclustV_pos = 0;
+  fNclustU_neg = 0;
+  fNclustV_neg = 0;
   //later we may need to check whether this is a performance bottleneck:
   fUclusters.clear();
   fVclusters.clear();
@@ -946,9 +981,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
   //initialize generic "strip" counter to zero:
   fNstrips_hit = 0;
+  fNstrips_hit_neg = 0;
+  fNstrips_hit_pos = 0;
   //initialize "U" and "V" strip counters to zero:
   fNstrips_hitU = 0;
   fNstrips_hitV = 0;
+  fNstrips_hitU_neg = 0;
+  fNstrips_hitV_neg = 0;
 
   //UInt_t MAXNSAMP_PER_APV = fN_APV25_CHAN * fN_MPD_TIME_SAMP;
 
@@ -1126,6 +1165,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
     
+    
     // if( cm_flags_found ){
     //   std::cout << "cm flag defaults overridden by raw data, effChan = " << effChan << ", CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
     // }
@@ -1143,7 +1183,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       CM_ENABLED = false; 
     }
 
-    
+  
     
     //Int_t nchan = evdata.GetNumChan( it->crate, it->slot ); //this could be made faster
 
@@ -1212,9 +1252,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
 
-    
+
     if( nsamp > 0 ){
-      
+
       //      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
       
@@ -1239,7 +1279,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
 	  int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
 	  UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
-
+	  
 	  Int_t ADC = Int_t( decoded_rawADC );
 	  
 	  rawStrip[iraw] = strip;
@@ -1400,7 +1440,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    commonModeSubtractedADC[iraw] = double(ADC) - ped;	    
 	  }
 	}
-	
+      
 	//Temporary vector to hold ped-subtracted ADC samples for this strip:
 	std::vector<double> ADCtemp(fN_MPD_TIME_SAMP);
 	std::vector<int> rawADCtemp(fN_MPD_TIME_SAMP);
@@ -1408,7 +1448,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//sums over time samples
 	double ADCsum_temp = 0.0;
 	double maxADC = 0.0;
+	double minADC = 10000.0;  //Negative pulse
 	Int_t iSampMax = -1;
+	Int_t iSampMin = -1;   //Negative pulse
 	
 	//crude timing calculations:
 	double Tsum = 0.0;
@@ -1475,6 +1517,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    maxADC = ADCvalue;
 	    iSampMax = adc_samp;
 	  }
+
+	  ///// Used for negative pulse study
+	  if( iSampMin < 0 || ADCvalue < minADC ){
+	    minADC = ADCvalue;
+	    iSampMin = adc_samp;
+	  }
+
 
 	  //for crude strip timing, just take simple time bins at the center of each sample (we'll worry about trigger time words later):
 	  double Tsamp = fSamplePeriod * ( adc_samp + 0.5 );
@@ -1584,6 +1633,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  
 	  fStrip[fNstrips_hit] = strip;
 	  fAxis[fNstrips_hit] = axis;
+	  fStripRaw[fNstrips_hit] = rawStrip[fN_MPD_TIME_SAMP * istrip];
 	  
 	  fKeepStrip[fNstrips_hit] = true;
 	  //fStripKeep[fNstrips_hit] = 1;
@@ -1636,6 +1686,20 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
 	  fStripTrackIndex[fNstrips_hit] = -1;
 	  fStripOnTrack[fNstrips_hit] = 0;
+
+	  //This block is only used for the negative signal studies
+	  fStripIsNeg[fNstrips_hit] = 0;
+	  fStripIsNegU[fNstrips_hit] = 0;
+	  fStripIsNegV[fNstrips_hit] = 0;
+	  fStripIsNegOnTrack[fNstrips_hit] = 0;
+	  fStripIsNegOnTrackU[fNstrips_hit] = 0;
+	  fStripIsNegOnTrackV[fNstrips_hit] = 0;
+
+	  //These are used for saving numbers to a text file for event displays
+	  fStripEvent[fNstrips_hit] = evdata.GetEvNum();
+	  fStripMPD[fNstrips_hit] = it->mpd_id;
+	  fStripADC_ID[fNstrips_hit] = it->adc_id;
+	  /// This block above is used for negative signal studies
 	  
 	  //	  fKeepStrip.push_back( true ); //keep all strips by default
 	  
@@ -1703,13 +1767,190 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  
 	  
 	  fNstrips_hit++;
-
+	  fNstrips_hit_pos++;
+	
 	  
 	  
 	} //check if passed zero suppression cuts
-      } //end loop over strips on this APV card
-    } //end if( nsamp > 0 )
 
+	/////// Negative pulse study, This is an exact copy of the loop above but instead stores the negative ADC info. "Keep" is set
+	/////// to false regardless so these strips will not be used for any of the normal clustering and tracking algorithms. They 
+	/////// are differentiated from positive strips by fStripIsNeg.
+	if(ADCsum_temp/double(fN_MPD_TIME_SAMP) < -1.0*fZeroSuppressRMS*rmstemp && BUILD_ALL_SAMPLES && !CM_ENABLED && !CM_OUT_OF_RANGE && fNegSignalStudy ){
+
+	  //Increment hit count and populate decoded data structures:
+	 
+	  //threshold on the average ADC
+	  
+	  //Slight reorganization: compute Tmean and Tsigma before applying gain correction:
+	  //(since these sums were computed using the uncorrected ADC samples)
+	  double Tmean_temp = Tsum/ADCsum_temp; 
+	  double Tsigma_temp = sqrt( -1.0*T2sum/ADCsum_temp - pow( Tmean_temp,2) );
+
+	  //NOW apply gain correction:
+	  //Don't apply any gain correction if we are doing pedestal mode analysis:
+	  if( !fPedestalMode ){ //only apply gain correction if we aren't in pedestal-mode:
+	    for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	      ADCtemp[isamp] /= gaintemp;
+	    }
+	    minADC /= gaintemp;  //Use min ADC instead of max for negative signals
+	    ADCsum_temp /= gaintemp;
+	  }
+
+	  //  ADCsum_temp /= gaintemp;
+	
+	  
+	  //fStrip.push_back( strip );
+	  //fAxis.push_back( axis );
+
+	  //std::cout << "strip, axis = " << strip << ", " << axis << std::endl;
+	  
+	  fStrip[fNstrips_hit] = strip;
+	  fAxis[fNstrips_hit] = axis;
+	  fStripRaw[fNstrips_hit] = rawStrip[fN_MPD_TIME_SAMP * istrip];	  
+
+	  //fStripKeep[fNstrips_hit] = 1;
+	  //	  fMaxSamp.push_back( iSampMax );
+	  fMaxSamp[fNstrips_hit] = iSampMin;
+
+	  //if( fSuppressFirstLast && (iSampMax == 0 || iSampMax+1 == fN_MPD_TIME_SAMP ) ){
+	  // fSuppressFirstLast:
+	  // 0 = allow peaking in first or last sample
+	  // 1 = suppress peaking in first and last sample
+	  // -1 = suppress peaking in first sample only (or other negative number)
+	  // -2 = suppress peaking in last sample only:	
+	  if( fSuppressFirstLast != 0 ){
+	    bool peakfirst = iSampMin == 0;
+	    bool peaklast = iSampMin+1 == fN_MPD_TIME_SAMP;
+	    
+	    if( peakfirst ){
+	      if( fSuppressFirstLast > 0 || fSuppressFirstLast != -2 ){
+		fKeepStrip[fNstrips_hit] = false;
+	      }
+	    } else if( peaklast ){
+	      if( fSuppressFirstLast > 0 || fSuppressFirstLast == -2 ){
+		fKeepStrip[fNstrips_hit] = false;
+	      }
+	    }
+	  }
+	  
+
+	  //if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
+	  //  fKeepStrip[fNstrips_hit] = false;
+	  //}
+
+	  //std::cout << "axis, Int_t(axis) = " << axis << ", " << Int_t(axis) << std::endl;
+	  //fStripAxis.push_back( Int_t(axis) );
+	  // fADCsamples.push_back( ADCtemp ); //pedestal-subtracted
+	  // fRawADCsamples.push_back( rawADCtemp ); //Raw
+	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	    fADCsamples[fNstrips_hit][isamp] = ADCtemp[isamp];
+	    fRawADCsamples[fNstrips_hit][isamp] = rawADCtemp[isamp];
+	    
+	    //fADCsamples1D.push_back( ADCtemp[isamp] );
+	    //fRawADCsamples1D.push_back( rawADCtemp[isamp] );
+	    fADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = ADCtemp[isamp];
+	    fRawADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = rawADCtemp[isamp];
+
+	    if( fKeepStrip[fNstrips_hit] && hADCfrac_vs_timesample_allstrips != NULL ){
+	      hADCfrac_vs_timesample_allstrips->Fill( isamp, ADCtemp[isamp]/ADCsum_temp );
+	    }
+	  }
+	  //fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
+	  fStripTrackIndex[fNstrips_hit] = -1;
+	  fStripOnTrack[fNstrips_hit] = 0;
+
+	  //Variables used for negative signal studies
+	  fStripIsNeg[fNstrips_hit] = 1;
+	  fStripIsNegU[fNstrips_hit] = (axis == SBSGEM::kUaxis) ? 1 : 0;
+	  fStripIsNegV[fNstrips_hit] = (axis == SBSGEM::kVaxis) ? 1 : 0;
+	  fStripIsNegOnTrack[fNstrips_hit] = 0;
+	  fStripIsNegOnTrackU[fNstrips_hit] = 0;
+	  fStripIsNegOnTrackV[fNstrips_hit] = 0;
+
+	  //These are used for saving numbers to a text file for event displays
+	  fStripEvent[fNstrips_hit] = evdata.GetEvNum();
+	  fStripMPD[fNstrips_hit] = it->mpd_id;
+	  fStripADC_ID[fNstrips_hit] = it->adc_id;
+	  //Variables used for negative signal studies
+	  
+
+	  //	  fKeepStrip.push_back( true ); //keep all strips by default
+	  
+	  
+	  //	  fADCmax.push_back( maxADC );
+	  fADCmax[fNstrips_hit] = minADC;    //Use minADC instead for negative strips
+	  //	  fTmean.push_back( Tsum/ADCsum_temp );
+	  fTmean[fNstrips_hit] = Tmean_temp;
+	  //  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
+	  fTsigma[fNstrips_hit] = Tsigma_temp;
+	  //fTcorr.push_back( fTmean.back() ); //don't apply any corrections for now
+
+	  fStripTSchi2[fNstrips_hit] = StripTSchi2(fNstrips_hit);
+
+	  if( fUseTSchi2cut && fStripTSchi2[fNstrips_hit] > fStripTSchi2Cut ){
+	    fKeepStrip[fNstrips_hit] = false;
+	  }
+	  
+	  fStripTdiff[fNstrips_hit] = -1000.; //This will become meaningful only at the clustering stage
+	  fStripCorrCoeff[fNstrips_hit] = -1000.; //This will become meaningful only at the clustering stage
+	  fTcorr[fNstrips_hit] = fTmean[fNstrips_hit];
+
+	  //fStripTfit[fNstrips_hit] = FitStripTime( fNstrips_hit, rmstemp*2.45 );
+	  fStripTfit[fNstrips_hit] = fTmean[fNstrips_hit];
+
+	  fStrip_ENABLE_CM[fNstrips_hit] = CM_ENABLED;
+	  fStrip_CM_GOOD[fNstrips_hit] = !CM_OUT_OF_RANGE;
+	  fStrip_BUILD_ALL_SAMPLES[fNstrips_hit] = BUILD_ALL_SAMPLES;
+	  
+	  //  fADCsums.push_back( ADCsum_temp ); //sum of all (pedestal-subtracted) samples
+	  fADCsums[fNstrips_hit] = ADCsum_temp;
+	  
+	  //  fStripADCavg.push_back( ADCsum_temp/double(fN_MPD_TIME_SAMP) );
+	  fStripADCavg[fNstrips_hit] = ADCsum_temp/double(fN_MPD_TIME_SAMP);
+	  
+	  UInt_t isU = (axis == SBSGEM::kUaxis) ? 1 : 0;
+	  UInt_t isV = (axis == SBSGEM::kVaxis) ? 1 : 0;
+	  //	  fStripIsU.push_back( isU );
+	  //      fStripIsV.push_back( isV );
+	  fStripIsU[fNstrips_hit] = isU;
+	  fStripIsV[fNstrips_hit] = isV;
+
+	  fStripUonTrack[fNstrips_hit] = 0;
+	  fStripVonTrack[fNstrips_hit] = 0;
+	  
+	  fNstrips_hitU_neg += isU;
+	  fNstrips_hitV_neg += isV;
+	  
+	  //	  if( axis == SBSGEM::kUaxis ) fUstripIndex[strip] = fNstrips_hit;
+	  //      if( axis == SBSGEM::kVaxis ) fVstripIndex[strip] = fNstrips_hit;
+
+	  //std::cout << "starting pedestal histograms..." << std::endl;
+
+	  if( fKeepStrip[fNstrips_hit] ){
+	    fNstrips_keep++;
+	    fNstrips_keepU += isU;
+	    fNstrips_keepV += isV;
+	    if( fADCmax[fNstrips_hit] >= fThresholdSample && fADCsums[fNstrips_hit] >= fThresholdStripSum ){
+	      fNstrips_keep_lmax++;
+	      fNstrips_keep_lmaxU += isU;
+	      fNstrips_keep_lmaxV += isV;
+	    }
+	    
+	  }
+	  
+	  
+	  fNstrips_hit++;
+	  fNstrips_hit_neg++;
+
+	  
+	  
+
+	}// end loop over negative zero suppression for full readout events
+
+      } //end loop over strips on this APV card	
+    } //end if( nsamp > 0 )
+  
     apvcounter++;
   } //end loop on decode map entries for this module
 
@@ -1822,11 +2063,14 @@ void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_w
   // find_clusters_1D; i.e., the peak is required to be within |peak position - constraint center| <= constraint width
   find_clusters_1D(SBSGEM::kUaxis, ucenter, (umax-umin)/2.0 ); //U clusters
   find_clusters_1D(SBSGEM::kVaxis, vcenter, (vmax-vmin)/2.0 );  //V clusters
-
+  
   //Now make 2D clusters
   
   fill_2D_hit_arrays();
 }
+
+
+
 
 void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint_center, Double_t constraint_width ){
 
@@ -1851,8 +2095,12 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   std::vector<sbsgemcluster_t> &clusters = (axis == SBSGEM::kUaxis ) ? fUclusters : fVclusters;
 
   UInt_t &nclust = ( axis == SBSGEM::kUaxis ) ? fNclustU : fNclustV; 
+  UInt_t &nclust_pos = ( axis == SBSGEM::kUaxis ) ? fNclustU_pos : fNclustV_pos; 
+  UInt_t &nclust_neg = ( axis == SBSGEM::kUaxis ) ? fNclustU_neg : fNclustV_neg; 
 
   nclust = 0;
+  nclust_pos = 0;
+  nclust_neg = 0;
 
   clusters.clear();
   
@@ -1875,6 +2123,10 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
   std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently:
   std::map<UShort_t, Double_t> pedrms_strip;
+
+  std::set<UShort_t> striplist_neg;  //same as above but for negative strips
+  std::map<UShort_t, UInt_t> hitindex_neg;
+  std::map<UShort_t, Double_t> pedrms_strip_neg;
   
   for( int ihit=0; ihit<fNstrips_hit; ihit++ ){
     if( fAxis[ihit] == axis && fKeepStrip[ihit] ){
@@ -1887,6 +2139,19 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 	  pedrms_strip[fStrip[ihit]] = fPedRMSU[fStrip[ihit]];
 	} else {
 	  pedrms_strip[fStrip[ihit]] = fPedRMSV[fStrip[ihit]];
+	}
+      }
+    }
+    //Also add strips for negative signal clustering if fNegSignalStudy is true
+    if( fAxis[ihit] == axis && fStripIsNeg[ihit] && fStrip_BUILD_ALL_SAMPLES[ihit] && !fStrip_ENABLE_CM[ihit] && fStrip_CM_GOOD[ihit] && fNegSignalStudy){
+      bool newstrip = (striplist_neg.insert( fStrip[ihit] ) ).second;
+      
+      if( newstrip ){ //should always be true:
+	hitindex_neg[fStrip[ihit]] = ihit;
+	if( axis == SBSGEM::kUaxis ){
+	  pedrms_strip_neg[fStrip[ihit]] = fPedRMSU[fStrip[ihit]];
+	} else {
+	  pedrms_strip_neg[fStrip[ihit]] = fPedRMSV[fStrip[ihit]];
 	}
       }
     }
@@ -2086,7 +2351,10 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       clusttemp.ADCsamples.resize(fN_MPD_TIME_SAMP);
       clusttemp.stripADCsum.clear();
       clusttemp.hitindex.clear();
-      
+      clusttemp.rawstrip = fStripRaw[hitindex[stripmax]];
+      clusttemp.rawMPD = fStripMPD[hitindex[stripmax]];
+      clusttemp.rawAPV = fStripADC_ID[hitindex[stripmax]];
+
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){ //initialize cluster-summed ADC samples to zero:
 	clusttemp.ADCsamples[isamp] = 0.0;
       }
@@ -2145,6 +2413,9 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       //initialize "keep" flag for all 1D clusters to true:
       clusttemp.keep = true;
       
+      clusttemp.isneg = false; //This is used for negative strip analysis
+      clusttemp.isnegontrack = false; //This is used for negative strip analysis
+
       // In the standalone we don't apply an independent threshold on the cluster sum in the context of 1D cluster-finding:
       // if( sumADC >= fThresholdClusterSum ){
       // if( axis == SBSGEM::kVaxis ){
@@ -2155,9 +2426,11 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       // 	fNclustU++;
       // }
 
+
       //Hopefully this works correctly:
       clusters[nclust] = clusttemp;
       nclust++;
+      nclust_pos++;
       
 
 	// std::cout << "found cluster, (axis, istripmax, nstrips, ADCsum, hit pos (mm) )=(" << axis << ", " << clusttemp.istripmax << ", "
@@ -2168,13 +2441,316 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     } //Check if peak is inside track search region constraint
   } //end loop on local maxima
 
-  clusters.resize(nclust); //just to make sure no pathological behavior later on
+  //clusters.resize(nclust); //just to make sure no pathological behavior later on
 
   //std::cout << "number of clusters found = " << nclust << std::endl;
   
   filter_1Dhits(SBSGEM::kUaxis);
   filter_1Dhits(SBSGEM::kVaxis);
+
+
+  ////// Below is an exact copy of the parts above but clusters negative strips instead. This works by adding -1 factors
+  ////// whenever we need the ADC value. Then at the end when saving the cluster information we flip the ADC back 
+  ////// negative again. 
+  localmaxima.clear();
+  islocalmax.clear();
+  
+  //Do clustering again but for negative strips
+  for( std::set<UShort_t>::iterator i=striplist_neg.begin(); i != striplist_neg.end(); ++i ){
+    int strip = *i;
+    //int hitidx = hitindex_neg[strip];
+    islocalmax[strip] = false;
+
+    double sumstrip = -1*fADCsums[hitindex_neg[strip]]; //Add -1 factor
+    double sumleft = 0.0;
+    double sumright = 0.0;
+    
+    
+    if( striplist_neg.find( strip - 1 ) != striplist_neg.end() ){
+      sumleft = -1*fADCsums[hitindex_neg[strip-1]]; //if strip - 1 is found in strip list, hitindex_neg is guaranteed to have been initialized above
+    }
+    if( striplist_neg.find( strip + 1 ) != striplist_neg.end() ){
+      sumright = -1*fADCsums[hitindex_neg[strip+1]];
+    }
+
+    //apply additional thresholds on max. sample and strip sum for local maxima:
+    //If a strip is not a local max, the threshold is just 5sigma above the noise 
+    //from decoding
+    //-1 factor added in if statuement
+    if( sumstrip >= sumleft && sumstrip >= sumright && 
+	sumstrip >= fThresholdStripSum &&
+	-1*fADCmax[hitindex_neg[strip]] >= fThresholdSample ){ //new local max:
+      islocalmax[strip] = true;
+      localmaxima.insert( strip );      
+    } 
+  } // end loop over list of strips along this axis:
+
+  //  cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
+  
+  peakstoerase.clear(); 
+
+  //now calculate "prominence" for all peaks and erase "insignificant" peaks:
+
+  for( std::set<UShort_t>::iterator i=localmaxima.begin(); i != localmaxima.end(); ++i ){
+    int stripmax = *i;
+
+    //Added -1 factor
+    double ADCmax = -1*fADCsums[hitindex_neg[stripmax]];
+    double prominence = -1*ADCmax;
+
+    int striplo = stripmax, striphi = stripmax;
+    double ADCminright=ADCmax, ADCminleft=ADCmax;
+
+    bool higherpeakright=false,higherpeakleft=false;
+    int peakright = -1, peakleft = -1;
+
+    while( striplist_neg.find( striphi+1 ) != striplist_neg.end() ){
+      striphi++;
+
+      Double_t ADCtest = -1*fADCsums[hitindex_neg[striphi]]; //Added -1 factor
+      
+      if( ADCtest < ADCminright && !higherpeakright ){ //as long as we haven't yet found a higher peak to the right, this is the lowest point between the current maximum and the next higher peak to the right:
+	ADCminright = ADCtest;
+      }
+
+      if( islocalmax[striphi] && ADCtest > ADCmax ){ //then this peak is in a contiguous group with another higher peak to the right:
+	higherpeakright = true;
+	peakright = striphi;
+      }
+    }
+
+    while( striplist_neg.find(striplo-1) != striplist_neg.end() ){
+      striplo--;
+      Double_t ADCtest = -1*fADCsums[hitindex_neg[striplo]]; //Added -q factor
+      if( ADCtest < ADCminleft && !higherpeakleft ){ //as long as we haven't yet found a higher peak to the left, this is the lowest point between the current maximum and the next higher peak to the left:
+	ADCminleft = ADCtest;
+      }
+
+      if( islocalmax[striplo] && ADCtest > ADCmax ){ //then this peak is in a contiguous group with another higher peak to the left:
+	higherpeakleft = true;
+	peakleft = striplo;
+      }
+    }
+
+    //    double sigma_sum = sqrt( double(fN_MPD_TIME_SAMP) )*fZeroSuppressRMS; //~25-50 ADC
+
+    // the above calculation is not consistent with the intended usages of the above variables.
+    // We should instead use the pedestal RMS value for the strip in question. The strip RMS values
+    // represent the RMS of the AVERAGE of the samples. So the prominence threshold should be expressed in terms of the same thing to be consistent:
+    double sigma_sum = double(fN_MPD_TIME_SAMP)*pedrms_strip_neg[stripmax]; //Typically 60-70 ADC. Since pedrms_strip represents the rms of the sum of the ADC samples divided by the number of samples, to get the RMS of the sum, we need only multiply by the number of samples.
+    //A 5-sigma threshold on this quantity would typically be about 300-350 ADC.
+    
+    bool peak_close = false;
+    if( !higherpeakleft ) ADCminleft = 0.0;
+    if( !higherpeakright ) ADCminright = 0.0;
+
+    if( higherpeakright || higherpeakleft ){ //this peak is contiguous with higher peaks on either the left or right or both:
+      prominence = ADCmax - std::max( ADCminleft, ADCminright ); //subtract the higher of the two valleys to get the prominence
+
+      if( higherpeakleft && std::abs( peakleft - stripmax ) <= 2*maxsep ) peak_close = true;
+      if( higherpeakright && std::abs( peakright - stripmax ) <= 2*maxsep ) peak_close = true;
+
+      if( peak_close && (prominence < fThresh_2ndMax_nsigma * sigma_sum ||
+			 prominence/ADCmax < fThresh_2ndMax_fraction ) ){
+	peakstoerase.push_back( stripmax );
+      }
+    }
+  }
+
+  //Erase "insignificant" peaks (those in contiguous grouping with higher peak with prominence below thresholds):
+  for(int ipeak : peakstoerase){
+    localmaxima.erase( ipeak );
+    islocalmax[ipeak] = false;
+  }
+  
+
+  //cout << "After peak erasing, n local maxima = " << localmaxima.size() << endl;
+  //for speed/efficiency, resize the cluster array to the theoretical maximum
+  //and use operator[] rather than push_back:
+  //The clusters array will have negative and positive clusters. So we add the 
+  //maximum negative clusters (localmaxima.size()) with the positive clusters
+  //found earlier (nclust).
+  clusters.resize( localmaxima.size() + nclust);
+  
+  //Cluster formation and cluster splitting from remaining local maxima:
+  for( auto i = localmaxima.begin(); i != localmaxima.end(); ++i ){
+    int stripmax = *i;
+    int striplo = stripmax;
+    int striphi = stripmax;
+    double ADCmax = -1*fADCsums[hitindex_neg[stripmax]]; //added -1 factor
+    
+    bool found_neighbor_low = true;
+    
+    //while( striplist_neg.find( striplo-1 ) != striplist_neg.end() &&
+    //	   stripmax - striplo < maxsep ){
+    while( found_neighbor_low ){
+      
+      found_neighbor_low = striplist_neg.find( striplo - 1 ) != striplist_neg.end() && stripmax - striplo < maxsep;
+
+      if( found_neighbor_low && fUseStripTimingCuts ){
+	//check time difference and correlation coefficient of the candidate strip
+	//with the max strip:
+	double Tdiff = fTmean[hitindex_neg[striplo-1]] - fTmean[hitindex_neg[stripmax]];
+	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_low = false;
+	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex_neg[striplo-1]], fADCsamples[hitindex_neg[stripmax]] );
+	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_low = false;
+      }
+
+      //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
+      //fails the cuts, stop growing the cluster in this direction
+      
+      if( found_neighbor_low ) striplo--;
+    }
+
+    // while( striplist_neg.find( striphi+1 ) != striplist_neg.end() &&
+    // 	   striphi - stripmax < maxsep ){
+    //   striphi++;
+    // }
+
+    bool found_neighbor_high = true;
+    
+    while( found_neighbor_high ){
+      
+      found_neighbor_high = striplist_neg.find( striphi + 1 ) != striplist_neg.end() && striphi - stripmax < maxsep;
+
+      if( found_neighbor_high && fUseStripTimingCuts ){
+	//check time difference and correlation coefficient of the candidate strip
+	//with the max strip:
+	double Tdiff = fTmean[hitindex_neg[striphi+1]] - fTmean[hitindex_neg[stripmax]];
+	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_high = false;
+	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex_neg[striphi+1]], fADCsamples[hitindex_neg[stripmax]] );
+	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_high = false;
+      }
+
+      //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
+      //fails the cuts, stop growing the cluster in this direction
+      
+      if( found_neighbor_high ) striphi++;
+    }
+    
+    int nstrips = striphi-striplo+1;
+
+    double sumx = 0.0, sumx2 = 0.0, sumADC = 0.0, sumt = 0.0, sumt2 = 0.0;
+    double sumwx = 0.0;
+
+    map<int,double> splitfraction;
+    vector<double> stripADCsum(nstrips);
+
+    double maxpos = (stripmax + 0.5 - 0.5*Nstrips) * pitch + offset;
+
+    //If peak position falls inside the "track search region" constraint, add a new cluster: 
+    if( fabs( maxpos - constraint_center ) <= constraint_width ){
+      
+      //create a cluster, but don't add it to the 1D cluster array unless it passes the track search region constraint:
+      sbsgemcluster_t clusttemp;
+      clusttemp.nstrips = nstrips;
+      clusttemp.istriplo = striplo;
+      clusttemp.istriphi = striphi;
+      clusttemp.istripmax = stripmax;
+      clusttemp.ADCsamples.resize(fN_MPD_TIME_SAMP);
+      clusttemp.stripADCsum.clear();
+      clusttemp.hitindex.clear();
+      clusttemp.rawstrip = fStripRaw[hitindex_neg[stripmax]];
+      clusttemp.rawMPD = fStripMPD[hitindex_neg[stripmax]];
+      clusttemp.rawAPV = fStripADC_ID[hitindex_neg[stripmax]];
+      
+      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){ //initialize cluster-summed ADC samples to zero:
+	clusttemp.ADCsamples[isamp] = 0.0;
+      }
+      
+      for( int istrip=striplo; istrip<=striphi; istrip++ ){
+	//int nmax_strip = 1;
+	double sumweight = ADCmax/(1.0 + pow( (stripmax-istrip)*pitch/fSigma_hitshape, 2 ) );
+	double maxweight = sumweight;
+	
+	for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
+	  if( localmaxima.find( jstrip ) != localmaxima.end() && jstrip != stripmax ){
+	    sumweight += -1*fADCsums[hitindex_neg[jstrip]]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) ); //Added -1 factor
+	  }
+	}
+   
+	splitfraction[istrip] = maxweight/sumweight;
+	
+	double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips
+	double ADCstrip = fADCsums[hitindex_neg[istrip]] * splitfraction[istrip];
+	double tstrip = fTmean[hitindex_neg[istrip]];
+	
+	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	  //Do not add -1 factor. We are now saving the negative cluster information
+	  clusttemp.ADCsamples[isamp] += fADCsamples[hitindex_neg[istrip]][isamp]*splitfraction[istrip]; 
+	}
+
+	clusttemp.stripADCsum.push_back( ADCstrip );
+
+	clusttemp.hitindex.push_back( hitindex_neg[istrip] ); //do we use this anywhere? Yes, it is good to keep track of this if we want to access raw strip info later on 
+	
+	sumADC += ADCstrip;
+	
+	//The variables below do not change if the ADC is negative or positive so we leave them alone
+	if( std::abs( istrip - stripmax ) <= std::max(UShort_t(1),std::min(maxsepcoord,maxsep)) ){ 
+	  sumx += hitpos * ADCstrip;
+	  sumx2 += pow(hitpos,2) * ADCstrip;
+	  sumwx += ADCstrip;
+	  //use same strip cuts for cluster timing determination as for position reconstruction: may revisit later:
+	  sumt += tstrip * ADCstrip;
+	  sumt2 += pow(tstrip,2) * ADCstrip;
+	} 
+      }
+
+      clusttemp.isampmax = 0; //figure out time sample in which peak of cluster-summed ADC values occurs:
+      double minADC = 10000;
+      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	if( isamp == 0 || clusttemp.ADCsamples[isamp] < minADC ){
+	  minADC = clusttemp.ADCsamples[isamp];
+	  clusttemp.isampmax = isamp;
+	}
+      }
+      
+      clusttemp.hitpos_mean = sumx / sumwx;
+      clusttemp.hitpos_sigma = sqrt( sumx2/sumwx - pow(clusttemp.hitpos_mean,2) );
+      clusttemp.clusterADCsum = sumADC;
+      clusttemp.t_mean = sumt / sumwx;
+      clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
+      
+      //initialize "keep" flag to false for negative strips:
+      clusttemp.keep = false;
+      
+      clusttemp.isneg = true; //This is used for negative strip analysis
+      clusttemp.isnegontrack = false; //This is used for negative strip analysis      
+
+      // In the standalone we don't apply an independent threshold on the cluster sum in the context of 1D cluster-finding:
+      // if( sumADC >= fThresholdClusterSum ){
+      // if( axis == SBSGEM::kVaxis ){
+      // 	fVclusters.push_back( clusttemp );
+      // 	fNclustV++;
+      // } else {
+      // 	fUclusters.push_back( clusttemp );
+      // 	fNclustU++;
+      // }
+
+      
+      //Hopefully this works correctly:
+      clusters[nclust] = clusttemp;
+      nclust++;
+      nclust_neg++;      
+
+	// std::cout << "found cluster, (axis, istripmax, nstrips, ADCsum, hit pos (mm) )=(" << axis << ", " << clusttemp.istripmax << ", "
+	// 	  << clusttemp.nstrips << ", " << clusttemp.clusterADCsum
+	// 	  << ", " << clusttemp.hitpos_mean*1000.0 << ")" << std::endl;
+	
+      //}
+    } //Check if peak is inside track search region constraint
+  } //end loop on local maxima
+  
+  clusters.resize(nclust); //just to make sure no pathological behavior later on
+ 
+
 }
+
+
+
+
+
 
 void SBSGEMModule::fill_2D_hit_arrays(){
   //Clear out the 2D hit array to get rid of any leftover junk from prior events:
@@ -2964,14 +3540,14 @@ Int_t SBSGEMModule::GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert )
 }
 
 void SBSGEMModule::filter_1Dhits(SBSGEM::GEMaxis_t axis){
-
+  
   if( fFiltering_flag1D < 0 ) return; //flag < 0 means don't filter 1D clusters at all
   // flag = 0 means use a "soft" filter (only reject if at least one other cluster passed)
   // flag > 0 means use a "hard" filter (reject failing clusters no matter what)
   //First filter on cluster ADC sum:
   int ngood = 0;
   int nclust = (axis == SBSGEM::kUaxis) ? fNclustU : fNclustV; 
-
+  
   std::vector<sbsgemcluster_t> &clusters =  (axis == SBSGEM::kUaxis) ? fUclusters : fVclusters;
 
   bool passed[nclust];
