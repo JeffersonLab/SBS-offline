@@ -101,7 +101,7 @@ void SBSCalorimeterCluster::AddElement(SBSElement* block) {
 }
 
 //_____________________________________________________________
-void SBSCalorimeterCluster::ClearEvent() {
+void SBSCalorimeterCluster::Clear( Option_t* opt ) {
     fMult=0;fX=fY=fE=0.;
     fEblk=0;
     fAtime=0;

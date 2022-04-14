@@ -162,6 +162,10 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCorrectCommonMode = false;
   fCorrectCommonModeMinStrips = 20;
   fCorrectCommonMode_Nsigma = 5.0;
+
+  fCommonModeBinWidth_Nsigma = 2.0; //Bin width +/- 2 sigma
+  fCommonModeScanRange_Nsigma = 4.0; //Scan window +/- 4 sigma
+  fCommonModeStepSize_Nsigma = 0.2; //sigma/5 for step size:
   
   return;
 }
@@ -184,11 +188,9 @@ SBSGEMModule::~SBSGEMModule() {
   //     delete fStrip;
   //     fStrip = NULL;
   // }
-  if( fStripTimeFunc ){
-    delete fStripTimeFunc;
-  }
 
-  return;
+  delete fStripTimeFunc;
+
 }
 
 Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
@@ -311,6 +313,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "correct_common_mode", &correctcommonmode, kInt, 0, 1, 1 },
     { "correct_common_mode_minstrips", &fCorrectCommonModeMinStrips, kUInt, 0, 1, 1 },
     { "correct_common_mode_nsigma", &fCorrectCommonMode_Nsigma, kDouble, 0, 1, 1 },
+    { "commonmode_binwidth_nsigma", &fCommonModeBinWidth_Nsigma, kDouble, 0, 1, 1 },
+    { "commonmode_scanrange_nsigma", &fCommonModeScanRange_Nsigma, kDouble, 0, 1, 1 },
+    { "commonmode_stepsize_nsigma", &fCommonModeStepSize_Nsigma, kDouble, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -402,6 +407,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     thisdata.pos    = fChanMapData[6+mapline*fMPDMAP_ROW_SIZE];
     thisdata.invert = fChanMapData[7+mapline*fMPDMAP_ROW_SIZE];
     thisdata.axis   = fChanMapData[8+mapline*fMPDMAP_ROW_SIZE];
+    thisdata.index  = mapline;
 
     //Populate relevant quantities mapped by strip index:
     for( int ich=0; ich<fN_APV25_CHAN; ich++ ){
@@ -916,6 +922,9 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
 void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more things too
   // Modify this a little bit so we only clear out the "hit counters", not necessarily the
   // arrays themselves, to make the decoding more efficient:
+
+  THaSubDetector::Clear(opt);
+  
   fNstrips_hit = 0;
   fNstrips_hitU = 0;
   fNstrips_hitV = 0;
@@ -972,8 +981,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   // fTmean.clear();
   // fTsigma.clear();
   // fTcorr.clear();
-  
-  return;
+
+  THaSubDetector::Clear(opt);
 }
 
 Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
@@ -1311,7 +1320,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  }
 	}
 	
-	// second loop over the hits to calculate and apply common-mode correction (sorting method)
+	// second loop over the hits to calculate and apply common-mode correction (sorting, Danning, or histogramming method)
 	//if( !fPedestalMode ){ //need to calculate common mode:
 	if( fMakeCommonModePlots || !fPedestalMode ){ // calculate both ways:
 	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
@@ -1322,13 +1331,39 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    // CM_OUT_OF_RANGE is set? 
 	  
 	    if( fMakeCommonModePlots ){
+	      //double cm_danning = GetCommonMode( isamp, 1, *it );
+	      //experimental: Test histogramming method:
 	      double cm_danning = GetCommonMode( isamp, 1, *it );
+	      double cm_histo= GetCommonMode( isamp, 2, *it );
+	      //if( !CM_OUT_OF_RANGE ) { // this is a hack so I only get debug printouts for good (full readout) events
+	      //cm_histo = GetCommonMode( isamp, 2, *it );
+	      // }	else {
+	      //cm_histo = cm_danning;
+	      //}
 	      double cm_sorting = GetCommonMode( isamp, 0, *it );
 
 	      //std::cout << "cm danning, sorting = " << cm_danning << ", " << cm_sorting << std::endl;
 	      
-	      if( !fPedestalMode ) commonMode[isamp] = fCommonModeFlag == 0 ? cm_sorting : cm_danning;
+	      if( !fPedestalMode ){
+		switch( fCommonModeFlag ){
+		case 2:
+		  commonMode[isamp] = cm_histo;
+		  break;
+		case 1:
+		default:
+		  commonMode[isamp] = cm_danning;
+		  break;
+		case 0:
+		  commonMode[isamp] = cm_sorting;
+		  break;
+		}
+	      }
 
+		  
+	      //commonMode[isamp] = fCommonModeFlag == 0 ? cm_sorting : cm_danning;
+
+	      //commonMode[isamp] = cm_histo;
+	      
 	      double cm_mean;
 	      
 	      UInt_t iAPV = it->pos;
@@ -1382,7 +1417,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// 1) The online calculated CM must be more than some number of std. deviations below the "expected" CM according to the rolling average
 	// 2) The number of strips with ADC values within some number of std. deviations of the "expected" CM must exceed some threshold to allow us to
 	//    to obtain a new estimate of the "true" common-mode for that event
-	// If both 1) and 2) are satisfied,
+	// If both 1) and 2) are satisfied, then we will attempt a new common-mode calculation using the strips that passed zero suppression using the online common-mode calculation.
 
 	//First loop over the samples: 
 	
@@ -1406,11 +1441,41 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    // Try to correct the common-mode. To calculate the correction requires us to loop on all the strips on this APV that passed
 	    // online zero suppression.
 	    // The simplest approach is just to take a simple average of all the strips within +/- some number of standard deviations of the
-	    // *EXPECTED* common-mode mean, but this is a biased approach. We can also implement some form of sorting or "Danning-like" approach for calculating
-	    // the common-mode correction.
-	    UInt_t NstripsInRange = 0;
-	    
-	    
+	    // *EXPECTED* common-mode mean, but this is a biased approach.
+	   
+	    UInt_t NstripsInRange = 0; 
+
+	    //Loop on all strips on this APV and calculate raw ADC values from 
+	    for(int istrip=0; istrip<nstrips; ++istrip ){
+	      int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
+
+	      int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
+	      UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+
+	      Int_t ADCtemp = Int_t( decoded_rawADC );
+
+	      rawStrip[iraw] = strip;
+	      Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
+
+	      // double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+	      
+	      //here the raw ADC value is the pedestal and common-mode subtracted ADC value: 
+	      //The pedestal has already been subtracted in this case, but we want to add back the common-mode:
+	      rawADC[iraw] = ADCtemp + CM_meas; //Add back the common-mode (but not the pedestal):
+	      pedsubADC[iraw] = double( rawADC[iraw] ); //this is the one that goes into the common-mode calculation
+	      if( fabs( pedsubADC[iraw] - CM_expect_mean ) <= fCorrectCommonMode_Nsigma * CM_expect_rms ) NstripsInRange++;
+	    }
+
+	    if( NstripsInRange >= fCommonModeMinStripsInRange ){
+	      //Correction to be ADDED to ADC value to get corrected value:
+	      CommonModeCorrection[isamp] = CM_meas -  GetCommonMode( isamp, fCommonModeFlag, *it, nstrips ); 
+	      // Uncorrected ADC value = Raw ADC - pedestal - CM_meas
+	      // Corrected ADC value = Raw ADC - pedestal - CM_corrected
+	      // Corrected ADC value = Uncorrected ADC value - CM_corrected + CM_meas = Uncorrected ADC value + CommonModeCorrection.
+	      // Therefore, when common-mode is corrected this way, 
+	    } else {
+	      CommonModeCorrection[isamp] = 0.0; //To be added to ADC value! 
+	    }
 	  }
 	  
 	}
@@ -1437,7 +1502,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    
 	    rawADC[iraw] = Int_t(ADC);
 	    pedsubADC[iraw] = double(ADC) - ped;
-	    commonModeSubtractedADC[iraw] = double(ADC) - ped;	    
+	    commonModeSubtractedADC[iraw] = double(ADC) - ped + CommonModeCorrection[isamp]; //common-mode correction will be zero unless a correction was calculated (see above)    
 	  }
 	}
       
@@ -3648,13 +3713,22 @@ void SBSGEMModule::filter_2Dhits(){
 
 }
 
-double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo ){
+//We'll overload this method with a different number of arguments to attempt the calculation for a variable number of strips:
+double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, UInt_t nhits ){
   if( isamp > fN_MPD_TIME_SAMP ) return 0;
 
+  //unsigned int index = apvinfo.index;
+  
   if( flag == 0 ){ //Sorting method: doesn't actually use the apv info: 
-    vector<double> sortedADCs(fN_APV25_CHAN);
-	    
-    for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+    vector<double> sortedADCs(nhits);
+
+    if( nhits < fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange ){
+      Error(Here("SBSGEMModule::GetCommonMode()"), "Sorting-method common-mode calculation requested with nhits %d less than minimum %d required", nhits, fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange );
+
+      exit(-1);
+    }
+    
+    for( int ihit=0; ihit<nhits; ihit++ ){
       int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	    
       sortedADCs[ihit] = fPedSubADC_APV[ iraw ];
     }
@@ -3666,16 +3740,104 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     int stripcount=0;
 
     
-    for( int k=fCommonModeNstripRejectLow; k<fN_APV25_CHAN-fCommonModeNstripRejectHigh; k++ ){
+    for( int k=fCommonModeNstripRejectLow; k<nhits-fCommonModeNstripRejectHigh; k++ ){
       cm_temp += sortedADCs[k];
       stripcount++;
     }
     return  cm_temp/double(stripcount);
-  } else { //Danning method: requires apv info for cm-mean and cm-rms values:
+  } else if( flag == 2 ) { //Histogramming method (experimental):
     int iAPV = apvinfo.pos;
     double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
     double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
 
+    //for now these are unused. Comment out to suppress compiler warning.
+    // double DBmean = cm_mean;
+    // double DBrms = cm_rms;
+    
+    // Not sure if we should update cm_mean and cm_rms in this context because then the logic can become somewhat circular/self-referential:
+    if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvinfo.index] >= std::min(UInt_t(100), fN_MPD_TIME_SAMP*fNeventsCommonModeLookBack ) ){
+      cm_mean = fCommonModeRollingAverage_by_APV[apvinfo.index];
+      cm_rms = fCommonModeRollingRMS_by_APV[apvinfo.index];
+    }
+
+    //bin width/stepsize = 8 with these settings:
+    double stepsize = cm_rms*fCommonModeStepSize_Nsigma; //Default is 0.2 = rms/5
+    double binwidth = cm_rms*fCommonModeBinWidth_Nsigma; //Default is +/- 2 sigma, bin width / step size = 20 with these settings
+
+    //this will actually include all ADCs within +/- (ScanRange + BinWidth) sigma of the mean since range is bin center +/- 1*RMS.
+    double scan_min = cm_mean - fCommonModeScanRange_Nsigma*cm_rms; 
+    double scan_max = cm_mean + fCommonModeScanRange_Nsigma*cm_rms;
+
+    int nbins= int( (scan_max - scan_min)/stepsize ); //Default = 8 * RMS / (rms/5) = 40 bins.
+
+    //NOTE: The largest number of bins that could contain any given sample is binwidth/stepsize = 20 with default settings:
+
+    //Construct std::vectors and explicitly zero-initialize them:
+    std::vector<double> bincounts(nbins,0);
+    std::vector<double> binADCsum(nbins,0.0);
+    std::vector<double> binADCsum2(nbins,0.0);
+    
+    int ibinmax=-1;
+    int maxcounts=0;
+    //Now loop on all the strips and fill the histogram: this is the version assuming full readout:
+    //for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+    for( int ihit=0; ihit<nhits; ihit++ ){
+      double ADC = fPedSubADC_APV[ isamp + fN_MPD_TIME_SAMP * ihit ];
+      //calculate the lowest bin containing this ADC value. 
+      int nearestbin = std::max(0,std::min(nbins-1, int(round( (ADC - scan_min)/stepsize ) ) ) );
+
+      int binlow = nearestbin;
+      int binhigh = nearestbin+1;
+      
+      while( binlow >= 0 && fabs( ADC - (scan_min + binlow*stepsize) ) <= binwidth ){
+	bincounts[binlow]++;
+	binADCsum[binlow] += ADC;
+	binADCsum2[binlow] += pow(ADC,2);
+
+	if( ibinmax < 0 || bincounts[binlow] > maxcounts ){
+	  ibinmax = binlow;
+	  maxcounts = bincounts[binlow];
+	}
+	binlow--;
+      }
+
+      while( binhigh < nbins && fabs( ADC - (scan_min + binhigh*stepsize) ) <= binwidth ){
+	bincounts[binhigh]++;
+	binADCsum[binhigh] += ADC;
+	binADCsum2[binhigh] += pow(ADC,2);
+	if( ibinmax < 0 || bincounts[binhigh] > maxcounts ){
+	  ibinmax = binhigh;
+	  maxcounts = bincounts[binhigh];
+	}
+	binhigh++;
+      }
+    }
+
+    
+    // for( int ibin=0; ibin<nbins; ibin++ ){
+    //   if( bincounts[ibin] > 0 ){
+    // 	double binAVG = binADCsum[ibin]/double(bincounts[ibin]);
+    // 	double binRMS = sqrt( binADCsum2[ibin]/double(bincounts[ibin])-pow(binAVG,2) );
+    //   }
+    // }
+    
+    if( ibinmax >= 0 && maxcounts >= fCommonModeMinStripsInRange ){
+      return binADCsum[ibinmax]/double(bincounts[ibinmax]);
+    } else { //Fall back on sorting method:
+      return GetCommonMode( isamp, 0, apvinfo );
+    }
+    
+  } else { //Danning method (default): requires apv info for cm-mean and cm-rms values:
+    int iAPV = apvinfo.pos;
+    double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
+    double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
+
+    // Not sure if we should update cm_mean and cm_rms in this context because then the logic can become somewhat circular/self-referential:
+    if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvinfo.index] >= std::min(UInt_t(100), fN_MPD_TIME_SAMP*fNeventsCommonModeLookBack ) ){
+      cm_mean = fCommonModeRollingAverage_by_APV[apvinfo.index];
+      cm_rms = fCommonModeRollingRMS_by_APV[apvinfo.index];
+    }
+    
     //TODO: allow to use a different parameter than the one used for
     // zero-suppression:
     double cm_min = cm_mean - fZeroSuppressRMS*cm_rms;
@@ -3683,12 +3845,12 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
 
     double cm_temp = 0.0;
     
-    //for now, hard-code 3 iterations:
     for( int iter=0; iter<fCommonModeNumIterations; iter++ ){
       int nstripsinrange=0;
       double sumADCinrange=0.0;
       //double sum2ADCinrange=0.0;
-      for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+      //for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
+      for( int ihit=0; ihit<nhits; ihit++ ){
 	int iraw=isamp + fN_MPD_TIME_SAMP * ihit;
 	
 	double ADCtemp = fPedSubADC_APV[iraw];
@@ -3870,11 +4032,13 @@ void SBSGEMModule::UpdateRollingCommonModeAverage( int iapv, double CM_sample ){
   
   double sum, sum2;
 
-  UInt_t pos = fMPDmap[iapv].pos;
-  UInt_t axis = fMPDmap[iapv].axis;
+  // For now "pos" and "axis" are unused. Comment out to suppress compiler warning:
+  // UInt_t pos = fMPDmap[iapv].pos;
+  // UInt_t axis = fMPDmap[iapv].axis;
 
-  double cm_mean_from_DB = (axis == SBSGEM::kUaxis) ? fCommonModeMeanU[pos] : fCommonModeMeanV[pos];
-  double cm_rms_from_DB = (axis == SBSGEM::kUaxis) ? fCommonModeRMSU[pos] : fCommonModeRMSV[pos];   
+  // For now these are unused. Comment out to suppress compiler warning:
+  // double cm_mean_from_DB = (axis == SBSGEM::kUaxis) ? fCommonModeMeanU[pos] : fCommonModeMeanV[pos];
+  // double cm_rms_from_DB = (axis == SBSGEM::kUaxis) ? fCommonModeRMSU[pos] : fCommonModeRMSV[pos];   
   
   //std::cout << "Updating rolling average common mode from full readout events for module " << GetName() << " iapv = " << iapv << std::endl;
   

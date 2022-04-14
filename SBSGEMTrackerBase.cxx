@@ -101,7 +101,11 @@ SBSGEMTrackerBase::~SBSGEMTrackerBase(){
 void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   //Also, when we construct the tracker, we want to clear out the modules:
   //fModules.clear(); we actually DON'T want to clear out the modules here, this gets called event-by-event
-  
+  fConstraintPoint_Front_IsInitialized = false;
+  fConstraintPoint_Back_IsInitialized = false;
+  fConstraintWidth_Front_IsInitialized = false;
+  fConstraintWidth_Back_IsInitialized = false;
+  fConstraintInitialized = false;
   
   fNtracks_found = 0;
   fNhitsOnTrack.clear();

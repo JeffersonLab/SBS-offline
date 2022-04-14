@@ -44,7 +44,7 @@ namespace Decoder {
 			Module::Init();
 				//    Config(0,25,6,16,128); // should be called by the user
 				fDebugFile=0;
-				Clear("");
+				Clear();
 				//    fName = "MPD Module (INFN MPD for GEM and more), use Config to dynamic config";
 				fName = "MPD Module";
 		}

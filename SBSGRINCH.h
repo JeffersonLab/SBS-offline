@@ -25,8 +25,8 @@ class SBSGRINCH : public SBSCherenkovDetector {
   
 public:
 
-  SBSGRINCH( const char* name, const char* description="", 
-	   THaApparatus* apparatus=NULL );
+  explicit SBSGRINCH( const char* name, const char* description="",
+	   THaApparatus* apparatus=nullptr );
   virtual ~SBSGRINCH();
   
   virtual void         Clear( Option_t* opt="" );

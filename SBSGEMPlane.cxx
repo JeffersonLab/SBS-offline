@@ -246,7 +246,7 @@ void    SBSGEMPlane::Clear( Option_t* opt){
   fadc_4.clear();
   fadc_5.clear();
   
-  return;
+  THaSubDetector::Clear(opt);
 }
 
 Int_t   SBSGEMPlane::Decode( const THaEvData& evdata ){

@@ -29,39 +29,39 @@ public:
   void Clear(); //clear out all the event-specific data structures
 
   //These can change event-by-event:
-  void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; }
-  void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
-  void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
-  void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
+  inline void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; fConstraintPoint_Front_IsInitialized = true; }
+  inline void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; fConstraintPoint_Back_IsInitialized = true; }
+  inline void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; fConstraintWidth_Front_IsInitialized = true; }
+  inline void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; fConstraintWidth_Back_IsInitialized = true; }
 
-  void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); }
-  void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); }
-  void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); }
-  void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); }
+  inline void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); fConstraintPoint_Front_IsInitialized = true; }
+  inline void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); fConstraintPoint_Back_IsInitialized = true; }
+  inline void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); fConstraintWidth_Front_IsInitialized = true; }
+  inline void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); fConstraintWidth_Back_IsInitialized = true; }
 
-  void SetPmin( double pmin ){ fPmin_track = pmin; }
-  void SetPmax( double pmax ){ fPmax_track = pmax; }
-  void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
+  inline void SetPmin( double pmin ){ fPmin_track = pmin; }
+  inline void SetPmax( double pmax ){ fPmax_track = pmax; }
+  inline void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
 
-  void SetXpTarmin( double xpmin ){ fxptarmin_track = xpmin; }
-  void SetXpTarmax( double xpmax ){ fxptarmax_track = xpmax; }
-  void SetXpTarRange( double xpmin, double xpmax ){ fxptarmin_track = xpmin; fxptarmax_track = xpmax; }
+  inline void SetXpTarmin( double xpmin ){ fxptarmin_track = xpmin; }
+  inline void SetXpTarmax( double xpmax ){ fxptarmax_track = xpmax; }
+  inline void SetXpTarRange( double xpmin, double xpmax ){ fxptarmin_track = xpmin; fxptarmax_track = xpmax; }
 
-  void SetYpTarmin( double ypmin ){ fyptarmin_track = ypmin; }
-  void SetYpTarmax( double ypmax ){ fyptarmax_track = ypmax; }
-  void SetYpTarRange( double ypmin, double ypmax ){ fyptarmin_track = ypmin; fyptarmax_track = ypmax; }
+  inline void SetYpTarmin( double ypmin ){ fyptarmin_track = ypmin; }
+  inline void SetYpTarmax( double ypmax ){ fyptarmax_track = ypmax; }
+  inline void SetYpTarRange( double ypmin, double ypmax ){ fyptarmin_track = ypmin; fyptarmax_track = ypmax; }
 
-  void SetYTarmin( double ymin ){ fytarmin_track = ymin; }
-  void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
-  void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
+  inline void SetYTarmin( double ymin ){ fytarmin_track = ymin; }
+  inline void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
+  inline void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
 
   bool CheckConstraint( double xtr, double ytr, double xptr, double yptr );
   
-  void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
+  inline void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
-  void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
+  inline void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
 
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -203,6 +203,12 @@ protected:
   TVector2 fConstraintSlope_Min; //Min and max slope along X and Y
   TVector2 fConstraintSlope_Max; //Min and max slope along X and Y
 
+  bool fConstraintPoint_Front_IsInitialized;
+  bool fConstraintPoint_Back_IsInitialized;
+  bool fConstraintWidth_Front_IsInitialized;
+  bool fConstraintWidth_Back_IsInitialized;
+  bool fConstraintInitialized;
+  
   //Optics-based constraints:
   double fPmin_track; //GeV
   double fPmax_track; //GeV

@@ -13,8 +13,10 @@
 
 class SBSBBShower : public SBSCalorimeter {
 public:
-  SBSBBShower( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+
+  explicit SBSBBShower( const char* name, const char* description = "",
+                        THaApparatus* a = nullptr);
+
   virtual ~SBSBBShower();
 
   // Standard apparatus re-implemented functions
@@ -25,22 +27,24 @@ public:
   virtual void   MakeCluster(Int_t nblk_size,SBSElement* blk);
   virtual void   MakeCluster(Int_t nblk_size);
   virtual void   AddToCluster(Int_t nc,SBSElement* blk);
-  virtual void MakeMainCluster();
-  virtual void ClearEvent();
+
+  virtual void MakeMainCluster(Int_t icl=0); 
+  virtual void Clear( Option_t* opt="" );
+
 
   Int_t GetRowMax() {return GetRow();}
   Int_t GetColMax() {return GetCol();}
 
   
-  Double_t EresMax() {return fEres;}
-  Double_t XresMax() {return fXres;}
-  Double_t YresMax() {return fYres;}
+  Double_t EresMax() const {return fEres;}
+  Double_t XresMax() const {return fXres;}
+  Double_t YresMax() const {return fYres;}
   
-  Double_t Eres(int i) {return fE_cl_res[i];}
-  Double_t Xres(int i) {return fX_cl_res[i];}
-  Double_t Yres(int i) {return fY_cl_res[i];}
+  Double_t Eres(int i) const {return fE_cl_res[i];}
+  Double_t Xres(int i) const {return fX_cl_res[i];}
+  Double_t Yres(int i) const {return fY_cl_res[i];}
 
-    SBSElement* GetElement(UInt_t i);
+  SBSElement* GetElement(UInt_t i);
     
   //two methods to set search region.
   void SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax);

@@ -74,12 +74,11 @@ typedef std::vector<SBSBlockSet> SBSBlockSetList;
 class SBSCalorimeter : public SBSGenericDetector {
 
 public:
-  SBSCalorimeter( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+  explicit SBSCalorimeter( const char* name, const char* description = "",
+      THaApparatus* a = nullptr);
   virtual ~SBSCalorimeter();
 
-  virtual void ClearEvent();
-  virtual void ClearOutputVariables();
+  virtual void Clear( Option_t* opt="" );
   virtual Int_t MakeGoodBlocks();
   virtual Int_t FindClusters();
 
@@ -123,6 +122,8 @@ protected:
   Int_t  fNclubr;       ///< Max number of row-blocks composing a cluster
   Int_t  fNclubc;       ///< Max number of col-blocks composing a cluster
 
+  Int_t fBestClusterIndex; //Index of best cluster in the array.
+  
   // Mapping (see also fDetMap)
 
   SBSCalBlocks fGoodBlocks; // < Good block structure for tree output
@@ -137,6 +138,7 @@ protected:
   std::vector<SBSCalorimeterCluster*> fClusters; // Cluster
 
   Double_t fEmin_clusSeed; //< Minimum energy to be the seed of a cluster
+  Double_t fEmin_clusTotal; //< Total energy threshold of a cluster
 
   Double_t    fEmin;         //< Minimum energy for a cluster center
   Double_t    fXmax_dis;         //< maximum X distance from a cluster center
@@ -156,6 +158,9 @@ protected:
 
   Double_t GetVVal(std::vector<Double_t> &v, UInt_t i = 0 );
   Int_t GetVVal(std::vector<Int_t> &v, UInt_t i = 0 );
+
+private:
+  void ClearOutputVariables();
 
   ClassDef(SBSCalorimeter,0)     //Generic shower detector class
 };

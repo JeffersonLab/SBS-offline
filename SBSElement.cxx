@@ -44,7 +44,7 @@ Bool_t SBSElement::HasADCData()
 
 ///////////////////////////////////////////////////////////////////////////////
 // Clear event from generic Element (with no data)
-void SBSElement::ClearEvent()
+void SBSElement::Clear( Option_t* opt )
 {
   fE = 0; // Reset calibrated energy for given event
   fStat = 0; // Reset status to 0, unseen

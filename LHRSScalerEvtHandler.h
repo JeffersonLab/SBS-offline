@@ -70,6 +70,7 @@ private:
    Double_t fDeltaTime;
    Double_t *dvarsFirst;
    UInt_t *dvars_prev_read;
+   Long64_t fPhysicsEventNumber;
    Int_t fNumBCMs;
    Int_t fbcm_Current_Threshold_Index;
    Double_t fbcm_Current_Threshold;
