@@ -33,6 +33,7 @@ struct mpdmap_t {
   UInt_t pos;
   UInt_t invert;
   UInt_t axis; //needed to add axis to the decode map
+  UInt_t index;
 };
 
 //Clustering results can be held in a simple C struct, as a cluster is just a collection of basic data types (not even arrays):
@@ -123,8 +124,8 @@ struct sbsgemcluster_t {  //1D clusters;
 class SBSGEMModule : public THaSubDetector {
  public:
 
-  SBSGEMModule( const char *name, const char *description = "",
-		THaDetectorBase* parent = 0 );
+  explicit SBSGEMModule( const char *name, const char *description = "",
+                         THaDetectorBase* parent = nullptr );
 
   virtual ~SBSGEMModule();
 
@@ -170,7 +171,7 @@ class SBSGEMModule : public THaSubDetector {
 
   void PrintPedestals( std::ofstream &dbfile_ped, std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
 
-  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
+  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, UInt_t nhits=128 ); //default to "sorting" method:
   
   void fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool max=false );
 
@@ -280,6 +281,9 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fCommonModeNstripRejectLow; //default = 28;
   Int_t fCommonModeNumIterations; //number of iterations for Danning Method: default = 3
   Int_t fCommonModeMinStripsInRange; //Minimum strips in range for Danning Method: default = 10;
+  Double_t fCommonModeBinWidth_Nsigma; //Bin width for "histogramming-method" common-mode calculation, in units of the RMS in a particular APV, default = 2
+  Double_t fCommonModeScanRange_Nsigma; //Scan range for common-mode histogramming method calculation, in units of RMS, +/- Nsigma about the mean, default = 4
+  Double_t fCommonModeStepSize_Nsigma; //Step size in units of RMS, default = 1/5:
 
   //same as in MPDModule: unavoidable to duplicate this definition unless someone smarter than I cam
   //can come up with a way to do so:

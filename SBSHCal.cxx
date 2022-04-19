@@ -114,11 +114,11 @@ Int_t SBSHCal::DefineVariables( EMode mode )
   return err;
 }
 
-void SBSHCal::ClearEvent()
+void SBSHCal::Clear( Option_t* opt )
 {
   fLEDBit = -1;
   fLEDCount = 0;
-  SBSCalorimeter::ClearEvent();
+  SBSCalorimeter::Clear(opt);
 }
 /*
  * Generic SBSHCal destructor

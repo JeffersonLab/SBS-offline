@@ -1005,7 +1005,8 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
       { 0 }
     };
     err = THaAnalysisObject::LoadDB(file, date, req_modules, prefix.c_str());
-    
+
+    if(err)return THaAnalysisObject::kInitError;
     
     //cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
     
@@ -1238,6 +1239,17 @@ int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
 {
   chan = h_chan%128;
   int n = (h_chan-chan)/128;
+
+  assert(mod<fInvGEMDetMap.at(detname).size());
+  assert(n<(fInvGEMDetMap.at(detname)[mod]).size());
+
+  // if( mod>fInvGEMDetMap.at(detname).size() ){
+  //   std::err << "ERROR: map size =  " << " for detector " << detname 
+  // 	     << " is smaller than module size =  " << mod << std:: endl;
+  //   //return -1;
+  // }else if( n>(fInvGEMDetMap.at(detname)[mod]).size() ){
+  //   return -1;
+  // }
   //if((fInvGEMDetMap.at(detname))[mod][n].chan_lo<=h_chan &&
   // hchan <= (fInvGEMDetMap.at(detname))[mod][n].chan_hi){
   crate = ((fInvGEMDetMap.at(detname))[mod][n]).crate;

@@ -72,9 +72,10 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
         {0}
     };
 
-    Int_t status = kInitError;
     err = LoadDB( file, date, request, fPrefix );
     fclose(file);
+    if(err)
+      return err;
 
     //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
     std::vector<std::string> planes = vsplit(planeconfig);
@@ -82,14 +83,9 @@ Int_t SBSGEMStand::ReadDatabase( const TDatime& date ){
             Error("", "[SBSGEMStand::ReadDatabase] No planes defined");
     }
 
-    for (std::vector<std::string>::iterator it = planes.begin() ; it != planes.end(); ++it){
-      fPlanes.push_back(new SBSGEMPlane( (*it).c_str(), (*it).c_str(), this, fIsMC));
+    for (const auto& name : planes ) {
+      fPlanes.push_back(new SBSGEMPlane( name.c_str(), name.c_str(), this, fIsMC));
     }
-
-    status = kOK;
-
-    if( status != kOK )
-        return status;
 
     fIsInit = kTRUE;
     
@@ -106,8 +102,9 @@ Int_t SBSGEMStand::Begin( THaRunBase* run ){
 }
 
 void SBSGEMStand::Clear( Option_t *opt ){
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
-        (*it)->Clear(opt);
+  THaTrackingDetector::Clear(opt);
+  for (auto* plane : fPlanes ){
+        plane->Clear(opt);
     }
 
     return;
@@ -117,8 +114,8 @@ Int_t SBSGEMStand::Decode(const THaEvData& evdata ){
   //return 0;
   //std::cout << "[SBSGEMStand::Decode]" << std::endl;
 
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
-      (*it)->Decode(evdata);
+    for (auto* plane : fPlanes ) {
+      plane->Decode(evdata);
     }
 
     return 0;
@@ -126,8 +123,8 @@ Int_t SBSGEMStand::Decode(const THaEvData& evdata ){
 
 
 Int_t SBSGEMStand::End( THaRunBase* run ){
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
-        (*it)->End(run);
+    for (auto* plane : fPlanes ) {
+        plane->End(run);
     }
 
 
@@ -142,8 +139,8 @@ void SBSGEMStand::Print(const Option_t* opt) const {
         (*it)->Print(opt);
     }
     */
-    for( unsigned int i = 0; i < fPlanes.size(); i++ ){
-        fPlanes[i]->Print(opt);
+    for( auto* plane : fPlanes.size() ){
+        plane->Print(opt);
     }
 
     return;
@@ -152,8 +149,8 @@ void SBSGEMStand::Print(const Option_t* opt) const {
 
 void SBSGEMStand::SetDebug( Int_t level ){
       THaTrackingDetector::SetDebug( level );
-    for (std::vector<SBSGEMPlane *>::iterator it = fPlanes.begin() ; it != fPlanes.end(); ++it){
-        (*it)->SetDebug(level);
+    for (auto* plane : fPlanes ) {
+        plane->SetDebug(level);
     }
 
     return;

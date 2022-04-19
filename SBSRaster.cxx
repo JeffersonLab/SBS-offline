@@ -155,9 +155,10 @@ SBSRaster::~SBSRaster()
 
 }
 //______________________________________________________________________________
-void SBSRaster::Clear( Option_t* )
+void SBSRaster::Clear( Option_t* opt )
 {
   // Reset per-event data.
+  THaBeamDet::Clear(opt);
   fRawPos(0)=-1;
   fRawPos(1)=-1;
   fRawSlope(0)=-1;
@@ -171,8 +172,6 @@ void SBSRaster::Clear( Option_t* )
 //______________________________________________________________________________
 Int_t SBSRaster::Decode( const THaEvData& evdata )
 {
-
-  // clears the event structure
   // loops over all modules defined in the detector map
   // copies raw data into local variables
   // pedestal subtraction is not foreseen for the raster

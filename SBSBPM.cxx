@@ -111,9 +111,10 @@ Int_t SBSBPM::DefineVariables( EMode mode )
 
 }
 //_____________________________________________________________________________
-void SBSBPM::Clear( Option_t* )
+void SBSBPM::Clear( Option_t* opt )
 {
   // Reset per-event data.
+  THaBeamDet::Clear(opt);
   fPosition.SetXYZ(0.,0.,-10000.);
   fDirection.SetXYZ(0.,0.,1.);
   fNfired=0;
@@ -125,8 +126,6 @@ void SBSBPM::Clear( Option_t* )
 //_____________________________________________________________________________
 Int_t SBSBPM::Decode( const THaEvData& evdata )
 {
-
-  // clears the event structure
   // loops over all modules defined in the detector map
   // copies raw data into local variables
   // performs pedestal subtraction
