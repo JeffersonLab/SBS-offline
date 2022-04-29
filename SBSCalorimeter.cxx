@@ -41,6 +41,7 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
   fMaxNclus(10), fConst(1.0), fSlope(0.0), fAccCharge(0.0), fDataOutputLevel(1000)
 {
   // Constructor.
+  fTmax = 1000.0; // 1000 ns maximum arrival time difference with seed to be in cluster
   fEmin = 0.001; // 1 MeV minimum energy to be in cluster (Hit threshold)  
   fEmin_clusSeed = 0.001; // 1 MeV minimum energy to be the seed of a cluster
   fEmin_clusTotal = 0.001; // Minimum total cluster energy is 1 MeV
@@ -91,6 +92,7 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
     { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
+    { "tmax",         &fTmax,   kDouble, 0, false }, ///< maximum time difference for block
     { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, false }, ///< minimum cluster seed energy
     { "emin_clTotal", &fEmin_clusTotal, kDouble, 0, false }, ///< minimum total cluster energy
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
@@ -356,7 +358,7 @@ Int_t SBSCalorimeter::FindClusters()
   // fBlockSet is initially ordered by energy in MakeGoodblocks
   fNclus = 0;
   DeleteContainer(fClusters);
-  //
+
   Int_t NSize = fBlockSet.size();
 
   fBestClusterIndex = -1;
@@ -370,38 +372,40 @@ Int_t SBSCalorimeter::FindClusters()
     fBlockSetIterator it = fBlockSet.begin();
     
     if ( (*it).e > fEmin_clusSeed ){
-
       Bool_t AddingBlocksToCluster = kTRUE;
       SBSElement *blk= fElements[(*it).id-fChanMapStart] ; 
       SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(fBlockSet.size(),blk);
       fClusters.push_back(cluster);
       fBlockSet.erase(it);
       NSize--;
-      while (AddingBlocksToCluster) {
 
-	Bool_t IsNeighbor=kFALSE;
+      while (AddingBlocksToCluster) {
+	Bool_t Close=kFALSE; //Check if block within user-def radius and time to add to cluster
 	fBlockSetIterator it2 = fBlockSet.begin();
-	while (!IsNeighbor && (it2 < fBlockSet.end())) {
+	SBSElement *blk_p= fElements[(*fBlockSet.begin()).id-fChanMapStart];
+        Double_t pTime=blk_p->GetAtime();
+
+	while (!Close && (it2 < fBlockSet.end())) {
 	  SBSElement *blk= fElements[(*it2).id-fChanMapStart]  ; 
 	  Int_t Index = fClusters.size()-1;
 	  Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
-	  IsNeighbor =( Rad<fRmax_dis );
-	  if (IsNeighbor) {
-	    fClusters[Index]->AddElement(blk);
+	  Double_t tDiff = blk->GetAtime()-pTime;
+	  Close =( Rad<fRmax_dis && fabs(tDiff)<fTmax );
+	  if (Close) {
+	      fClusters[Index]->AddElement(blk);
 	  } else {	       
 	    ++it2;
 	  }
 	}
 	if (it2 == fBlockSet.end()) AddingBlocksToCluster = kFALSE;
-	if (IsNeighbor)   {
+	if (Close)   {
 	  fBlockSet.erase(it2);
 	  NSize--;
-	}
+	}	
       }
       
       // Adding total cluster energy threshold
       if ( (cluster->GetE())<fEmin_clusTotal ) fClusters.pop_back();
-
 
       //After we are done adding blocks to the cluster, we check if this is the cluster
       //with the largest total energy:
@@ -445,7 +449,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
   // Get information on the cluster with highest energy (useful even if
   // fMaxNclus is zero, i.e., storing no vector of clusters)
   
-  if( !(fClusters.empty()) && fBestClusterIndex >= 0 && fBestClusterIndex < fClusters.size() ) {
+  if( !(fClusters.empty()) && fBestClusterIndex >= 0 && fBestClusterIndex < (Int_t)fClusters.size() ) {
     //if( !(fClusters.empty()) ) {
     SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
  
