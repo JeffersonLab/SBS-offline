@@ -136,6 +136,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"bbgemhit_edep",   "BBGEM MC hit edep",   "fBBGEMhit_edep"},
     {"bbgemhit_x",   "BBGEM MC hit transport X",   "fBBGEMhit_x"},
     {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_y"},
+    {"bbps_esum",   "BBPS total energy sum",   "fBBPS_esum"},
+    {"bbsh_esum",   "BBSH total energy sum",   "fBBSH_esum"},
     { 0 }
   };
 
@@ -239,7 +241,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fBBGEMhit_edep = *(simEvent->Tgmn->Earm_BBGEM_hit_edep);
   fBBGEMhit_x = *(simEvent->Tgmn->Earm_BBGEM_hit_tx);
   fBBGEMhit_y = *(simEvent->Tgmn->Earm_BBGEM_hit_ty);
- 
+  fBBPS_esum = simEvent->Tgmn->Earm_BBPSTF1_det_esum;
+  fBBSH_esum = simEvent->Tgmn->Earm_BBSHTF1_det_esum;
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {

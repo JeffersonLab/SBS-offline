@@ -174,6 +174,8 @@ protected:
   std::vector<Double_t> fBBGEMhit_edep;
   std::vector<Double_t> fBBGEMhit_x;
   std::vector<Double_t> fBBGEMhit_y;
+  Double_t fBBPS_esum;
+  Double_t fBBSH_esum;
   
   //TH1D* h1_sizeHCal;
   //TH1D* h1_sizeGEMs;
