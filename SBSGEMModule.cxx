@@ -196,7 +196,7 @@ SBSGEMModule::~SBSGEMModule() {
 Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   std::cout << "[SBSGEMModule::ReadDatabase]" << std::endl;
-
+  
   Int_t status;
 
   FILE* file = OpenFile( date );
@@ -534,6 +534,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
       fPedRMSV[istrip] = rawrmsv[0];
     } 
   }
+
 
   // //resize all the "decoded strip" arrays to their maximum possible values for this module:
   UInt_t nstripsmax = fNstripsU + fNstripsV;
@@ -997,7 +998,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   fNstrips_hitV = 0;
   fNstrips_hitU_neg = 0;
   fNstrips_hitV_neg = 0;
-
+ 
   //UInt_t MAXNSAMP_PER_APV = fN_APV25_CHAN * fN_MPD_TIME_SAMP;
 
   //std::cout << "MAXNSAMP_PER_APV = " << MAXNSAMP_PER_APV << std::endl;
@@ -1375,7 +1376,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      
 	      if( axis == SBSGEM::kUaxis ){
 		cm_mean = fCommonModeMeanU[iAPV];
-		
+
 		fCommonModeDistU->Fill( iAPV, commonMode[isamp] - cm_mean );
 		fCommonModeDistU_Sorting->Fill( iAPV, cm_sorting - cm_mean );
 		fCommonModeDistU_Danning->Fill( iAPV, cm_danning - cm_mean );
@@ -1420,7 +1421,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// If both 1) and 2) are satisfied, then we will attempt a new common-mode calculation using the strips that passed zero suppression using the online common-mode calculation.
 
 	//First loop over the samples: 
-	
+      
 	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	  double CM_meas = CMcalc_signed[isamp];
 	  double CM_expect_mean, CM_expect_rms;
@@ -1481,7 +1482,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	}
 	
       }
-      
+   
       //std::cout << "finished common mode " << std::endl;
       // Last loop over all the strips and samples in the data and populate/calculate global variables that are passed to track-finding:
       //Int_t ihit = 0;
@@ -3186,7 +3187,7 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   return 0;
 }
 
-void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_CM, std::ofstream &daqfile, std::ofstream &daqfile_cmr ){
+void SBSGEMModule::PrintPedestals( std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_CM ){
   //The first argument is a file in the format expected by the database,
   //The second argument is a file in the format expected by the DAQ:
 
@@ -3246,6 +3247,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   TString modname = GetName();
   
   TString header;
+  /* We use the pedestal daq file for the DB, so this code is not needed
   header.Form( "%s.%s.%s.pedu = ", appname.Data(), detname.Data(), modname.Data() );
   dbfile << std::endl << header << std::endl;
   for( UInt_t iu=0; iu<fNstripsU; iu++ ){
@@ -3291,7 +3293,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   }
 
   dbfile << std::endl;
-  
+  */
   //TO DO: common-mode mean, min, and max by APV card:
 
   
@@ -3301,13 +3303,14 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   std::vector<double> commonmode_meanU(nAPVsU), commonmode_rmsU(nAPVsU);
   std::vector<double> commonmode_meanV(nAPVsV), commonmode_rmsV(nAPVsV);
 
+  
   for( int iAPV = 0; iAPV<nAPVsU; iAPV++ ){
     TH1D *htemp = hcommonmode_mean_by_APV_U->ProjectionY("htemp", iAPV+1, iAPV+1 );
 
     commonmode_meanU[iAPV] = htemp->GetMean();
     commonmode_rmsU[iAPV] = htemp->GetRMS();
   }
-
+  /* Moving to new format for CM DB file, but keeping this commented out for reference
   header.Form( "%s.%s.%s.commonmode_meanU = ", appname.Data(), detname.Data(), modname.Data() );
 
   dbfile_CM << std::endl << header << std::endl;
@@ -3329,7 +3332,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
 
     if( (iAPV+1) % 16 == 0 ) dbfile_CM << std::endl;
   }
-  
+  */
   
   for( int iAPV = 0; iAPV<nAPVsV; iAPV++ ){
     TH1D *htemp = hcommonmode_mean_by_APV_V->ProjectionY("htemp", iAPV+1, iAPV+1 );
@@ -3337,7 +3340,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
     commonmode_meanV[iAPV] = htemp->GetMean();
     commonmode_rmsV[iAPV] = htemp->GetRMS();
   }
-
+  /*Moving to new format for CM DB file, but keeping this commented out for reference
   header.Form( "%s.%s.%s.commonmode_meanV = ", appname.Data(), detname.Data(), modname.Data() );
 
   dbfile_CM << std::endl << header << std::endl;
@@ -3362,7 +3365,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
   
 
   dbfile_CM << std::endl << std::endl;
-  
+  */
   //That takes care of the database file. For the "DAQ" file, we need to organize things by APV card. For this we can loop over the MPDmap:
   
   for( auto iapv = fMPDmap.begin(); iapv != fMPDmap.end(); iapv++ ){
@@ -3375,7 +3378,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
     int axis = iapv->axis;
 
     
-    daqfile << "APV "
+    daqfile_ped << "APV "
 	    << std::setw(16) << crate 
 	    << std::setw(16) << slot 
 	    << std::setw(16) << mpd
@@ -3388,7 +3391,7 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
       double pedmean = (axis == SBSGEM::kUaxis ) ? fPedestalU[strip] : fPedestalV[strip];
       double pedrms = (axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
 
-      daqfile << std::setw(16) << ich
+      daqfile_ped << std::setw(16) << ich
 	      << std::setw(16) << std::setprecision(4) << pedmean
 	      << std::setw(16) << std::setprecision(4) << pedrms
 	      << std::endl;
@@ -3403,8 +3406,8 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
     cm_min = 0.0;
     double cm_max = cm_mean + fCommonModeRange_nsigma * cm_rms;
 
-    
-    daqfile_cmr << std::setw(12) << crate 
+    //daq CM file needs a CM min and max and integers
+    daqfile_CM << std::setw(12) << crate 
 		<< std::setw(12) << slot
 		<< std::setw(12) << mpd
 		<< std::setw(12) << adc_ch
@@ -3412,6 +3415,14 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile, std::ofstream &dbfile_
 		<< std::setw(12) << int( cm_max )
 		<< std::endl;
 		
+    //DB CM file prefers the CM mean and RMS and doubles
+    dbfile_CM << std::setw(12) << crate 
+		      << std::setw(12) << slot
+		      << std::setw(12) << mpd
+		      << std::setw(12) << adc_ch
+		      << std::setw(12) << Form("%15.5g", cm_mean)
+		      << std::setw(12) << Form("%15.5g", cm_rms)
+		      << std::endl;
     
   }
 

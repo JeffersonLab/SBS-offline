@@ -88,6 +88,7 @@ protected:
   //Utility methods: initialization:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void LoadPedestals(const char *fname);
+  void LoadCM(const char *fname);
   void InitLayerCombos();
   void InitGridBins(); //initialize 
   void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
@@ -440,10 +441,11 @@ protected:
   bool fDumpGeometryInfo; //default to FALSE
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr; 
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq; 
   // input files for (optional) loading of pedestals from database:
 
   std::string fpedfilename;
+  std::string fcmfilename;
   
 };
 

@@ -60,6 +60,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fModulesInitialized = false;
 
   fpedfilename = "";
+  fcmfilename = "";
 
   fBinSize_efficiency2D = 0.01; //1 cm
   fBinSize_efficiency1D = 0.003; //3 mm
@@ -278,11 +279,17 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   
   InitLayerCombos();
   InitGridBins();
-
+  
   if( !fpedfilename.empty() ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
     //NOTE: if we load the pedestals from a file formatted in the way the DAQ wants, then we have to assume that SLOT, MPD_ID, and ADC_CH are sufficient to uniquely identify
 
     LoadPedestals( fpedfilename.c_str() );
+    
+  }
+  
+  if( !fcmfilename.empty() ){ //load CM from file; NOTE: This OVERRIDES any pedestals found in the database
+       
+    LoadCM( fcmfilename.c_str() );
     
   }
   
@@ -414,6 +421,100 @@ void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
   }
 
   
+  
+}
+
+
+
+
+void SBSGEMTrackerBase::LoadCM( const char *fname ){
+
+  std::cout << "[SBSGEMTrackerBase::LoadCM]: fname = " << fname << std::endl;
+
+  TString cmfilename = fname;
+
+  TString prefix = std::getenv("DB_DIR");
+  prefix += "/";
+  
+  if( gSystem->AccessPathName( fname ) ){ //
+    
+    std::cout << "[SBSGEMTrackerBase::LoadCM]: could not find " << fname << " in working directory, looking in " << prefix << std::endl;
+
+    cmfilename.Prepend(prefix);
+    
+  }
+  std::ifstream cmfile( cmfilename.Data() );
+
+  if( !cmfile.good() ){
+    cmfile.close();
+
+    std::cout << "Warning: could not find CM file " << fname << " in working directory or in " << prefix << ", CM not loaded" << std::endl;
+
+    return;
+  } else {
+    std::cout << "Found CM file " << cmfilename << endl;
+  }
+
+  std::map<int, std::map<int, std::map<int,double > > > CMMean;
+  std::map<int, std::map<int, std::map<int,double > > > CMRMS;
+
+  std::string currentline;
+
+  int crate=0, slot=0, mpd=0, adc_ch=0;
+  double db_mean, db_rms;
+
+  while( std::getline(cmfile, currentline) ){
+    //TString currentline;
+    if( cmfile.eof() ) break;
+
+    std::istringstream is(currentline);
+    
+    //File is formated like crate, slot, mpd, adc_ch, CM mean, CM RMS
+    is >> crate >> slot >> mpd >> adc_ch >> db_mean >> db_rms;
+        
+    int index = adc_ch + 16*mpd;
+
+    //Assign CM mean and RMS for ever APV
+    CMMean[crate][slot][index] = db_mean;
+    CMRMS[crate][slot][index] = db_rms;
+    
+  }
+
+  //Loop over all modules and APVs
+  for( int module=0; module<fNmodules; module++ ){
+    for ( auto it = fModules[module]->fMPDmap.begin(); it != fModules[module]->fMPDmap.end(); ++it ){
+
+      int this_crate = it->crate;
+      int this_index = it->adc_id + 16 * it->mpd_id;
+      int this_slot = it->slot;
+      int this_apv = it->pos;    //This is the APV position used in the analyis 
+
+      //std::cout << "(crate, slot, index)=(" << this_crate << ", " << this_slot << ", " << this_index << ")" << std::endl;
+      
+      if( CMMean.find( this_crate ) != CMMean.end() ){
+	//std::cout << "found crate " << this_crate << std::endl;
+	if( CMMean[this_crate].find( this_slot ) != CMMean[this_crate].end() ){
+	  //std::cout << "found slot " << this_slot << std::endl;
+	  if( CMMean[this_crate][this_slot].find( this_index ) != CMMean[this_crate][this_slot].end() ){
+	    //std::cout << "found index " << this_index << std::endl;
+	    
+	    double this_mean = CMMean[this_crate][this_slot][this_index];
+	    double this_rms = CMRMS[this_crate][this_slot][this_index];
+	    	    
+	    //Set module APVs CM values from the arrays from the DB file
+	    if ( it->axis == SBSGEM::kUaxis ){
+	      fModules[module]->fCommonModeMeanU[this_apv] = this_mean;
+	      fModules[module]->fCommonModeRMSU[this_apv] = this_rms; 
+	    } else {
+	      fModules[module]->fCommonModeMeanV[this_apv] = this_mean;
+	      fModules[module]->fCommonModeRMSV[this_apv] = this_rms; 
+	    }
+	    
+	  }
+	}
+      }
+    }
+  }
   
 }
 
