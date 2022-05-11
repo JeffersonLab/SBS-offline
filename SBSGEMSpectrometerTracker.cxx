@@ -368,11 +368,11 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     
     TString message;
 
-    //message.Form( "# Copy the contents of this file into $DB_DIR/gemped to use these pedestals for analysis" );
-    //fCMfile_dbase << sdate << std::endl;
-    //fCMfile_dbase << message << std::endl;
-    //fCMfile_dbase << "# format = detname.commonmode_mean(U,V) and detname.commonmode_rms(U,V) = common-mode mean and RMS for U, V strips by APV card in order of position"
-    //		  << std::endl;
+    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
+    fCMfile_daq << sdate << std::endl;
+    fCMfile_daq << message << std::endl;
+    fCMfile_daq << "# format = crate, slot, mpd, adc_ch, CM min, CM max"
+    		  << std::endl;
 
     message.Form( "# Copy this file into $DB_DIR/gemped to use these pedestals for analysis");
     fCMfile_dbase << sdate << std::endl;
@@ -380,13 +380,12 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     fCMfile_dbase << "# format = crate, slot, mpd, adc_ch, CM mean, CM RMS"
 		  << std::endl;
     
-    message.Form( "# Copy the contents of this file into the CODA cfg for online pedestal subtraction" );
+    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
     
-    
-    //fpedfile_daq << sdate << std::endl;
-    //fpedfile_daq <<  message << std::endl;
-    //fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
-    // 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
+    fpedfile_daq << sdate << std::endl;
+    fpedfile_daq <<  message << std::endl;
+    fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
+     		 << "# APV channel number      pedestal mean      pedestal rms " << std::endl;
 
     //message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
     
