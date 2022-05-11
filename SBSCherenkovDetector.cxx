@@ -38,6 +38,8 @@ SBSCherenkovDetector::SBSCherenkovDetector( const char* name, const char* descri
   fDoResolve(false), fDoTimeFilter(false)//, 
   //fTrackX(kBig), fTrackY(kBig)
 {
+  SetModeTDC(SBSModeTDC::kTDC); //  A TDC with leading & trailing edge info
+  SetModeADC(SBSModeADC::kNone); // Default is No ADC, but can be re-enabled later
   //keep this line first
   fBench = new THaBenchmark;
 

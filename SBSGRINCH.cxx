@@ -52,13 +52,13 @@ SBSGRINCH::~SBSGRINCH()
   // allocated by us.
   Clear();// so the prgram doesn't complain when deleting clusters
   RemoveVariables();
-  delete fHits;
+  // delete fHits;
   // delete fResolvedHits;
-  delete fClusters;
+  // delete fClusters;
   // delete fResolvedClusters;
   // delete [] fMIPs;
   // delete [] fXseg;
-  delete fBench;
+  // delete fBench;
 }
 
 //_____________________________________________________________________________

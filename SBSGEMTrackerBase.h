@@ -387,6 +387,8 @@ protected:
   std::vector<int> fNclustV_layer;
   std::vector<int> fNclustU_layer_neg;
   std::vector<int> fNclustV_layer_neg;
+  std::vector<int> fNclustU_layer_miss;
+  std::vector<int> fNclustV_layer_miss;
   std::vector<int> fN2Dhit_layer;
 
   std::vector<int> neg_event;

@@ -145,6 +145,8 @@ protected:
 	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
+  Double_t fSigma;
+  Double_t fOmega;
   Double_t fEPx;
   Double_t fEPy;
   Double_t fEPz;
@@ -172,6 +174,8 @@ protected:
   std::vector<Double_t> fBBGEMhit_edep;
   std::vector<Double_t> fBBGEMhit_x;
   std::vector<Double_t> fBBGEMhit_y;
+  Double_t fBBPS_esum;
+  Double_t fBBSH_esum;
   
   //TH1D* h1_sizeHCal;
   //TH1D* h1_sizeGEMs;
