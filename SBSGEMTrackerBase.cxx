@@ -1468,7 +1468,11 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
     
     
     std::set<int> layersontrack;
-    bool modules_hit[fNmodules] = {false};
+    bool modules_hit[fNmodules];
+    for( int imod=0; imod<fNmodules; imod++ ){
+      modules_hit[imod] = false;
+    }
+    
     std::map<int, int> modulesontrack_by_layer;
     
     for( int ihit=0; ihit<fNhitsOnTrack[itrack]; ihit++ ){ //loop over hits on tracks:
