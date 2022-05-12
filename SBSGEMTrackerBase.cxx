@@ -217,7 +217,8 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   fNumModulesByLayer.clear();
   fModuleListByLayer.clear();
   //loop on the array of (initialized) modules and fill out missing info:
-  
+  bool cm_already_loaded = false;
+
   for( int imod=0; imod<(int)fModules.size(); imod++ ){
     int layer = fModules[imod]->fLayer;
 
@@ -241,6 +242,11 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     if( fCommonModePlotsFlagIsSet ){
       fModules[imod]->SetMakeCommonModePlots( fCommonModePlotsFlag );
     }
+
+    for(int iAPV = 0; iAPV < fModules[imod]->fNAPVs_U; iAPV++)
+      if(fModules[imod]->fCommonModeMeanU[iAPV] > 1.0) cm_already_loaded = true;
+      
+
   }
 
   fNmodules = fModules.size();
@@ -287,9 +293,9 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     
   }
   
-  if( !fcmfilename.empty() ){ //load CM from file; NOTE: This OVERRIDES any pedestals found in the database
-       
-    LoadCM( fcmfilename.c_str() );
+  if( !fcmfilename.empty() && !cm_already_loaded){ //load CM from file; NOTE: This OVERRIDES any pedestals found in the database
+
+    if(!cm_already_loaded) LoadCM( fcmfilename.c_str() );
     
   }
   
