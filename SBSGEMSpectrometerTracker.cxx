@@ -65,7 +65,7 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     }
 
     CompleteInitialization();
-
+    
     if( !fTestTrackInitialized ){
     
       new( (*fTestTracks)[0] ) THaTrack();
@@ -76,7 +76,7 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     return kInitError;
   }
 
- 
+  
   return kOK;
 }
 
@@ -121,6 +121,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
+    { "cmfile",  &fcmfilename, kString, 0, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
@@ -346,46 +347,47 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
   //To automate the printing out of pedestals for database and DAQ, 
   if( fPedestalMode ){
-    TString fname_dbase, fname_daq, fname_cmr, fname_dbcm;
+    TString fname_dbped, fname_daqped, fname_dbcm, fname_daqcm;
     
     
     TString specname = GetApparatus()->GetName();
     TString detname = GetName();
-    fname_dbase.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+    fname_dbped.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_dbcm.Form( "db_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-    fname_daq.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-    fname_cmr.Form( "CommonModeRange_%s_%s_run%d.txt", specname.Data(), detname.Data(), runnum );
+    fname_daqped.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+    fname_daqcm.Form( "daq_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+
     
-    fpedfile_dbase.open( fname_dbase.Data() );
+    //fpedfile_dbase.open( fname_dbase.Data() );
     fCMfile_dbase.open( fname_dbcm.Data() );
-    fpedfile_daq.open( fname_daq.Data() );
-    fpedfile_cmr.open( fname_cmr.Data() );
+    fpedfile_daq.open( fname_daqped.Data() );
+    fCMfile_daq.open( fname_daqcm.Data() );
     
     TString sdate = run->GetDate().AsString();
     sdate.Prepend( "#" );
     
     TString message;
 
-    message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
+    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
+    fCMfile_daq << sdate << std::endl;
+    fCMfile_daq << message << std::endl;
+    fCMfile_daq << "# format = crate, slot, mpd, adc_ch, CM min, CM max"
+    		  << std::endl;
+
+    message.Form( "# Copy this file into $DB_DIR/gemped to use these pedestals for analysis");
     fCMfile_dbase << sdate << std::endl;
     fCMfile_dbase << message << std::endl;
-    fCMfile_dbase << "# format = detname.commonmode_mean(U,V) and detname.commonmode_rms(U,V) = common-mode mean and RMS for U, V strips by APV card in order of position"
+    fCMfile_dbase << "# format = crate, slot, mpd, adc_ch, CM mean, CM RMS"
 		  << std::endl;
     
-    message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
+    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
     
-    fpedfile_dbase << sdate << std::endl;
-    fpedfile_dbase << message << std::endl;
-    fpedfile_dbase << "#format = detname.ped(u,v) and detname.rms(u,v) = pedestal mean and rms by (u,v) strip number in order of position" << std::endl;
-    
-    message.Form("# copy the contents of this file into (location TBD) to update CODA thresholds for detector %s.%s", specname.Data(), detname.Data() );
-    
-    // fpedfile_daq << sdate << std::endl;
-    // fpedfile_daq <<  message << std::endl;
-    // fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
-    // 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
+    fpedfile_daq << sdate << std::endl;
+    fpedfile_daq <<  message << std::endl;
+    fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
+     		 << "# APV channel number      pedestal mean      pedestal rms " << std::endl;
 
-    message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
+    //message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
     
     // fpedfile_cmr << sdate << std::endl;
     // fpedfile_cmr << message << std::endl;
@@ -393,7 +395,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
   }
 
   for( auto& module: fModules ) {
-    if( fPedestalMode ) { module->PrintPedestals(fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr); }
+    if( fPedestalMode ) { module->PrintPedestals(fCMfile_dbase, fpedfile_daq, fCMfile_daq); }
     module->End(run);
   }
 
@@ -595,8 +597,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "nclustu_layer_neg", "total number of negative U clusters by layer", "fNclustU_layer_neg" },
     { "nclustv_layer_neg", "total number of negative V clusters by layer", "fNclustV_layer_neg" },
     { "n2Dhit_layer", "total_number of 2D hits by layer", "fN2Dhit_layer" },
-    { "nclustu_layer_miss", "total number of U clusters by layer in a module missing hits", "fNclustU_layer_miss" },
-    { "nclustv_layer_miss", "total number of V clusters by layer in a module missing hits", "fNclustV_layer_miss" },
+    //{ "nclustu_layer_miss", "total number of U clusters by layer in a module missing hits", "fNclustU_layer_miss" },
+    //{ "nclustv_layer_miss", "total number of V clusters by layer in a module missing hits", "fNclustV_layer_miss" },
     { nullptr }
   };
   DefineVarsFromList( vars, mode );
