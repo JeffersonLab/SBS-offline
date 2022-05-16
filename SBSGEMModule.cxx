@@ -1493,7 +1493,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// If both 1) and 2) are satisfied, then we will attempt a new common-mode calculation using the strips that passed zero suppression using the online common-mode calculation.
 
 	//First loop over the samples: 
-      
+	
 	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	  double CM_meas = CMcalc_signed[isamp];
 	  double CM_expect_mean, CM_expect_rms;

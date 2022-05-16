@@ -176,7 +176,7 @@ class SBSGEMModule : public THaSubDetector {
 
   void PrintPedestals( std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_CM );
 
-  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, UInt_t nhits=128 ); //default to "sorting" method:
+  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, Double_t CM_online=0, UInt_t nhits=128 ); //default to "sorting" method:
   
   void fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool max=false );
 
@@ -558,12 +558,16 @@ class SBSGEMModule : public THaSubDetector {
   TH2D *fCommonModeDistU_Sorting;
   TH2D *fCommonModeDistU_Danning;
   TH2D *fCommonModeDiffU; //difference between sorting and danning mode calculations:
+  TH2D *fCommonModeCorrectionU;
+  TH2D *fCommonModeNotCorrectionU;
 
   //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
   TH2D *fCommonModeDistV; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
   TH2D *fCommonModeDistV_Sorting;
   TH2D *fCommonModeDistV_Danning;
   TH2D *fCommonModeDiffV; //difference between sorting and danning mode calculations:
+  TH2D *fCommonModeCorrectionV;
+  TH2D *fCommonModeNotCorrectionV;
   
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;
