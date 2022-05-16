@@ -554,6 +554,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
     { "hit.UtimeMaxStrip", "cluster timing based on U strips", "fHitUTimeMaxStrip" },
     { "hit.VtimeMaxStrip", "cluster timing based on V strips", "fHitVTimeMaxStrip" },
+    { "hit.UtimeMaxStripFit", "Strip fitted t0 for max strip in cluster", "fHitUTimeMaxStripFit" },
+    { "hit.VtimeMaxStripFit", "Strip fitted t0 for max strip in cluster", "fHitVTimeMaxStripFit" },
     { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
     { "hit.Tavg", "hit T average", "fHitTavg" },
     { "hit.isampmaxUclust", "peak time sample in cluster-summed U ADC samples", "fHitIsampMaxUclust" },

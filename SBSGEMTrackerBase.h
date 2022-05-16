@@ -339,6 +339,8 @@ protected:
   std::vector<double> fHitVTime; // cluster-mean time, V strips
   std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
+  std::vector<double> fHitUTimeMaxStripFit; //fitted strip t0
+  std::vector<double> fHitVTimeMaxStripFit; //fitted strip t0
   std::vector<double> fHitDeltaT; // TU - TV;
   std::vector<double> fHitTavg; //(TU+TV)/2
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips

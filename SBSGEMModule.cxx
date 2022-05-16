@@ -854,12 +854,14 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
   RVarDef varclust[] = {
     { "clust.nclustu",   "Number of clusters in u",   "fNclustU_pos" },
     { "clust.nclustu_neg",   "Number of clusters in u that are negative",   "fNclustU_neg" },
+    { "clust.nclustu_tot", "Total number of U clusters found in total active area", "fNclustU_total" },
     { "clust.clustu_strips",   "u clusters strip multiplicity",   "fUclusters.nstrips" },
     { "clust.clustu_pos",   "u clusters position",   "fUclusters.hitpos_mean" },
     { "clust.clustu_adc",   "u clusters adc sum",   "fUclusters.clusterADCsum" },
     { "clust.clustu_time",   "u clusters time",   "fUclusters.t_mean" },
     { "clust.nclustv",   "Number of clusters in v",   "fNclustV_pos" },
     { "clust.nclustv_neg",   "Number of clusters in v that are negative",   "fNclustV_neg" },
+    { "clust.nclustv_tot", "Total number of V clusters found in total active area", "fNclustV_total" },
     { "clust.clustv_strips",   "v clusters strip multiplicity",   "fVclusters.nstrips" },
     { "clust.clustv_pos",   "v clusters position",   "fVclusters.hitpos_mean" },
     { "clust.clustv_adc",   "v clusters adc sum",   "fVclusters.clusterADCsum" },
@@ -953,6 +955,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fNclustV_pos = 0;
   fNclustU_neg = 0;
   fNclustV_neg = 0;
+  fNclustU_total = 0;
+  fNclustV_total = 0;
   //later we may need to check whether this is a performance bottleneck:
   fUclusters.clear();
   fVclusters.clear();
@@ -2232,11 +2236,14 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   UInt_t &nclust = ( axis == SBSGEM::kUaxis ) ? fNclustU : fNclustV; 
   UInt_t &nclust_pos = ( axis == SBSGEM::kUaxis ) ? fNclustU_pos : fNclustV_pos; 
   UInt_t &nclust_neg = ( axis == SBSGEM::kUaxis ) ? fNclustU_neg : fNclustV_neg; 
-
+  UInt_t &nclust_tot = ( axis == SBSGEM::kUaxis ) ? fNclustU_total : fNclustV_total;
+  
   nclust = 0;
   nclust_pos = 0;
   nclust_neg = 0;
-
+  nclust_tot = 0;
+ 
+  
   clusters.clear();
   
   if( axis == SBSGEM::kUaxis ){
@@ -2407,6 +2414,11 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   //for speed/efficiency, resize the cluster array to the theoretical maximum
   //and use operator[] rather than push_back:
   clusters.resize( localmaxima.size() );
+
+  //nclust_tot = localmaxima.size();
+
+  
+    
   
   //Cluster formation and cluster splitting from remaining local maxima:
   for( auto i = localmaxima.begin(); i != localmaxima.end(); ++i ){
@@ -2416,6 +2428,10 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     double ADCmax = fADCsums[hitindex[stripmax]];
 
     bool found_neighbor_low = true;
+
+    //double Tfit = 
+
+    
     
     //while( striplist.find( striplo-1 ) != striplist.end() &&
     //	   stripmax - striplo < maxsep ){
@@ -2475,81 +2491,83 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     double maxpos = (stripmax + 0.5 - 0.5*Nstrips) * pitch + offset;
 
     //If peak position falls inside the "track search region" constraint, add a new cluster: 
-    if( fabs( maxpos - constraint_center ) <= constraint_width ){
-      
-      //create a cluster, but don't add it to the 1D cluster array unless it passes the track search region constraint:
-      sbsgemcluster_t clusttemp;
-      clusttemp.nstrips = nstrips;
-      clusttemp.istriplo = striplo;
-      clusttemp.istriphi = striphi;
-      clusttemp.istripmax = stripmax;
-      clusttemp.ADCsamples.resize(fN_MPD_TIME_SAMP);
-      clusttemp.stripADCsum.clear();
-      clusttemp.hitindex.clear();
-      clusttemp.rawstrip = fStripRaw[hitindex[stripmax]];
-      clusttemp.rawMPD = fStripMPD[hitindex[stripmax]];
-      clusttemp.rawAPV = fStripADC_ID[hitindex[stripmax]];
+    //if( fabs( maxpos - constraint_center ) <= constraint_width ){
+    //Move constraint check to later so we can filter the "total cluster multiplicity" by basic quality criteria:
+    //This MIGHT slow down analysis at higher occupancies, but we'll have to see how noticeable it is:
+    
+    //create a cluster, but don't add it to the 1D cluster array unless it passes the track search region constraint:
+    sbsgemcluster_t clusttemp;
+    clusttemp.nstrips = nstrips;
+    clusttemp.istriplo = striplo;
+    clusttemp.istriphi = striphi;
+    clusttemp.istripmax = stripmax;
+    clusttemp.ADCsamples.resize(fN_MPD_TIME_SAMP);
+    clusttemp.stripADCsum.clear();
+    clusttemp.hitindex.clear();
+    clusttemp.rawstrip = fStripRaw[hitindex[stripmax]];
+    clusttemp.rawMPD = fStripMPD[hitindex[stripmax]];
+    clusttemp.rawAPV = fStripADC_ID[hitindex[stripmax]];
 
-      for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){ //initialize cluster-summed ADC samples to zero:
-	clusttemp.ADCsamples[isamp] = 0.0;
-      }
+    for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){ //initialize cluster-summed ADC samples to zero:
+      clusttemp.ADCsamples[isamp] = 0.0;
+    }
       
-      for( int istrip=striplo; istrip<=striphi; istrip++ ){
-	//int nmax_strip = 1;
-	double sumweight = ADCmax/(1.0 + pow( (stripmax-istrip)*pitch/fSigma_hitshape, 2 ) );
-	double maxweight = sumweight;
-	for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
-	  if( localmaxima.find( jstrip ) != localmaxima.end() && jstrip != stripmax ){
-	    sumweight += fADCsums[hitindex[jstrip]]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) );
-	  }
+    for( int istrip=striplo; istrip<=striphi; istrip++ ){
+      //int nmax_strip = 1;
+      double sumweight = ADCmax/(1.0 + pow( (stripmax-istrip)*pitch/fSigma_hitshape, 2 ) );
+      double maxweight = sumweight;
+      for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
+	if( localmaxima.find( jstrip ) != localmaxima.end() && jstrip != stripmax ){
+	  sumweight += fADCsums[hitindex[jstrip]]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) );
 	}
+      }
    
-	splitfraction[istrip] = maxweight/sumweight;
+      splitfraction[istrip] = maxweight/sumweight;
 
-	double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips
-	double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
-	double tstrip = fTmean[hitindex[istrip]];
-
-	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	  clusttemp.ADCsamples[isamp] += fADCsamples[hitindex[istrip]][isamp]*splitfraction[istrip];
-	}
-
-	clusttemp.stripADCsum.push_back( ADCstrip );
-
-	clusttemp.hitindex.push_back( hitindex[istrip] ); //do we use this anywhere? Yes, it is good to keep track of this if we want to access raw strip info later on 
-	
-	sumADC += ADCstrip;
-	
-	if( std::abs( istrip - stripmax ) <= std::max(UShort_t(1),std::min(maxsepcoord,maxsep)) ){ 
-	  sumx += hitpos * ADCstrip;
-	  sumx2 += pow(hitpos,2) * ADCstrip;
-	  sumwx += ADCstrip;
-	  //use same strip cuts for cluster timing determination as for position reconstruction: may revisit later:
-	  sumt += tstrip * ADCstrip;
-	  sumt2 += pow(tstrip,2) * ADCstrip;
-	} 
-      }
-
-      clusttemp.isampmax = 0; //figure out time sample in which peak of cluster-summed ADC values occurs:
-      double maxADC = 0.0;
+      double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips
+      double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
+      double tstrip = fTmean[hitindex[istrip]];
+      
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	if( isamp == 0 || clusttemp.ADCsamples[isamp] > maxADC ){
-	  maxADC = clusttemp.ADCsamples[isamp];
-	  clusttemp.isampmax = isamp;
-	}
+	clusttemp.ADCsamples[isamp] += fADCsamples[hitindex[istrip]][isamp]*splitfraction[istrip];
       }
       
-      clusttemp.hitpos_mean = sumx / sumwx;
-      clusttemp.hitpos_sigma = sqrt( sumx2/sumwx - pow(clusttemp.hitpos_mean,2) );
-      clusttemp.clusterADCsum = sumADC;
-      clusttemp.t_mean = sumt / sumwx;
-      clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
+      clusttemp.stripADCsum.push_back( ADCstrip );
 
-      //initialize "keep" flag for all 1D clusters to true:
-      clusttemp.keep = true;
+      clusttemp.hitindex.push_back( hitindex[istrip] ); //do we use this anywhere? Yes, it is good to keep track of this if we want to access raw strip info later on 
+	
+      sumADC += ADCstrip;
+	
+      if( std::abs( istrip - stripmax ) <= std::max(UShort_t(1),std::min(maxsepcoord,maxsep)) ){ 
+	sumx += hitpos * ADCstrip;
+	sumx2 += pow(hitpos,2) * ADCstrip;
+	sumwx += ADCstrip;
+	//use same strip cuts for cluster timing determination as for position reconstruction: may revisit later:
+	sumt += tstrip * ADCstrip;
+	sumt2 += pow(tstrip,2) * ADCstrip;
+      } 
+    }
+    
+    clusttemp.isampmax = 0; //figure out time sample in which peak of cluster-summed ADC values occurs:
+    double maxADC = 0.0;
+    for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+      if( isamp == 0 || clusttemp.ADCsamples[isamp] > maxADC ){
+	maxADC = clusttemp.ADCsamples[isamp];
+	clusttemp.isampmax = isamp;
+      }
+    }
+    
+    clusttemp.hitpos_mean = sumx / sumwx;
+    clusttemp.hitpos_sigma = sqrt( sumx2/sumwx - pow(clusttemp.hitpos_mean,2) );
+    clusttemp.clusterADCsum = sumADC;
+    clusttemp.t_mean = sumt / sumwx;
+    clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
+    
+    //initialize "keep" flag for all 1D clusters to true:
+    clusttemp.keep = true;
       
-      clusttemp.isneg = false; //This is used for negative strip analysis
-      clusttemp.isnegontrack = false; //This is used for negative strip analysis
+    clusttemp.isneg = false; //This is used for negative strip analysis
+    clusttemp.isnegontrack = false; //This is used for negative strip analysis
 
       // In the standalone we don't apply an independent threshold on the cluster sum in the context of 1D cluster-finding:
       // if( sumADC >= fThresholdClusterSum ){
@@ -2560,13 +2578,24 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       // 	fUclusters.push_back( clusttemp );
       // 	fNclustU++;
       // }
-
-
+    if( sumADC >= fThresholdClusterSum && clusttemp.nstrips >= 2 ){ //Increment "total cluster multiplicity"
+      nclust_tot++;
+    }
+    
       //Hopefully this works correctly:
+    if( fabs( clusttemp.hitpos_mean - constraint_center ) <= constraint_width ){
+
+      //Fit max strip time for hits in constraint region:
+      double Tfit = FitStripTime( hitindex[stripmax], 20.0 );
+      fStripTfit[hitindex[stripmax]] = Tfit;
+
+      
+      // if( fabs( Tfit - 25.0 ) < 10.0 ){ //Experimental, crude hack for testing:
+      
       clusters[nclust] = clusttemp;
       nclust++;
       nclust_pos++;
-      
+	//}
 
 	// std::cout << "found cluster, (axis, istripmax, nstrips, ADCsum, hit pos (mm) )=(" << axis << ", " << clusttemp.istripmax << ", "
 	// 	  << clusttemp.nstrips << ", " << clusttemp.clusterADCsum
@@ -2576,6 +2605,34 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     } //Check if peak is inside track search region constraint
   } //end loop on local maxima
 
+  //Fill cluster multiplicity and "hit rate" histograms:
+  if( fMakeEfficiencyPlots && fEfficiencyInitialized
+      && hClusterBasedOccupancyUstrips != nullptr
+      && hClusterBasedOccupancyVstrips != nullptr
+      && hClusterMultiplicityUstrips != nullptr
+      && hClusterMultiplicityVstrips != nullptr ){
+    
+    //We are using units of kHz/cm^2 for our "rate" plot:
+    //Timing window size = cut width:
+    
+    //The following is in ns, we want to convert to milliseconds, so need to DIVIDE by 1e6:
+    double window = fStripMaxTcut_width; //later we can use a fancier definition:
+    if( !fUseStripTimingCuts ) window = fN_MPD_TIME_SAMP * fSamplePeriod; //If we aren't using strip timing cuts we take the entire six-sample window as the time interval for "occupancy"
+    //The following is in m^2, need to multiply by 1e4
+    double area = GetXSize() * GetYSize();
+    
+    //window * area = ns * m^2 * 1e4 cm^2 /m^2 * 1e-6 ms/ns 
+    double ratefac = window*area/100.0; // ms * cm^2
+    
+    if( axis == SBSGEM::kUaxis ){
+      hClusterBasedOccupancyUstrips->Fill( double(nclust_tot)/ratefac );
+      hClusterMultiplicityUstrips->Fill( double(nclust_tot) );
+    } else {
+      hClusterBasedOccupancyVstrips->Fill( double(nclust_tot)/ratefac );
+      hClusterMultiplicityVstrips->Fill( double(nclust_tot) );
+    }
+  }
+  
   //clusters.resize(nclust); //just to make sure no pathological behavior later on
 
   //std::cout << "number of clusters found = " << nclust << std::endl;
@@ -3066,6 +3123,15 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
 			      nbinsy2D, -0.51*GetYSize(), 0.51*GetYSize(),
 			      nbinsx2D, -0.51*GetXSize(), 0.51*GetXSize() );
 
+    //We want to plot number of clusters/event/time;
+    // Let's use area units of cm^2, and time units of milliseconds; so that one cluster/cm^2/ms = 1,000 clusters/cm^2/s
+    // Since "expected" rates are in the range of up to 500 kHz/cm^2/s, we might set the limits of the histogram to something like 0-500 (kHz/cm^2) 								
+    hClusterBasedOccupancyUstrips = new TH1D( TString::Format( "hClusterBasedOccupancy_%s_U", detname.Data() ), TString::Format( "U strips; Hit rate (kHz/cm^2) ;"), 250, 0.0, 500.0 );
+    hClusterBasedOccupancyVstrips = new TH1D( TString::Format( "hClusterBasedOccupancy_%s_V", detname.Data() ), TString::Format( "V strips; Hit rate (kHz/cm^2) ;"), 250, 0.0, 500.0 );
+
+    hClusterMultiplicityUstrips = new TH1D( TString::Format("hClusterMultiplicity_%s_U", detname.Data() ), TString::Format( "U/X strips; Total number of clusters/event;"), 501,-0.5,500.5);
+    hClusterMultiplicityVstrips = new TH1D( TString::Format("hClusterMultiplicity_%s_V", detname.Data() ), TString::Format( "V/Y strips; Total number of clusters/event;"), 501,-0.5,500.5);
+    
     fEfficiencyInitialized = true;
   }
 
@@ -3257,7 +3323,7 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     
   //if( !fStripTimeFunc ){
   fStripTimeFunc = new TF1( TString::Format("StripPulseShape_%s",detname.Data() ),
-			    "std::max(0.0,[0]*exp(1.0)*(x-[1])/[2]*exp(-(x-[1])/[2]))",0.,fN_MPD_TIME_SAMP * fSamplePeriod );
+			    "std::max([3],[3]+[0]*exp(1.0)*(x-[1])/[2]*exp(-(x-[1])/[2]))",0.,fN_MPD_TIME_SAMP * fSamplePeriod );
   //  }
 
   return 0;
@@ -3562,6 +3628,11 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
     if( fhshouldhitx != NULL  ) fhshouldhitx->Write(fhshouldhitx->GetName(), kOverwrite );
     if( fhshouldhity != NULL  ) fhshouldhity->Write(fhshouldhity->GetName(), kOverwrite );
     if( fhshouldhitxy != NULL  ) fhshouldhitxy->Write(fhshouldhitxy->GetName(), kOverwrite );
+
+    if( hClusterBasedOccupancyUstrips != nullptr ) hClusterBasedOccupancyUstrips->Write( hClusterBasedOccupancyUstrips->GetName(), kOverwrite );
+    if( hClusterBasedOccupancyVstrips != nullptr ) hClusterBasedOccupancyVstrips->Write( hClusterBasedOccupancyVstrips->GetName(), kOverwrite );
+    if( hClusterMultiplicityUstrips != nullptr ) hClusterMultiplicityUstrips->Write( hClusterMultiplicityUstrips->GetName(), kOverwrite );
+    if( hClusterMultiplicityVstrips != nullptr ) hClusterMultiplicityVstrips->Write( hClusterMultiplicityVstrips->GetName(), kOverwrite );
   }
 
   if( fPedestalMode || fMakeCommonModePlots ){ //write out pedestal histograms, print out pedestals in the format needed for both database and DAQ:
@@ -4073,52 +4144,67 @@ double SBSGEMModule::StripTSchi2( int hitindex ){
 double SBSGEMModule::FitStripTime( int striphitindex, double RMS ){
   if( striphitindex < 0 || striphitindex > fNstrips_hit ) return -1000.0;
  
-  double Ttest_min = -fN_MPD_TIME_SAMP * fSamplePeriod; 
-  double Ttest_max = fN_MPD_TIME_SAMP * fSamplePeriod;
-  double Tstep = fSamplePeriod/25.0; //scan t0 in 1 ns steps
+  // double Ttest_min = -fN_MPD_TIME_SAMP * fSamplePeriod; 
+  // double Ttest_max = fN_MPD_TIME_SAMP * fSamplePeriod;
+  // double Tstep = fSamplePeriod/25.0; //scan t0 in 1 ns steps
 
-  //fStripTimeFunc
-  // fStripTimeFunc->FixParameter(2,fStripTau);
-  // fStripTimeFunc->SetParameter(1,fTmean[striphitindex]);
-  // fStripTimeFunc->FixParameter(0,fADCmax[striphitindex])
+  // //fStripTimeFunc
+  // // fStripTimeFunc->FixParameter(2,fStripTau);
+  // // fStripTimeFunc->SetParameter(1,fTmean[striphitindex]);
+  // // fStripTimeFunc->FixParameter(0,fADCmax[striphitindex])
 
-  //int isampmax = fMaxSamp[striphitindex];
-  double ADCmax = fADCmax[striphitindex];
+  // //int isampmax = fMaxSamp[striphitindex];
+  // double ADCmax = fADCmax[striphitindex];
 
-  double minchi2 = 0.0;
-  bool first = true;
+  // double minchi2 = 0.0;
+  // bool first = true;
 
-  double Tbest = 0.0;
+  // double Tbest = 0.0;
 
-  double Ttest = Ttest_min; 
-  while( Ttest < Ttest_max ){
+  // double Ttest = Ttest_min; 
+  // while( Ttest < Ttest_max ){
     
-    double chi2 = 0.0;
-    for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-      double Tsamp = fSamplePeriod * (isamp + 0.5);
+  //   double chi2 = 0.0;
+  //   for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+  //     double Tsamp = fSamplePeriod * (isamp + 0.5);
 
-      double ADCtheory = ADCmax*exp(1.0)/fStripTau * (Tsamp - Ttest) * exp(-(Tsamp-Ttest)/fStripTau ); 
-      chi2 += pow( (ADCtheory - fADCsamples[striphitindex][isamp])/RMS, 2 );
-    }
+  //     double ADCtheory = ADCmax*exp(1.0)/fStripTau * (Tsamp - Ttest) * exp(-(Tsamp-Ttest)/fStripTau ); 
+  //     chi2 += pow( (ADCtheory - fADCsamples[striphitindex][isamp])/RMS, 2 );
+  //   }
 
-    if ( first || chi2 < minchi2 ){
-      minchi2 = chi2;
-      Tbest = Ttest;
-      first = false;
-    }
-    Ttest += Tstep;
+  //   if ( first || chi2 < minchi2 ){
+  //     minchi2 = chi2;
+  //     Tbest = Ttest;
+  //     first = false;
+  //   }
+  //   Ttest += Tstep;
+  // }
+  double xtemp[fN_MPD_TIME_SAMP],ytemp[fN_MPD_TIME_SAMP],extemp[fN_MPD_TIME_SAMP],eytemp[fN_MPD_TIME_SAMP];
+
+  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+    xtemp[isamp] = fSamplePeriod * (isamp + 0.5);
+    ytemp[isamp] = fADCsamples[striphitindex][isamp];
+    extemp[isamp] = 0.0;
+    eytemp[isamp] = RMS;
   }
- 
-  
 
-  //TGraph *gtemp = new TGraphErrors(fN_MPD_TIME_SAMP, xtemp, ytemp, extemp, eytemp);
-  //gtemp->Fit(fStripTimeFunc,"SQ0");
+  fStripTimeFunc->SetParameter( 0, fADCmax[striphitindex] );
+  fStripTimeFunc->SetParameter( 1, 0.0 );
+  fStripTimeFunc->SetParameter( 2, 50.0 );
+  fStripTimeFunc->SetParameter( 3, 0.0 );
+
+  TGraph *gtemp = new TGraphErrors(fN_MPD_TIME_SAMP, xtemp, ytemp, extemp, eytemp);
+  gtemp->Fit(fStripTimeFunc,"SQ0");
 
   //std::cout << "Strip tmean, tfit = " << fTmean[striphitindex] << ", " << Tbest << std::endl;
   // 	    << " +/- " << fStripTimeFunc->GetParError(1) << std::endl;
 
-  //return fStripTimeFunc->GetParameter(1);
-  return Tbest;
+  //double retval = fStripTimeFunc->GetParameter(1);
+
+  gtemp->Delete();
+  
+  return fStripTimeFunc->GetParameter(1);
+  //return Tbest;
 }
 
 void SBSGEMModule::InitAPVMAP(){
