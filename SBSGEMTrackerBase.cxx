@@ -171,6 +171,8 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitVTime.clear();
   fHitUTimeMaxStrip.clear();
   fHitVTimeMaxStrip.clear();
+  fHitUTimeMaxStripFit.clear();
+  fHitVTimeMaxStripFit.clear();
   fHitDeltaT.clear();
   fHitTavg.clear();
   
@@ -1652,6 +1654,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 
       fHitUTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_umax] );
       fHitVTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_vmax] );
+
+      fHitUTimeMaxStripFit.push_back( fModules[module]->fStripTfit[hitidx_umax] );
+      fHitVTimeMaxStripFit.push_back( fModules[module]->fStripTfit[hitidx_vmax] );
       
       fHitDeltaT.push_back( hitinfo->tdiff );
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );

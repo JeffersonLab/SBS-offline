@@ -414,6 +414,8 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fNclustV_pos; // number of positive V clusters found
   UInt_t fNclustU_neg; // number of negative U clusters found
   UInt_t fNclustV_neg; // number of negative V clusters found
+  UInt_t fNclustU_total; // Number of U clusters found in entire active area, without enforcing search region constraint
+  UInt_t fNclustV_total; // Number of U clusters found in entire active area, without enforcing search region constraint
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
 
@@ -617,6 +619,13 @@ class SBSGEMModule : public THaSubDetector {
   TH2D *hADCfrac_vs_timesample_allstrips; //All fired strips
   TH2D *hADCfrac_vs_timesample_goodstrips;  //strips on good tracks
   TH2D *hADCfrac_vs_timesample_maxstrip; //max strip in cluster on good track
+
+  //Let's make hard-coded, automated cluster-based "occupancy" histos for tracking, with or without external constraint:
+  //Basic idea: count number of found clusters within constraint region, normalize to area of search region and some kind of "effective time window":
+  TH1D *hClusterBasedOccupancyUstrips;
+  TH1D *hClusterBasedOccupancyVstrips;
+  TH1D *hClusterMultiplicityUstrips;
+  TH1D *hClusterMultiplicityVstrips;
   
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;
