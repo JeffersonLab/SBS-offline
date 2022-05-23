@@ -710,6 +710,14 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }else if(simev->Tgmn->Harm_HCal_dighit_chan->at(j+1)!=lchan){
 	loadevt = true;
       }
+
+      // In simulation row 0 col 0 block starts at top left corner weheras in real data row 0 col 0 starts at top
+      // right corner, while looking at HCAL from front. Lets try the following to eleminate the mismatch:
+      col = lchan%12;
+      row = (lchan-col)/12; // row in simulation is already same as real data
+      col = 12 - 1 - col; // this will fix the mismatch in column numbering
+      lchan = row*12 + col; 
+      // --
       
       if(loadevt){
 	//ADC
