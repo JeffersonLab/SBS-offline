@@ -175,14 +175,21 @@ class SBSGEMModule : public THaSubDetector {
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
 
   void PrintPedestals( std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_CM );
+  
+  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, UInt_t nhits=128 ); //default to "sorting" method:
 
-  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, Double_t CM_online=0, UInt_t nhits=128 ); //default to "sorting" method:
+  //Simulation of common-mode correction algorithm as applied to full readout events:
+  double GetCommonModeCorrection( UInt_t isamp, const mpdmap_t &apvinfo, UInt_t &ngood, const UInt_t &nhits=128, bool fullreadout=false, Int_t flag=0 );
   
   void fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool max=false );
 
   double FitStripTime( int striphitindex, double RMS=20.0 ); // "dumb" fit method 
 
+  //Since we have two different kinds of rolling averages to evaluate, we consolidate both codes into one method.
+  //Since we can only declare references with initialization, we have to pass the underlying arrays as arguments:
+  void UpdateRollingAverage( int iapv, double val, std::vector<std::deque<Double_t> > &RC, std::vector<Double_t> &AVG, std::vector<Double_t> &RMS, std::vector<UInt_t> &Nevt ); 
   void UpdateRollingCommonModeAverage(int iapv, double CM_sample);
+  //void UpdateRollingCommonModeBias( int iapv, double CM_bias ); 
   
   TF1 *fStripTimeFunc;
 
@@ -209,6 +216,11 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeRollingAverage_by_APV;
   std::vector<Double_t> fCommonModeRollingRMS_by_APV;
   std::vector<UInt_t> fNeventsRollingAverage_by_APV;
+
+  std::vector<std::deque<Double_t> > fCMbiasResultContainer_by_APV;
+  std::vector<Double_t> fCommonModeOnlineBiasRollingAverage_by_APV;
+  std::vector<Double_t> fCommonModeOnlineBiasRollingRMS_by_APV;
+  std::vector<UInt_t> fNeventsOnlineBias_by_APV;
   
   SBSGEM::APVmap_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
 
@@ -252,10 +264,11 @@ class SBSGEMModule : public THaSubDetector {
   //Moved to the MPD module class:
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
   
-  Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method, other = ONLINE
+  Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method, 2 = histogramming method, 3 = "online" Danning-method
   Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 
                      // 1 = pedestal subtraction WAS done online, even for full readout events, only subtract the common-mode
-
+  Double_t fCommonModeDanningMethod_NsigmaCut;
+  
   Int_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
   Bool_t fUseStripTimingCuts; // Apply strip timing cuts:
   
@@ -324,11 +337,12 @@ class SBSGEMModule : public THaSubDetector {
   UShort_t fMPDMAP_ROW_SIZE; //MPDMAP_ROW_SIZE: default = 9, let's not hardcode
   UShort_t fNumberOfChannelInFrame; //default 128, not clear if this is used: This might not be constant, in fact
 
-  Double_t fSamplePeriod; //for timing calculations: default = 25 ns.
+  Double_t fSamplePeriod; //for timing calculations: default = 24 ns for Hall A .
 
   //variables defining rectangular track search region constraint (NOTE: these will change event-to-event, they are NOT constant!)
   Double_t fxcmin, fxcmax;
-  Double_t fycmin, fycmax;
+  Double_t fycmin,
+    fycmax;
 
   //Arrays to temporarily hold raw data from ONE APV card:
   std::vector<UInt_t> fStripAPV;
@@ -336,6 +350,9 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Int_t> fRawADC_APV;
   std::vector<Double_t> fPedSubADC_APV;
   std::vector<Double_t> fCommonModeSubtractedADC_APV;
+
+  //Let's store the online calculated common-mode in its own dedicated array as well:
+  std::vector<Double_t> fCM_online; //size equal to fN_MPD_TIME_SAMP
   
   //BASIC DECODED STRIP HIT INFO:
   //By the time the information is populated here, the ADC values are already assumed to be pedestal/common-mode subtracted and/or zero-suppressed as appropriate:
@@ -467,6 +484,8 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeRMSU;
   std::vector<Double_t> fCommonModeRMSV;
 
+  std::vector<Double_t> fCMbiasU;
+  std::vector<Double_t> fCMbiasV;
   
   
   double fCommonModeRange_nsigma; //default = 5
@@ -552,22 +571,37 @@ class SBSGEMModule : public THaSubDetector {
 
   bool fMakeEventInfoPlots;
   bool fEventInfoPlotsInitialized;
+
+  //Let's revamp the common-mode diagnostic plots altogether:
   
   //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
-  TH2D *fCommonModeDistU; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
+  TH2D *fCommonModeDistU; //user
+  TH2D *fCommonModeDistU_Histo; //Distribution of calculated common-mode (minus expected common-mode mean) using chosen method:
   TH2D *fCommonModeDistU_Sorting;
   TH2D *fCommonModeDistU_Danning;
-  TH2D *fCommonModeDiffU; //difference between sorting and danning mode calculations:
-  TH2D *fCommonModeCorrectionU;
-  TH2D *fCommonModeNotCorrectionU;
+  TH2D *fCommonModeDiffU; //difference between "user" and "online" danning-mode calculations:
+  TH2D *fCommonModeDiffU_Uncorrected;
+  TH2D *fCommonModeCorrectionU; //common-mode correction applied
+  //TH2D *fCommonModeNotCorrectionU;
+  //For full readout events that WEREN'T corrected, plot the difference between "online Danning method" and "true" common-mode:
+  TH2D *fCommonModeResidualBiasU; //for full-readout events only: "online corrected" - "true" common-mode vs APV
+  TH2D *fCommonModeResidualBias_vs_OccupancyU; //for full-readout events only: "online corrected" - "true" common-mode vs. occupancy
 
+  TH2D *fCommonModeResidualBiasU_corrected;
+  
   //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
-  TH2D *fCommonModeDistV; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
+  TH2D *fCommonModeDistV;
+  TH2D *fCommonModeDistV_Histo; //Distribution of calculated common-mode (minus expected common-mode mean) using chosen method:
   TH2D *fCommonModeDistV_Sorting;
   TH2D *fCommonModeDistV_Danning;
-  TH2D *fCommonModeDiffV; //difference between sorting and danning mode calculations:
+  TH2D *fCommonModeDiffV; //difference between "user" and "online" danning mode calculations
+  TH2D *fCommonModeDiffV_Uncorrected;
   TH2D *fCommonModeCorrectionV;
-  TH2D *fCommonModeNotCorrectionV;
+  //TH2D *fCommonModeNotCorrectionV;
+  TH2D *fCommonModeResidualBiasV; //for full-readout events only: "online corrected" - "true" common-mode vs APV
+  TH2D *fCommonModeResidualBias_vs_OccupancyV; //for full-readout events only: "online corrected" - "true" common-mode vs. 
+
+  TH2D *fCommonModeResidualBiasV_corrected;
   
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;

@@ -445,7 +445,7 @@ protected:
   bool fDumpGeometryInfo; //default to FALSE
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq; 
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq, fCMbiasfile_dbase; 
   // input files for (optional) loading of pedestals from database:
 
   std::string fpedfilename;

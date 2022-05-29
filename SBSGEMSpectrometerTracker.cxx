@@ -356,12 +356,13 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     fname_dbcm.Form( "db_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daqped.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daqcm.Form( "daq_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-
+    
     
     //fpedfile_dbase.open( fname_dbase.Data() );
     fCMfile_dbase.open( fname_dbcm.Data() );
     fpedfile_daq.open( fname_daqped.Data() );
     fCMfile_daq.open( fname_daqcm.Data() );
+    
     
     TString sdate = run->GetDate().AsString();
     sdate.Prepend( "#" );
