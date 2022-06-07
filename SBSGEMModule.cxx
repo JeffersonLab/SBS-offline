@@ -322,6 +322,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_binwidth_nsigma", &fCommonModeBinWidth_Nsigma, kDouble, 0, 1, 1 },
     { "commonmode_scanrange_nsigma", &fCommonModeScanRange_Nsigma, kDouble, 0, 1, 1 },
     { "commonmode_stepsize_nsigma", &fCommonModeStepSize_Nsigma, kDouble, 0, 1, 1 },
+    { "deconvolution_tau", &fStripTau, kDouble, 0, 1, 1 },
     { "CMbiasU", &fCMbiasU, kDoubleV, 0, 1, 1 },
     { "CMbiasV", &fCMbiasV, kDoubleV, 0, 1, 1 },
     {0}
@@ -369,6 +370,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fCommonModeNumIterations = std::min( 10, std::max( 2, fCommonModeNumIterations ) );
   fCommonModeMinStripsInRange = std::min( fN_APV25_CHAN-25, std::max(1, fCommonModeMinStripsInRange ) );
 
+  double x = fSamplePeriod/fStripTau;
+  
+  fDeconv_weights[0] = exp( x - 1.0 )/x;
+  fDeconv_weights[1] = -2.0*exp(-1.0)/x;
+  fDeconv_weights[2] = exp(-1.0-x)/x;
   
   //std::cout << GetName() << " fThresholdStripSum " << fThresholdStripSum 
   //<< " fThresholdSample " << fThresholdSample << std::endl;
@@ -562,12 +568,16 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fAxis.resize( nstripsmax );
   fADCsamples.resize( nstripsmax );
   fRawADCsamples.resize( nstripsmax );
+  fADCsamples_deconv.resize( nstripsmax );
   //The lines below are problematic and unnecessary
   for( unsigned int istrip=0; istrip<nstripsmax; istrip++ ){
     fADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
     fRawADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
+    fADCsamples_deconv[istrip].resize( fN_MPD_TIME_SAMP );
   }
+  
   fADCsums.resize( nstripsmax );
+  fADCsumsDeconv.resize( nstripsmax );
   fStripADCavg.resize( nstripsmax );
   fStripIsU.resize( nstripsmax );
   fStripIsV.resize( nstripsmax );
@@ -585,8 +595,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fStripTrackIndex.resize( nstripsmax );
   fKeepStrip.resize( nstripsmax );
   fMaxSamp.resize( nstripsmax );
+  fMaxSampDeconv.resize( nstripsmax );
   fADCmax.resize( nstripsmax );
+  fADCmaxDeconv.resize( nstripsmax );
   fTmean.resize( nstripsmax );
+  fTmeanDeconv.resize( nstripsmax );
   fTsigma.resize( nstripsmax );
   fStripTdiff.resize( nstripsmax );
   fStripTSchi2.resize( nstripsmax );
@@ -603,7 +616,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
   fRawADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
- 
+  fADCsamplesDeconv1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
  
   
   //default all common-mode mean and RMS values to 0 and 10 respectively if they were
@@ -832,11 +845,16 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.IsV", "V strip?", kUInt, 0, &(fStripIsV[0]), &fNstrips_hit },
     { "strip.ADCsamples", "ADC samples (index = isamp+Nsamples*istrip)", kDouble, 0, &(fADCsamples1D[0]), &fNdecoded_ADCsamples },
     { "strip.rawADCsamples", "raw ADC samples (no baseline subtraction)", kInt, 0, &(fRawADCsamples1D[0]), &fNdecoded_ADCsamples },
+    { "strip.DeconvADCsamples", "Deconvoluted ADC samples (index = isamp+Nsamples*istrip)", kDouble, 0, &(fADCsamplesDeconv1D[0]), &fNdecoded_ADCsamples },
     { "strip.ADCsum", "Sum of ADC samples on a strip", kDouble, 0, &(fADCsums[0]), &fNstrips_hit },
+    { "strip.DeconvADCsum", "Sum of deconvoluted ADC samples on a strip", kDouble, 0, &(fADCsumsDeconv[0]), &fNstrips_hit },
     { "strip.isampmax", "sample in which max ADC occurred on a strip", kUInt, 0, &(fMaxSamp[0]), &fNstrips_hit },
+    { "strip.isampmaxDeconv", "sample in which max deconvoluted ADC occurred", kUInt, 0, &(fMaxSampDeconv[0]), &fNstrips_hit },
     { "strip.ADCmax", "Value of max ADC sample on a strip", kDouble, 0, &(fADCmax[0]), &fNstrips_hit },
+    { "strip.DeconvADCmax", "Value of max deconvoluted ADC sample", kDouble, 0, &(fADCmaxDeconv[0]), &fNstrips_hit },
     { "strip.Tmean", "ADC-weighted mean strip time", kDouble, 0, &(fTmean[0]), &fNstrips_hit },
     { "strip.Tsigma", "ADC-weighted rms strip time", kDouble, 0, &(fTsigma[0]), &fNstrips_hit },
+    { "strip.TmeanDeconv", "ADC-weighted mean deconvoluted strip time", kDouble, 0, &(fTmeanDeconv[0]), &fNstrips_hit },
     { "strip.Tcorr", "Corrected strip time", kDouble, 0, &(fTcorr[0]), &fNstrips_hit },
     { "strip.Tfit", "Fitted strip time", kDouble, 0, &(fStripTfit[0]), &fNstrips_hit },
     { "strip.Tdiff", "time diff. wrt max strip in cluster (or perhaps cluster tmean)", kDouble, 0, &(fStripTdiff[0]), &fNstrips_hit },
@@ -1314,7 +1332,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// If pedestal subtraction was done online, don't do it again:
 	// In pedestal mode, the DAQ should NOT have subtracted the pedestals,
 	// but even if it did, it shouldn't affect the pedestal analysis to first order whether we subtract the pedestals or not:
-	if( fPedSubFlag != 0 && !fPedestalMode ) ped = 0.0;
+	if( fPedSubFlag != 0 && !fPedestalMode && !fIsMC ) ped = 0.0;
 	if( CM_ENABLED && !fIsMC ) {
 	  ped = 0.0; //If this is true then the pedestal was DEFINITELY always calculated online:
 	  //rawADC[iraw] += fCM_online[isamp] (not yet sure if we want to add back the online-CM) ;
@@ -1890,19 +1908,45 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //fStripAxis.push_back( Int_t(axis) );
 	  // fADCsamples.push_back( ADCtemp ); //pedestal-subtracted
 	  // fRawADCsamples.push_back( rawADCtemp ); //Raw
+	  
+	  double ADCsum_deconv = 0.0;
+	  double maxdeconv=0.0;
+	  int imaxdeconv=0;
+
+	  double Tsum_deconv = 0.0;
+	  
 	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	    fADCsamples[fNstrips_hit][isamp] = ADCtemp[isamp];
 	    fRawADCsamples[fNstrips_hit][isamp] = rawADCtemp[isamp];
+
+	    double Adeconvtemp = fDeconv_weights[0] * ADCtemp[isamp];
+	    if( isamp > 0 ) Adeconvtemp += fDeconv_weights[1] * ADCtemp[isamp-1];
+	    if( isamp > 1 ) Adeconvtemp += fDeconv_weights[2] * ADCtemp[isamp-2];
+	    
+	    fADCsamples_deconv[fNstrips_hit][isamp] = Adeconvtemp;
+
+	    ADCsum_deconv += Adeconvtemp;
+
+	    if( isamp == 0 || Adeconvtemp > maxdeconv ){
+	      imaxdeconv = isamp;
+	      maxdeconv = Adeconvtemp;
+	    }
+
+	    Tsum_deconv += fSamplePeriod * (isamp + 0.5) * Adeconvtemp;
 	    
 	    //fADCsamples1D.push_back( ADCtemp[isamp] );
 	    //fRawADCsamples1D.push_back( rawADCtemp[isamp] );
 	    fADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = ADCtemp[isamp];
 	    fRawADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = rawADCtemp[isamp];
-
+	    fADCsamplesDeconv1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = fADCsamples_deconv[fNstrips_hit][isamp];
+	    
 	    if( fKeepStrip[fNstrips_hit] && hADCfrac_vs_timesample_allstrips != NULL ){
 	      hADCfrac_vs_timesample_allstrips->Fill( isamp, ADCtemp[isamp]/ADCsum_temp );
 	    }
 	  }
+
+	  
+	  fADCsumsDeconv[fNstrips_hit] = ADCsum_deconv;
 	  //fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
 	  fStripTrackIndex[fNstrips_hit] = -1;
 	  fStripOnTrack[fNstrips_hit] = 0;
@@ -1925,7 +1969,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  
 	  
 	  //	  fADCmax.push_back( maxADC );
-	  fADCmax[fNstrips_hit] = maxADC; 
+	  fADCmax[fNstrips_hit] = maxADC;
+	  fADCmaxDeconv[fNstrips_hit] = maxdeconv;
+
+	  fMaxSampDeconv[fNstrips_hit] = imaxdeconv;
+	  fTmeanDeconv[fNstrips_hit] = Tsum_deconv/ADCsum_deconv;
+	  
 	  //	  fTmean.push_back( Tsum/ADCsum_temp );
 	  fTmean[fNstrips_hit] = Tmean_temp;
 	  //  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
@@ -2703,7 +2752,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     double area = GetXSize() * GetYSize();
     
     //window * area = ns * m^2 * 1e4 cm^2 /m^2 * 1e-6 ms/ns 
-    double ratefac = window*area/100.0; // ms * cm^2
+    double ratefac = 2.0*window*area/100.0; // ms * cm^2
     
     if( axis == SBSGEM::kUaxis ){
       hClusterBasedOccupancyUstrips->Fill( double(nclust_tot)/ratefac );

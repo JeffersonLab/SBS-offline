@@ -274,6 +274,7 @@ class SBSGEMModule : public THaSubDetector {
   
 
   Double_t fStripTau; //time constant for strip timing fit
+  Double_t fDeconv_weights[3]; //
   Double_t fStripMaxTcut_central, fStripMaxTcut_width; // Strip timing cuts for local maximum used to seed cluster
   Double_t fStripAddTcut_width; //Time cut for adding strips to a cluster
   Double_t fStripAddCorrCoeffCut; //cut on correlation coefficient for adding neighboring strips to a cluster.
@@ -387,7 +388,10 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<SBSGEM::GEMaxis_t>  fAxis;  //We just made our enumerated type that has two possible values, makes the code more readable (maybe)
   std::vector<std::vector<Double_t> > fADCsamples; //2D array of ADC samples by hit: Outer index runs over hits; inner index runs over ADC samples
   std::vector<std::vector<Int_t> > fRawADCsamples; //2D array of raw (non-baseline-subtracted) ADC values.
+  std::vector<std::vector<Double_t> > fADCsamples_deconv; //"Deconvoluted" ADC samples
+  
   std::vector<Double_t> fADCsums;
+  std::vector<Double_t> fADCsumsDeconv; //deconvoluted strip ADC sums
   std::vector<Double_t> fStripADCavg;
   std::vector<UInt_t> fStripIsU; // is this a U strip? 0/1
   std::vector<UInt_t> fStripIsV; // is this a V strip? 0/1
@@ -407,7 +411,10 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<bool> fNegStrip; //Does this strip pass negative zero suppression? - neg pulse study
   //std::vector<Int_t> fStripKeep; //Strip passes timing cuts (and part of a cluster)?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
+  std::vector<UInt_t> fMaxSampDeconv; //Sample with largest deconvoluted ADC value
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
+  std::vector<Double_t> fADCmaxDeconv; //Largest deconvoluted ADC sample
+  std::vector<Double_t> fTmeanDeconv; //mean deconvoluted strip time
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
   std::vector<Double_t> fStripTfit; //Dumb strip fit:
@@ -445,6 +452,7 @@ class SBSGEMModule : public THaSubDetector {
   //std::vector<UInt_t> fStripAxis; //redundant with fAxis, but more convenient for Podd global variable definition
   std::vector<Double_t> fADCsamples1D; //1D array to hold ADC samples; should end up with dimension fNstrips_hit*fN_MPD_TIME_SAMP
   std::vector<Int_t> fRawADCsamples1D;
+  std::vector<Double_t> fADCsamplesDeconv1D; //1D array of deconvoluted ADC samples
   
   /////////////////////// End of global variables needed for ROOT Tree/Histogram output ///////////////////////
   //////////////////////////////////////////////////////////////////////////////////////////////
