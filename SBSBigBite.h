@@ -137,6 +137,10 @@ protected:
   Double_t fBackConstraintX0; 
   Double_t fBackConstraintY0;
 
+  // Angle constraint widths:
+  Double_t fConstraintWidth_theta;
+  Double_t fConstraintWidth_phi;
+
   //The following parameters are used to calculate the weights in the constraint point calculation:
   Double_t fSigmaX_shower; //default = block size /12
   Double_t fSigmaY_shower; //default = block size /12

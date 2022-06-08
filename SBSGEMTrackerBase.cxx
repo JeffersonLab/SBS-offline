@@ -54,6 +54,10 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fConstraintWidth_Front.Set( 1.5, 0.5 );
   fConstraintWidth_Back.Set( 1.5, 0.5 );
 
+  //Default to wide-open track slope cuts:
+  fConstraintWidth_theta = 1000.0;
+  fConstraintWidth_phi = 1000.0;
+  
   fEfficiencyInitialized = false;
   fMakeEfficiencyPlots = true;
 
@@ -159,10 +163,15 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitVADC.clear();
   fHitUADCmaxstrip.clear();
   fHitVADCmaxstrip.clear();
+  fHitUADCmaxstrip_deconv.clear();
+  fHitVADCmaxstrip_deconv.clear();
   fHitUADCmaxsample.clear();
   fHitVADCmaxsample.clear();
+  fHitUADCmaxsample_deconv.clear();
+  fHitVADCmaxsample_deconv.clear();
   fHitUADCmaxclustsample.clear();
   fHitVADCmaxclustsample.clear();
+  
 
   
   fHitADCasym.clear();
@@ -173,6 +182,8 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitVTimeMaxStrip.clear();
   fHitUTimeMaxStripFit.clear();
   fHitVTimeMaxStripFit.clear();
+  fHitUTimeMaxStripDeconv.clear();
+  fHitVTimeMaxStripDeconv.clear();
   fHitDeltaT.clear();
   fHitTavg.clear();
   
@@ -180,6 +191,8 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitIsampMaxVclust.clear();
   fHitIsampMaxUstrip.clear();
   fHitIsampMaxVstrip.clear();
+  fHitIsampMaxUstripDeconv.clear();
+  fHitIsampMaxVstripDeconv.clear();
   
   fHitCorrCoeffClust.clear();
   fHitCorrCoeffMaxStrip.clear();
@@ -205,7 +218,20 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitADCfrac3_MaxVstrip.clear();
   fHitADCfrac4_MaxVstrip.clear();
   fHitADCfrac5_MaxVstrip.clear();
-  
+
+  fHitDeconvADC0_MaxUstrip.clear();
+  fHitDeconvADC1_MaxUstrip.clear();
+  fHitDeconvADC2_MaxUstrip.clear();
+  fHitDeconvADC3_MaxUstrip.clear();
+  fHitDeconvADC4_MaxUstrip.clear();
+  fHitDeconvADC5_MaxUstrip.clear();
+
+  fHitDeconvADC0_MaxVstrip.clear();
+  fHitDeconvADC1_MaxVstrip.clear();
+  fHitDeconvADC2_MaxVstrip.clear();
+  fHitDeconvADC3_MaxVstrip.clear();
+  fHitDeconvADC4_MaxVstrip.clear();
+  fHitDeconvADC5_MaxVstrip.clear();
 
   fclustering_done = false;
   ftracking_done = false;
@@ -997,7 +1023,8 @@ void SBSGEMTrackerBase::find_tracks(){
   //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
 
   //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
-  /*Long64_t Ncombos_allhits_all_layers = */InitHitList();
+  /*Long64_t Ncombos_allhits_all_layers = */
+  InitHitList();
 
   
   //std::cout << 
@@ -1384,24 +1411,28 @@ void SBSGEMTrackerBase::find_tracks(){
 		    //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
 		    FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
 
+		    
 		    //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
 		  
 		    if( firstgoodcombo || chi2ndftemp < minchi2 ){
-		    
-		      firstgoodcombo = false;
-		      minchi2 = chi2ndftemp;
-		    
-		      besthitcombo = hitcombo;
-		    
-		      //record track properties so we don't need to re-fit later
-		      besttrack[0] = xtrtemp;
-		      besttrack[1] = ytrtemp;
-		      besttrack[2] = xptrtemp;
-		      besttrack[3] = yptrtemp;
-		    
-		      //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
-		      uresidbest = uresidtemp;
-		      vresidbest = vresidtemp; 
+
+		      if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
+			
+			firstgoodcombo = false;
+			minchi2 = chi2ndftemp;
+			
+			besthitcombo = hitcombo;
+			
+			//record track properties so we don't need to re-fit later
+			besttrack[0] = xtrtemp;
+			besttrack[1] = ytrtemp;
+			besttrack[2] = xptrtemp;
+			besttrack[3] = yptrtemp;
+			
+			//Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
+			uresidbest = uresidtemp;
+			vresidbest = vresidtemp; 
+		      }
 		    }
 		  
 		    ncombostested++;
@@ -1451,20 +1482,22 @@ void SBSGEMTrackerBase::find_tracks(){
 		  FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
 
 		  if( firstgoodcombo || chi2ndftemp < minchi2 ){
-		    firstgoodcombo = false;
-		    minchi2 = chi2ndftemp;
-		    besthitcombo = hitcombo;
-
-		    besttrack[0] = xtrtemp;
-		    besttrack[1] = ytrtemp;
-		    besttrack[2] = xptrtemp;
-		    besttrack[3] = yptrtemp;
-		    
-		    //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
-		    uresidbest = uresidtemp;
-		    vresidbest = vresidtemp;
+		    if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
+		      firstgoodcombo = false;
+		      minchi2 = chi2ndftemp;
+		      besthitcombo = hitcombo;
+		      
+		      besttrack[0] = xtrtemp;
+		      besttrack[1] = ytrtemp;
+		      besttrack[2] = xptrtemp;
+		      besttrack[3] = yptrtemp;
+		      
+		      //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
+		      uresidbest = uresidtemp;
+		      vresidbest = vresidtemp;
+		    }
 		  }
-
+		  
 		  ncombostested++;
 
 		  hitcombo.clear();
@@ -1477,7 +1510,7 @@ void SBSGEMTrackerBase::find_tracks(){
 	} //end loop over layer combinations at current minimum hit requirement
 
 	  //We treat all layer combinations at the same minimum hit requirement on an equal footing as far as track-finding is concerned:
-	if( !firstgoodcombo && minchi2 < fTrackChi2Cut ){ //then we found at least one candidate track:
+	if( !firstgoodcombo && minchi2 < fTrackChi2Cut ){ //then we found at least one "good" candidate track:
 	  //check optics and other constraints:
 
 	  //double xtrtemp = besttrack[0];
@@ -1629,9 +1662,15 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitUADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_umax] );
       fHitVADCmaxstrip.push_back( fModules[module]->fADCsums[hitidx_vmax] );
 
+      fHitUADCmaxstrip_deconv.push_back( fModules[module]->fADCsumsDeconv[hitidx_umax] );
+      fHitVADCmaxstrip_deconv.push_back( fModules[module]->fADCsumsDeconv[hitidx_vmax] );
+
       fHitUADCmaxsample.push_back( fModules[module]->fADCmax[hitidx_umax] );
       fHitVADCmaxsample.push_back( fModules[module]->fADCmax[hitidx_vmax] );
 
+      fHitUADCmaxsample_deconv.push_back( fModules[module]->fADCmaxDeconv[hitidx_umax] );
+      fHitVADCmaxsample_deconv.push_back( fModules[module]->fADCmaxDeconv[hitidx_vmax] );
+      
       fHitU_ENABLE_CM.push_back( fModules[module]->fStrip_ENABLE_CM[hitidx_umax] );
       fHitU_CM_GOOD.push_back( fModules[module]->fStrip_CM_GOOD[hitidx_umax] );
       fHitU_BUILD_ALL_SAMPLES.push_back( fModules[module]->fStrip_BUILD_ALL_SAMPLES[hitidx_umax] );
@@ -1644,6 +1683,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       
       fHitIsampMaxUstrip.push_back( fModules[module]->fMaxSamp[hitidx_umax] );
       fHitIsampMaxVstrip.push_back( fModules[module]->fMaxSamp[hitidx_vmax] );
+      fHitIsampMaxUstripDeconv.push_back( fModules[module]->fMaxSampDeconv[hitidx_umax] );
+      fHitIsampMaxVstripDeconv.push_back( fModules[module]->fMaxSampDeconv[hitidx_vmax] );
       fHitIsampMaxUclust.push_back( uclustinfo->isampmax );
       fHitIsampMaxVclust.push_back( vclustinfo->isampmax );
       
@@ -1654,6 +1695,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 
       fHitUTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_umax] );
       fHitVTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_vmax] );
+
+      fHitUTimeMaxStripDeconv.push_back( fModules[module]->fTmeanDeconv[hitidx_umax] );
+      fHitVTimeMaxStripDeconv.push_back( fModules[module]->fTmeanDeconv[hitidx_vmax] );
 
       fHitUTimeMaxStripFit.push_back( fModules[module]->fStripTfit[hitidx_umax] );
       fHitVTimeMaxStripFit.push_back( fModules[module]->fStripTfit[hitidx_vmax] );
@@ -1741,9 +1785,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       
       double ADCfrac_maxUstrip[ntimesamples];
       double ADCfrac_maxVstrip[ntimesamples]; 
-     
-      
-      
+
+      double DeconvADC_maxUstrip[ntimesamples];
+      double DeconvADC_maxVstrip[ntimesamples];
       
       double ADCsum_maxUstrip = fModules[module]->fADCsums[hitidx_umax];
       double ADCsum_maxVstrip = fModules[module]->fADCsums[hitidx_vmax];
@@ -1754,6 +1798,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	if( isamp < fModules[module]->fN_MPD_TIME_SAMP ){
 	  ADCfrac_maxUstrip[isamp] = fModules[module]->fADCsamples[hitidx_umax][isamp]/ADCsum_maxUstrip;
 	  ADCfrac_maxVstrip[isamp] = fModules[module]->fADCsamples[hitidx_vmax][isamp]/ADCsum_maxVstrip;
+
+	  DeconvADC_maxUstrip[isamp] = fModules[module]->fADCsamples_deconv[hitidx_umax][isamp];
+	  DeconvADC_maxVstrip[isamp] = fModules[module]->fADCsamples_deconv[hitidx_vmax][isamp];
 	}
       }
       
@@ -1771,6 +1818,19 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitADCfrac4_MaxVstrip.push_back( ADCfrac_maxVstrip[4] );
       fHitADCfrac5_MaxVstrip.push_back( ADCfrac_maxVstrip[5] );
 
+      fHitDeconvADC0_MaxUstrip.push_back( DeconvADC_maxUstrip[0] );
+      fHitDeconvADC1_MaxUstrip.push_back( DeconvADC_maxUstrip[1] );
+      fHitDeconvADC2_MaxUstrip.push_back( DeconvADC_maxUstrip[2] );
+      fHitDeconvADC3_MaxUstrip.push_back( DeconvADC_maxUstrip[3] );
+      fHitDeconvADC4_MaxUstrip.push_back( DeconvADC_maxUstrip[4] );
+      fHitDeconvADC5_MaxUstrip.push_back( DeconvADC_maxUstrip[5] );
+      
+      fHitDeconvADC0_MaxVstrip.push_back( DeconvADC_maxVstrip[0] );
+      fHitDeconvADC1_MaxVstrip.push_back( DeconvADC_maxVstrip[1] );
+      fHitDeconvADC2_MaxVstrip.push_back( DeconvADC_maxVstrip[2] );
+      fHitDeconvADC3_MaxVstrip.push_back( DeconvADC_maxVstrip[3] );
+      fHitDeconvADC4_MaxVstrip.push_back( DeconvADC_maxVstrip[4] );
+      fHitDeconvADC5_MaxVstrip.push_back( DeconvADC_maxVstrip[5] );
     
       if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 && itrack == 0 ){
       //if( fMakeEfficiencyPlots && itrack == 0 ){
@@ -2479,6 +2539,9 @@ bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, do
   double xproject_fcp = xtr + xptr * fConstraintPoint_Front.Z();
   double yproject_fcp = ytr + yptr * fConstraintPoint_Front.Z();
 
+  double xpc = ( fConstraintPoint_Back.X() - fConstraintPoint_Front.X() )/( fConstraintPoint_Back.Z() - fConstraintPoint_Front.Z() );
+  double ypc = ( fConstraintPoint_Back.Y() - fConstraintPoint_Front.Y() )/( fConstraintPoint_Back.Z() - fConstraintPoint_Front.Z() );
+  
   bool constraint_check = false;
   
   if( fabs( xproject_bcp - fConstraintPoint_Back.X() ) <= fConstraintWidth_Back.X() &&
@@ -2487,7 +2550,14 @@ bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, do
       fabs( yproject_fcp - fConstraintPoint_Front.Y() ) <= fConstraintWidth_Front.Y() ){
     
     constraint_check = true;
-  } 
+  }
 
-  return constraint_check;
+  bool slopecheck = false;
+  
+  if( fabs( xptr - xpc ) <= fConstraintWidth_theta &&
+      fabs( yptr - ypc ) <= fConstraintWidth_phi ){
+    slopecheck = true;
+  }
+  
+  return constraint_check && (slopecheck || !fUseSlopeConstraint);
 }

@@ -66,7 +66,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 
   fSamplePeriod = 24.0; //nanoseconds:
 
-  fSigma_hitshape = 0.0004; //0.4 mm
+  fSigma_hitshape = 0.0004; //0.4 mm; controls cluster-splitting algorithm
   // for( Int_t i = 0; i < N_MPD_TIME_SAMP; i++ ){
   //     fadc[i] = NULL;
   // }
@@ -97,7 +97,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   // fChan_MPD_EventCount = 515;
   // fChan_MPD_Debug = 516;
 
-  fChan_CM_flags = 640; //default to 512:
+  //Start dummy channels at 640 by default, to accommodate up to 40 MPDs per VTP crate
+  fChan_CM_flags = 640; //default to 640 (so as not to step on up to 40 MPDs per VTP crate):
   fChan_TimeStamp_low = 641;
   fChan_TimeStamp_high = 642;
   fChan_MPD_EventCount = 643;
@@ -111,6 +112,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fPedSubADC_APV.resize( MAXNSAMP_PER_APV );
   fCommonModeSubtractedADC_APV.resize( MAXNSAMP_PER_APV );
 
+  fCM_online.resize( fN_MPD_TIME_SAMP );
+  
   //default to 
   fMAX2DHITS = 250000;
 
@@ -157,15 +160,17 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fPulseShapeInitialized = false;
 
   fMeasureCommonMode = true;
-  fNeventsCommonModeLookBack = 100;
+  fNeventsCommonModeLookBack = 15;
 
   fCorrectCommonMode = false;
   fCorrectCommonModeMinStrips = 20;
   fCorrectCommonMode_Nsigma = 5.0;
 
-  fCommonModeBinWidth_Nsigma = 2.0; //Bin width +/- 2 sigma
+  fCommonModeBinWidth_Nsigma = 1.0; //Bin width +/- 1 sigma by default
   fCommonModeScanRange_Nsigma = 4.0; //Scan window +/- 4 sigma
   fCommonModeStepSize_Nsigma = 0.2; //sigma/5 for step size:
+
+  fCommonModeDanningMethod_NsigmaCut = 3.0; //Default to 3 sigma
   
   return;
 }
@@ -291,6 +296,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_niter", &fCommonModeNumIterations, kInt, 0, 1, 1},
     { "commonmode_minstrips", &fCommonModeMinStripsInRange, kInt, 0, 1, 1},
     { "commonmode_range_nsigma", &fCommonModeRange_nsigma, kDouble, 0, 1, 1},
+    { "commonmode_danning_nsigma_cut", &fCommonModeDanningMethod_NsigmaCut, kDouble, 0, 1, 1 },
     { "plot_common_mode", &cmplots_flag, kInt, 0, 1, 1},
     { "plot_event_info", &eventinfoplots_flag, kInt, 0, 1, 1},
     { "chan_cm_flags", &fChan_CM_flags, kUInt, 0, 1, 1}, //optional, search up the tree: must match the value in crate map!
@@ -316,6 +322,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_binwidth_nsigma", &fCommonModeBinWidth_Nsigma, kDouble, 0, 1, 1 },
     { "commonmode_scanrange_nsigma", &fCommonModeScanRange_Nsigma, kDouble, 0, 1, 1 },
     { "commonmode_stepsize_nsigma", &fCommonModeStepSize_Nsigma, kDouble, 0, 1, 1 },
+    { "deconvolution_tau", &fStripTau, kDouble, 0, 1, 1 },
+    { "CMbiasU", &fCMbiasU, kDoubleV, 0, 1, 1 },
+    { "CMbiasV", &fCMbiasV, kDoubleV, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -338,7 +347,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fSuppressFirstLast = suppressfirstlast; 
 
-  fMeasureCommonMode = usecommonmoderollingaverage != 0;
+  //fMeasureCommonMode = usecommonmoderollingaverage != 0;
+  fMeasureCommonMode = true; //we're not turning this off
   fCorrectCommonMode = correctcommonmode != 0;
   
   if( fUseTSchi2cut && TSfrac_mean_temp.size() == fN_MPD_TIME_SAMP && TSfrac_sigma_temp.size() == fN_MPD_TIME_SAMP ){
@@ -360,6 +370,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fCommonModeNumIterations = std::min( 10, std::max( 2, fCommonModeNumIterations ) );
   fCommonModeMinStripsInRange = std::min( fN_APV25_CHAN-25, std::max(1, fCommonModeMinStripsInRange ) );
 
+  double x = fSamplePeriod/fStripTau;
+  
+  fDeconv_weights[0] = exp( x - 1.0 )/x;
+  fDeconv_weights[1] = -2.0*exp(-1.0)/x;
+  fDeconv_weights[2] = exp(-1.0-x)/x;
   
   //std::cout << GetName() << " fThresholdStripSum " << fThresholdStripSum 
   //<< " fThresholdSample " << fThresholdSample << std::endl;
@@ -395,6 +410,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fCommonModeRollingAverage_by_APV.resize( nentry );
   fCommonModeRollingRMS_by_APV.resize( nentry );
   fNeventsRollingAverage_by_APV.resize( nentry );
+
+  fCMbiasResultContainer_by_APV.resize( nentry );
+  fCommonModeOnlineBiasRollingAverage_by_APV.resize( nentry );
+  fCommonModeOnlineBiasRollingRMS_by_APV.resize( nentry );
+  fNeventsOnlineBias_by_APV.resize( nentry );
   
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
     mpdmap_t thisdata;
@@ -443,6 +463,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fCommonModeRollingAverage_by_APV[mapline] = 0.0;
     fCommonModeRollingRMS_by_APV[mapline] = 10.0;
     fNeventsRollingAverage_by_APV[mapline] = 0; //Really will be the number of time samples = 6 * number of events
+
+    fCMbiasResultContainer_by_APV[mapline].resize( fNeventsCommonModeLookBack*fN_MPD_TIME_SAMP );
+    fCommonModeOnlineBiasRollingAverage_by_APV[mapline] = 0.0;
+    fCommonModeOnlineBiasRollingRMS_by_APV[mapline] = 10.0;
+    fNeventsOnlineBias_by_APV[mapline] = 0;
   }
 
   //if a different number of decode map entries is counted than the expectation based on the number of strips, 
@@ -543,12 +568,16 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fAxis.resize( nstripsmax );
   fADCsamples.resize( nstripsmax );
   fRawADCsamples.resize( nstripsmax );
+  fADCsamples_deconv.resize( nstripsmax );
   //The lines below are problematic and unnecessary
   for( unsigned int istrip=0; istrip<nstripsmax; istrip++ ){
     fADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
     fRawADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
+    fADCsamples_deconv[istrip].resize( fN_MPD_TIME_SAMP );
   }
+  
   fADCsums.resize( nstripsmax );
+  fADCsumsDeconv.resize( nstripsmax );
   fStripADCavg.resize( nstripsmax );
   fStripIsU.resize( nstripsmax );
   fStripIsV.resize( nstripsmax );
@@ -566,8 +595,11 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fStripTrackIndex.resize( nstripsmax );
   fKeepStrip.resize( nstripsmax );
   fMaxSamp.resize( nstripsmax );
+  fMaxSampDeconv.resize( nstripsmax );
   fADCmax.resize( nstripsmax );
+  fADCmaxDeconv.resize( nstripsmax );
   fTmean.resize( nstripsmax );
+  fTmeanDeconv.resize( nstripsmax );
   fTsigma.resize( nstripsmax );
   fStripTdiff.resize( nstripsmax );
   fStripTSchi2.resize( nstripsmax );
@@ -584,7 +616,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
   fRawADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
- 
+  fADCsamplesDeconv1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
  
   
   //default all common-mode mean and RMS values to 0 and 10 respectively if they were
@@ -616,6 +648,21 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fCommonModeRMSV.resize( fNAPVs_V );
     for( unsigned int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
       fCommonModeRMSV[iAPV] = 10.0;
+    }
+  }
+
+  // Initialize default "CM correction bias" values to zero if they were not loaded from the DB:
+  if( fCMbiasU.size() != fNAPVs_U ){
+    fCMbiasU.resize( fNAPVs_U );
+    for( unsigned int iAPV=0; iAPV<fNAPVs_U; iAPV++ ){
+      fCMbiasU[iAPV] = 0.0;
+    }
+  }
+
+  if( fCMbiasV.size() != fNAPVs_V ){
+    fCMbiasV.resize( fNAPVs_V );
+    for( unsigned int iAPV=0; iAPV<fNAPVs_V; iAPV++ ){
+      fCMbiasV[iAPV] = 0.0;
     }
   }
   
@@ -798,11 +845,16 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.IsV", "V strip?", kUInt, 0, &(fStripIsV[0]), &fNstrips_hit },
     { "strip.ADCsamples", "ADC samples (index = isamp+Nsamples*istrip)", kDouble, 0, &(fADCsamples1D[0]), &fNdecoded_ADCsamples },
     { "strip.rawADCsamples", "raw ADC samples (no baseline subtraction)", kInt, 0, &(fRawADCsamples1D[0]), &fNdecoded_ADCsamples },
+    { "strip.DeconvADCsamples", "Deconvoluted ADC samples (index = isamp+Nsamples*istrip)", kDouble, 0, &(fADCsamplesDeconv1D[0]), &fNdecoded_ADCsamples },
     { "strip.ADCsum", "Sum of ADC samples on a strip", kDouble, 0, &(fADCsums[0]), &fNstrips_hit },
+    { "strip.DeconvADCsum", "Sum of deconvoluted ADC samples on a strip", kDouble, 0, &(fADCsumsDeconv[0]), &fNstrips_hit },
     { "strip.isampmax", "sample in which max ADC occurred on a strip", kUInt, 0, &(fMaxSamp[0]), &fNstrips_hit },
+    { "strip.isampmaxDeconv", "sample in which max deconvoluted ADC occurred", kUInt, 0, &(fMaxSampDeconv[0]), &fNstrips_hit },
     { "strip.ADCmax", "Value of max ADC sample on a strip", kDouble, 0, &(fADCmax[0]), &fNstrips_hit },
+    { "strip.DeconvADCmax", "Value of max deconvoluted ADC sample", kDouble, 0, &(fADCmaxDeconv[0]), &fNstrips_hit },
     { "strip.Tmean", "ADC-weighted mean strip time", kDouble, 0, &(fTmean[0]), &fNstrips_hit },
     { "strip.Tsigma", "ADC-weighted rms strip time", kDouble, 0, &(fTsigma[0]), &fNstrips_hit },
+    { "strip.TmeanDeconv", "ADC-weighted mean deconvoluted strip time", kDouble, 0, &(fTmeanDeconv[0]), &fNstrips_hit },
     { "strip.Tcorr", "Corrected strip time", kDouble, 0, &(fTcorr[0]), &fNstrips_hit },
     { "strip.Tfit", "Fitted strip time", kDouble, 0, &(fStripTfit[0]), &fNstrips_hit },
     { "strip.Tdiff", "time diff. wrt max strip in cluster (or perhaps cluster tmean)", kDouble, 0, &(fStripTdiff[0]), &fNstrips_hit },
@@ -964,6 +1016,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   //similar here:
   fHits.clear();
 
+  fCM_online.assign(fN_MPD_TIME_SAMP,0.0);
+  
   //fStripAxis.clear();
   // fADCsamples1D.clear();
   // fStripTrackIndex.clear();
@@ -1018,38 +1072,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
   
   
-  //resize all the "decoded strip" arrays to their maximum possible values for this module:
-  //we need to do this event-by-event, because we shrink the size of the arrays to fNstrips_hit after decoding to prevent
-  //enormous ROOT output:
-  //UInt_t nstripsmax = fNstripsU + fNstripsV;
   
-  // fStrip.resize( nstripsmax );
-  // fAxis.resize( nstripsmax );
-  // fADCsamples.resize( nstripsmax );
-  // fRawADCsamples.resize( nstripsmax );
-  // for( int istrip=0; istrip<nstripsmax; istrip++ ){
-  //   fADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
-  //   fRawADCsamples[istrip].resize( fN_MPD_TIME_SAMP );
-  // }
-  // fADCsums.resize( nstripsmax );
-  // fStripADCavg.resize( nstripsmax );
-  // fStripIsU.resize( nstripsmax );
-  // fStripIsV.resize( nstripsmax );
-  // fKeepStrip.resize( nstripsmax );
-  // fMaxSamp.resize( nstripsmax );
-  // fADCmax.resize( nstripsmax );
-  // fTmean.resize( nstripsmax );
-  // fTsigma.resize( nstripsmax );
-  // fTcorr.resize( nstripsmax );
-  
-  // fADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
-  // fRawADCsamples1D.resize( nstripsmax * fN_MPD_TIME_SAMP );
-  // fStripTrackIndex.resize( nstripsmax );
-  
-  // fUstripIndex.clear();
-  // fVstripIndex.clear();
-  //This could be written more efficiently, in principle. However, it's not yet clear it's a speed bottleneck, so for now let's not worry about it too much:
-
   //Now, how are we going to implement any kind of common-mode "sag" correction?
   // 1. It has to be optional
   // 2. It will probably require some new optional user-adjustable database parameters to control the behavior.
@@ -1252,6 +1275,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    CMcalc[2*iw+1] = ( (MPDdebugwords[iw]>>13) & 0xFFF ) | ( ( (MPDdebugwords[iw]>>13) & 0x1000 ) ? 0xFFFFF000 : 0x0 );
 	    CMcalc_signed[2*iw] = Int_t( CMcalc[2*iw] );
 	    CMcalc_signed[2*iw+1] = Int_t( CMcalc[2*iw+1] );
+
+	    fCM_online[2*iw] = double(CMcalc_signed[2*iw]);
+	    fCM_online[2*iw+1] = double(CMcalc_signed[2*iw+1]);
 	  }
 
 	  //
@@ -1262,7 +1288,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	}
       }
       
-    }
+    } //End check if CM_ENABLED
     
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
 
@@ -1271,7 +1297,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
       //      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
       Int_t nstrips = nsamp/fN_MPD_TIME_SAMP; //number of strips fired on this APV card (should be exactly 128 if online zero suppression is NOT used):
-      
+
+      bool fullreadout = !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN;
       // std::cout << "MPD ID, ADC channel, number of strips fired = " << it->mpd_id << ", "
       // 		<< it->adc_id << ", " << nstrips << std::endl;
 
@@ -1283,51 +1310,60 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	commonMode[isamp] = 0.0;
 	CommonModeCorrection[isamp] = 0.0;
       }
+
+      // Let's throw in the towel and always do a first loop over the data, despite a small loss of efficiency,
+      // to populate the local arrays; otherwise this code is getting too confusing and bug-prone:
+      // First loop over the hits: populate strip, raw strip, raw ADC, ped sub ADC and common-mode-subtracted aDC:
+      for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
+	int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
+	UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+
+	int isamp = iraw%fN_MPD_TIME_SAMP;
+	  
+	Int_t ADC = Int_t( decoded_rawADC );
+	  
+	rawStrip[iraw] = strip;
+	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
+
+	rawADC[iraw] = ADC;
+	
+	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+
+	// If pedestal subtraction was done online, don't do it again:
+	// In pedestal mode, the DAQ should NOT have subtracted the pedestals,
+	// but even if it did, it shouldn't affect the pedestal analysis to first order whether we subtract the pedestals or not:
+	if( fPedSubFlag != 0 && !fPedestalMode && !fIsMC ) ped = 0.0;
+	if( CM_ENABLED && !fIsMC ) {
+	  ped = 0.0; //If this is true then the pedestal was DEFINITELY always calculated online:
+	  //rawADC[iraw] += fCM_online[isamp] (not yet sure if we want to add back the online-CM) ;
+	}
+	  
+	pedsubADC[iraw] = double(ADC) - ped;
+	commonModeSubtractedADC[iraw] = double(ADC) - ped; 
+
+	//the calculation of common mode in pedestal mode analysis differs from the
+	// offline or online zero suppression analysis; here we use a simple average of all 128 channels:
+	if( fPedestalMode ){
+	  //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
+	  //values   
+	    
+	  if( fSubtractPedBeforeCommonMode ){
+	    commonMode[isamp] += pedsubADC[iraw]/double(fN_APV25_CHAN);
+	  } else {
+	    commonMode[isamp] += rawADC[iraw]/double(fN_APV25_CHAN);
+	  }
+	}
+      }
       
-      if( !CM_ENABLED && BUILD_ALL_SAMPLES && nstrips == fN_APV25_CHAN ){ //then two loops over the data are necessary, first one to calculate common-mode:
+      if( fullreadout ){ //then we need to calculate the common-mode:
 	//declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
 	
 	//std::cout << "Common-mode calculation: " << std::endl;
 	
-	//First loop over the hits: populate strip, raw strip, raw ADC, ped sub ADC and common-mode-subtracted aDC:
-	for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
-	  int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
-	  UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+	if( fMakeCommonModePlots || !fPedestalMode ) { // calculate both ways:
+
+	  //vector<double> CM_danning_online_temp(fN_MPD_TIME_SAMP,0);
 	  
-	  Int_t ADC = Int_t( decoded_rawADC );
-	  
-	  rawStrip[iraw] = strip;
-	  Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
-
-	  double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
-
-	  // If pedestal subtraction was done online, don't do it again:
-	  // In pedestal mode, the DAQ should NOT have subtracted the pedestals,
-	  // but even if it did, it shouldn't affect the pedestal analysis to first order whether we subtract the pedestals or not:
-	  if( fPedSubFlag != 0 && !fPedestalMode ) ped = 0.0;
-	
-	  rawADC[iraw] = ADC;
-	  pedsubADC[iraw] = double(ADC) - ped;
-	  commonModeSubtractedADC[iraw] = double(ADC) - ped; 
-
-	  //the calculation of common mode in pedestal mode analysis differs from the
-	  // offline or online zero suppression analysis; here we use a simple average of all 128 channels:
-	  if( fPedestalMode ){
-	    //do simple common-mode calculation involving the simple average of all 128 (ped-subtracted) ADC
-	    //values
-	    int isamp = iraw%fN_MPD_TIME_SAMP;
-	    
-	    if( fSubtractPedBeforeCommonMode ){
-	      commonMode[isamp] += pedsubADC[iraw]/double(fN_APV25_CHAN);
-	    } else {
-	      commonMode[isamp] += rawADC[iraw]/double(fN_APV25_CHAN);
-	    }
-	  }
-	}
-	
-	// second loop over the hits to calculate and apply common-mode correction (sorting, Danning, or histogramming method)
-	//if( !fPedestalMode ){ //need to calculate common mode:
-	if( fMakeCommonModePlots || !fPedestalMode ){ // calculate both ways:
 	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	    
 	    //moved common-mode calculation to its own function:
@@ -1347,8 +1383,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      //}
 	      double cm_sorting = GetCommonMode( isamp, 0, *it );
 	      double cm_danning_online = GetCommonMode( isamp, 3, *it );
-	      double cm_danning_offline = GetCommonMode( isamp, 4, *it, cm_danning_online ); //Artificially zero suppress this calculation to check the CM correction algorithm
+	      //double cm_danning_offline = GetCommonMode( isamp, 4, *it, cm_danning_online ); //Artificially zero suppress this calculation to check the CM correction algorithm
+
+	      fCM_online[isamp] = cm_danning_online;
 	      
+	      //If we are in this if-block, this is a full-readout event
 
 	      //std::cout << "cm danning, sorting = " << cm_danning << ", " << cm_sorting << std::endl;
 	      
@@ -1367,64 +1406,65 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 		}
 	      }
 
+	      // //Common-mode correction needs to be moved to its own method:
 	      
-	      //Calculate diagnostic plots for the CM correction algorithm
-	      double CM_meas = cm_danning_online;
-	      double CM_expect_mean, CM_expect_rms;
-	      if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvcounter] >= std::min(UInt_t(100),fNeventsCommonModeLookBack*fN_MPD_TIME_SAMP) ){
-		//If we have a critical mass of events in the rolling CM average for this to be a reliable estimate, use it: 
-		CM_expect_mean = fCommonModeRollingAverage_by_APV[apvcounter];
-		CM_expect_rms = fCommonModeRollingRMS_by_APV[apvcounter]; 
-	      } else { //use database value:
-		UInt_t postemp = fMPDmap[apvcounter].pos;
-		UInt_t axistemp = fMPDmap[apvcounter].axis;
+	      // //Calculate diagnostic plots for the CM correction algorithm
+	      // double CM_meas = cm_danning_online;
+	      // double CM_expect_mean, CM_expect_rms;
+	      // if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvcounter] >= std::min(UInt_t(100),fNeventsCommonModeLookBack*fN_MPD_TIME_SAMP) ){
+	      // 	//If we have a critical mass of events in the rolling CM average for this to be a reliable estimate, use it: 
+	      // 	CM_expect_mean = fCommonModeRollingAverage_by_APV[apvcounter];
+	      // 	CM_expect_rms = fCommonModeRollingRMS_by_APV[apvcounter]; 
+	      // } else { //use database value:
+	      // 	UInt_t postemp = fMPDmap[apvcounter].pos;
+	      // 	UInt_t axistemp = fMPDmap[apvcounter].axis;
 		
-		CM_expect_mean = (axistemp == SBSGEM::kUaxis) ? fCommonModeMeanU[postemp] : fCommonModeMeanV[postemp];
-		CM_expect_rms = (axistemp == SBSGEM::kUaxis) ? fCommonModeRMSU[postemp] : fCommonModeRMSV[postemp];		
-	      }
+	      // 	CM_expect_mean = (axistemp == SBSGEM::kUaxis) ? fCommonModeMeanU[postemp] : fCommonModeMeanV[postemp];
+	      // 	CM_expect_rms = (axistemp == SBSGEM::kUaxis) ? fCommonModeRMSU[postemp] : fCommonModeRMSV[postemp];		
+	      // }
 	      
-	      //if( CM_meas < CM_expect_mean - fCorrectCommonMode_Nsigma * CM_expect_rms ){
-	      if(true){ // Lets try forcing every event to pass this first cut
-		// The online common mode appears to have a large negative bias relative to the expectation. 
-		// Try to correct the common-mode. To calculate the correction requires us to loop on all the strips on this APV that passed
-		// online zero suppression.
-		// The simplest approach is just to take a simple average of all the strips within +/- some number of standard deviations of the
-		// *EXPECTED* common-mode mean, but this is a biased approach.
+	      // //if( CM_meas < CM_expect_mean - fCorrectCommonMode_Nsigma * CM_expect_rms ){
+	      // if(true){ // Lets try forcing every event to pass this first cut
+	      // 	// The online common mode appears to have a large negative bias relative to the expectation. 
+	      // 	// Try to correct the common-mode. To calculate the correction requires us to loop on all the strips on this APV that passed
+	      // 	// online zero suppression.
+	      // 	// The simplest approach is just to take a simple average of all the strips within +/- some number of standard deviations of the
+	      // 	// *EXPECTED* common-mode mean, but this is a biased approach.
 		
-		UInt_t NstripsInRange = 0; 
+	      // 	UInt_t NstripsInRange = 0; 
 		
-		//Loop on all strips on this APV and calculate raw ADC values from 
-		for(int istrip=0; istrip<nstrips; ++istrip ){
-		  int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
+	      // 	//Loop on all strips on this APV and calculate raw ADC values from 
+	      // 	for(int istrip=0; istrip<nstrips; ++istrip ){
+	      // 	  int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
 		  
-		  int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
-		  UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+	      // 	  int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
+	      // 	  UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
 		  
-		  Int_t ADCtemp = pedsubADC[iraw];
+	      // 	  Int_t ADCtemp = pedsubADC[iraw];
 
-		  double rmstemp = (axis == SBSGEM::kUaxis ) ? fPedRMSU[Strip[iraw]] : fPedRMSV[Strip[iraw]];
+	      // 	  double rmstemp = (axis == SBSGEM::kUaxis ) ? fPedRMSU[Strip[iraw]] : fPedRMSV[Strip[iraw]];
 
-		  double strip_sum = 0;
-		  for(int itsamp=0; itsamp < 6; itsamp++)
-		    strip_sum += ADCtemp - cm_danning_online;
-		  if(strip_sum/fN_MPD_TIME_SAMP < 3*rmstemp) continue;
+	      // 	  double strip_sum = 0;
+	      // 	  for(int itsamp=0; itsamp < 6; itsamp++)
+	      // 	    strip_sum += ADCtemp - cm_danning_online;
+	      // 	  if(strip_sum/fN_MPD_TIME_SAMP < 3*rmstemp) continue;
 		  
-		  rawStrip[iraw] = strip;
-		  Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
+	      // 	  rawStrip[iraw] = strip;
+	      // 	  Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 		  		  
-		  rawADC[iraw] = ADCtemp;
-		  pedsubADC[iraw] = double( rawADC[iraw] ); //this is the one that goes into the common-mode calculation
-		  if( fabs( pedsubADC[iraw] - CM_expect_mean ) <= fCorrectCommonMode_Nsigma * CM_expect_rms ) NstripsInRange++;
-		}
+	      // 	  rawADC[iraw] = ADCtemp;
+	      // 	  pedsubADC[iraw] = double( rawADC[iraw] ); //this is the one that goes into the common-mode calculation
+	      // 	  if( fabs( pedsubADC[iraw] - CM_expect_mean ) <= fCorrectCommonMode_Nsigma * CM_expect_rms ) NstripsInRange++;
+	      // 	}
 		
-		if( NstripsInRange >= fCommonModeMinStripsInRange ){
-		  //Correction to be ADDED to ADC value to get corrected value:
-		  CommonModeCorrection[isamp] = CM_meas -  GetCommonMode( isamp, 4, *it, cm_danning_online, nstrips ) + 3*8.3*(1 - NstripsInRange*1.0 / 128); //add extra 3 sigma * (1 - occupancy) to correct for extra positive bias from zero suppression
+	      // 	if( NstripsInRange >= fCommonModeMinStripsInRange ){
+	      // 	  //Correction to be ADDED to ADC value to get corrected value:
+	      // 	  CommonModeCorrection[isamp] = CM_meas -  GetCommonMode( isamp, 4, *it, cm_danning_online, nstrips ) + 3*8.3*(1 - NstripsInRange*1.0 / 128); //add extra 3 sigma * (1 - occupancy) to correct for extra positive bias from zero suppression
 		  
-		} else {
-		  CommonModeCorrection[isamp] = 0.0; //To be added to ADC value! 
-		}
-	      }
+	      // 	} else {
+	      // 	  CommonModeCorrection[isamp] = 0.0; //To be added to ADC value! 
+	      // 	}
+	      // }
 	      
 	    
 	      
@@ -1445,20 +1485,24 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 		cm_mean = fCommonModeMeanU[iAPV];
 
 		fCommonModeDistU->Fill( iAPV, commonMode[isamp] - cm_mean );
+		fCommonModeDistU_Histo->Fill( iAPV, cm_histo - cm_mean );
 		fCommonModeDistU_Sorting->Fill( iAPV, cm_sorting - cm_mean );
-		fCommonModeDistU_Danning->Fill( iAPV, cm_danning_online - cm_mean );
-		fCommonModeDiffU->Fill( iAPV, cm_sorting - cm_danning_online );
-		if(CommonModeCorrection[isamp] != 0.0) fCommonModeCorrectionU->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
-		else fCommonModeNotCorrectionU->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
+		fCommonModeDistU_Danning->Fill( iAPV, cm_danning - cm_mean );
+		fCommonModeDiffU->Fill( iAPV, commonMode[isamp] - cm_danning_online );
+		// Moving simulated common-mode corrections for full-readout events to a separate dedicated method
+		// if(CommonModeCorrection[isamp] != 0.0) fCommonModeCorrectionU->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
+		// else fCommonModeNotCorrectionU->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
 	      } else {
 		cm_mean = fCommonModeMeanV[iAPV];
 		
 		fCommonModeDistV->Fill( iAPV, commonMode[isamp] - cm_mean );
+		fCommonModeDistV_Histo->Fill( iAPV, cm_histo - cm_mean );
 		fCommonModeDistV_Sorting->Fill( iAPV, cm_sorting - cm_mean );
-		fCommonModeDistV_Danning->Fill( iAPV, cm_danning_online - cm_mean );
-		fCommonModeDiffV->Fill( iAPV, cm_sorting - cm_danning_online );
-		if(CommonModeCorrection[isamp] != 0.0) fCommonModeCorrectionV->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
-		else fCommonModeNotCorrectionV->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
+		fCommonModeDistV_Danning->Fill( iAPV, cm_danning - cm_mean );
+		fCommonModeDiffV->Fill( iAPV, commonMode[isamp] - cm_danning_online );
+		// Moving simulated common-mode corrections for full-readout events to a separate dedicated method
+		// if(CommonModeCorrection[isamp] != 0.0) fCommonModeCorrectionV->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
+		// else fCommonModeNotCorrectionV->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
 	      }
 	    
 	      //std::cout << "Done..." << std::endl;
@@ -1467,16 +1511,86 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      
 	      commonMode[isamp] = GetCommonMode( isamp, fCommonModeFlag, *it );
 
+	      if( fCorrectCommonMode ){
+		//always calculate online CM if doing corrections:
+		fCM_online[isamp] = GetCommonMode( isamp, 3, *it ); 
+	      }
 
 	    }
 	    //std::cout << "effChan, isamp, Common-mode = " << effChan << ", " << isamp << ", " << commonMode[isamp] << std::endl;
 
 	    //Now handle rolling average common-mode calculation:
 	    
-	    UpdateRollingCommonModeAverage(apvcounter,commonMode[isamp]);
-	    
+	    //UpdateRollingCommonModeAverage(apvcounter,commonMode[isamp]);
+	    UpdateRollingAverage( apvcounter, commonMode[isamp],
+				  fCommonModeResultContainer_by_APV,
+				  fCommonModeRollingAverage_by_APV,
+				  fCommonModeRollingRMS_by_APV,
+				  fNeventsRollingAverage_by_APV );
+					    
 	    
 	  } //loop over time samples
+
+	  if( fCorrectCommonMode ){ //For full readout events we are mainly interested in monitoring the "bias" of the ONLINE calculation,
+	    // NOT correcting the offline calculation
+	    for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	      //Are we passing sufficient information for this purpose? Let's see:
+	      UInt_t ngoodhits=0;
+
+	      //std::cout << "Attempting common-mode correction for full-readout event sample " << isamp << "...";
+	      
+	      double Correction = GetCommonModeCorrection( isamp, *it, ngoodhits, fN_APV25_CHAN, true );
+
+	      double bias = fCM_online[isamp] - Correction - commonMode[isamp];
+
+	      if( Correction != 0. ){
+		UpdateRollingAverage( apvcounter, bias,
+				      fCMbiasResultContainer_by_APV,
+				      fCommonModeOnlineBiasRollingAverage_by_APV,
+				      fCommonModeOnlineBiasRollingRMS_by_APV,
+				      fNeventsOnlineBias_by_APV );
+	      }
+
+	      //Correction += 2.0*bias*(1.0-double(ngoodhits)/double(fN_APV25_CHAN));
+	      
+	      //double Correction = 0.0;
+	      
+	      //std::cout << " done." << std::endl;
+	      //We are subtracting the result of the CM correction from the data. 
+	      
+	      UInt_t iAPV = it->pos;
+
+	      if( fMakeCommonModePlots ){
+		if( Correction != 0. ){
+
+		  double CMbiasDB = ( it->axis == SBSGEM::kUaxis ) ? fCMbiasU[iAPV] : fCMbiasV[iAPV];
+		  double CMbias = CMbiasDB;
+		  
+		  if( fNeventsOnlineBias_by_APV[apvcounter] >= std::min( UInt_t(100), std::max(UInt_t(10), fN_MPD_TIME_SAMP * fNeventsCommonModeLookBack) ) ){
+		    CMbias = fCommonModeOnlineBiasRollingAverage_by_APV[apvcounter]; 
+		  }
+		  
+		  if( it->axis == SBSGEM::kUaxis ){
+		    fCommonModeCorrectionU->Fill( iAPV, -Correction );
+		    fCommonModeResidualBiasU->Fill( iAPV, fCM_online[isamp] -Correction - commonMode[isamp] );
+		    fCommonModeResidualBias_vs_OccupancyU->Fill( double(ngoodhits)/double(fN_APV25_CHAN), fCM_online[isamp] - Correction - commonMode[isamp] );		    
+		    fCommonModeResidualBiasU_corrected->Fill( iAPV, fCM_online[isamp] -Correction - commonMode[isamp] - 2.0*CMbias*(1.0-double(ngoodhits)/double(fN_APV25_CHAN)) );
+		  } else {
+		    fCommonModeCorrectionV->Fill( iAPV, -Correction );
+		    fCommonModeResidualBiasV->Fill( iAPV, fCM_online[isamp] - Correction - commonMode[isamp] );
+		    fCommonModeResidualBias_vs_OccupancyV->Fill( double(ngoodhits)/double(fN_APV25_CHAN), fCM_online[isamp] - Correction - commonMode[isamp] );
+		    fCommonModeResidualBiasV_corrected->Fill( iAPV, fCM_online[isamp] -Correction - commonMode[isamp] - 2.0*CMbias*(1.0-double(ngoodhits)/double(fN_APV25_CHAN)) );
+		  }
+		} else {
+		  if( it->axis == SBSGEM::kUaxis ){
+		    fCommonModeDiffU_Uncorrected->Fill( iAPV, commonMode[isamp] - fCM_online[isamp] );
+		  } else {
+		    fCommonModeDiffV_Uncorrected->Fill( iAPV, commonMode[isamp] - fCM_online[isamp] );
+		  }
+		}
+	      }
+	    }
+	  }
 	  
 	} //check if conditions are satisfied to require offline common-mode calculation
       
@@ -1492,93 +1606,75 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	//    to obtain a new estimate of the "true" common-mode for that event
 	// If both 1) and 2) are satisfied, then we will attempt a new common-mode calculation using the strips that passed zero suppression using the online common-mode calculation.
 
-	//First loop over the samples: 
-	
-	for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	  double CM_meas = CMcalc_signed[isamp];
-	  double CM_expect_mean, CM_expect_rms;
-	  if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvcounter] >= std::min(UInt_t(100),fNeventsCommonModeLookBack*fN_MPD_TIME_SAMP) ){
-	    //If we have a critical mass of events in the rolling CM average for this to be a reliable estimate, use it: 
-	    CM_expect_mean = fCommonModeRollingAverage_by_APV[apvcounter];
-	    CM_expect_rms = fCommonModeRollingRMS_by_APV[apvcounter]; 
-	  } else { //use database value:
-	    UInt_t postemp = fMPDmap[apvcounter].pos;
-	    UInt_t axistemp = fMPDmap[apvcounter].axis;
+	for(int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 
-	    CM_expect_mean = (axistemp == SBSGEM::kUaxis) ? fCommonModeMeanU[postemp] : fCommonModeMeanV[postemp];
-	    CM_expect_rms = (axistemp == SBSGEM::kUaxis) ? fCommonModeRMSU[postemp] : fCommonModeRMSV[postemp];		
-	  }
+	  UInt_t ngood=0;
+	  UInt_t nhitstemp = UInt_t(nstrips);
 
-	  //if( CM_meas < CM_expect_mean - fCorrectCommonMode_Nsigma * CM_expect_rms ){
-	  if(true){ // Lets try forcing every event to pass this first cut
-	    // The online common mode appears to have a large negative bias relative to the expectation. 
-	    // Try to correct the common-mode. To calculate the correction requires us to loop on all the strips on this APV that passed
-	    // online zero suppression.
-	    // The simplest approach is just to take a simple average of all the strips within +/- some number of standard deviations of the
-	    // *EXPECTED* common-mode mean, but this is a biased approach.
-	   
-	    UInt_t NstripsInRange = 0; 
-
-	    //Loop on all strips on this APV and calculate raw ADC values from 
-	    for(int istrip=0; istrip<nstrips; ++istrip ){
-	      int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
-
-	      int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
-	      UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
-
-	      Int_t ADCtemp = Int_t( decoded_rawADC );
-
-	      rawStrip[iraw] = strip;
-	      Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
-
-	      // double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
-	      
-	      //here the raw ADC value is the pedestal and common-mode subtracted ADC value: 
-	      //The pedestal has already been subtracted in this case, but we want to add back the common-mode:
-	      rawADC[iraw] = ADCtemp + CM_meas; //Add back the common-mode (but not the pedestal):
-	      pedsubADC[iraw] = double( rawADC[iraw] ); //this is the one that goes into the common-mode calculation
-	      if( fabs( pedsubADC[iraw] - CM_expect_mean ) <= fCorrectCommonMode_Nsigma * CM_expect_rms ) NstripsInRange++;
-	    }
-
-	    if( NstripsInRange >= fCommonModeMinStripsInRange ){
-	      //Correction to be ADDED to ADC value to get corrected value:
-	      CommonModeCorrection[isamp] = CM_meas -  GetCommonMode( isamp, fCommonModeFlag, *it, 0, nstrips ) + 3*8.3*(1 - NstripsInRange*1.0 / 128); //add extra 3 sigma * (1 - occupancy) to correct for extra positive bias from zero suppression
-	      // Uncorrected ADC value = Raw ADC - pedestal - CM_meas
-	      // Corrected ADC value = Raw ADC - pedestal - CM_corrected
-	      // Corrected ADC value = Uncorrected ADC value - CM_corrected + CM_meas = Uncorrected ADC value + CommonModeCorrection.
-	      // Therefore, when common-mode is corrected this way, 
-	    } else {
-	      CommonModeCorrection[isamp] = 0.0; //To be added to ADC value! 
-	    }
-	  }
+	  //std::cout << "Attempting common-mode correction for online zero-suppressed event sample " << isamp << "...";
 	  
+	  CommonModeCorrection[isamp] = GetCommonModeCorrection( isamp, *it, ngood, nhitstemp );
+
+	  if( CommonModeCorrection[isamp] != 0.0 ){ //if we are applying a correction, correct it for bias:
+	    UInt_t iAPV = it->pos;
+	    
+	    double CMbiasDB = ( it->axis == SBSGEM::kUaxis ) ? fCMbiasU[iAPV] : fCMbiasV[iAPV];
+	    
+	    double CMbias = CMbiasDB;
+	    
+	    if( fNeventsOnlineBias_by_APV[apvcounter] >= std::min( UInt_t(100), std::max(UInt_t(10), fN_MPD_TIME_SAMP * fNeventsCommonModeLookBack) ) ){
+	      CMbias = fCommonModeOnlineBiasRollingAverage_by_APV[apvcounter]; 
+	    }
+
+	    //bias is DEFINED as Online common-mode MINUS correction MINUS "true" common-mode:
+	    //"correction" is DEFINED as Online common-mode MINUS "corrected common-mode" and is to be ADDED to the ADC values:
+
+	    // bias = online CM - (online CM - corrected CM) - true CM = corrected CM - true CM
+	    // --> true CM = corrected CM - bias
+	    // corrected ADC = ADC + online CM - true CM = uncorrected ADC + [online CM - (corrected CM - bias)]
+	    // = uncorrected ADC + [correction + bias]
+	    // [...] = correction to be ADDED to ADC
+	    // --> corrected correction = correction + bias
+	    CommonModeCorrection[isamp] += 2.0*CMbias*(1.0-double(ngood)/double(fN_APV25_CHAN));
+	    
+	    //"TRUE" common-mode is equal to 
+	    
+	  }
+	  //std::cout << " done." << std::endl;
 	}
-	
+	  
       }
+	
+      
    
       //std::cout << "finished common mode " << std::endl;
       // Last loop over all the strips and samples in the data and populate/calculate global variables that are passed to track-finding:
       //Int_t ihit = 0;
             
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
-	if( CM_ENABLED ){ //unless fIsMC is true, then both CM and pedestals were subtracted online:
-	  //then we skipped the first loop over the data; need to grab the actual data:
-	  for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	    int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
-	    int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
-	    int ADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
-	    rawStrip[iraw] = strip;
-	    Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
-	    //no need to grab pedestal if CM_ENABLED is true:
+
+	//The following loop is no longer necessary if we always do a loop over the data to populate the "local" hit arrays:
+	// if( CM_ENABLED ){ //unless fIsMC is true, then both CM and pedestals were subtracted online:
+	//   // then we skipped the first loop over the data; need to grab the actual data into our temporary arrays:
+	//   // Technically, if we attempted to perform a common-mode correction above, then this loop is unnecessary, but
+	//   // to avoid confusion and needless overcomplication, we keep it for now, and repeating this step is
+	//   // harmless in any case:
+	//   for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
+	//     int iraw = isamp + fN_MPD_TIME_SAMP * istrip;
+	//     int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
+	//     int ADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
+	//     rawStrip[iraw] = strip;
+	//     Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
+	//     //no need to grab pedestal if CM_ENABLED is true:
 	    
-	    double ped = 0;
-	    if(fIsMC) ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+	//     double ped = 0;
+	//     if(fIsMC) ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 	    
-	    rawADC[iraw] = Int_t(ADC);
-	    pedsubADC[iraw] = double(ADC) - ped;
-	    commonModeSubtractedADC[iraw] = double(ADC) - ped + CommonModeCorrection[isamp]; //common-mode correction will be zero unless a correction was calculated (see above)    
-	  }
-	}
+	//     rawADC[iraw] = Int_t(ADC);
+	//     pedsubADC[iraw] = double(ADC) - ped;
+	//     commonModeSubtractedADC[iraw] = double(ADC) - ped + CommonModeCorrection[isamp]; //common-mode correction will be zero unless a correction was calculated above:    
+	//   }
+	// }
       
 	//Temporary vector to hold ped-subtracted ADC samples for this strip:
 	std::vector<double> ADCtemp(fN_MPD_TIME_SAMP);
@@ -1625,6 +1721,9 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    // 	      << std::endl;
 	    commonModeSubtractedADC[ iraw ] = pedsubADC[ iraw ] - commonMode[adc_samp];
 	  }
+
+	  //We need to apply a common-mode correction if we calculated one:
+	  if( fCorrectCommonMode ) commonModeSubtractedADC[ iraw ] += CommonModeCorrection[adc_samp];
 	  
 	  // Int_t ihit = adc_samp + fN_MPD_TIME_SAMP * istrip; //index in the "hit" array for this APV card:
 	  // assert(ihit<nsamp);
@@ -1755,10 +1854,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //Don't apply any gain correction if we are doing pedestal mode analysis:
 	  if( !fPedestalMode ){ //only apply gain correction if we aren't in pedestal-mode:
 	    for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	      ADCtemp[isamp] /= gaintemp;
+	      ADCtemp[isamp] *= gaintemp;
 	    }
-	    maxADC /= gaintemp;
-	    ADCsum_temp /= gaintemp;
+	    maxADC *= gaintemp;
+	    ADCsum_temp *= gaintemp;
 	  }
 
 	  
@@ -1809,19 +1908,45 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //fStripAxis.push_back( Int_t(axis) );
 	  // fADCsamples.push_back( ADCtemp ); //pedestal-subtracted
 	  // fRawADCsamples.push_back( rawADCtemp ); //Raw
+	  
+	  double ADCsum_deconv = 0.0;
+	  double maxdeconv=0.0;
+	  int imaxdeconv=0;
+
+	  double Tsum_deconv = 0.0;
+	  
 	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	    fADCsamples[fNstrips_hit][isamp] = ADCtemp[isamp];
 	    fRawADCsamples[fNstrips_hit][isamp] = rawADCtemp[isamp];
+
+	    double Adeconvtemp = fDeconv_weights[0] * ADCtemp[isamp];
+	    if( isamp > 0 ) Adeconvtemp += fDeconv_weights[1] * ADCtemp[isamp-1];
+	    if( isamp > 1 ) Adeconvtemp += fDeconv_weights[2] * ADCtemp[isamp-2];
+	    
+	    fADCsamples_deconv[fNstrips_hit][isamp] = Adeconvtemp;
+
+	    ADCsum_deconv += Adeconvtemp;
+
+	    if( isamp == 0 || Adeconvtemp > maxdeconv ){
+	      imaxdeconv = isamp;
+	      maxdeconv = Adeconvtemp;
+	    }
+
+	    Tsum_deconv += fSamplePeriod * (isamp + 0.5) * Adeconvtemp;
 	    
 	    //fADCsamples1D.push_back( ADCtemp[isamp] );
 	    //fRawADCsamples1D.push_back( rawADCtemp[isamp] );
 	    fADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = ADCtemp[isamp];
 	    fRawADCsamples1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = rawADCtemp[isamp];
-
+	    fADCsamplesDeconv1D[isamp + fN_MPD_TIME_SAMP * fNstrips_hit ] = fADCsamples_deconv[fNstrips_hit][isamp];
+	    
 	    if( fKeepStrip[fNstrips_hit] && hADCfrac_vs_timesample_allstrips != NULL ){
 	      hADCfrac_vs_timesample_allstrips->Fill( isamp, ADCtemp[isamp]/ADCsum_temp );
 	    }
 	  }
+
+	  
+	  fADCsumsDeconv[fNstrips_hit] = ADCsum_deconv;
 	  //fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
 	  fStripTrackIndex[fNstrips_hit] = -1;
 	  fStripOnTrack[fNstrips_hit] = 0;
@@ -1844,7 +1969,12 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  
 	  
 	  //	  fADCmax.push_back( maxADC );
-	  fADCmax[fNstrips_hit] = maxADC; 
+	  fADCmax[fNstrips_hit] = maxADC;
+	  fADCmaxDeconv[fNstrips_hit] = maxdeconv;
+
+	  fMaxSampDeconv[fNstrips_hit] = imaxdeconv;
+	  fTmeanDeconv[fNstrips_hit] = Tsum_deconv/ADCsum_deconv;
+	  
 	  //	  fTmean.push_back( Tsum/ADCsum_temp );
 	  fTmean[fNstrips_hit] = Tmean_temp;
 	  //  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
@@ -1930,10 +2060,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //Don't apply any gain correction if we are doing pedestal mode analysis:
 	  if( !fPedestalMode ){ //only apply gain correction if we aren't in pedestal-mode:
 	    for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
-	      ADCtemp[isamp] /= gaintemp;
+	      ADCtemp[isamp] *= gaintemp;
 	    }
-	    minADC /= gaintemp;  //Use min ADC instead of max for negative signals
-	    ADCsum_temp /= gaintemp;
+	    minADC *= gaintemp;  //Use min ADC instead of max for negative signals
+	    ADCsum_temp *= gaintemp;
 	  }
 
 	  //  ADCsum_temp /= gaintemp;
@@ -2622,7 +2752,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     double area = GetXSize() * GetYSize();
     
     //window * area = ns * m^2 * 1e4 cm^2 /m^2 * 1e-6 ms/ns 
-    double ratefac = window*area/100.0; // ms * cm^2
+    double ratefac = 2.0*window*area/100.0; // ms * cm^2
     
     if( axis == SBSGEM::kUaxis ){
       hClusterBasedOccupancyUstrips->Fill( double(nclust_tot)/ratefac );
@@ -3144,14 +3274,14 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     // 3. Add "coarse" strip offsets (common-mode means) back into "common-mode subtracted" ADC 
 
     //U strips:
-    hpedrmsU_distribution = new TH1D( TString::Format( "hpedrmsU_distribution_%s", detname.Data() ), "Pedestal RMS distribution, U strips; Ped. RMS", 500, 0, 100 );
-    hpedmeanU_distribution = new TH1D( TString::Format( "hpedmeanU_distribution_%s", detname.Data() ), "Pedestal mean distribution, U strips; Ped. mean", 500, -500, 500 );
+    hpedrmsU_distribution = new TH1D( TString::Format( "hpedrmsU_distribution_%s", detname.Data() ), "Pedestal RMS distribution, U strips; Ped. RMS", 200, 0, 100 );
+    hpedmeanU_distribution = new TH1D( TString::Format( "hpedmeanU_distribution_%s", detname.Data() ), "Pedestal mean distribution, U strips; Ped. mean", 250, -250, 250 );
     hpedrmsU_by_strip = new TH1D( TString::Format( "hpedrmsU_by_strip_%s", detname.Data() ), "Pedestal rms U by strip; strip; ped. RMS", fNstripsU, -0.5, fNstripsU - 0.5 );
     hpedmeanU_by_strip = new TH1D( TString::Format( "hpedmeanU_by_strip_%s", detname.Data() ), "Pedestal mean U by strip; strip; ped. mean", fNstripsU, -0.5, fNstripsU - 0.5 );
 
     //V strips:
-    hpedrmsV_distribution = new TH1D( TString::Format( "hpedrmsV_distribution_%s", detname.Data() ), "Pedestal RMS distribution, V strips; Ped. RMS", 500, 0, 100 );
-    hpedmeanV_distribution = new TH1D( TString::Format( "hpedmeanV_distribution_%s", detname.Data() ), "Pedestal mean distribution, V strips; Ped. mean", 500, -500, 500 );
+    hpedrmsV_distribution = new TH1D( TString::Format( "hpedrmsV_distribution_%s", detname.Data() ), "Pedestal RMS distribution, V strips; Ped. RMS", 200, 0, 100 );
+    hpedmeanV_distribution = new TH1D( TString::Format( "hpedmeanV_distribution_%s", detname.Data() ), "Pedestal mean distribution, V strips; Ped. mean", 250, -250, 250 );
     hpedrmsV_by_strip = new TH1D( TString::Format( "hpedrmsV_by_strip_%s", detname.Data() ), "Pedestal rms V by strip; strip; Ped. RMS", fNstripsV, -0.5, fNstripsV - 0.5 );
     hpedmeanV_by_strip = new TH1D( TString::Format( "hpedmeanV_by_strip_%s", detname.Data() ), "Pedestal mean V by strip; strip; Ped. mean", fNstripsV, -0.5, fNstripsV - 0.5 );
 
@@ -3175,31 +3305,31 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     
     hrawADCs_by_stripU = new TH2D( TString::Format( "hrawADCs_by_stripU_%s", detname.Data() ), "Raw ADCs by U strip number, no corrections; U/X strip; Raw ADC",
 				   fNstripsU, -0.5, fNstripsU-0.5,
-				   1024, -0.5, 4095.5 );
+				   512, -0.5, 4095.5 );
     hrawADCs_by_stripV = new TH2D( TString::Format( "hrawADCs_by_stripV_%s", detname.Data() ), "Raw ADCs by V strip number, no corrections; V/Y strip; Raw ADC",
 				   fNstripsV, -0.5, fNstripsV-0.5,
-				   1024, -0.5, 4095.5 );
+				   512, -0.5, 4095.5 );
 
     hcommonmode_subtracted_ADCs_by_stripU = new TH2D( TString::Format( "hpedestalU_%s", detname.Data() ), "ADCs by U strip number, w/common mode correction, no ped. subtraction; U/X strip; ADC - Common-mode",
 						      fNstripsU, -0.5, fNstripsU-0.5,
-						      1250, -500.0, 4500.0 );
+						      500, -500.0, 500.0 );
     hcommonmode_subtracted_ADCs_by_stripV = new TH2D( TString::Format( "hpedestalV_%s", detname.Data() ), "ADCs by V strip number, w/common mode correction, no ped. subtraction; V/Y strip; ADC - Common-mode",
 						      fNstripsV, -0.5, fNstripsV-0.5,
-						      1250, -500.0, 4500.0 );
+						      500, -500.0, 500.0 );
 
     hpedestal_subtracted_ADCs_by_stripU = new TH2D( TString::Format( "hADCpedsubU_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by U strip number; U/X strip; ADC - Common-mode - pedestal",
 						    fNstripsU, -0.5, fNstripsU-0.5,
-						    1250,-500.,4500. );
+						    500,-500.,4500. );
     hpedestal_subtracted_ADCs_by_stripV = new TH2D( TString::Format( "hADCpedsubV_%s", detname.Data() ), "Pedestal and common-mode subtracted ADCs by V strip number; V/Y strip; ADC - Common-mode - pedestal",
 						    fNstripsV, -0.5, fNstripsV-0.5,
-						    1250,-500.,4500. );
+						    500,-500.,4500. );
 
     hpedestal_subtracted_rawADCs_by_stripU = new TH2D( TString::Format( "hrawADCpedsubU_%s", detname.Data() ), "ADCs by U strip, ped-subtracted, no common-mode correction; U/X strip; ADC - pedestal",
 						       fNstripsU, -0.5, fNstripsU-0.5,
-						       1250,-500.,4500. );
+						       500,-500.,4500. );
     hpedestal_subtracted_rawADCs_by_stripV = new TH2D( TString::Format( "hrawADCpedsubV_%s", detname.Data() ), "ADCs by V strip, ped-subtracted, no common-mode correction; V/Y strip; ADC - pedestal",
 						       fNstripsV, -0.5, fNstripsV-0.5,
-						       1250,-500.,4500. );
+						       500,-500.,4500. );
 
     hpedestal_subtracted_rawADCsU = new TH1D( TString::Format( "hrawADCpedsubU_allstrips_%s", detname.Data() ), "distribution of ped-subtracted U strip ADCs w/o common-mode correction; ADC - pedestal",
 					      1250, -500.,4500. );
@@ -3265,6 +3395,8 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     //U strips:
    
     fCommonModeDistU = new TH2D( TString::Format( "hcommonmodeU_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+
+    fCommonModeDistU_Histo = new TH2D( TString::Format( "hcommonmodeU_histo_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (Histogram)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
     
     fCommonModeDistU_Sorting = new TH2D( TString::Format( "hcommonmodeU_sorting_%s", detname.Data() ), "U/X strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
@@ -3273,17 +3405,24 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     fCommonModeDistU_Danning = new TH2D( TString::Format( "hcommonmodeU_danning_%s", detname.Data() ), "U/X strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
     
    
-    fCommonModeDiffU = new TH2D( TString::Format( "hcommonmodeU_diff_%s", detname.Data() ), "U/X strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -100.0, 100.0 );
+    fCommonModeDiffU = new TH2D( TString::Format( "hcommonmodeU_diff_%s", detname.Data() ), "U/X strips (all events); APV card; Common-mode (User) - Common-mode (Danning online)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 200, -100.0, 100.0 );
 
-    fCommonModeCorrectionU = new TH2D( TString::Format( "hcommonmodeU_corr_%s", detname.Data() ), "U/X strips; APV card; CM Sorting - CM Danning with Correction", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -100.0, 100.0 );
+    fCommonModeDiffU_Uncorrected = new TH2D( TString::Format( "hcommonmodeU_diff_uncorrected_%s", detname.Data() ), "U/X strips (uncorrected events only); APV card; CM (User) - CM (Danning online)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 200, -100.0, 100.0 );
     
-    fCommonModeNotCorrectionU = new TH2D( TString::Format( "hcommonmodeU_notcorr_%s", detname.Data() ), "U/X strips; APV card; CM Sorting - CM Danning without Correction", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -100.0, 100.0 );
+    fCommonModeCorrectionU = new TH2D( TString::Format( "hcommonmodeU_corr_%s", detname.Data() ), "U/X strips; APV card; applied CM correction", fNAPVs_U, -0.5, fNAPVs_U-0.5, 200, -200.0, 200.0 );
     
+    //fCommonModeNotCorrectionU = new TH2D( TString::Format( "hcommonmodeU_notcorr_%s", detname.Data() ), "U/X strips; APV card; CM Sorting - CM Danning without Correction", fNAPVs_U, -0.5, fNAPVs_U-0.5, 250, -100.0, 100.0 );
+    fCommonModeResidualBiasU = new TH2D( TString::Format( "hcommonmodeU_bias_%s", detname.Data() ), "U/X strips; APV card; residual bias (corr. - true)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 200, -200, 200 );
+
+    fCommonModeResidualBiasU_corrected = new TH2D( TString::Format( "hcommonmodeU_bias_corrected_%s", detname.Data() ), "U/X strips; APV card; residual bias (corr. - true)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 200, -200, 200 );
+
+    fCommonModeResidualBias_vs_OccupancyU = new TH2D( TString::Format( "hcommonmodeU_bias_vs_occupancy_%s", detname.Data() ), "U/X strips; APV in-range occupancy; residual bias (corr. - true)", 100, 0.0, 1.0, 200, -200, 200 );
 
     //V strips:
     
     fCommonModeDistV = new TH2D( TString::Format( "hcommonmodeV_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
-    
+
+    fCommonModeDistV_Histo = new TH2D( TString::Format( "hcommonmodeV_histo_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (Histogram)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     fCommonModeDistV_Sorting = new TH2D( TString::Format( "hcommonmodeV_sorting_%s", detname.Data() ), "V/Y strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
@@ -3291,11 +3430,19 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     fCommonModeDistV_Danning = new TH2D( TString::Format( "hcommonmodeV_danning_%s", detname.Data() ), "V/Y strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
     
     
-    fCommonModeDiffV = new TH2D( TString::Format( "hcommonmodeV_diff_%s", detname.Data() ), "V/Y strips; APV card; Common-mode (Sorting) - Common-mode (Danning)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -100.0,100.0 );
-    
-    fCommonModeCorrectionV = new TH2D( TString::Format( "hcommonmodeV_corr_%s", detname.Data() ), "V/Y strips; APV card; CM Sorting - CM Danning with Correction", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -100.0, 100.0 );
+    fCommonModeDiffV = new TH2D( TString::Format( "hcommonmodeV_diff_%s", detname.Data() ), "V/Y strips (all events); APV card; Common-mode (User) - Common-mode (Danning online)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 200, -100.0,100.0 );
 
-    fCommonModeNotCorrectionV = new TH2D( TString::Format( "hcommonmodeV_notcorr_%s", detname.Data() ), "V/Y strips; APV card; CM Sorting - CM Danning without Correction", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -100.0, 100.0 );
+    fCommonModeDiffV_Uncorrected = new TH2D( TString::Format( "hcommonmodeV_diff_uncorrected_%s", detname.Data() ), "V/Y strips (uncorrected events only); APV card; CM (User) - CM (Danning online)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 200, -100.0, 100.0 );
+    
+    fCommonModeCorrectionV = new TH2D( TString::Format( "hcommonmodeV_corr_%s", detname.Data() ), "V/Y strips; APV card; applied CM correction", fNAPVs_V, -0.5, fNAPVs_V-0.5, 200, -200.0, 200.0 );
+
+    fCommonModeResidualBiasV = new TH2D( TString::Format( "hcommonmodeV_bias_%s", detname.Data() ), "V/Y strips; APV card; residual bias (corr. - true)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 200, -200, 200 );
+
+    fCommonModeResidualBiasV_corrected = new TH2D( TString::Format( "hcommonmodeV_bias_corrected_%s", detname.Data() ), "V/Y strips; APV card; residual bias (corr. - true)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 200, -200, 200 );
+
+    fCommonModeResidualBias_vs_OccupancyV = new TH2D( TString::Format( "hcommonmodeV_bias_vs_occupancy_%s", detname.Data() ), "V/Y strips; APV in-range occupancy; residual bias (corr. - true)", 100, 0.0, 1.0, 200, -200, 200 );
+    
+    //fCommonModeNotCorrectionV = new TH2D( TString::Format( "hcommonmodeV_notcorr_%s", detname.Data() ), "V/Y strips; APV card; CM Sorting - CM Danning without Correction", fNAPVs_V, -0.5, fNAPVs_V-0.5, 250, -100.0, 100.0 );
 
     // fCommonModeDistU->Print();
     // fCommonModeDistU_Sorting->Print();
@@ -3567,11 +3714,6 @@ void SBSGEMModule::PrintPedestals( std::ofstream &dbfile_CM, std::ofstream &daqf
 		      << std::endl;
     
   }
-
-  
-
-  
-  
 }
 
 Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes hit maps and efficiency histograms and/or pedestal info to ROOT file:
@@ -3677,18 +3819,28 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
 
   if ( fMakeCommonModePlots ){
     fCommonModeDistU->Write(0,kOverwrite);
+    fCommonModeDistU_Histo->Write(0,kOverwrite);
     fCommonModeDistU_Sorting->Write(0,kOverwrite);
     fCommonModeDistU_Danning->Write(0,kOverwrite);
     fCommonModeDiffU->Write(0,kOverwrite);
+    fCommonModeDiffU_Uncorrected->Write(0,kOverwrite);
     fCommonModeCorrectionU->Write(0,kOverwrite);
-    fCommonModeNotCorrectionU->Write(0,kOverwrite);
+    fCommonModeResidualBiasU->Write(0,kOverwrite);
+    fCommonModeResidualBiasU_corrected->Write(0,kOverwrite);
+    fCommonModeResidualBias_vs_OccupancyU->Write(0,kOverwrite);
+    //fCommonModeNotCorrectionU->Write(0,kOverwrite);
 
     fCommonModeDistV->Write(0,kOverwrite);
+    fCommonModeDistV_Histo->Write(0,kOverwrite);
     fCommonModeDistV_Sorting->Write(0,kOverwrite);
     fCommonModeDistV_Danning->Write(0,kOverwrite);
     fCommonModeDiffV->Write(0,kOverwrite);
+    fCommonModeDiffV_Uncorrected->Write(0,kOverwrite);
     fCommonModeCorrectionV->Write(0,kOverwrite);
-    fCommonModeNotCorrectionV->Write(0,kOverwrite);
+    fCommonModeResidualBiasV->Write(0,kOverwrite);
+    fCommonModeResidualBiasV_corrected->Write(0,kOverwrite);
+    fCommonModeResidualBias_vs_OccupancyV->Write(0,kOverwrite);
+    //fCommonModeNotCorrectionV->Write(0,kOverwrite);
   }
     
   if( fPulseShapeInitialized ){
@@ -3875,13 +4027,13 @@ void SBSGEMModule::filter_2Dhits(){
 
 }
 
-//We'll overload this method with a different number of arguments to attempt the calculation for a variable number of strips:
-double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, Double_t CM_online, UInt_t nhits ){
+double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, UInt_t nhits ){ 
   if( isamp > fN_MPD_TIME_SAMP ) return 0;
 
   //unsigned int index = apvinfo.index;
   
-  if( flag == 0 ){ //Sorting method: doesn't actually use the apv info: 
+  if( flag == 0 ){ //Sorting method: doesn't actually use the apv info:
+    //int ngoodhits=0;
     vector<double> sortedADCs(nhits);
 
     if( nhits < fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange ){
@@ -3891,7 +4043,8 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     }
     
     for( int ihit=0; ihit<nhits; ihit++ ){
-      int iraw = isamp + fN_MPD_TIME_SAMP * ihit;	    
+      int iraw = isamp + fN_MPD_TIME_SAMP * ihit;
+
       sortedADCs[ihit] = fPedSubADC_APV[ iraw ];
     }
 	    
@@ -3914,15 +4067,17 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
 
     //for now these are unused. Comment out to suppress compiler warning.
-    // double DBmean = cm_mean;
-    // double DBrms = cm_rms;
+    double DBmean = cm_mean;
+    double DBrms = cm_rms;
     
-    // Not sure if we should update cm_mean and cm_rms in this context because then the logic can become somewhat circular/self-referential:
+    // Not sure if we SHOULD update cm_mean and cm_rms in this context because then the logic can become somewhat circular/self-referential:
     if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvinfo.index] >= std::min(UInt_t(100), fN_MPD_TIME_SAMP*fNeventsCommonModeLookBack ) ){
       cm_mean = fCommonModeRollingAverage_by_APV[apvinfo.index];
-      cm_rms = fCommonModeRollingRMS_by_APV[apvinfo.index];
+      cm_rms = std::max(0.2*DBrms, std::min(5.0*DBrms,fCommonModeRollingRMS_by_APV[apvinfo.index]));
     }
-   
+
+    cm_rms = DBrms;
+    
     //bin width/stepsize = 8 with these settings:
     double stepsize = cm_rms*fCommonModeStepSize_Nsigma; //Default is 0.2 = rms/5
     double binwidth = cm_rms*fCommonModeBinWidth_Nsigma; //Default is +/- 2 sigma, bin width / step size = 20 with these settings
@@ -3931,7 +4086,10 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     double scan_min = cm_mean - fCommonModeScanRange_Nsigma*cm_rms; 
     double scan_max = cm_mean + fCommonModeScanRange_Nsigma*cm_rms;
 
-    int nbins= int( (scan_max - scan_min)/stepsize ); //Default = 8 * RMS / (rms/5) = 40 bins.
+    int nbins= int( (scan_max - scan_min)/stepsize ); //20 * RMS / (RMS/4) = 80
+
+    // std::cout << "histogramming cm: (scan min, scan max, step size, bin width, nbins)=("
+    // 	      << scan_min << ", " << scan_max << ", " << stepsize << ", " << binwidth << ", " << nbins << ")" << std::endl;
     
     //NOTE: The largest number of bins that could contain any given sample is binwidth/stepsize = 20 with default settings:
     
@@ -3939,13 +4097,13 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     
     if(stepsize == 0) cout<<"SBSGEMModule::GetCommonMode() ERROR Histogramming has zeros"<<endl;
     //Construct std::vectors and explicitly zero-initialize them:
-    std::vector<double> bincounts(nbins,0);
+    std::vector<int> bincounts(nbins,0);
     std::vector<double> binADCsum(nbins,0.0);
     std::vector<double> binADCsum2(nbins,0.0);
     
     int ibinmax=-1;
     int maxcounts=0;
-    //Now loop on all the strips and fill the histogram: this is the version assuming full readout:
+    //Now loop on all the strips and fill the histogram: 
     //for( int ihit=0; ihit<fN_APV25_CHAN; ihit++ ){
     for( int ihit=0; ihit<nhits; ihit++ ){
       double ADC = fPedSubADC_APV[ isamp + fN_MPD_TIME_SAMP * ihit ];
@@ -4032,7 +4190,7 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     return CM_2/n_keep;
     
     
-  } else { //Danning method (default): requires apv info for cm-mean and cm-rms values:
+  } else { //"offline" Danning method (default): requires apv info for cm-mean and cm-rms values:
     int iAPV = apvinfo.pos;
     double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
     double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
@@ -4046,8 +4204,8 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     
     //TODO: allow to use a different parameter than the one used for
     // zero-suppression:
-    double cm_min = cm_mean - fZeroSuppressRMS*cm_rms;
-    double cm_max = cm_mean + fZeroSuppressRMS*cm_rms;
+    double cm_min = cm_mean - fCommonModeDanningMethod_NsigmaCut*cm_rms;
+    double cm_max = cm_mean + fCommonModeDanningMethod_NsigmaCut*cm_rms;
 
     double cm_temp = 0.0;
     
@@ -4064,21 +4222,21 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
 	//on iterations after the first iteration, reject strips with signals above nsigma * pedrms:
 	double rmstemp = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
 
-	if(flag == 4){  //This is used for diagnostic plots where we "pretend" the data is zero suppressed
-	  double strip_sum = 0;
-	  for(int itsamp=0; itsamp < fN_MPD_TIME_SAMP; itsamp++)
-	    strip_sum += ADCtemp - CM_online;
-	  if(strip_sum/fN_MPD_TIME_SAMP < 3*rmstemp) continue;
-	}
+	// if(flag == 4){  //This is used for diagnostic plots where we "pretend" the data is zero suppressed //moving this to another method
+	//   double strip_sum = 0;
+	//   for(int itsamp=0; itsamp < fN_MPD_TIME_SAMP; itsamp++)
+	//     strip_sum += ADCtemp - CM_online;
+	//   if(strip_sum/fN_MPD_TIME_SAMP < 3*rmstemp) continue;
+	// }
 
 	double mintemp = cm_min;
 	double maxtemp = cm_max;
 	
 	if( iter > 0 ) {
-	  //Hard coding 3 sigma cut. This works better than 5 sigma. Should we add a new DB variable?
-	  maxtemp = cm_temp + 3*rmstemp*fRMS_ConversionFactor; //2.45 = sqrt(6), don't want to calculate sqrt every time
+	  //Hard coding 3 sigma cut. This works better than 5 sigma. Should we add a new DB variable? Yes, done!
+	  maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut*rmstemp*fRMS_ConversionFactor; //2.45 = sqrt(6), don't want to calculate sqrt every time
 	  //mintemp = 0.0;
-	  mintemp = cm_temp - 3*rmstemp*fRMS_ConversionFactor;
+	  mintemp = cm_temp - fCommonModeDanningMethod_NsigmaCut*rmstemp*fRMS_ConversionFactor;
 	}
 	
 	if( ADCtemp >= mintemp && ADCtemp <= maxtemp ){
@@ -4332,4 +4490,273 @@ void SBSGEMModule::UpdateRollingCommonModeAverage( int iapv, double CM_sample ){
     // 	      << ", " << newavg << ", " << cm_rms_from_DB << ", " << oldrms << ", " << newrms << ")" << std::endl;
 
   }
+}
+
+//This is a copy of the code for 
+void SBSGEMModule::UpdateRollingAverage( int iapv, double value, std::vector<std::deque<Double_t> > &ResultContainer, std::vector<Double_t> &RollingAverage, std::vector<Double_t> &RollingRMS, std::vector<UInt_t> &EventCounter ){
+  
+  UInt_t N, Nmax;
+  
+  N = EventCounter[iapv];
+  Nmax = fN_MPD_TIME_SAMP * fNeventsCommonModeLookBack;
+
+  double sum, sum2;
+  
+  if( N < Nmax ){
+    ResultContainer[iapv][N] = value;
+    if( N == 0 ){ //first sample, initialize all sums/averages:
+      RollingAverage[iapv] = value;
+      RollingRMS[iapv] = 0.0;
+      sum = value;
+      sum2 = pow(value,2);
+    } else { //second and subsequent samples: increment sums, recalculate:
+      double oldavg = RollingAverage[iapv];
+      double oldrms = RollingRMS[iapv];
+
+      sum = N*oldavg + value;
+      sum2 = N*(pow(oldrms,2) + pow(oldavg,2)) + pow(value,2);
+
+      double newavg = sum/double(N+1);
+      double newrms = sqrt(sum2/double(N+1) - pow(newavg,2));
+      RollingAverage[iapv] = newavg;
+      RollingRMS[iapv] = newrms;
+    }
+    EventCounter[iapv] = N+1;
+  } else { //we've reached the full size of the look-back window:
+    double oldfirstsample = ResultContainer[iapv].front();
+    //The net result of the following two operations should be to keep the container size the same:
+    ResultContainer[iapv].pop_front(); //remove oldest sample
+    ResultContainer[iapv].push_back( value ); //insert newest sample
+
+    double oldavg = RollingAverage[iapv];
+    double oldrms = RollingRMS[iapv];
+
+    double oldsum = Nmax * oldavg;
+    double oldsum2 = Nmax * ( pow(oldrms,2) + pow(oldavg,2) );
+
+    double lastsample = value;
+
+    double newsum = oldsum - oldfirstsample + lastsample;
+    double newsum2 = oldsum2 - pow(oldfirstsample,2) + pow(lastsample,2);
+
+    double newavg = newsum/double(Nmax);
+    double newrms = sqrt(newsum2/double(Nmax) - pow(newavg,2));
+
+    RollingAverage[iapv] = newavg;
+    RollingRMS[iapv] = newrms;
+    
+  }
+}
+
+//This routine attempts to calculate any necessary correction to the common-mode in a sample:
+double SBSGEMModule::GetCommonModeCorrection( UInt_t isamp, const mpdmap_t &apvinfo, UInt_t &ngoodhits, const UInt_t &nhits, bool fullreadout, Int_t flag ){
+
+  if( !fCorrectCommonMode ){
+    return 0.0;
+  }
+  //In the case of full readout events, here we are trying to simulate what happens with online zero suppression to debug the correction (but not do anything else with the information since the "true" common-mode can be determined for these events):
+  
+  //This method should ONLY be called if all 128 channels are read out for a given event. In this case, we can reconstruct the hypothetical result of the online common-mode calculation, calculate our best estimate of the "true" common mode, and see how close any given correction algorithm comes to the "true" common-mode:
+
+  //First, we will need to check the results of zero suppression:
+
+  //Note: it is ASSUMED that we already know the "online" common-mode before we call this routine:
+
+  if( isamp < 0 || isamp >= fN_MPD_TIME_SAMP ) return 0.0;
+  if( nhits < fCorrectCommonModeMinStrips ) return 0.0;
+  
+  int ngood=0;
+
+  if( !fullreadout ) ngoodhits = nhits;
+  
+  //double sumADCinrange=0.0;
+
+  int iAPV = apvinfo.pos;
+  double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
+  double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
+
+  double DBrms = cm_rms;
+  
+  if( fMeasureCommonMode && fNeventsRollingAverage_by_APV[apvinfo.index] >= std::max(UInt_t(10),std::min(UInt_t(100), fN_MPD_TIME_SAMP*fNeventsCommonModeLookBack ) ) ){
+    
+    cm_mean = fCommonModeRollingAverage_by_APV[apvinfo.index];
+    cm_rms = fCommonModeRollingRMS_by_APV[apvinfo.index];
+  }
+
+  //How much does the online common-mode differ from the expected one? 
+  double online_bias = cm_mean - fCM_online[isamp];
+  
+  std::vector<int> goodhits(nhits,0);
+  
+  //std::cout << "counting number of good hits...";
+
+  //a relevant question here is whether we should put an UPPER limit on the ADC value to attempt a correction?
+  //It seems the CM calculations below will take care of imposing any relevant upper limits.
+  
+  for( int ihit=0; ihit<nhits; ihit++ ){
+    int iraw=isamp + fN_MPD_TIME_SAMP*ihit;
+    
+    //Subtract the "online" version of the common-mode for this full readout event.
+    //Check whether this event would have satisfied online zero suppression:
+
+    bool isgood = true;
+    //double ADCtemp = fPedSubADC_APV[iraw];
+    if( fullreadout ){ //then we actually need to sum all samples on this strip to simulate the online zero-suppression:
+      //ADCtemp -= fCM_online[isamp];
+      double ADCsumtemp = 0.0;
+      for( int jsamp=0; jsamp<fN_MPD_TIME_SAMP; jsamp++ ){
+	ADCsumtemp += fPedSubADC_APV[jsamp + fN_MPD_TIME_SAMP*ihit] - fCM_online[jsamp];
+      }
+
+      double RMS = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
+
+      //would this strip have passed online zero suppression?
+      isgood = (ADCsumtemp >= fCommonModeDanningMethod_NsigmaCut * RMS * double(fN_MPD_TIME_SAMP) ); 
+      
+    }
+
+    if( isgood ){ 
+      goodhits[ngood] = ihit;
+      ngood++;
+      //sumADCinrange += fPedSubADC_APV[iraw];
+    }
+  }
+  //std::cout << "done, ngoodhits = " << ngood << std::endl;
+
+  ngoodhits = ngood;
+  
+  //Now when we talk about calculating the CORRECTION to the online common-mode, we can still use the Danning, sorting, or histogramming methods
+  //We must ask whether it is possible to calculate a correction using the chosen method:
+
+  //In the latest version of the code,
+  // rawADC = whatever the DAQ reported out
+  // pedsubADC = raw ADC - pedestal = same as raw ADC in most circumstances
+  // if CM_ENABLED (i.e., NOT "fullreadout") then ONLINE common-mode has already been subtracted 
+  // 
+  
+  double CMcorrection = 0.0;
+
+  //std::cout << "(ngoodhits, flag)=(" << ngoodhits << ", " << flag << std::endl;
+  
+  if( ngoodhits >= fCorrectCommonModeMinStrips &&
+      (online_bias > fCorrectCommonMode_Nsigma * cm_rms || flag == 0 ) ){
+    //Attempt to calculate a correction:
+    if( fCommonModeFlag == 0 ){
+      //sorting: this method will be significantly biased if we use the same "low strip" rejection as for full-readout events
+      if( ngoodhits >= fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange ){
+	std::vector<double> sortedADCs(ngood);
+	for( int ihit=0; ihit<ngood; ihit++ ){
+	  int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
+	  double ADCtemp = fPedSubADC_APV[iraw]; 
+	  if( !fullreadout ) ADCtemp += fCM_online[isamp]; //Add back in online common-mode if it was subtracted online
+	  sortedADCs[ihit] = ADCtemp;
+	}
+	
+	double cm_temp = 0.0;
+	int stripcount=0;
+	
+	std::sort( sortedADCs.begin(), sortedADCs.end() );
+	
+	for( int k=fCommonModeNstripRejectLow; k<ngoodhits-fCommonModeNstripRejectHigh; k++ ){
+	  cm_temp += sortedADCs[k];
+	  stripcount++;
+	}
+	CMcorrection = fCM_online[isamp] - cm_temp/double(stripcount);
+      }
+    } else if( fCommonModeFlag == 1 ){
+      
+      double cm_min = cm_mean - fCommonModeDanningMethod_NsigmaCut*cm_rms;
+      double cm_max = cm_mean + fCommonModeDanningMethod_NsigmaCut*cm_rms;
+	
+      double cm_temp = 0.0;
+      for( int iter=0; iter<fCommonModeNumIterations; iter++ ){
+	  
+	int nstripsinrange = 0;
+	  
+	double sumADCinrange = 0.0;
+	  
+	for( int ihit=0; ihit<ngood; ihit++ ){
+	  int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
+	  double ADCtemp = fPedSubADC_APV[iraw];
+	    
+	  if( !fullreadout ) ADCtemp += fCM_online[isamp];
+	    
+	  double rmstemp = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
+	    
+	  double mintemp = cm_min;
+	  double maxtemp = cm_max;
+	    
+	  if( iter > 0 ){
+	    maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
+	    mintemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
+	  }
+	    
+	  if( ADCtemp >= mintemp && ADCtemp >= maxtemp ){
+	    nstripsinrange++;
+	    sumADCinrange += ADCtemp;
+	  }  
+	}
+	  
+	if( nstripsinrange >= fCommonModeMinStripsInRange ){
+	  cm_temp = sumADCinrange/double(nstripsinrange);
+	  ngoodhits = nstripsinrange;
+	} else if( iter == 0 ){ //don't attempt correction, just return 0
+	  CMcorrection = 0.0;
+	}
+      }
+
+      CMcorrection = fCM_online[isamp] - cm_temp;
+    } else if( fCommonModeFlag == 2 ){
+
+      // cm_rms = std::max(DBrms,std::min(5.*DBrms,cm_rms) );
+      cm_rms = DBrms;
+      
+      double stepsize = cm_rms*fCommonModeStepSize_Nsigma;
+      double binwidth = cm_rms*fCommonModeBinWidth_Nsigma;
+	
+      double scan_min = cm_mean - fCommonModeScanRange_Nsigma*cm_rms;
+      double scan_max = cm_mean + fCommonModeScanRange_Nsigma*cm_rms;
+	
+      int nbins = int( (scan_max-scan_min)/stepsize );
+	
+      if( stepsize == 0. ) return 0.0;
+	
+      std::vector<int> bincounts(nbins,0);
+      std::vector<double> binADCsum(nbins,0.0);
+      
+      
+      int ibinmax=-1;
+      int maxcounts=0;
+
+      for( int ihit=0; ihit<ngood; ihit++ ){
+	int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
+	double ADC = fPedSubADC_APV[iraw];
+
+	if( !fullreadout ) ADC += fCM_online[isamp];
+
+	//increment counts for any bin containing this hit:
+	for( int ibin=0; ibin<nbins; ibin++ ){
+	  if( fabs( ADC - (scan_min + ibin*stepsize) ) <= binwidth ){
+	    bincounts[ibin]++;
+	    binADCsum[ibin] += ADC;
+	    if( bincounts[ibin] > maxcounts ){
+	      ibinmax = ibin;
+	      maxcounts = bincounts[ibin];
+	    }
+	  }
+	}
+      }
+
+      if( maxcounts >= fCommonModeMinStripsInRange && ibinmax >= 0 ){
+	CMcorrection = fCM_online[isamp] - binADCsum[ibinmax]/double(maxcounts);
+	ngoodhits = maxcounts;
+      }
+    }
+  }
+  
+  // if( flag == 0 ){ //add extra, "occupancy-based" correction per Sean method:
+    
+  // }
+  
+  return CMcorrection;
 }
