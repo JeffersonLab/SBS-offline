@@ -67,7 +67,7 @@ namespace Decoder {
     fNumSample = 6;
     
     fDebugFile=0;
-    Clear("");
+    Clear();
     //    fName = "MPD Module (INFN MPD for GEM and more), use Config to dynamic config";
     fName = "MPD Module";
   }
@@ -624,6 +624,7 @@ namespace Decoder {
   }
   
   void MPDModuleVMEv4::Clear(const Option_t *opt) {
+    VmeModule::Clear(opt);
     // fNumHits = 0;
     // for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
     // for (Int_t i=0; i<fNumADC*fNumSample; i++) { 

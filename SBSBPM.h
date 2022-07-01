@@ -30,8 +30,8 @@ using namespace std;
 class SBSBPM : public THaBeamDet {
 
 public:
-	SBSBPM( const char* name, const char* description = "",
-			THaApparatus* a = NULL );
+	explicit SBSBPM( const char* name, const char* description = "",
+                         THaApparatus* a = nullptr );
 	virtual ~SBSBPM();
 
 	virtual void       Clear( Option_t* ="" );

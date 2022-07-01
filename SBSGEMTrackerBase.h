@@ -10,6 +10,7 @@
 #include "TVector2.h"
 //#include <THaTrackingDetector.h>
 
+
 //class THaRunBase;
 //class THaApparatus;
 //class THaEvData;
@@ -28,39 +29,42 @@ public:
   void Clear(); //clear out all the event-specific data structures
 
   //These can change event-by-event:
-  void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; }
-  void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
-  void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
-  void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
+  inline void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; fConstraintPoint_Front_IsInitialized = true; }
+  inline void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; fConstraintPoint_Back_IsInitialized = true; }
+  inline void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; fConstraintWidth_Front_IsInitialized = true; }
+  inline void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; fConstraintWidth_Back_IsInitialized = true; }
 
-  void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); }
-  void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); }
-  void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); }
-  void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); }
+  inline void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); fConstraintPoint_Front_IsInitialized = true; }
+  inline void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); fConstraintPoint_Back_IsInitialized = true; }
+  inline void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); fConstraintWidth_Front_IsInitialized = true; }
+  inline void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); fConstraintWidth_Back_IsInitialized = true; }
 
-  void SetPmin( double pmin ){ fPmin_track = pmin; }
-  void SetPmax( double pmax ){ fPmax_track = pmax; }
-  void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
+  inline void SetConstraintWidth_theta( double dth ){ fConstraintWidth_theta = dth; }
+  inline void SetConstraintWidth_phi( double dph ){ fConstraintWidth_phi = dph; }
+  
+  inline void SetPmin( double pmin ){ fPmin_track = pmin; }
+  inline void SetPmax( double pmax ){ fPmax_track = pmax; }
+  inline void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
 
-  void SetXpTarmin( double xpmin ){ fxptarmin_track = xpmin; }
-  void SetXpTarmax( double xpmax ){ fxptarmax_track = xpmax; }
-  void SetXpTarRange( double xpmin, double xpmax ){ fxptarmin_track = xpmin; fxptarmax_track = xpmax; }
+  inline void SetXpTarmin( double xpmin ){ fxptarmin_track = xpmin; }
+  inline void SetXpTarmax( double xpmax ){ fxptarmax_track = xpmax; }
+  inline void SetXpTarRange( double xpmin, double xpmax ){ fxptarmin_track = xpmin; fxptarmax_track = xpmax; }
 
-  void SetYpTarmin( double ypmin ){ fyptarmin_track = ypmin; }
-  void SetYpTarmax( double ypmax ){ fyptarmax_track = ypmax; }
-  void SetYpTarRange( double ypmin, double ypmax ){ fyptarmin_track = ypmin; fyptarmax_track = ypmax; }
+  inline void SetYpTarmin( double ypmin ){ fyptarmin_track = ypmin; }
+  inline void SetYpTarmax( double ypmax ){ fyptarmax_track = ypmax; }
+  inline void SetYpTarRange( double ypmin, double ypmax ){ fyptarmin_track = ypmin; fyptarmax_track = ypmax; }
 
-  void SetYTarmin( double ymin ){ fytarmin_track = ymin; }
-  void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
-  void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
+  inline void SetYTarmin( double ymin ){ fytarmin_track = ymin; }
+  inline void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
+  inline void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
 
   bool CheckConstraint( double xtr, double ytr, double xptr, double yptr );
   
-  void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
+  inline void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
-  void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
+  inline void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
 
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -74,6 +78,8 @@ protected:
   bool fUseOpticsConstraint; //default to FALSE:
   //bool fUseFrontTrackerConstraint; //default to FALSE:
   
+  bool fNegSignalStudy;
+
   //1D and 2D clustering: 
   void hit_reconstruction();
   //track-finding: 
@@ -81,15 +87,17 @@ protected:
 
   // Fill arrays of "good" hits (hits that end up on fitted tracks)
   void fill_good_hit_arrays();
-  
+
   //Utility methods: initialization:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void LoadPedestals(const char *fname);
+  void LoadCM(const char *fname);
   void InitLayerCombos();
   void InitGridBins(); //initialize 
   void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
   void CalcEfficiency(); //essentially, divide "did hit/should hit" histograms
 
+  void PrintNegEvents( const char *fname );
   void PrintGeometry( const char *fname );
   
   Long64_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
@@ -196,9 +204,19 @@ protected:
   TVector2 fConstraintWidth_Front;
   TVector2 fConstraintWidth_Back;
 
-  TVector2 fConstraintSlope_Min; //Min and max slope along X and Y
-  TVector2 fConstraintSlope_Max; //Min and max slope along X and Y
+  double fConstraintWidth_theta;
+  double fConstraintWidth_phi;
 
+  //For now these aren't used
+  // TVector2 fConstraintSlope_Min; //Min and max slope along X and Y
+  // TVector2 fConstraintSlope_Max; //Min and max slope along X and Y
+  
+  bool fConstraintPoint_Front_IsInitialized;
+  bool fConstraintPoint_Back_IsInitialized;
+  bool fConstraintWidth_Front_IsInitialized;
+  bool fConstraintWidth_Back_IsInitialized;
+  bool fConstraintInitialized;
+  
   //Optics-based constraints:
   double fPmin_track; //GeV
   double fPmax_track; //GeV
@@ -318,8 +336,12 @@ protected:
   std::vector<double> fHitVADC; // cluster ADC sum, V strips
   std::vector<double> fHitUADCmaxstrip; //ADC sum on max U strip
   std::vector<double> fHitVADCmaxstrip; //ADC sum on max V strip
+  std::vector<double> fHitUADCmaxstrip_deconv; //ADC sum on max U strip, deconvoluted
+  std::vector<double> fHitVADCmaxstrip_deconv; //ADC sum on max V strip, deconvoluted
   std::vector<double> fHitUADCmaxsample; //max ADC sample on max U strip
   std::vector<double> fHitVADCmaxsample; //max ADC sample on max V strip
+  std::vector<double> fHitUADCmaxsample_deconv; //max deconvoluted ADC sample on max U strip
+  std::vector<double> fHitVADCmaxsample_deconv; //max deconvoluted ADC sample on max V strip
   std::vector<double> fHitUADCmaxclustsample;
   std::vector<double> fHitVADCmaxclustsample;
   std::vector<double> fHitADCasym; // (ADCU-ADCV)/(ADCU + ADCV)
@@ -328,28 +350,48 @@ protected:
   std::vector<double> fHitVTime; // cluster-mean time, V strips
   std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
+  std::vector<double> fHitUTimeMaxStripFit; //fitted strip t0
+  std::vector<double> fHitVTimeMaxStripFit; //fitted strip t0
+  std::vector<double> fHitUTimeMaxStripDeconv; //fitted strip t0
+  std::vector<double> fHitVTimeMaxStripDeconv; //fitted strip t0
   std::vector<double> fHitDeltaT; // TU - TV;
   std::vector<double> fHitTavg; //(TU+TV)/2
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
   std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster
   std::vector<double> fHitIsampMaxVstrip; //same but for max strip in cluster
+  std::vector<double> fHitIsampMaxUstripDeconv; //Same but for max strip in cluster, deconvoluted
+  std::vector<double> fHitIsampMaxVstripDeconv; //same but for max strip in cluster, deconvoluted
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
   std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC.
   //For pulse shape studies:
   std::vector<double> fHitADCfrac0_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac1_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac2_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac3_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac4_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac5_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac0_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac1_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac2_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac3_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac4_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac5_MaxVstrip; //time sample 0 of max U strip
-
+  std::vector<double> fHitADCfrac1_MaxUstrip; //time sample 1 of max U strip
+  std::vector<double> fHitADCfrac2_MaxUstrip; //time sample 2 of max U strip
+  std::vector<double> fHitADCfrac3_MaxUstrip; //time sample 3 of max U strip
+  std::vector<double> fHitADCfrac4_MaxUstrip; //time sample 4 of max U strip
+  std::vector<double> fHitADCfrac5_MaxUstrip; //time sample 5 of max U strip
+  std::vector<double> fHitADCfrac0_MaxVstrip; //time sample 0 of max V strip
+  std::vector<double> fHitADCfrac1_MaxVstrip; //time sample 1 of max V strip
+  std::vector<double> fHitADCfrac2_MaxVstrip; //time sample 2 of max V strip
+  std::vector<double> fHitADCfrac3_MaxVstrip; //time sample 3 of max V strip
+  std::vector<double> fHitADCfrac4_MaxVstrip; //time sample 4 of max V strip
+  std::vector<double> fHitADCfrac5_MaxVstrip; //time sample 5 of max V strip
+  //Deconvoluted ADC samples: 
+  std::vector<double> fHitDeconvADC0_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitDeconvADC1_MaxUstrip; //time sample 1 of max U strip
+  std::vector<double> fHitDeconvADC2_MaxUstrip; //time sample 2 of max U strip
+  std::vector<double> fHitDeconvADC3_MaxUstrip; //time sample 3 of max U strip
+  std::vector<double> fHitDeconvADC4_MaxUstrip; //time sample 4 of max U strip
+  std::vector<double> fHitDeconvADC5_MaxUstrip; //time sample 5 of max U strip
+  std::vector<double> fHitDeconvADC0_MaxVstrip; //time sample 0 of max V strip
+  std::vector<double> fHitDeconvADC1_MaxVstrip; //time sample 1 of max V strip
+  std::vector<double> fHitDeconvADC2_MaxVstrip; //time sample 2 of max V strip
+  std::vector<double> fHitDeconvADC3_MaxVstrip; //time sample 3 of max V strip
+  std::vector<double> fHitDeconvADC4_MaxVstrip; //time sample 4 of max V strip
+  std::vector<double> fHitDeconvADC5_MaxVstrip; //time sample 5 of max V strip
+  
+  
   //And I THINK that's all we need to get started!
   std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
   std::vector<UInt_t> fHitU_CM_GOOD;
@@ -366,9 +408,25 @@ protected:
 
   std::vector<int> fNstripsU_layer;
   std::vector<int> fNstripsV_layer;
+  std::vector<int> fNstripsU_layer_neg;
+  std::vector<int> fNstripsV_layer_neg;
+  std::vector<int> fNstripsU_layer_neg_hit;
+  std::vector<int> fNstripsV_layer_neg_hit;
+  std::vector<int> fNstripsU_layer_neg_miss;
+  std::vector<int> fNstripsV_layer_neg_miss;
   std::vector<int> fNclustU_layer;
   std::vector<int> fNclustV_layer;
+  std::vector<int> fNclustU_layer_neg;
+  std::vector<int> fNclustV_layer_neg;
+  std::vector<int> fNclustU_layer_miss;
+  std::vector<int> fNclustV_layer_miss;
   std::vector<int> fN2Dhit_layer;
+
+  std::vector<int> neg_event;
+  std::vector<int> neg_MPD;
+  std::vector<int> neg_APV;
+  std::vector<int> neg_strip;
+  std::vector<int> is_neg;
 
   //"did hit" and "should hit" by module (numerators and denominators for efficiency determination)
   std::vector<int> fDidHit_Module;
@@ -390,6 +448,24 @@ protected:
   TClonesArray *hefficiency_y_layer;
   TClonesArray *hefficiency_xy_layer;
 
+  TClonesArray *hdidnothit_x_layer;
+  TClonesArray *hdidnothit_y_layer;
+
+  TClonesArray *hdidhit_fullreadout_x_layer;
+  TClonesArray *hdidhit_fullreadout_y_layer;
+
+  TClonesArray *hneghit_x_layer;
+  TClonesArray *hneghit_y_layer;
+
+  TClonesArray *hneghit1D_x_layer;
+  TClonesArray *hneghit1D_y_layer;
+
+  TClonesArray *hneghit_good_x_layer;
+  TClonesArray *hneghit_good_y_layer;
+
+  TClonesArray *hneghit_good1D_x_layer;
+  TClonesArray *hneghit_good1D_y_layer;
+
   double fBinSize_efficiency2D; //Efficiency bin sizes for 1D and 2D plots
   double fBinSize_efficiency1D; //define bin size for efficiency plots (assume equal bin width along X and Y, default to 1 cm)
   
@@ -398,10 +474,11 @@ protected:
   bool fDumpGeometryInfo; //default to FALSE
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr; 
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq, fCMbiasfile_dbase; 
   // input files for (optional) loading of pedestals from database:
 
   std::string fpedfilename;
+  std::string fcmfilename;
   
 };
 

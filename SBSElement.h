@@ -54,7 +54,7 @@ public:
   void SetWaveform(Double_t ped, Double_t gain,Double_t ChanToMv,Double_t adc_timecut);
 
   // Sub-classes may want a more comprehensive clear
-  virtual void ClearEvent();
+  virtual void Clear( Option_t* opt="" );
 
 
   // Check if this block has any data

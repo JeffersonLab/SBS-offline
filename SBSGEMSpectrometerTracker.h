@@ -15,8 +15,8 @@ class TClonesArray;
 
 class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrackerBase {
  public:
-  SBSGEMSpectrometerTracker( const char *name, const char *description = "",
-	       THaApparatus *app = 0 );
+  explicit SBSGEMSpectrometerTracker( const char *name, const char *description = "",
+                                      THaApparatus *app = nullptr );
 
   virtual ~SBSGEMSpectrometerTracker();
 

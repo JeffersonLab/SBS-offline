@@ -126,10 +126,10 @@ Int_t SBSBBShower::FineProcess(TClonesArray& tracks)
   // This function now needs to store the MCdata
   
   for (size_t i=0;i<fClusters.size();i++) {
-     if(fDebug){
-       cout << " cluster " << i << " E = " << fClusters[i]->GetE() << " " 
-        << fClusters[i]->GetX() << " " << fClusters[i]->GetY() 
-        << " " << fClusters[i]->GetMult()  << endl; 
+    if(fDebug){
+      cout << " cluster " << i << " E = " << fClusters[i]->GetE() << " " 
+	   << fClusters[i]->GetX() << " " << fClusters[i]->GetY() 
+	   << " " << fClusters[i]->GetMult()  << endl; 
     }
 
     if(fMCdata){
@@ -151,8 +151,8 @@ SBSBBShower::~SBSBBShower()
 }
 
 void SBSBBShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
-{  
-  ClearEvent();
+{
+  Clear();
   SBSCalorimeterCluster *cluster = new SBSCalorimeterCluster(fNclublk);
   cluster->SetE(E);
   cluster->SetX(x);
@@ -181,10 +181,17 @@ void SBSBBShower::AddToCluster(Int_t nc,SBSElement* blk)
   if (nc < (int)fClusters.size()) fClusters[nc]->AddElement(blk);
 }
 
-void SBSBBShower::MakeMainCluster() 
+void SBSBBShower::MakeMainCluster(Int_t iclust) 
 {
-  if(!fClusters.empty()) {
-    SBSCalorimeterCluster *clus = fClusters[0];
+  //Since we only ever really want one cluster as the "Main" one, let's invoke
+  //ClearCaloOutput here:
+  ClearCaloOutput( fMainclus );
+
+  // It is assumed that if MakeMainCluster is called for index iclust, then we
+  // want to set fBestClusterIndex to iclust:
+  
+  if(!fClusters.empty() && iclust >= 0 && iclust < fClusters.size() ) {
+    SBSCalorimeterCluster *clus = fClusters[iclust];
     fMainclus.e.push_back(clus->GetE());
     fMainclus.atime.push_back(clus->GetAtime());
     fMainclus.tdctime.push_back(clus->GetTDCtime());
@@ -197,6 +204,21 @@ void SBSBBShower::MakeMainCluster()
     fMainclus.id.push_back(clus->GetElemID());
     fMainclus.row.push_back(clus->GetRow());
     fMainclus.col.push_back(clus->GetCol());
+    fBestClusterIndex = iclust;
+  } else { //Make an "empty" cluster:
+    fMainclus.e.push_back( 0.0 );
+    fMainclus.atime.push_back( -1000.0 );
+    fMainclus.tdctime.push_back( -1000.0 );
+    fMainclus.e_c.push_back( 0.0 );
+    fMainclus.x.push_back( 0.0 );
+    fMainclus.y.push_back( 0.0 );
+    fMainclus.n.push_back( 0 );
+    fMainclus.blk_e.push_back( 0.0 );
+    fMainclus.blk_e_c.push_back( 0.0 );
+    fMainclus.id.push_back( -1 );
+    fMainclus.row.push_back( -1 );
+    fMainclus.col.push_back( -1 );
+    fBestClusterIndex = -1;
   }
   //
   fNclus=0;
@@ -217,9 +239,9 @@ void SBSBBShower::SetSearchRegion(int rowmin, int rowmax, int colmin, int colmax
   fMultClus = false;
 }
 
-void SBSBBShower::ClearEvent()
+void SBSBBShower::Clear( Option_t* opt )
 {
-  SBSCalorimeter::ClearEvent();
+  SBSCalorimeter::Clear(opt);
 
   fEres = fXres = fYres = 0.0;
   fE_cl_res.clear();

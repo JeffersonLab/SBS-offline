@@ -16,7 +16,7 @@ class SBSDecodeF1TDCModule : public VmeModule {
 
 public:
 
-   SBSDecodeF1TDCModule() {};
+   SBSDecodeF1TDCModule() {}
    SBSDecodeF1TDCModule(Int_t crate, Int_t slot);
    virtual ~SBSDecodeF1TDCModule();
 

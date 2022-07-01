@@ -60,7 +60,7 @@ SBSScintHit::SBSScintHit(const SBSScintHit* pScHit, Int_t planenum, Int_t Bar_nd
 
 //___________________________________________________________________________
 void SBSScintHit::Clear(Option_t *) {
-  fScBar = 0;
+  fScBar = nullptr;
   fPlaneNum = -1;
   fBarNum = 0;
   fBarNum_nd = -1;

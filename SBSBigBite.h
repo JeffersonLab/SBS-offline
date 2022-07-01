@@ -13,7 +13,7 @@ public:
   SBSBigBite( const char *name, const char *description );
   virtual ~SBSBigBite();
     
-  virtual void             Clear( Option_t* opt="");
+  virtual void  Clear( Option_t* opt="");
   
   virtual Int_t	CoarseReconstruct();
   virtual Int_t	CoarseTrack();
@@ -137,12 +137,26 @@ protected:
   Double_t fBackConstraintX0; 
   Double_t fBackConstraintY0;
 
-    
+  // Angle constraint widths:
+  Double_t fConstraintWidth_theta;
+  Double_t fConstraintWidth_phi;
+
+  //The following parameters are used to calculate the weights in the constraint point calculation:
+  Double_t fSigmaX_shower; //default = block size /12
+  Double_t fSigmaY_shower; //default = block size /12
+  Double_t fSigmaX_preshower; //default = block size /12
+  Double_t fSigmaY_preshower; //default = block size /12
+
+  Double_t fSigmaX_hodo; //default = bar vertical size / sqrt(12)
+  Double_t fSigmaY_hodo; //default = hit resolution from left/right time difference
+  
   //for output only... Vectors instead?
   std::vector<double> fFrontConstraintX;
   std::vector<double> fFrontConstraintY;
+  std::vector<double> fFrontConstraintZ;
   std::vector<double> fBackConstraintX;
   std::vector<double> fBackConstraintY;
+  std::vector<double> fBackConstraintZ;
     
   std::vector<double> fEpsEtotRatio;
   std::vector<double> fEtot;

@@ -107,6 +107,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   cout << "Read SBSSimDecoder variables " << endl;
   
   RVarDef vars[] = {
+    {"mc_sigma",   "MC cross section",   "fSigma"},
+    {"mc_omega",   "MC phase spece generation",   "fOmega"},
     {"mc_epx",   "MC electron momentum x",   "fEPx"},
     {"mc_epy",   "MC electron momentum y",   "fEPy"},
     {"mc_epz",   "MC electron momentum z",   "fEPz"},
@@ -134,6 +136,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"bbgemhit_edep",   "BBGEM MC hit edep",   "fBBGEMhit_edep"},
     {"bbgemhit_x",   "BBGEM MC hit transport X",   "fBBGEMhit_x"},
     {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_y"},
+    {"bbps_esum",   "BBPS total energy sum",   "fBBPS_esum"},
+    {"bbsh_esum",   "BBSH total energy sum",   "fBBSH_esum"},
     { 0 }
   };
 
@@ -208,6 +212,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
   
+  fSigma = simEvent->Tgmn->ev_sigma;
+  fOmega = simEvent->Tgmn->ev_solang;
   fEPx = simEvent->Tgmn->ev_epx;
   fEPy = simEvent->Tgmn->ev_epy;
   fEPz = simEvent->Tgmn->ev_epz;
@@ -235,7 +241,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fBBGEMhit_edep = *(simEvent->Tgmn->Earm_BBGEM_hit_edep);
   fBBGEMhit_x = *(simEvent->Tgmn->Earm_BBGEM_hit_tx);
   fBBGEMhit_y = *(simEvent->Tgmn->Earm_BBGEM_hit_ty);
- 
+  fBBPS_esum = simEvent->Tgmn->Earm_BBPSTF1_det_esum;
+  fBBSH_esum = simEvent->Tgmn->Earm_BBSHTF1_det_esum;
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
@@ -369,8 +376,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   int row, col;
   
   if(strcmp(detname.c_str(), "bb.ps")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBPSTF1.nhits << " " << simev->Tgmn->Earm_BBPS_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBPSTF1_hit_nhits << " " << simev->Tgmn->Earm_BBPS_dighit_nchan << endl;
     samps.clear();
+    assert(simev->Tgmn->b_Earm_BBPS_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_BBPS_dighit_nchan; j++){
       loadevt = false;
       //if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)==0)cout << "SBSSimDecoder, BBPS " << simev->Tgmn->Earm_BBPS_dighit_chan->at(j);// << endl;
@@ -396,11 +404,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
       }
 	*/
+	//That stuff below is confusing... let's stick to the use of the block position in the DB!
 	row = lchan%26;
 	col = (lchan-row)/26;
-	//lchan = row*2+col;
-	row = 25-row;
-	lchan = col*26+row;
+	lchan = row*2+col;
+	//row = 25-row;
+	//lchan = col*26+row;
 	//cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
 	//ADC
 	ChanToROC(detname, lchan, crate, slot, chan);
@@ -447,9 +456,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.sh")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBSHTF1.nhits << " " << simev->Tgmn->Earm_BBSH_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBSHTF1_hit_nhits << " " << simev->Tgmn->Earm_BBSH_dighit_nchan << endl;
     samps.clear();
-    
+    assert(simev->Tgmn->b_Earm_BBSH_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_BBSH_dighit_nchan; j++){
       loadevt = false;
       //if(simev->Tgmn->Earm_BBSH_dighit_samp->at(j)==0)cout << "SBSSimDecoder, BBSH " << simev->Tgmn->Earm_BBSH_dighit_chan->at(j);// << endl;
@@ -473,11 +482,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
       }
 	*/
-      row = lchan%27;
-      col = (lchan-row)/27;
-      row = 26-row;
-      col = 6-col;
-      lchan = row*7+col;
+	row = lchan%27;
+	col = (lchan-row)/27;
+      // row = 26-row;
+      // col = 6-col;
+	lchan = row*7+col;
       //cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
 	//ADC
 	ChanToROC(detname, lchan, crate, slot, chan);
@@ -540,6 +549,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     myev->push_back(0);
     */
     int ntdc = 0;
+    assert(simev->Tgmn->b_Earm_BBHodo_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
       ntdc = 0;
       lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j);
@@ -585,7 +595,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   if(strcmp(detname.c_str(), "bb.grinch")==0){
     int ntdc = 0;
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
+    //if(simev->Tgmn->b_Earm_GRINCH_dighit_nchan==0)
+    //cout << "*** Warning: your GRINCH variables are probably missing in the tree you are analyzing. " << endl << " consider using another file or removing the grinch for your analysis " << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->b_Earm_GRINCH_dighit_nchan << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
+    assert(simev->Tgmn->b_Earm_GRINCH_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_GRINCH_dighit_nchan; j++){
       ntdc = 0;
       //cout << j << " " << simev->Tgmn->Earm_GRINCH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_adc->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j) << endl;
@@ -634,6 +647,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     samps.clear();  
     strips.clear();  
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBGEM_dighit_nstrips << endl;
+    assert(simev->Tgmn->b_Earm_BBGEM_dighit_nstrips);
     for(int j = 0; j<simev->Tgmn->Earm_BBGEM_dighit_nstrips; j++){
       loadevt = false;
       mod = simev->Tgmn->Earm_BBGEM_dighit_module->at(j);
@@ -684,10 +698,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Harm_HCalScint.nhits << " " << simev->Tgmn->Harm_HCal_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Harm_HCalScint_hit_nhits << " " << simev->Tgmn->Harm_HCal_dighit_nchan << endl;
     samps.clear();
     times.clear();
     
+    assert(simev->Tgmn->b_Harm_HCal_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Harm_HCal_dighit_nchan; j++){
       loadevt = false;
       lchan = simev->Tgmn->Harm_HCal_dighit_chan->at(j);
@@ -702,6 +717,14 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }else if(simev->Tgmn->Harm_HCal_dighit_chan->at(j+1)!=lchan){
 	loadevt = true;
       }
+
+      // In simulation row 0 col 0 block starts at top left corner weheras in real data row 0 col 0 starts at top
+      // right corner, while looking at HCAL from front. Lets try the following to eleminate the mismatch:
+      col = lchan%12;
+      row = (lchan-col)/12; // row in simulation is already same as real data
+      col = 12 - 1 - col; // this will fix the mismatch in column numbering
+      lchan = row*12 + col; 
+      // --
       
       if(loadevt){
 	//ADC
@@ -1005,7 +1028,8 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
       { 0 }
     };
     err = THaAnalysisObject::LoadDB(file, date, req_modules, prefix.c_str());
-    
+
+    if(err)return THaAnalysisObject::kInitError;
     
     //cout << " prefix " << pref_cham.c_str() << " err " << err << " modules " << modules.c_str() << " size ? " << modules.size() << endl;
     
@@ -1163,6 +1187,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
        int chan_offset = 1;
        if(detname.find("sh")!=std::string::npos)chan_offset = 0;
        if(detname.find("hodo")!=std::string::npos)chan_offset = 0;
+       if(detname.find("grinch")!=std::string::npos)chan_offset = 0;
        if(detname.find("ps")!=std::string::npos)chan_offset = 0;
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	 if(ch_count>(int)nlogchan){
@@ -1222,6 +1247,7 @@ void SBSSimDecoder::ChanToROC(const std::string& detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
+  assert(h_chan<fInvDetMap.at(detname).size());
   
   if(fDebug>3){
     std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
@@ -1238,6 +1264,17 @@ int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
 {
   chan = h_chan%128;
   int n = (h_chan-chan)/128;
+
+  assert(mod<fInvGEMDetMap.at(detname).size());
+  assert(n<(fInvGEMDetMap.at(detname)[mod]).size());
+
+  // if( mod>fInvGEMDetMap.at(detname).size() ){
+  //   std::err << "ERROR: map size =  " << " for detector " << detname 
+  // 	     << " is smaller than module size =  " << mod << std:: endl;
+  //   //return -1;
+  // }else if( n>(fInvGEMDetMap.at(detname)[mod]).size() ){
+  //   return -1;
+  // }
   //if((fInvGEMDetMap.at(detname))[mod][n].chan_lo<=h_chan &&
   // hchan <= (fInvGEMDetMap.at(detname))[mod][n].chan_hi){
   crate = ((fInvGEMDetMap.at(detname))[mod][n]).crate;
