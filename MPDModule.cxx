@@ -49,7 +49,7 @@ namespace Decoder {
     DoRegister( ModuleType( "Decoder::MPDModule" , 3561 ));
 
   MPDModule::MPDModule(Int_t crate, Int_t slot) : VmeModule(crate, slot) {
-    fDebugFile=0;
+    fDebugFile=nullptr;
     Init(); //Should this be called here? not clear...
     
   }
@@ -61,8 +61,8 @@ namespace Decoder {
   void MPDModule::Init() { 
     VmeModule::Init();
     //    Config(0,25,6,16,128); // should be called by the user (but how?)
-    fDebugFile=0;
-    Clear("");
+    fDebugFile=nullptr;
+    Clear();
     //    fName = "MPD Module (INFN MPD for GEM and more), use Config to dynamic config";
     fName = "MPD Module";
 
@@ -82,11 +82,11 @@ namespace Decoder {
     
     fNumSample = 6;
 
-    fChan_CM_flags = 512; //reference channel for common-mode and zero suppression flags
-    fChan_TimeStamp_low = 513;
-    fChan_TimeStamp_high = 514;
-    fChan_MPD_EventCount = 515;
-    fChan_MPD_Debug = 516;
+    fChan_CM_flags = 640; //reference channel for common-mode and zero suppression flags
+    fChan_TimeStamp_low = 641;
+    fChan_TimeStamp_high = 642;
+    fChan_MPD_EventCount = 643;
+    fChan_MPD_Debug = 644;
     
   }
 
@@ -96,13 +96,15 @@ namespace Decoder {
     vector<ConfigStrReq> req = { {"chan_cmflags", fChan_CM_flags},
 				 {"chan_timestamp_low", fChan_TimeStamp_low},
 				 {"chan_timestamp_high", fChan_TimeStamp_high},
-				 {"chan_event_count", fChan_MPD_EventCount} };
+				 {"chan_event_count", fChan_MPD_EventCount},
+				 {"chan_MPD_debug", fChan_MPD_Debug} };
     ParseConfigStr(configstr, req);
 
     assert( fChan_CM_flags < THaCrateMap::MAXCHAN );
     assert( fChan_TimeStamp_low < THaCrateMap::MAXCHAN );
     assert( fChan_TimeStamp_high < THaCrateMap::MAXCHAN );
     assert( fChan_MPD_EventCount < THaCrateMap::MAXCHAN );
+    assert( fChan_MPD_Debug < THaCrateMap::MAXCHAN );
   }
 
   //This version ASSUMES that there is no online zero suppression, so all 128 APV channels are present in every event!
@@ -139,7 +141,7 @@ namespace Decoder {
     std::map<UInt_t, UInt_t> TimeStampL_vs_fiber; //least significant 24 bits of time stamp
     std::map<UInt_t, UInt_t> TimeStampH_vs_fiber; //most significant 24 bits of time stamp
     std::map<UInt_t, UInt_t> EventCount_vs_fiber; //20-bit "event count" variable:
-    std::map<UInt_t, std::vector<Int_t> > MPDdebugInfo_vs_chan; //TBD
+    std::map<UInt_t, std::vector<UInt_t> > MPDdebugInfo_vs_chan; //TBD: key = effective channel, mapped value = vector of (3) data words encoding calculated common-mode corrections for six time samples:
     
     UInt_t TIMESTAMP_LO = 0, TIMESTAMP_HI=0, EVENT_COUNT=0;
     UInt_t eventinfo_wordcount=0;
@@ -169,13 +171,15 @@ namespace Decoder {
     UInt_t ADCsamples[fNumSample]; //temporary storage for ADC time samples. will this compile? Hope so... 
 
     UInt_t hitwords[3]; //temporary storage for the three words needed to extract the information for one "hit"
+
+    UInt_t CMwordcount = 0;
+    UInt_t CMwords[3]; //temporary storage for the three words containing the common-mode values for the six time samples of an APV:
     
     while( iword < len ){
       thisword = datawords[iword++];
 
       //check whether this is a data-type defining or data-type continuation word:
       UInt_t word_type = (thisword & 0x80000000)>>31;
-      
       
       if( word_type == 1 ){ //data-type defining: extract data type from bits 30-27:
 	//old_type_tag = type_tag;
@@ -210,10 +214,17 @@ namespace Decoder {
 	  ENABLE_CM = TESTBIT( thisword, 26 );        
 	  BUILD_ALL_SAMPLES = TESTBIT(thisword, 25 );
 	  CM_OR = TESTBIT(thisword, 24 );
-	  
-	  //FIBER number is in bits 20-16:
-	  fiber = (thisword & 0x001F0000)>>16;
 
+	  //NEW firmware to support up to 40 MPDs per VTP
+	  //to extract bits 21-16:
+	  // 0x003F0000 = 0000 0000 0011 1111 0000 0000 0000 0000
+	  
+	  //FIBER number was in bits 20-16:
+	  //fiber = (thisword & 0x001F0000)>>16;
+
+	  //NOW the fiber number is in bits 21-16:
+	  fiber = (thisword & 0x003F0000)>>16;
+	  
 	  //MPD ID is in bits 0-4, but we basically ignore it:
 	  //mpd_id = (thisword & 0x0000001F);
 
@@ -246,9 +257,10 @@ namespace Decoder {
 	  
 	}
 
-	// if( type_tag == fMPDDebugHeader ){ //
-	  
-	// }
+	if( type_tag == fMPDDebugHeader ){
+	  CMwordcount = 0;
+	  CMwords[CMwordcount] = thisword;
+	}
 	
       } else if( found_this_slot ){
 	//data-type continuation: behavior depends on type_tag. If the most recently found "slot" 
@@ -331,11 +343,16 @@ namespace Decoder {
 	  }
 	}
 
-	// if( type_tag == fMPDDebugHeader && found_MPD_header ){
-
-	// }
-	
-	
+	if( type_tag == fMPDDebugHeader && found_MPD_header ){
+	  CMwordcount++;
+	  CMwords[CMwordcount%3] = thisword;
+	  if( CMwordcount == 2 ){ 
+	    MPDdebugInfo_vs_chan[effChan].clear();
+	    for( int iw=0; iw<3; iw++ ){
+	      MPDdebugInfo_vs_chan[effChan].push_back( CMwords[iw] );
+	    }
+	  }
+	}
       }
       
       fWordsSeen++;
@@ -357,6 +374,14 @@ namespace Decoder {
       sldat->loadData( fChan_TimeStamp_low, TimeStampL_vs_fiber[fiber], fiber );
       sldat->loadData( fChan_TimeStamp_high, TimeStampH_vs_fiber[fiber], fiber );
       sldat->loadData( fChan_MPD_EventCount, EventCount_vs_fiber[fiber], fiber );
+    }
+
+    //Now loop over all APVs seen in the data and load the MPD debug headers into the appropriate dummy channel:
+    for( auto iapv = MPDdebugInfo_vs_chan.begin(); iapv != MPDdebugInfo_vs_chan.end(); ++iapv ){
+      UInt_t chan = iapv->first;
+      for( UInt_t iw=0; iw<MPDdebugInfo_vs_chan[chan].size(); iw++ ){
+	sldat->loadData( fChan_MPD_Debug, MPDdebugInfo_vs_chan[chan][iw], chan );
+      }
     }
     
     //std::cout << "Finished MPDModule::LoadSlot, fWordsSeen = " << fWordsSeen << std::endl;
@@ -792,7 +817,8 @@ namespace Decoder {
     return 0;
   }
   
-  void MPDModule::Clear(const Option_t *opt) {
+  void MPDModule::Clear(const Option_t* opt) {
+    VmeModule::Clear(opt);
     // fNumHits = 0;
     // for (Int_t i=0; i<fNumChan*fNumSample*fNumADC; i++) fData[i]=0;
     // for (Int_t i=0; i<fNumADC*fNumSample; i++) { 

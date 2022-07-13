@@ -27,10 +27,14 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fPedestalMode = false;
   fSubtractPedBeforeCommonMode = false;
   fPedMode_DBoverride = false; //Only if the user script invokes the SetPedestalMode method do we override the database value:
+
+  fNegSignalStudy = false;
   
   fIsSpectrometerTracker = true; //used by tracker base
   fUseOpticsConstraint = false;
   
+  fTestTrackInitialized = false;
+
   fTestTracks = new TClonesArray("THaTrack",1);
 }
 
@@ -61,14 +65,18 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     }
 
     CompleteInitialization();
-
-    new( (*fTestTracks)[0] ) THaTrack();
+    
+    if( !fTestTrackInitialized ){
+    
+      new( (*fTestTracks)[0] ) THaTrack();
+      fTestTrackInitialized = true;
+    }
     
   } else {
     return kInitError;
   }
 
- 
+  
   return kOK;
 }
 
@@ -107,10 +115,13 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
   int useslopeconstraint = fUseSlopeConstraint ? 1 : 0;
+
+  int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
+    { "cmfile",  &fcmfilename, kString, 0, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
@@ -126,6 +137,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "useopticsconstraint", &useopticsconstraint, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
+    { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
@@ -161,6 +173,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     fSubtractPedBeforeCommonMode = ( pedestalmode_flag < 0 );
   }
   
+  fNegSignalStudy = negsignalstudy_flag != 0;
+
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 
@@ -168,6 +182,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   
   //std::cout << "pedestal file name = " << fpedfilename << std::endl;
   
+  fUseOpticsConstraint = (useopticsconstraint != 0 );
+
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
@@ -283,6 +299,9 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ) {
 }
 
 void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
+  
+  THaTrackingDetector::Clear(opt);
+
   SBSGEMTrackerBase::Clear();
 
   for( auto& module: fModules ) {
@@ -317,49 +336,58 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
   UInt_t runnum = run->GetNumber(); 
+
+  TString fname_neg_events;
   
+  fname_neg_events.Form("GEM_neg_on_track_run%d.dat",runnum);
+
+  if(fNegSignalStudy)
+    PrintNegEvents(fname_neg_events.Data());
+
+
   //To automate the printing out of pedestals for database and DAQ, 
   if( fPedestalMode ){
-    TString fname_dbase, fname_daq, fname_cmr, fname_dbcm;
+    TString fname_dbped, fname_daqped, fname_dbcm, fname_daqcm;
     
     
     TString specname = GetApparatus()->GetName();
     TString detname = GetName();
-    fname_dbase.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+    fname_dbped.Form( "db_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_dbcm.Form( "db_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-    fname_daq.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-    fname_cmr.Form( "CommonModeRange_%s_%s_run%d.txt", specname.Data(), detname.Data(), runnum );
+    fname_daqped.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+    fname_daqcm.Form( "daq_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
+
     
-    fpedfile_dbase.open( fname_dbase.Data() );
+    //fpedfile_dbase.open( fname_dbase.Data() );
     fCMfile_dbase.open( fname_dbcm.Data() );
-    fpedfile_daq.open( fname_daq.Data() );
-    fpedfile_cmr.open( fname_cmr.Data() );
+    fpedfile_daq.open( fname_daqped.Data() );
+    fCMfile_daq.open( fname_daqcm.Data() );
     
     TString sdate = run->GetDate().AsString();
     sdate.Prepend( "#" );
     
     TString message;
 
-    message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
+    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
+    fCMfile_daq << sdate << std::endl;
+    fCMfile_daq << message << std::endl;
+    fCMfile_daq << "# format = crate, slot, mpd, adc_ch, CM min, CM max"
+    		  << std::endl;
+
+    message.Form( "# Copy this file into $DB_DIR/gemped to use these pedestals for analysis");
     fCMfile_dbase << sdate << std::endl;
     fCMfile_dbase << message << std::endl;
-    fCMfile_dbase << "# format = detname.commonmode_mean(U,V) and detname.commonmode_rms(U,V) = common-mode mean and RMS for U, V strips by APV card in order of position"
+    fCMfile_dbase << "# format = crate, slot, mpd, adc_ch, CM mean, CM RMS"
 		  << std::endl;
     
-    message.Form( "# Copy the contents of this file into $DB_DIR/db_%s.%s.dat to use these pedestals for analysis", specname.Data(), detname.Data() );
+    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
     
-    fpedfile_dbase << sdate << std::endl;
-    fpedfile_dbase << message << std::endl;
-    fpedfile_dbase << "#format = detname.ped(u,v) and detname.rms(u,v) = pedestal mean and rms by (u,v) strip number in order of position" << std::endl;
-    
-    message.Form("# copy the contents of this file into (location TBD) to update CODA thresholds for detector %s.%s", specname.Data(), detname.Data() );
-    
-    // fpedfile_daq << sdate << std::endl;
-    // fpedfile_daq <<  message << std::endl;
-    // fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
-    // 		 << "# APV channel number      pedestal mean      pedestal rms (for average over time samples)" << std::endl;
+    fpedfile_daq << sdate << std::endl;
+    fpedfile_daq <<  message << std::endl;
+    fpedfile_daq << "# format = APV        crate       slot       mpd_id       adc_ch followed by " << std::endl
+     		 << "# APV channel number      pedestal mean      pedestal rms " << std::endl;
 
-    message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
+    //message.Form( "# This file defines the common-mode range for the online zero-suppression for the GEM DAQ. Copy its contents into (location TBD) to set these values for detector %s.%s", specname.Data(), detname.Data() );
     
     // fpedfile_cmr << sdate << std::endl;
     // fpedfile_cmr << message << std::endl;
@@ -367,7 +395,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
   }
 
   for( auto& module: fModules ) {
-    if( fPedestalMode ) { module->PrintPedestals(fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr); }
+    if( fPedestalMode ) { module->PrintPedestals(fCMfile_dbase, fpedfile_daq, fCMfile_daq); }
     module->End(run);
   }
 
@@ -386,6 +414,24 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     hefficiency_y_layer->Compress();
     hefficiency_xy_layer->Compress();
 
+    hdidnothit_x_layer->Compress();
+    hdidnothit_y_layer->Compress();
+
+    hdidhit_fullreadout_x_layer->Compress();
+    hdidhit_fullreadout_y_layer->Compress();
+
+    hneghit_x_layer->Compress();
+    hneghit_y_layer->Compress();
+
+    hneghit1D_x_layer->Compress();
+    hneghit1D_y_layer->Compress();
+
+    hneghit_good_x_layer->Compress();
+    hneghit_good_y_layer->Compress();
+
+    hneghit_good1D_x_layer->Compress();
+    hneghit_good1D_y_layer->Compress();
+
     hdidhit_x_layer->Write(0,kOverwrite);
     hdidhit_y_layer->Write(0,kOverwrite);
     hdidhit_xy_layer->Write(0,kOverwrite);
@@ -397,6 +443,24 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     hefficiency_x_layer->Write(0,kOverwrite);
     hefficiency_y_layer->Write(0,kOverwrite);
     hefficiency_xy_layer->Write(0,kOverwrite);
+
+    hdidnothit_x_layer->Write(0,kOverwrite);
+    hdidnothit_y_layer->Write(0,kOverwrite);
+
+    hdidhit_fullreadout_x_layer->Write(0,kOverwrite);
+    hdidhit_fullreadout_y_layer->Write(0,kOverwrite);
+
+    hneghit_x_layer->Write(0,kOverwrite);
+    hneghit_y_layer->Write(0,kOverwrite);
+
+    hneghit1D_x_layer->Write(0,kOverwrite);
+    hneghit1D_y_layer->Write(0,kOverwrite);
+
+    hneghit_good_x_layer->Write(0,kOverwrite);
+    hneghit_good_y_layer->Write(0,kOverwrite);
+
+    hneghit_good1D_x_layer->Write(0,kOverwrite);
+    hneghit_good1D_y_layer->Write(0,kOverwrite);
   }
 
   if( fDumpGeometryInfo ){ //Print out geometry info for alignment:
@@ -490,6 +554,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
     { "hit.UtimeMaxStrip", "cluster timing based on U strips", "fHitUTimeMaxStrip" },
     { "hit.VtimeMaxStrip", "cluster timing based on V strips", "fHitVTimeMaxStrip" },
+    { "hit.UtimeMaxStripFit", "Strip fitted t0 for max strip in cluster", "fHitUTimeMaxStripFit" },
+    { "hit.VtimeMaxStripFit", "Strip fitted t0 for max strip in cluster", "fHitVTimeMaxStripFit" },
     { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
     { "hit.Tavg", "hit T average", "fHitTavg" },
     { "hit.isampmaxUclust", "peak time sample in cluster-summed U ADC samples", "fHitIsampMaxUclust" },
@@ -522,9 +588,19 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "nlayershituv", "number of layers with at least one 2D hit", "fNlayers_hitUV" },
     { "nstripsu_layer", "total number of U strips fired by layer", "fNstripsU_layer" },
     { "nstripsv_layer", "total number of V strips fired by layer", "fNstripsV_layer" },
+    { "nstripsu_layer_neg", "total number of negative U strips fired by layer", "fNstripsU_layer_neg" },
+    { "nstripsv_layer_neg", "total number of negative V strips fired by layer", "fNstripsV_layer_neg" },
+    { "nstripsu_layer_neg_miss", "total U strips near track by layer with hits not found", "fNstripsU_layer_neg_miss" },
+    { "nstripsv_layer_neg_miss", "total V strips near track by layer with hits notfound", "fNstripsV_layer_neg_miss" },
+    { "nstripsu_layer_neg_hit", "total U strips near track by layer with hits found", "fNstripsU_layer_neg_hit" },
+    { "nstripsv_layer_neg_hit", "total V strips near track by layer with hits found", "fNstripsV_layer_neg_hit" },
     { "nclustu_layer", "total number of U clusters by layer", "fNclustU_layer" },
     { "nclustv_layer", "total number of V clusters by layer", "fNclustV_layer" },
+    { "nclustu_layer_neg", "total number of negative U clusters by layer", "fNclustU_layer_neg" },
+    { "nclustv_layer_neg", "total number of negative V clusters by layer", "fNclustV_layer_neg" },
     { "n2Dhit_layer", "total_number of 2D hits by layer", "fN2Dhit_layer" },
+    //{ "nclustu_layer_miss", "total number of U clusters by layer in a module missing hits", "fNclustU_layer_miss" },
+    //{ "nclustv_layer_miss", "total number of V clusters by layer in a module missing hits", "fNclustV_layer_miss" },
     { nullptr }
   };
   DefineVarsFromList( vars, mode );
@@ -567,24 +643,30 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
     //std::cout << "SBSGEMSpectrometerTracker::FineTrack..."; 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;
-    find_tracks();
 
-    //We don't necessarily know 
+    //Is using a constraint, only attempt tracking if constraints have actually been initialized with info from external detectors:
+    fConstraintInitialized = fConstraintPoint_Front_IsInitialized && fConstraintPoint_Back_IsInitialized &&
+      fConstraintWidth_Front_IsInitialized && fConstraintWidth_Back_IsInitialized;
+
+    if( fConstraintInitialized ){
+      find_tracks();
+
+      //We don't necessarily know 
     
-    for( int itrack=0; itrack<fNtracks_found; itrack++ ){
-      //AddTrack returns a pointer to the created THaTrack:
-      THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
+      for( int itrack=0; itrack<fNtracks_found; itrack++ ){
+	//AddTrack returns a pointer to the created THaTrack:
+	THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
 
-      int ndf = 2*fNhitsOnTrack[itrack]-4;
-      double chi2 = fChi2Track[itrack]*ndf;
+	int ndf = 2*fNhitsOnTrack[itrack]-4;
+	double chi2 = fChi2Track[itrack]*ndf;
       
-      Track->SetChi2( chi2, ndf );
+	Track->SetChi2( chi2, ndf );
 
-      int index = tracks.GetLast();
-      Track->SetIndex( index );
+	int index = tracks.GetLast();
+	Track->SetIndex( index );
       
+      }
     }
-
     //std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
   }
@@ -593,6 +675,10 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
 }
 
 bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction ){
+  
+  // std::cout << "[SBSGEMSpectrometerTracker::PassedOpticsConstraint]: Checking target reconstruction" 
+  // 	    << std::endl;
+
   double xptemp = track_direction.X()/track_direction.Z();
   double yptemp = track_direction.Y()/track_direction.Z();
 

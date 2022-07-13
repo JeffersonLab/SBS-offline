@@ -55,7 +55,8 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSBBShower.cxx SBSBBTotalShower.cxx 
   SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx 
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
-  SBSScintPartialHit.cxx SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx
+  SBSScintPartialHit.cxx SBSCherenkovDetector.cxx SBSCherenkov_ClusterList.cxx
+  SBSGRINCH.cxx
   SBSScintPlane.cxx SBSEArm.cxx
   SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx SBSGenericDetector.cxx
   SBSData.cxx SBSElement.cxx
@@ -67,11 +68,13 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSTimingHodoscopePMT.cxx SBSTimingHodoscopeBar.cxx SBSTimingHodoscopeCluster.cxx
   SBSBPM.cxx SBSRaster.cxx SBSRasteredBeam.cxx 
   LHRSScalerEvtHandler.cxx SBSScalerEvtHandler.cxx
+  SBSScalerHelicity.cxx SBSScalerHelicityReader.cxx
   gmn_tree_digitized.cxx VETROC.cxx
   )
 #gmn_tree_digitized.C
 #g4sbs_data.cxx g4sbs_tree.cxx
 #gmn_dig_tree.cxx  SBSSimMPD.cxx SBSBBShowerCluster.cxx SBSShowerBlock.cxx
+#SBSGRINCH.cxx SBSGRINCH_ClusterList.cxx
 
 ## Make corresponding header files
 string(REGEX REPLACE .cxx .h headers "${sources}")

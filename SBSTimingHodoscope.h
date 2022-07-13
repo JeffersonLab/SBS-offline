@@ -41,31 +41,31 @@ public:
   virtual Int_t   CoarseProcess( TClonesArray& tracks );
   virtual Int_t   FineProcess( TClonesArray& tracks );
   /* virtual Int_t   FindGoodHit(SBSElement *element); */
-  virtual void    ClearEvent();
+  virtual void    Clear( Option_t* opt="" );
   // new functions
   Int_t   ConstructHodoscope();
   Double_t TimeWalk(Double_t time, Double_t tot, Double_t timewalk0, Double_t timewalk1);
   
-  Int_t GetGoodBarsSize() {return fGoodBarIDsTDC.size();};
-  std::vector<Int_t> GetGoodBarsIDs() {return fGoodBarIDsTDC;};
-  std::vector<Double_t> GetGoodBarsMeanTimes() {return fGoodBarTDCmean;};
+  Int_t GetGoodBarsSize() const {return fGoodBarIDsTDC.size();};
+  std::vector<Int_t> GetGoodBarsIDs() const {return fGoodBarIDsTDC;};
+  std::vector<Double_t> GetGoodBarsMeanTimes() const {return fGoodBarTDCmean;};
   // time diff pos is hit pos along the bar length from time diff
-  std::vector<Double_t> GetGoodBarsTimeDiffPos() {return fGoodBarTDCpos;};
-  std::vector<Double_t> GetGoodBarsVPos() {return fGoodBarTDCvpos;};
-  Double_t GetGoodBarVPosElement(Int_t i) {
+  std::vector<Double_t> GetGoodBarsTimeDiffPos() const {return fGoodBarTDCpos;};
+  std::vector<Double_t> GetGoodBarsVPos() const {return fGoodBarTDCvpos;};
+  Double_t GetGoodBarVPosElement(Int_t i) const {
     if((Double_t)i<fGoodBarTDCvpos.size())
       return fGoodBarTDCvpos[i];
     else return -999.0;};
-  Double_t GetGoodBarHPosElement(Int_t i) {
+  Double_t GetGoodBarHPosElement(Int_t i) const {
     if((Double_t)i<fGoodBarTDCpos.size())
       return fGoodBarTDCpos[i];
     else return -999.0;};
-  Double_t GetGoodBarMeanTimeElement(Int_t i) {
+  Double_t GetGoodBarMeanTimeElement(Int_t i) const {
     if((Double_t)i<fGoodBarTDCmean.size())
       return fGoodBarTDCmean[i];
     else return -999.0;};
   
-  Int_t GetNClusters() {return fClusters.size();};
+  Int_t GetNClusters() const {return fClusters.size();};
   SBSTimingHodoscopeCluster* GetCluster(int i);
   
   Int_t GetID();

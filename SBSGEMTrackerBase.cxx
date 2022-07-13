@@ -60,16 +60,18 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fModulesInitialized = false;
 
   fpedfilename = "";
+  fcmfilename = "";
 
   fBinSize_efficiency2D = 0.01; //1 cm
   fBinSize_efficiency1D = 0.003; //3 mm
   
   fDumpGeometryInfo = false;
-
   fIsSpectrometerTracker = true; //default to true
   fIsPolarimeterTracker = false;
   fUseOpticsConstraint = false;
   //fUseFrontTrackerConstraint =false;
+
+  fNegSignalStudy = false;
 
   fPmin_track = 0.5; //GeV
   fPmax_track = 11.0; //GeV
@@ -87,6 +89,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fypfpmin = -0.2;
   fypfpmax = 0.2;
   
+  fCommonModePlotsFlag = 0; 
+  fCommonModePlotsFlagIsSet = false;
   
 }
 
@@ -98,7 +102,11 @@ SBSGEMTrackerBase::~SBSGEMTrackerBase(){
 void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   //Also, when we construct the tracker, we want to clear out the modules:
   //fModules.clear(); we actually DON'T want to clear out the modules here, this gets called event-by-event
-  
+  fConstraintPoint_Front_IsInitialized = false;
+  fConstraintPoint_Back_IsInitialized = false;
+  fConstraintWidth_Front_IsInitialized = false;
+  fConstraintWidth_Back_IsInitialized = false;
+  fConstraintInitialized = false;
   
   fNtracks_found = 0;
   fNhitsOnTrack.clear();
@@ -163,6 +171,8 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitVTime.clear();
   fHitUTimeMaxStrip.clear();
   fHitVTimeMaxStrip.clear();
+  fHitUTimeMaxStripFit.clear();
+  fHitVTimeMaxStripFit.clear();
   fHitDeltaT.clear();
   fHitTavg.clear();
   
@@ -209,7 +219,8 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   fNumModulesByLayer.clear();
   fModuleListByLayer.clear();
   //loop on the array of (initialized) modules and fill out missing info:
-  
+  bool cm_already_loaded = false;
+
   for( int imod=0; imod<(int)fModules.size(); imod++ ){
     int layer = fModules[imod]->fLayer;
 
@@ -229,6 +240,15 @@ void SBSGEMTrackerBase::CompleteInitialization(){
     //moved "zero suppress" flag to GEMModule
     fModules[imod]->fBinSize_efficiency1D = fBinSize_efficiency1D;
     fModules[imod]->fBinSize_efficiency2D = fBinSize_efficiency2D;
+
+    if( fCommonModePlotsFlagIsSet ){
+      fModules[imod]->SetMakeCommonModePlots( fCommonModePlotsFlag );
+    }
+
+    for(int iAPV = 0; iAPV < fModules[imod]->fNAPVs_U; iAPV++)
+      if(fModules[imod]->fCommonModeMeanU[iAPV] > 1.0) cm_already_loaded = true;
+      
+
   }
 
   fNmodules = fModules.size();
@@ -236,11 +256,20 @@ void SBSGEMTrackerBase::CompleteInitialization(){
 
   fNstripsU_layer.resize( fNlayers );
   fNstripsV_layer.resize( fNlayers );
+  fNstripsU_layer_neg.resize( fNlayers );
+  fNstripsV_layer_neg.resize( fNlayers );
+  fNstripsU_layer_neg_miss.resize( fNlayers );
+  fNstripsV_layer_neg_miss.resize( fNlayers );
+  fNstripsU_layer_neg_hit.resize( fNlayers );
+  fNstripsV_layer_neg_hit.resize( fNlayers );
   fNclustU_layer.resize( fNlayers );
   fNclustV_layer.resize( fNlayers );
+  fNclustU_layer_neg.resize( fNlayers );
+  fNclustV_layer_neg.resize( fNlayers );
   fN2Dhit_layer.resize( fNlayers );
   fDidHit_Module.resize( fNmodules );
   fShouldHit_Module.resize( fNmodules );
+
 
   fIndexByLayer.clear();
   
@@ -258,11 +287,17 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   
   InitLayerCombos();
   InitGridBins();
-
+  
   if( !fpedfilename.empty() ){ //load pedestals from file; NOTE: This OVERRIDES any pedestals found in the database
     //NOTE: if we load the pedestals from a file formatted in the way the DAQ wants, then we have to assume that SLOT, MPD_ID, and ADC_CH are sufficient to uniquely identify
 
     LoadPedestals( fpedfilename.c_str() );
+    
+  }
+  
+  if( !fcmfilename.empty() && !cm_already_loaded){ //load CM from file; NOTE: This OVERRIDES any pedestals found in the database
+
+    if(!cm_already_loaded) LoadCM( fcmfilename.c_str() );
     
   }
   
@@ -397,6 +432,100 @@ void SBSGEMTrackerBase::LoadPedestals( const char *fname ){
   
 }
 
+
+
+
+void SBSGEMTrackerBase::LoadCM( const char *fname ){
+
+  std::cout << "[SBSGEMTrackerBase::LoadCM]: fname = " << fname << std::endl;
+
+  TString cmfilename = fname;
+
+  TString prefix = std::getenv("DB_DIR");
+  prefix += "/";
+  
+  if( gSystem->AccessPathName( fname ) ){ //
+    
+    std::cout << "[SBSGEMTrackerBase::LoadCM]: could not find " << fname << " in working directory, looking in " << prefix << std::endl;
+
+    cmfilename.Prepend(prefix);
+    
+  }
+  std::ifstream cmfile( cmfilename.Data() );
+
+  if( !cmfile.good() ){
+    cmfile.close();
+
+    std::cout << "Warning: could not find CM file " << fname << " in working directory or in " << prefix << ", CM not loaded" << std::endl;
+
+    return;
+  } else {
+    std::cout << "Found CM file " << cmfilename << endl;
+  }
+
+  std::map<int, std::map<int, std::map<int,double > > > CMMean;
+  std::map<int, std::map<int, std::map<int,double > > > CMRMS;
+
+  std::string currentline;
+
+  int crate=0, slot=0, mpd=0, adc_ch=0;
+  double db_mean, db_rms;
+
+  while( std::getline(cmfile, currentline) ){
+    //TString currentline;
+    if( cmfile.eof() ) break;
+
+    std::istringstream is(currentline);
+    
+    //File is formated like crate, slot, mpd, adc_ch, CM mean, CM RMS
+    is >> crate >> slot >> mpd >> adc_ch >> db_mean >> db_rms;
+        
+    int index = adc_ch + 16*mpd;
+
+    //Assign CM mean and RMS for ever APV
+    CMMean[crate][slot][index] = db_mean;
+    CMRMS[crate][slot][index] = db_rms;
+    
+  }
+
+  //Loop over all modules and APVs
+  for( int module=0; module<fNmodules; module++ ){
+    for ( auto it = fModules[module]->fMPDmap.begin(); it != fModules[module]->fMPDmap.end(); ++it ){
+
+      int this_crate = it->crate;
+      int this_index = it->adc_id + 16 * it->mpd_id;
+      int this_slot = it->slot;
+      int this_apv = it->pos;    //This is the APV position used in the analyis 
+
+      //std::cout << "(crate, slot, index)=(" << this_crate << ", " << this_slot << ", " << this_index << ")" << std::endl;
+      
+      if( CMMean.find( this_crate ) != CMMean.end() ){
+	//std::cout << "found crate " << this_crate << std::endl;
+	if( CMMean[this_crate].find( this_slot ) != CMMean[this_crate].end() ){
+	  //std::cout << "found slot " << this_slot << std::endl;
+	  if( CMMean[this_crate][this_slot].find( this_index ) != CMMean[this_crate][this_slot].end() ){
+	    //std::cout << "found index " << this_index << std::endl;
+	    
+	    double this_mean = CMMean[this_crate][this_slot][this_index];
+	    double this_rms = CMRMS[this_crate][this_slot][this_index];
+	    	    
+	    //Set module APVs CM values from the arrays from the DB file
+	    if ( it->axis == SBSGEM::kUaxis ){
+	      fModules[module]->fCommonModeMeanU[this_apv] = this_mean;
+	      fModules[module]->fCommonModeRMSU[this_apv] = this_rms; 
+	    } else {
+	      fModules[module]->fCommonModeMeanV[this_apv] = this_mean;
+	      fModules[module]->fCommonModeRMSV[this_apv] = this_rms; 
+	    }
+	    
+	  }
+	}
+      }
+    }
+  }
+  
+}
+
 void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
 
   if( fMakeEfficiencyPlots && !fEfficiencyInitialized ){
@@ -413,7 +542,26 @@ void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
     hefficiency_y_layer = new TClonesArray( "TH1D", fNlayers );
     hefficiency_xy_layer = new TClonesArray( "TH2D", fNlayers );
 
-    
+    hdidnothit_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hdidnothit_y_layer = new TClonesArray( "TH1D", fNlayers );
+
+    hdidhit_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hdidhit_y_layer = new TClonesArray( "TH1D", fNlayers );
+
+    hdidhit_fullreadout_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hdidhit_fullreadout_y_layer = new TClonesArray( "TH1D", fNlayers );
+
+    hneghit_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hneghit_y_layer = new TClonesArray( "TH1D", fNlayers );
+
+    hneghit1D_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hneghit1D_y_layer = new TClonesArray( "TH1D", fNlayers );
+
+    hneghit_good_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hneghit_good_y_layer = new TClonesArray( "TH1D", fNlayers );
+
+    hneghit_good1D_x_layer = new TClonesArray( "TH1D", fNlayers );
+    hneghit_good1D_y_layer = new TClonesArray( "TH1D", fNlayers );
      
     TString histname;
     TString detname = dname;
@@ -444,6 +592,24 @@ void SBSGEMTrackerBase::InitEfficiencyHistos(const char *dname){
       new( (*hefficiency_xy_layer)[ilayer] ) TH2D( histname.Format( "hefficiency_xy_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x, y; y(m); x(m)", 
 						   nbinsy2D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer]+0.01,
 						   nbinsx2D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer]+0.01 );
+
+      new( (*hdidnothit_x_layer)[ilayer] ) TH1D( histname.Format( "hdidnothit_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y; x(m); efficiency", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hdidnothit_y_layer)[ilayer] ) TH1D( histname.Format( "hdidnothit_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x; y(m); efficiency", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+
+      new( (*hdidhit_fullreadout_x_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_fullreadout_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y; x(m); efficiency", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hdidhit_fullreadout_y_layer)[ilayer] ) TH1D( histname.Format( "hdidhit_fullreadout_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x; y(m); efficiency", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+
+      new( (*hneghit_x_layer)[ilayer] ) TH1D( histname.Format( "hneghit_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y; x(m); efficiency", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hneghit_y_layer)[ilayer] ) TH1D( histname.Format( "hneghit_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x; y(m); efficiency", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      
+      new( (*hneghit1D_x_layer)[ilayer] ) TH1D( histname.Format( "hneghit1D_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y; x(m); efficiency", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hneghit1D_y_layer)[ilayer] ) TH1D( histname.Format( "hneghit1D_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x; y(m); efficiency", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+
+      new( (*hneghit_good_x_layer)[ilayer] ) TH1D( histname.Format( "hneghit_good_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y; x(m); efficiency", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hneghit_good_y_layer)[ilayer] ) TH1D( histname.Format( "hneghit_good_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x; y(m); efficiency", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
+      
+      new( (*hneghit_good1D_x_layer)[ilayer] ) TH1D( histname.Format( "hneghit_good1D_x_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs x (m), averaged over y; x(m); efficiency", nbinsx1D, fXmin_layer[ilayer]-0.01, fXmax_layer[ilayer] + 0.01 );
+      new( (*hneghit_good1D_y_layer)[ilayer] ) TH1D( histname.Format( "hneghit_good1D_y_%s_layer%d", detname.Data(), ilayer ), "track-based efficiency vs y (m), averaged over x; y(m); efficiency", nbinsy1D, fYmin_layer[ilayer]-0.01, fYmax_layer[ilayer] + 0.01 );
       
     }
     
@@ -643,6 +809,7 @@ Long64_t SBSGEMTrackerBase::InitFreeHitList(){
   
   Nfreehits_binxy_layer.clear();
   freehitlist_binxy_layer.clear();
+  freehitlist_goodxy.clear();
 
   Long64_t Ncombos=1;
 
@@ -725,8 +892,12 @@ void SBSGEMTrackerBase::hit_reconstruction(){
   for( int ilayer=0; ilayer<fNlayers; ilayer++ ){
     fNstripsU_layer[ilayer] = 0;
     fNstripsV_layer[ilayer] = 0;
+    fNstripsU_layer_neg[ilayer] = 0;
+    fNstripsV_layer_neg[ilayer] = 0;
     fNclustU_layer[ilayer] = 0;
     fNclustV_layer[ilayer] = 0;
+    fNclustU_layer_neg[ilayer] = 0;
+    fNclustV_layer_neg[ilayer] = 0;
     fN2Dhit_layer[ilayer] = 0;
   }
   //Loop over all the GEM modules and invoke their cluster-finding methods with search region constraints:
@@ -783,16 +954,19 @@ void SBSGEMTrackerBase::hit_reconstruction(){
     int layerindex = fIndexByLayer[mod->fLayer];
     fNstripsU_layer[layerindex] += mod->fNstrips_hitU;
     fNstripsV_layer[layerindex] += mod->fNstrips_hitV;
+    fNstripsU_layer_neg[layerindex] += mod->fNstrips_hitU_neg;
+    fNstripsV_layer_neg[layerindex] += mod->fNstrips_hitV_neg;
 
-    fNclustU_layer[layerindex] += mod->fNclustU;
-    fNclustV_layer[layerindex] += mod->fNclustV;
-
+    fNclustU_layer[layerindex] += mod->fNclustU_pos;
+    fNclustV_layer[layerindex] += mod->fNclustV_pos;
+    fNclustU_layer_neg[layerindex] += mod->fNclustV_neg;
+    fNclustV_layer_neg[layerindex] += mod->fNclustV_neg;
     fN2Dhit_layer[layerindex] += mod->fN2Dhits;
     
   }
-
+  
   for( int layerindex=0; layerindex<fNlayers; layerindex++ ){
-    if( fNstripsU_layer[layerindex] + fNstripsV_layer[layerindex] > 0 ) fNlayers_hit++;
+        if( fNstripsU_layer[layerindex] + fNstripsV_layer[layerindex] > 0 ) fNlayers_hit++;
     if( fNstripsU_layer[layerindex] > 0 ) fNlayers_hitU++;
     if( fNstripsV_layer[layerindex] > 0 ) fNlayers_hitV++;
     if( fN2Dhit_layer[layerindex] > 0 ) fNlayers_hitUV++;
@@ -805,7 +979,7 @@ void SBSGEMTrackerBase::hit_reconstruction(){
 
 // Standard "fast" track-finding algorithm (based on SBSGEM_standalone code by Andrew Puckett):
 void SBSGEMTrackerBase::find_tracks(){ 
-
+  
   //should this method invoke clear()? Yes: Clear() just clears out all the track arrays. It is assumed that this method will only be called once per event.
   //Although that is probably not correct; it might be called as many as two times or perhaps once per cluster (to be developed later). Anyway, for now, let's use it, might need to revisit later:
   Clear();
@@ -970,7 +1144,6 @@ void SBSGEMTrackerBase::find_tracks(){
 	      //The track search region constraint should have already been enforced at the 2D hit reconstruction stage, so additional checks here are probably unnecessary.
 
 	      //std::cout << "looping over combinations of hits from minlayer,maxlayer, ihit, jhit = " << ihit << ", " << jhit << std::endl;
-	      
 	      int hitmin = freehitlist_layer[minlayer][ihit];
 	      int hitmax = freehitlist_layer[maxlayer][jhit];
 
@@ -1210,7 +1383,7 @@ void SBSGEMTrackerBase::find_tracks(){
 		    //Fit a track to the current hit combination:
 		    //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
 		    FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
-		  
+
 		    //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
 		  
 		    if( firstgoodcombo || chi2ndftemp < minchi2 ){
@@ -1305,12 +1478,67 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	  //We treat all layer combinations at the same minimum hit requirement on an equal footing as far as track-finding is concerned:
 	if( !firstgoodcombo && minchi2 < fTrackChi2Cut ){ //then we found at least one candidate track:
-	  foundtrack = true;
+	  //check optics and other constraints:
 
+	  //double xtrtemp = besttrack[0];
+	  //double ytrtemp = besttrack[1];
+	  //double xptrtemp = besttrack[2];
+	  //double yptrtemp = besttrack[3];
+
+	  TVector3 TrackPosTemp( besttrack[0], besttrack[1], 0.0 );
+	  TVector3 TrackDirTemp( besttrack[2], besttrack[3], 1.0 );
+	  TrackDirTemp = TrackDirTemp.Unit(); 
+
+	  bool goodoptics = true;
+	  if( fIsSpectrometerTracker && fUseOpticsConstraint ){
+	    goodoptics = PassedOpticsConstraint( TrackPosTemp, TrackDirTemp );
+	  }
+	  
+	  //If using search region constraint, ignore tracks that don't give straight-line track parameters consistent with the constraint:
+	  bool constraint_check = true;
+	  if( fUseConstraint ){
+	    constraint_check = CheckConstraint( besttrack[0], besttrack[1], besttrack[2], besttrack[3] );
+	  }
+		    
+	  //If using slope constraint, ignore tracks that would give slope outside the allowed range
+	  //along X or Y:
+	  bool slope_check = true;
+	  if( fUseSlopeConstraint ){
+	    slope_check = ( fxpfpmin <= besttrack[2] && besttrack[2] <= fxpfpmax &&
+			    fypfpmin <= besttrack[3] && besttrack[3] <= fypfpmax );
+	  }
+	  
+	  foundtrack = goodoptics && constraint_check && slope_check;
+	  
 	  // "AddTrack" takes care of incrementing fNtracks_found
 	  //Changed method name to "AddNewTrack to avoid conflict with THaTrackingDetector::AddTrack
-	  AddNewTrack( besthitcombo, besttrack, minchi2, uresidbest, vresidbest );
+	  
+	  Int_t nHighQualityHits = 0;
+	  //For three-hit tracks, we require ALL three hits to be "high-quality" hits: 
+	  //if( besthitcombo.size() == 3 ){
+	  for( auto ilayer = besthitcombo.begin(); ilayer != besthitcombo.end(); ++ilayer ){
+	    int layer = ilayer->first;
+	    int hitidx = ilayer->second;
 	    
+	    int module = modindexhit2D[layer][hitidx];
+	    int iclust = clustindexhit2D[layer][hitidx];
+	    
+	    if( fModules[module]->fHits[iclust].highquality ) nHighQualityHits++;
+
+	  }
+	  
+	  if( besthitcombo.size() == 3 ){
+	    foundtrack = foundtrack && nHighQualityHits >= 3;
+	  }
+
+	  // Special treatment and extra hit/track quality cuts for 3-hit tracks:
+	  // In particular, require at least 2x2 cluster size, good ADC correlation for all 3 hits on the track, 
+	  // And also check agreement of hit times with each other:
+	  
+
+	  if( foundtrack ){
+	    AddNewTrack( besthitcombo, besttrack, minchi2, uresidbest, vresidbest );
+	  }
 	}
 	  
       } else {
@@ -1334,7 +1562,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
   if( !ftracking_done ) find_tracks();
 
   if( !fEfficiencyInitialized ) InitEfficiencyHistos("generic_gemtracker"); //this guarantees that the efficiency histograms will exist when we try to fill them:
-  
+
+
   //This is probably also the place to fill the efficiency histograms. Need to refresh on how this was done in the standalone:
   
   fBestTrackIndex = 0; //for now
@@ -1348,6 +1577,11 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
     
     
     std::set<int> layersontrack;
+    bool modules_hit[fNmodules];
+    for( int imod=0; imod<fNmodules; imod++ ){
+      modules_hit[imod] = false;
+    }
+    
     std::map<int, int> modulesontrack_by_layer;
     
     for( int ihit=0; ihit<fNhitsOnTrack[itrack]; ihit++ ){ //loop over hits on tracks:
@@ -1420,6 +1654,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 
       fHitUTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_umax] );
       fHitVTimeMaxStrip.push_back( fModules[module]->fTmean[hitidx_vmax] );
+
+      fHitUTimeMaxStripFit.push_back( fModules[module]->fStripTfit[hitidx_umax] );
+      fHitVTimeMaxStripFit.push_back( fModules[module]->fStripTfit[hitidx_vmax] );
       
       fHitDeltaT.push_back( hitinfo->tdiff );
       fHitCorrCoeffClust.push_back( hitinfo->corrcoeff_clust );
@@ -1437,7 +1674,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitVstripHi.push_back( vclustinfo->istriphi );
       //
       
-      
+          
       
       //Also set the "trackindex" variable and other properties for strips on this track:
       for( unsigned int istrip=uclustinfo->istriplo; istrip<=uclustinfo->istriphi; istrip++ ){
@@ -1534,7 +1771,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitADCfrac4_MaxVstrip.push_back( ADCfrac_maxVstrip[4] );
       fHitADCfrac5_MaxVstrip.push_back( ADCfrac_maxVstrip[5] );
 
-      
+    
       if( fMakeEfficiencyPlots && fNhitsOnTrack[itrack] >= 4 && itrack == 0 ){
       //if( fMakeEfficiencyPlots && itrack == 0 ){
 	//fill "did hit" efficiency histos (numerator for efficiency determination):
@@ -1562,6 +1799,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	  ( (TH1D*) (*hdidhit_x_layer)[layer] )->Fill( Intersect.X() );
 	  ( (TH1D*) (*hdidhit_y_layer)[layer] )->Fill( Intersect.Y() );
 	  ( (TH2D*) (*hdidhit_xy_layer)[layer] )->Fill( Intersect.Y(), Intersect.X() );
+
+	  modules_hit[module] = true; //Save if the track goes through this module
 	}
 	
       }
@@ -1571,7 +1810,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       
       fNgoodhits++;
     }
-
+  
+    
+    
     //if( fMakeEfficiencyPlots ){
     //Now loop on all layers and fill the "should hit" histograms (denominator for track-based efficiency calculation): 
     for( int ilayer = 0; ilayer < fNlayers; ilayer++ ){
@@ -1580,12 +1821,22 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       if( layersontrack.find( ilayer ) != layersontrack.end() ){ //reduce bias in efficiency determination by requiring hits in at least three layers OTHER than the one in question if this layer is on the track:
 	minhits=4;
 	moduleontrack = modulesontrack_by_layer[ilayer]; 
+
       }
 
-     
+      fNstripsU_layer_neg_hit[ilayer] = 0;
+      fNstripsV_layer_neg_hit[ilayer] = 0;
+      fNstripsU_layer_neg_miss[ilayer] = 0;
+      fNstripsV_layer_neg_miss[ilayer] = 0;
+      
+      
+      bool neg_save = false;
+      bool pos_save = false;
       // Check ALL modules in the layer:
       for( auto imod=fModuleListByLayer[ilayer].begin(); imod != fModuleListByLayer[ilayer].end(); ++imod ){
 	int module = *imod; 
+
+
 	double sdummy;
 	TVector3 Intersect = TrackIntersect( module, TrackOrigin, TrackDirection, sdummy );
 
@@ -1620,6 +1871,219 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	      ( (TH1D*) (*hshouldhit_x_layer)[ilayer] )->Fill( Intersect.X() );
 	      ( (TH1D*) (*hshouldhit_y_layer)[ilayer] )->Fill( Intersect.Y() );
 	      ( (TH2D*) (*hshouldhit_xy_layer)[ilayer] )->Fill( Intersect.Y(), Intersect.X() );
+	   
+	      
+
+
+	      /// Check modules with full readout and if fNegSignalStudy is enabled for the negative signal study/////
+	      if(fModules[module]->fStrip_BUILD_ALL_SAMPLES[0] && !fModules[module]->fStrip_ENABLE_CM[0] && fModules[module]->fStrip_CM_GOOD[0] && fNegSignalStudy){
+	      
+		//Histograms filled if the track passed through the module but no hit was found on the track
+		if(!modules_hit[module]){
+		  ( (TH1D*) (*hdidnothit_x_layer)[ilayer] )->Fill( Intersect.X() );
+		  ( (TH1D*) (*hdidnothit_y_layer)[ilayer] )->Fill( Intersect.Y() );
+		}
+
+		//Histograms filled if the track passed through the module and a hit was found.
+		//Only difference between this and the other hdidhit histogram is this is only for full readout events
+		if(modules_hit[module]){
+		  ( (TH1D*) (*hdidhit_fullreadout_x_layer)[ilayer] )->Fill( Intersect.X() );
+		  ( (TH1D*) (*hdidhit_fullreadout_y_layer)[ilayer] )->Fill( Intersect.Y() );
+		}
+
+
+		// loop over all 1D negative strips on modules missing hits
+		for( int istrip=0; istrip < fModules[module]->fNstrips_hit; istrip++){
+	
+		  if(!fModules[module]->fStripIsNeg[istrip]) continue; //Skip is the strip is not negative
+		  
+
+		  UInt_t Nstrips;
+		  Double_t pitch;
+		  Double_t offset;
+		  
+		  //Check if it is the U-Axis
+		  if(fModules[module]->fAxis[istrip] == SBSGEM::kUaxis){
+		    
+		    Nstrips = fModules[module]->fNstripsU;
+		    pitch = fModules[module]->fUStripPitch; 
+		    offset = fModules[module]->fUStripOffset;
+		  
+		    double hitposu = (fModules[module]->fStrip[istrip] + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips  
+
+		    double residual = abs(hitposu - fModules[module]->XYtoUV(Intersect.XYvector()).X());
+		    
+		    //Add if residual is < 2 mm
+		    if(residual < 0.002){
+		      if(modules_hit[module]) fNstripsU_layer_neg_miss[ilayer]++;
+		      if(!modules_hit[module]) fNstripsU_layer_neg_hit[ilayer]++;
+
+		    }
+		  }
+		  //Check if it is V-axis
+		  if(fModules[module]->fAxis[istrip] == SBSGEM::kVaxis){
+
+		    Nstrips = fModules[module]->fNstripsV;
+		    pitch = fModules[module]->fVStripPitch; 
+		    offset = fModules[module]->fVStripOffset;
+		  
+		    double hitposv = (fModules[module]->fStrip[istrip] + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips  
+
+		    double residual = abs(hitposv - fModules[module]->XYtoUV(Intersect.XYvector()).Y());
+		    
+		    //Add if residual is < 2 mm
+		    if(residual < 0.002){
+		      if(modules_hit[module]) fNstripsV_layer_neg_miss[ilayer]++;
+		      if(!modules_hit[module]) fNstripsV_layer_neg_hit[ilayer]++;
+		    }
+		  }
+		}
+		
+
+		//Loop over all U clusters
+		for( UInt_t iuclust=0; iuclust<fModules[module]->fNclustU; iuclust++ ){
+		  sbsgemcluster_t *uclust = &(fModules[module]->fUclusters[iuclust]);
+		  
+		  if(!uclust->isneg) continue; //skip if cluster is not negative
+		  
+		  double residual = abs(uclust->hitpos_mean - fModules[module]->XYtoUV(Intersect.XYvector()).X());
+		  
+		  //If negative hit is < 2 mm then save it in the histogram. Do not repeat this twice for a single event
+		  if(residual < 0.002 && !neg_save && !modules_hit[module]){
+		    ( (TH1D*) (*hneghit1D_x_layer)[ilayer] )->Fill( Intersect.X() );
+		    neg_save = true;
+		  }
+		  //If negative hit is < 2 mm then save it in the histogram. Do not repeat this twice for a single event
+		  if(residual < 0.002 && !pos_save && modules_hit[module]){
+		    ( (TH1D*) (*hneghit_good1D_x_layer)[ilayer] )->Fill( Intersect.X() );
+		    pos_save = true;
+		  }
+		  
+		}
+
+		neg_save = false;
+		pos_save = false;
+
+		//Loop over V clusters
+		for( UInt_t ivclust=0; ivclust<fModules[module]->fNclustV; ivclust++ ){
+		  sbsgemcluster_t *vclust = &(fModules[module]->fVclusters[ivclust]);
+
+		  if(!vclust->isneg) continue;
+		  
+		  double residual = abs(vclust->hitpos_mean - fModules[module]->XYtoUV(Intersect.XYvector()).Y());
+
+		  if(residual < 0.002 && !neg_save && !modules_hit[module]){
+		    ( (TH1D*) (*hneghit1D_y_layer)[ilayer] )->Fill( Intersect.Y() );
+		    neg_save = true;
+		  }
+
+		  if(residual < 0.002 && !pos_save && modules_hit[module]){
+		    ( (TH1D*) (*hneghit_good1D_y_layer)[ilayer] )->Fill( Intersect.Y() );
+		    pos_save = true;
+		  }
+
+		}
+		
+
+		neg_save = false;
+		pos_save = false;
+
+		//Now to 2D loop
+		for( int iuclust=0; iuclust < fModules[module]->fNclustU; iuclust++){
+		  
+		  sbsgemcluster_t *uclust = &(fModules[module]->fUclusters[iuclust]);
+		 		    
+		  
+		  for( int ivclust=0; ivclust < fModules[module]->fNclustV; ivclust++){
+		    
+		    sbsgemcluster_t *vclust = &(fModules[module]->fVclusters[ivclust]);
+
+		    
+		    if( !uclust->isneg && !vclust->isneg) continue; //At least one of the clusters must be negative
+
+		    TVector2 UVtemp(uclust->hitpos_mean,vclust->hitpos_mean);
+		    TVector2 XYtemp = fModules[module]->UVtoXY( UVtemp );
+		    
+		    double xhit = XYtemp.X();
+		    double yhit = XYtemp.Y();
+		    
+		    TVector3 hitpos_global = fModules[module]->DetToTrackCoord( xhit, yhit );	
+		    
+		    double residual = sqrt(pow(hitpos_global.X() - Intersect.X(),2) + pow(hitpos_global.Y() - Intersect.Y(),2));
+		    
+		    //pass if residual is < 2 mm
+		    if(residual < 0.002){
+		      
+		      //If the modules already has a hit on the track we fill this histogram
+		      if(modules_hit[module] && !pos_save){
+			
+			( (TH1D*) (*hneghit_good_x_layer)[ilayer] )->Fill( hitpos_global.X() );
+			( (TH1D*) (*hneghit_good_y_layer)[ilayer] )->Fill( hitpos_global.Y() );
+			
+			pos_save = true;			  
+		      }
+		      
+		      //If a hit is not found on a track we fill this information
+		      if(!modules_hit[module]){
+			if(!neg_save){
+			  
+			  ( (TH1D*) (*hneghit_x_layer)[ilayer] )->Fill( hitpos_global.X() );
+			  ( (TH1D*) (*hneghit_y_layer)[ilayer] )->Fill( hitpos_global.Y() );
+			  
+			  static int ineg_event = 0;
+			  
+			  ineg_event++;
+			  //Fill a text file up to 200 lines for some event display information
+			  if(ineg_event <= 200){
+			    int event_temp = fModules[module]->fStripEvent[0];
+
+			    //cout<<event_temp<<" "<<ineg_event<<" "<<module<<" "<<hitpos_global.X()<<endl;
+			  
+			    neg_event.push_back(event_temp);
+			    neg_MPD.push_back(uclust->rawMPD);
+			    neg_APV.push_back(uclust->rawAPV);
+			    neg_strip.push_back(uclust->rawstrip);
+			    is_neg.push_back(uclust->isneg);
+			    
+			    neg_event.push_back(event_temp);
+			    neg_MPD.push_back(vclust->rawMPD);
+			    neg_APV.push_back(vclust->rawAPV);
+			    neg_strip.push_back(vclust->rawstrip);
+			    is_neg.push_back(vclust->isneg);
+			    
+			  }
+			  
+			  
+			}
+			
+			neg_save = true;
+		      
+			//Fill the strip on track inforamtion for negative strips
+			for( unsigned int istrip=uclust->istriplo; istrip<=uclust->istriphi; istrip++ ){
+			  
+			  int hitidx_i = uclust->hitindex[istrip-uclust->istriplo];
+			  
+			  uclust->isnegontrack = true;
+			  fModules[module]->fStripIsNegOnTrack[hitidx_i] = 1;
+			  fModules[module]->fStripIsNegOnTrackU[hitidx_i] = 1;
+			}
+			
+			for( unsigned int istrip=vclust->istriplo; istrip<=vclust->istriphi; istrip++ ){
+			  
+			  int hitidx_i = vclust->hitindex[istrip-vclust->istriplo];
+			  
+			  uclust->isnegontrack = true;
+			  fModules[module]->fStripIsNegOnTrack[hitidx_i] = 1;
+			  fModules[module]->fStripIsNegOnTrackV[hitidx_i] = 1;
+			}
+		
+		      }
+		    } //end loop over residual < 2 mm
+
+   		  }//end loop over V clusters
+		  
+		}//end loop over U clusters
+	      }//end loop for negative signal study
 	    }
 	  }
 	} // if is in active area or module on track
@@ -1629,6 +2093,10 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
   } //end loop over tracks
   
 }
+      
+
+
+
 
 //The next function determines the line of best fit through a combination of hits, without calculating residuals or chi2.
 // Note that these equations assume all hits are to be given equal weights. You will need a different function if you want to use different weights for different hits:
@@ -1909,6 +2377,18 @@ int SBSGEMTrackerBase::GetNearestModule( int layer, TVector3 track_origin, TVect
 
   return nearestmod;
 }
+
+void SBSGEMTrackerBase::PrintNegEvents( const char *fname ){
+
+  std::ofstream outfile( fname );
+  
+  for(int idata = 0; idata < neg_event.size(); idata++)
+    outfile << neg_event[idata] <<" "<< neg_MPD[idata] <<" "<< neg_APV[idata] <<" "<< neg_strip[idata] <<" "<< is_neg[idata]<<endl;
+  
+  outfile.close();
+      
+}
+
 
 void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
   std::ofstream outfile( fname );

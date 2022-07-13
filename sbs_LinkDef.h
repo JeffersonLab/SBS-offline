@@ -19,8 +19,9 @@
 #pragma link C++ class SBSGEMSpectrometerTracker+;
 #pragma link C++ class SBSGEMModule+;
 #pragma link C++ class SBSGRINCH+;
-#pragma link C++ class SBSGRINCH_Cluster+;
-#pragma link C++ class SBSGRINCH_Hit+;
+#pragma link C++ class SBSCherenkovDetector+;
+#pragma link C++ class SBSCherenkov_Cluster+;
+#pragma link C++ class SBSCherenkov_Hit+;
 //#pragma link C++ class SBSECal+;
 //#pragma link C++ class SBSECalCluster+;
 #pragma link C++ class SBSEArm+;
@@ -74,5 +75,7 @@
 #pragma link C++ class SBSRaster+; 
 #pragma link C++ class SBSBPM+;
 #pragma link C++ class LHRSScalerEvtHandler+;  
-#pragma link C++ class SBSScalerEvtHandler+;  
+#pragma link C++ class SBSScalerEvtHandler+; 
+#pragma link C++ class SBSScalerHelicity+;  
+#pragma link C++ class SBSScalerHelicityReader+;  
 #endif

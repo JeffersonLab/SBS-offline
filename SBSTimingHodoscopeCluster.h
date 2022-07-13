@@ -15,7 +15,7 @@ class SBSTimingHodoscopeCluster : public TObject {
 public:
 
     SBSTimingHodoscopeCluster();
-    SBSTimingHodoscopeCluster(Int_t nmaxblk);
+    explicit SBSTimingHodoscopeCluster(Int_t nmaxblk);
     SBSTimingHodoscopeCluster(Int_t nmaxblk, SBSTimingHodoscopeBar* bar);
     virtual ~SBSTimingHodoscopeCluster();
 
@@ -36,11 +36,11 @@ public:
     SBSTimingHodoscopeBar* GetElement(UInt_t i);
     std::vector<SBSTimingHodoscopeBar*>& GetElements() {return fElements;}
 
-    Int_t GetSize() {return fMult;}
+    Int_t GetSize() const {return fMult;}
 
     Bool_t AddElement(SBSTimingHodoscopeBar* bar);
 
-    void ClearEvent();
+    virtual void Clear( Option_t* opt="" );
 
 private:
 

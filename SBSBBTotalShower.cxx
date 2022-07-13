@@ -31,17 +31,18 @@ ClassImp(SBSBBTotalShower)
 SBSBBTotalShower::SBSBBTotalShower( const char* name, const char* description,
                                    THaApparatus* apparatus ) :
 SBSCalorimeter(name,description,apparatus), 
-  fShower(NULL), fPreShower(NULL), fMaxDx(0.4), fMaxDy(0.4)
-//fE(0.0), fX(0.0), fY(0.0)//, fID(NULL)
+  fShower(nullptr), fPreShower(nullptr), fMaxDx(0.4), fMaxDy(0.4), fTotalSum_Threshold(0.0)
+  
+  //fE(0.0), fX(0.0), fY(0.0)//, fID(NULL)
 {
-    // Constructor. With this method, the subdetectors are created using
-    // this detector's prefix followed by "sh" and "ps", respectively,
-    // and variable names like "L.ts.sh.nhits".
-
-    DEBUG_HALL_A_ANALYZER_DEBUGER_INIT;
-    DEBUG_LEVEL_RELATED_PERFORMACE_CHECKER;
-
-    Setup( name, "sh", "ps", description, apparatus, true );
+  // Constructor. With this method, the subdetectors are created using
+  // this detector's prefix followed by "sh" and "ps", respectively,
+  // and variable names like "L.ts.sh.nhits".
+  
+  DEBUG_HALL_A_ANALYZER_DEBUGER_INIT;
+  DEBUG_LEVEL_RELATED_PERFORMACE_CHECKER;
+  
+  Setup( name, "sh", "ps", description, apparatus, true );
 }
 
 
@@ -52,7 +53,7 @@ SBSBBTotalShower::SBSBBTotalShower( const char* name,
                                    const char* description,
                                    THaApparatus* apparatus ) :
   SBSCalorimeter(name,description,apparatus),
-  fShower(NULL), fPreShower(NULL),fMaxDx(0.4), fMaxDy(0.4)
+  fShower(nullptr), fPreShower(nullptr),fMaxDx(0.4), fMaxDy(0.4)
   //fE(0.0), fX(0.0), fY(0.0)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -146,21 +147,23 @@ void SBSBBTotalShower::Setup( const char* name,
 exit:
     delete [] subname;
     delete [] desc;
-    return;
 }
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::Decode( const THaEvData& evdata )
 {
-  ClearEvent();
   fShower->Decode(evdata);
   fPreShower->Decode(evdata);
   return 0;
 }
 //_____________________________________________________________________________
-void SBSBBTotalShower::ClearEvent() {
-  fShower->ClearEvent();
-  fPreShower->ClearEvent();
+void SBSBBTotalShower::Clear( Option_t* opt )
+{
+  SBSCalorimeter::Clear(opt);
+  fShower->Clear(opt);
+  fPreShower->Clear(opt);
   fSHclusPSclusIDmap.clear();
+
+  fPassedThreshold = 0;
 }
 
 //_____________________________________________________________________________
@@ -239,11 +242,12 @@ Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
     { "MaxDx",   &fMaxDx,   kDouble, 0, 1},
     { "MaxDy",   &fMaxDy,   kDouble, 0, 1},
     { "pssh_matchmap_y",   &pssh_matchmap_y,   kIntV, 0, 1},
+    { "totalsum_threshold", &fTotalSum_Threshold, kDouble, 0, 1},
     { 0 }
   };
   
   Int_t err = LoadDB( file, date, config_request, fPrefix );
-
+  
   fclose(file);
   if( err ) {
     return kInitError;
@@ -271,7 +275,14 @@ Int_t SBSBBTotalShower::DefineVariables( EMode mode )
     fIsSetup = ( mode == kDefine );
 
     // Register global variables
+    RVarDef vars[] = {
+      { "over_threshold", "Max. total sum (SH + PS) above user threshold", "fPassedThreshold" },
+      {0}
+    };
 
+    Int_t err = DefineVarsFromList( vars, mode );
+    if( err ) return err;
+    
     return 0;
 }
 
@@ -280,6 +291,8 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 {
   //   cout << "SBSBBTotalShower::CoarseProcess " << endl;
 
+  fPassedThreshold = 0;
+  
   fShower->CoarseProcess(tracks);
   fPreShower->CoarseProcess(tracks);
   //
@@ -290,38 +303,78 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
   //
   fShower->FindClusters();
   // match blocks hit in Preshower to clusters in the  Shower
-  std::vector<SBSCalorimeterCluster*> ShowerClusters = fShower->GetClusters();
+  std::vector<SBSCalorimeterCluster*> &ShowerClusters = fShower->GetClusters();
   fSHclusPSclusIDmap.resize(ShowerClusters.size());
-  std::vector<SBSBlockSet> PreShowerBlockSet = fPreShower->GetBlockSet();
+  std::vector<SBSBlockSet> &PreShowerBlockSet = fPreShower->GetBlockSet();
+  std::vector<SBSCalorimeterCluster*> &PreShowerClusters = fPreShower->GetClusters();
   Int_t PreShower_Nclus= 0;
+
+  double TotalSum_max = 0.0;
+  int iclust_sh_TotalSum_max = -1;
+  int iclust_ps_TotalSum_max = -1;
+  
   for (UInt_t nc=0;nc<ShowerClusters.size();nc++) {
     Double_t xsh = ShowerClusters[nc]->GetX();
     Double_t ysh = ShowerClusters[nc]->GetY();
     Bool_t AddToPreShowerCluster = kFALSE;
+
+    fSHclusPSclusIDmap[nc] = -1;
+    
     for (UInt_t nps=0;nps<PreShowerBlockSet.size();nps++) {
       if (!PreShowerBlockSet[nps].InCluster) {
 	SBSElement* psblk = fPreShower->GetElement(PreShowerBlockSet[nps].id);
-	     Double_t xps =  PreShowerBlockSet[nps].x;
-	     Double_t yps =  PreShowerBlockSet[nps].y;
-      Bool_t MatchCriterion = abs(xsh-xps) < fMaxDx && abs(ysh-yps) < fMaxDy;
-      if (MatchCriterion) {
-	PreShowerBlockSet[nps].InCluster = kTRUE;
-	if (!AddToPreShowerCluster) {
-	  fPreShower->MakeCluster(PreShowerBlockSet.size(),psblk);
-	  fSHclusPSclusIDmap[nc] = fPreShower->GetClusters().size()-1;
-	  AddToPreShowerCluster = kTRUE;
-	  PreShower_Nclus++;
-	} else {
-	  fPreShower->AddToCluster(PreShower_Nclus-1,psblk);
+	Double_t xps =  PreShowerBlockSet[nps].x;
+	Double_t yps =  PreShowerBlockSet[nps].y;
+	Bool_t MatchCriterion = abs(xsh-xps) < fMaxDx && abs(ysh-yps) < fMaxDy;
+	if (MatchCriterion) {
+	  PreShowerBlockSet[nps].InCluster = kTRUE;
+	  if (!AddToPreShowerCluster) {
+	    //First block passing shower match criterion: create cluster
+	    fPreShower->MakeCluster(PreShowerBlockSet.size(),psblk); //Start cluster with this block (psblk) as seed
+	    //fSHclusPSclusIDmap[nc] = fPreShower->GetClusters().size()-1;
+	    fSHclusPSclusIDmap[nc] = PreShower_Nclus;
+	    AddToPreShowerCluster = kTRUE;
+	    PreShower_Nclus++;
+	  } else {
+	    fPreShower->AddToCluster(PreShower_Nclus-1,psblk);
+	  }
 	}
-      }else{fSHclusPSclusIDmap[nc] = -1;}
       }
     }
-    if (!AddToPreShowerCluster && PreShowerBlockSet.size()>0) fPreShower->MakeCluster(PreShowerBlockSet.size()); // If preshower not matched to shower, make preshower cluster with mult = 0
+    
+    //The question here is, do we want to continue adding empty clusters to the preshower
+    //cluster array? I think not. 
+    //if (!AddToPreShowerCluster && PreShowerBlockSet.size()>0) fPreShower->MakeCluster(PreShowerBlockSet.size()); // If preshower not matched to shower, make preshower cluster with mult = 0
+
+    double TotalSum = ShowerClusters[nc]->GetE();
+    if( AddToPreShowerCluster ){
+      TotalSum += PreShowerClusters[fSHclusPSclusIDmap[nc]]->GetE(); 
+    }
+
+    if( iclust_sh_TotalSum_max < 0 || TotalSum > TotalSum_max ){
+      TotalSum_max = TotalSum;
+      iclust_sh_TotalSum_max = nc;
+      iclust_ps_TotalSum_max = fSHclusPSclusIDmap[nc];
+    }
   }
-    //
-    fPreShower->MakeMainCluster();
+
+  
+  
+  //Now let's override "Main cluster" variables for both shower and preshower:
+  //First: clear out fMainclus:
+  //fShower->ClearCaloOutput( fShower->fMainclus );
+  // Since fMainclus is a protected member of SBSCalorimeter, we clear 
+  // the main cluster info using the MakeMainCluster method of SBSBBShower
+  fShower->MakeMainCluster( iclust_sh_TotalSum_max );
+  //if( iclust_ps_TotalSum_max >= 0 ){
+  fPreShower->MakeMainCluster( iclust_ps_TotalSum_max );
+    //}
+  
+  if( TotalSum_max >= fTotalSum_Threshold ) fPassedThreshold = 1;
   //
+  // std::cout << "TotalSum_max, totalsum_threshold, passed = " << TotalSum_max << ", "
+  // 	    << fTotalSum_Threshold << ", " << fPassedThreshold << std::endl;
+  
   return 0;
 }
 //_____________________________________________________________________________
@@ -348,14 +401,13 @@ void SBSBBTotalShower::SetApparatus( THaApparatus* app )
     SBSCalorimeter::SetApparatus( app );
     fShower->SetApparatus( app );
     fPreShower->SetApparatus( app );
-    return;
 }
 
 //_____________________________________________________________________________
 
 void SBSBBTotalShower::LoadMCHitAt( Double_t x, Double_t y, Double_t E )
 {
-    ClearEvent();
+  Clear();
     /*
   fNclust = 0;
     fE = double(E);

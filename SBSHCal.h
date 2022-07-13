@@ -13,14 +13,14 @@
 
 class SBSHCal : public SBSCalorimeter {
 public:
-  SBSHCal( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+  explicit SBSHCal( const char* name, const char* description = "",
+                    THaApparatus* a = nullptr);
   virtual ~SBSHCal();
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  Decode( const THaEvData& evdata );
   virtual Int_t  CoarseProcess(TClonesArray& tracks );
   virtual Int_t  DefineVariables( EMode mode = kDefine );
-  virtual void ClearEvent();
+  virtual void   Clear( Option_t* opt="" );
 
 protected:
   Bool_t fWithLED;

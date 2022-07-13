@@ -64,11 +64,11 @@ Int_t SBSAdcHit::Compare(const TObject *obj) const {
 }
 
 //_____________________________________________________________________________
-void SBSAdcHit::Clear(Option_t *s) {
+void SBSAdcHit::Clear(Option_t *) {
   // clear the data inside SBSAdcHit, so it does not have to be deleted each
   // time
 
-  fPMT = 0;
+  fPMT = nullptr;
   fRawAmpl = fAmplPedCor = fSide = 0;
   fBarNum = -1;
   fAmpl = 0;

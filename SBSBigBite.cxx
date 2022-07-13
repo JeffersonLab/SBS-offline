@@ -78,8 +78,25 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   SetPID(true);
 
   //Default
+  fPrecon_flag = 0;
+
+  fA_pth1 = 0.28615 * 0.97;
+  fB_pth1 = 0.1976;
+  fC_pth1 = 0.4764;
+
+  //Default to block size/sqrt(12) for shower and preshower:
+  fSigmaX_shower = 0.085/sqrt(12.0); //2.45 cm
+  fSigmaY_shower = 0.085/sqrt(12.0);
+  fSigmaX_preshower = 0.09/sqrt(12.0); //2.6 cm
+  fSigmaY_preshower = 0.37/sqrt(12.0); //10.7 cm
+
+  //The hodoscope position resolutions are based on a fit of the hodo-track differences along X and Y:
+  //NOTE: for X it is worse than bar size over sqrt(12), presumably the averaging of several bars does NOT improve the vertical position resolution of the hodoscope much
+  // for Y it is based on the timing resolution 
   
-  
+  fSigmaX_hodo = 0.021;
+  fSigmaY_hodo = 0.041;
+
   // Constructor. Defines standard detectors
   //The standard BigBite detector package in the 12 GeV/SBS era will include:
   // pre-shower + shower calorimeters (inherit from THaNonTrackingDetector OR THaPidDetector)
@@ -104,15 +121,17 @@ SBSBigBite::~SBSBigBite()
 void SBSBigBite::Clear( Option_t *opt )
 {
   THaSpectrometer::Clear(opt);
-  f_xtg_exp.clear();
+  //  f_xtg_exp.clear();
   fEpsEtotRatio.clear();
   fEtot.clear();
   fEtotPratio.clear();
   fEpsEtotRatio.clear();
   fFrontConstraintX.clear();
   fFrontConstraintY.clear();
+  fFrontConstraintZ.clear();
   fBackConstraintX.clear();
   fBackConstraintY.clear();
+  fBackConstraintZ.clear();
   fProbaE.clear();
   fProbaPi.clear();
 }
@@ -208,6 +227,16 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "pcalPIDprobatable",    &pcal_pidproba, kDoubleV,  0, 1, 0},
     { "grinchPIDpbins",    &fP_table, kDoubleV,  0, 1, 0},
     { "grinchPIDprobatable",    &grinch_pidproba, kDoubleV,  0, 1, 0},
+    { "preconflag", &fPrecon_flag, kUInt, 0, 1, 1 },
+    { "A_pth1", &fA_pth1, kDouble, 0, 1, 1 },
+    { "B_pth1", &fB_pth1, kDouble, 0, 1, 1 },
+    { "C_pth1", &fC_pth1, kDouble, 0, 1, 1 },
+    { "xsigma_shower", &fSigmaX_shower, kDouble, 0, 1, 1 },
+    { "ysigma_shower", &fSigmaY_shower, kDouble, 0, 1, 1 },
+    { "xsigma_preshower", &fSigmaX_preshower, kDouble, 0, 1, 1 },
+    { "ysigma_preshower", &fSigmaY_preshower, kDouble, 0, 1, 1 },
+    { "xsigma_hodo", &fSigmaX_hodo, kDouble, 0, 1, 1 },
+    { "ysigma_hodo", &fSigmaY_hodo, kDouble, 0, 1, 1 },
     {0}
   };
     
@@ -393,7 +422,7 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   // removing all that stuff since apparently I'm not able to code properly...
 
   RVarDef beamtrackvars[] = {
-    { "tr.tg_x", "track constraint y", "f_xtg_exp" },
+    { "tr.tg_x", "target x", "fTracks.THaTrack.fTX" },
     { nullptr }
   };
   DefineVarsFromList( beamtrackvars, mode );
@@ -401,8 +430,10 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
   RVarDef constraintvars[] = {
     { "x_fcp", "front track constraint x", "fFrontConstraintX" },
     { "y_fcp", "front track constraint y", "fFrontConstraintY" },
+    { "z_fcp", "front track constraint z", "fFrontConstraintZ" },
     { "x_bcp", "back track constraint x", "fBackConstraintX" },
     { "y_bcp", "back track constraint y", "fBackConstraintY" },
+    { "z_bcp", "back track constraing z", "fBackConstraintZ" },
     { nullptr }
   };
   DefineVarsFromList( constraintvars, mode );
@@ -453,7 +484,7 @@ Int_t SBSBigBite::CoarseReconstruct()
   // FOR NOW: fetch the highest clusters from SBSBBShower detectors
   double x_fcp = 0, y_fcp = 0, z_fcp = 0;
   double x_bcp = 0, y_bcp = 0, z_bcp = 0;
-  double sumweights_x = 0, sumweights_y = 0;
+  double sumweights_x = 0, sumweights_y = 0, sumweights_z = 0.0;
   double Etot = 0;
   //npts is incremented only if there are clusters in the preshower and shower
   int npts = 0;
@@ -483,24 +514,86 @@ Int_t SBSBigBite::CoarseReconstruct()
       if(GetMultiTracks()){
 	std::vector<SBSCalorimeterCluster*> ShowerClusters = BBTotalShower->GetShower()->GetClusters();
 	std::vector<SBSCalorimeterCluster*> PreShowerClusters = BBTotalShower->GetPreShower()->GetClusters();
-	z_bcp = BBTotalShower->GetShower()->GetOrigin().Z();
-	sumweights_x = 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
-	sumweights_y = 1.;
+	
 	//cout << BBTotalShower->GetShower()->GetECorrected() << endl;
 	for(unsigned int i = 0; i<ShowerClusters.size(); i++){
+	  npts = 0;
+	  sumweights_x = sumweights_y = 0;
+	  x_bcp = y_bcp = z_bcp = 0;
+	  
+	  sumweights_x+= 1./(pow(BBTotalShower->GetShower()->SizeRow(), 2)/12.);
+	  sumweights_y+= 1./(pow(BBTotalShower->GetShower()->SizeCol(), 2)/12.);
+
 	  Etot = ShowerClusters[i]->GetE();
 	  npts = 1;
-	  x_bcp = ShowerClusters[i]->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
-	  y_bcp = ShowerClusters[i]->GetY();
+	  x_bcp+= ShowerClusters[i]->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
+	  y_bcp+= ShowerClusters[i]->GetY()/(pow(BBTotalShower->GetShower()->SizeCol(), 2)/12.);
+	  
+	  z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
+	  npts++;
 	  
 	  if(BBTotalShower->PSMatchClusIdx(i)<(int)PreShowerClusters.size()){
 	    Etot+= PreShowerClusters[BBTotalShower->PSMatchClusIdx(i)]->GetE();
 	    fEpsEtotRatio.push_back(EpsEtotRatio);
 	    fEtot.push_back(Etot);
+	    
+	    x_bcp+= PreShowerClusters[BBTotalShower->PSMatchClusIdx(i)]->GetX()/(pow(BBTotalShower->GetPreShower()->SizeRow(), 2)/12.);
+	    y_bcp+= PreShowerClusters[BBTotalShower->PSMatchClusIdx(i)]->GetY()/(pow(BBTotalShower->GetPreShower()->SizeCol(), 2)/12.);
+	      
+	    sumweights_x+= 1./(pow(BBTotalShower->GetPreShower()->SizeRow(), 2)/12.);
+	    sumweights_y+= 1./(pow(BBTotalShower->GetPreShower()->SizeCol(), 2)/12.);
 
+	    z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
+	    npts++;
+	    
+	    double x_temp = x_bcp/sumweights_x;
+	    
+	    TIter next1( fNonTrackingDetectors );
+	    while( auto* theNonTrackDetector =
+		   static_cast<THaNonTrackingDetector*>( next1() )) {
+	      // match a hodoscope cluster to a track:
+	      //the hodoscope has to be found for anything to be done.
+	      if(theNonTrackDetector->InheritsFrom("SBSTimingHodoscope")){
+		SBSTimingHodoscope* TH = reinterpret_cast<SBSTimingHodoscope*>(theNonTrackDetector);
+		
+		double xhodo = 0, yhodo = 0, weightx = 0, weighty = 0;
+		double dxmin = 10.0;
+		
+		bool found = false;
+		//cout << TH->SizeRow() << " " << TH->SizeCol() << endl;
+		
+		for(int i=0; i<TH->GetNClusters(); i++){
+		  SBSTimingHodoscopeCluster* clus = TH->GetCluster(i);
+		  if(clus->GetXmean()-clus->GetSize()*TH->SizeRow()/2<x_temp && 
+		     x_temp<clus->GetXmean()+clus->GetSize()*TH->SizeRow()/2){
+		    found = true;
+		    if(fabs(x_temp-clus->GetXmean())<dxmin){
+		      dxmin = fabs(x_temp-clus->GetXmean());
+		      weightx = 1./(clus->GetSize()*TH->SizeRow()*TH->SizeRow()/4.);
+		      weighty = 1./(TH->SizeCol()*TH->SizeCol()/clus->GetSize()/4.);
+		      
+		      xhodo = clus->GetXmean();
+		      yhodo = clus->GetYmean();
+		    }
+		  }  
+		}
+		
+		if(found){
+		  x_bcp+= xhodo*weightx;
+		  y_bcp+= yhodo*weighty;
+		  z_bcp+= TH->GetOrigin().Z();
+		  
+		  sumweights_x+=weightx;
+		  sumweights_y+=weighty;
+		  npts++;
+		}
+	      }//end if inherits from hodoscope
+	    }//end loop on non-tracking detectors
+	    
 	    x_bcp/=sumweights_x;
 	    y_bcp/=sumweights_y;
-
+	    z_bcp/=npts;
+	    
 	    double Efudge = Etot * fECaloFudgeFactor;
 	    
 	    double dx = (Efudge*fOpticsAngle - fPtheta_00000 + x_bcp * (Efudge*fXptar_10000-fPtheta_10000)) /
@@ -513,50 +606,148 @@ Int_t SBSBigBite::CoarseReconstruct()
 	    
 	    fFrontConstraintX.push_back(x_fcp);
 	    fFrontConstraintY.push_back(y_fcp);
+	    fFrontConstraintZ.push_back(z_fcp);
 	    fBackConstraintX.push_back(x_bcp);
 	    fBackConstraintY.push_back(y_bcp);
+	    fBackConstraintZ.push_back(z_bcp);
 	    
 	    //now what???
 	  }
 	}//end loop on Shower clusters
       }else{//end if(GetMultiTracks())
+	x_bcp = y_bcp = z_bcp = 0;
+	npts = 0;
 	//if(BBTotalShower->GetShower()->GetNclust()){
 	//cout << BBTotalShower->GetShower()->GetName() << " " << BBTotalShower->GetShower()->GetX() << " " << BBTotalShower->GetShower()->GetY() << " " << BBTotalShower->GetShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12)) << endl;
 	// TODO: so far we use only the "main" cluster... 
 	//       we might want to check the others...
 	//y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
 	Etot+= BBTotalShower->GetShower()->GetECorrected();
-	x_bcp+= BBTotalShower->GetShower()->GetX()/pow(BBTotalShower->GetShower()->SizeRow()/sqrt(12.),2);
-	y_bcp = BBTotalShower->GetShower()->GetY();
-	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z();
+
+	double weightxSH = pow(fSigmaX_shower,-2);
+	double weightySH = pow(fSigmaY_shower,-2);
+	
+	// x_bcp+= BBTotalShower->GetShower()->GetX()/(pow(BBTotalShower->GetShower()->SizeRow(), 2)/12.);
+	// y_bcp+= BBTotalShower->GetShower()->GetY()/(pow(BBTotalShower->GetShower()->SizeCol(), 2)/12.);
+	x_bcp+= BBTotalShower->GetShower()->GetX()*weightxSH;
+	y_bcp+= BBTotalShower->GetShower()->GetY()*weightySH;
+	z_bcp+= BBTotalShower->GetShower()->GetOrigin().Z() * (weightxSH + weightySH);
 	npts++;
-	sumweights_x+=1./pow(BBTotalShower->GetShower()->SizeRow()/sqrt(12),2);
-	sumweights_y+=1.;//1./(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
+	// sumweights_x+=1./(pow(BBTotalShower->GetShower()->SizeRow(), 2)/12.);
+	// sumweights_y+=1./(pow(BBTotalShower->GetShower()->SizeCol(), 2)/12.);
+	sumweights_x += weightxSH;
+	sumweights_y += weightySH;
+	sumweights_z += weightxSH + weightySH;
+	
 	//}
 	//if(BBTotalShower->GetPreShower()->GetNclust()){
 	//cout << BBTotalShower->GetPreShower()->GetName() << " " << BBTotalShower->GetPreShower()->GetX() << " " << BBTotalShower->GetPreShower()->GetY() << " " << BBTotalShower->GetPreShower()->GetOrigin().Z() << " " << 1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12)) << " " << 1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12)) << endl;
+	//std::cout << x_bcp << " " << x_bcp/sumweights_x << endl;
+	//std::cout << "Back constraint point sh only x, y, z: " << x_bcp/sumweights_x << ", " << y_bcp/sumweights_y << ", " << z_bcp/npts << endl;
+
+	double weightxPS = pow(fSigmaX_preshower,-2);
+	double weightyPS = pow(fSigmaY_preshower,-2);
 	
 	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
 	EpsEtotRatio = BBTotalShower->GetPreShower()->GetECorrected()/Etot;
 	fEpsEtotRatio.push_back(EpsEtotRatio);
 	fEtot.push_back(Etot);
-	//x_bcp+= -BBTotalShower->GetPreShower()->GetX()/(BBTotalShower->GetShower()->SizeRow()/sqrt(12));
-	//y_bcp+= BBTotalShower->GetPreShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
-	//z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
-	//npts++;
-	//sumweights_x+=1./(BBTotalShower->GetPreShower()->SizeRow()/sqrt(12));
-	//sumweights_y+=1./(BBTotalShower->GetPreShower()->SizeCol()/sqrt(12));
+	// x_bcp+= BBTotalShower->GetPreShower()->GetX()/(pow(BBTotalShower->GetPreShower()->SizeRow(), 2)/12.);
+	// y_bcp+= BBTotalShower->GetPreShower()->GetY()/(pow(BBTotalShower->GetPreShower()->SizeCol(), 2)/12.);
+	// z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z();
+
+	x_bcp+= BBTotalShower->GetPreShower()->GetX()*weightxPS;
+	y_bcp+= BBTotalShower->GetPreShower()->GetY()*weightyPS;
+	z_bcp+= BBTotalShower->GetPreShower()->GetOrigin().Z() * (weightxPS+weightyPS);
+	
+	npts++;
+	// sumweights_x+=1./(pow(BBTotalShower->GetPreShower()->SizeRow(), 2)/12.);
+	// sumweights_y+=1./(pow(BBTotalShower->GetPreShower()->SizeCol(), 2)/12.);
+
+	sumweights_x += weightxPS;
+	sumweights_y += weightyPS;
+	sumweights_z += weightxPS + weightyPS;
+	
+	//std::cout << x_bcp << " " << x_bcp/sumweights_x << endl;
+	//std::cout << "PS cluster x, y: " << BBTotalShower->GetPreShower()->GetX() << ", " << BBTotalShower->GetPreShower()->GetY() << std::endl;
+	//<< std::endl;
 	//}
-      
+	double x_temp = x_bcp/sumweights_x;
+	double y_temp = y_bcp/sumweights_y;
+
+	double sigx2_temp = 1.0/sumweights_x;
+	double sigy2_temp = 1.0/sumweights_y;
+
+	double weightx_hodo = pow(fSigmaX_hodo,-2);
+	double weighty_hodo = pow(fSigmaY_hodo,-2);
+	
+	TIter next1( fNonTrackingDetectors );
+	while( auto* theNonTrackDetector =
+	       static_cast<THaNonTrackingDetector*>( next1() )) {
+	  // match a hodoscope cluster to a track:
+	  //the hodoscope has to be found for anything to be done.
+	  if(theNonTrackDetector->InheritsFrom("SBSTimingHodoscope")){
+	    SBSTimingHodoscope* TH = reinterpret_cast<SBSTimingHodoscope*>(theNonTrackDetector);
+	    
+	    double xhodo = 0, yhodo = 0; 
+	    //double dxmin = 10.0;
+	    double mindiff2 = 1000.0;
+	    
+	    bool found = false;
+	    //cout << TH->SizeRow() << " " << TH->SizeCol() << endl;
+
+	    //Require a cluster that agrees with the shower/preshower cluster to within some tolerance: 
+	    for(int i=0; i<TH->GetNClusters(); i++){
+	      SBSTimingHodoscopeCluster* clus = TH->GetCluster(i);
+	      // if(clus->GetXmean()-clus->GetSize()*TH->SizeRow()/2.<x_temp && 
+	      // 	 x_temp<clus->GetXmean()+clus->GetSize()*TH->SizeRow()/2.){
+	      double xdiff = clus->GetXmean() - x_temp;
+	      double ydiff = clus->GetYmean() - y_temp;
+	      //Add a hodoscope cluster if within +/- 3.5 sigma of 
+
+	      double diff2 = pow(xdiff,2)/(sigx2_temp + pow(fSigmaX_hodo,2)) + pow(ydiff,2)/(sigy2_temp + pow(fSigmaY_hodo,2));
+	      //if(fabs(x_temp-clus->GetXmean())<dxmin){
+	      if( !found || diff2 < mindiff2 ){
+		//		dxmin = fabs(x_temp-clus->GetXmean());
+		mindiff2 = diff2;
+		//weightx = 1./(clus->GetSize()*TH->SizeRow()*TH->SizeRow()/4.);
+		//weighty = 1./(TH->SizeCol()*TH->SizeCol()/clus->GetSize()/4.);
+		
+		xhodo = clus->GetXmean();
+		yhodo = clus->GetYmean();
+		found = true;
+	      }
+	    }
+
+	    //std::cout << "Number of hodoscope clusters = " << TH->GetNClusters() << std::endl;
+	    
+	    //std::cout << "After loop over hodoscope clusters, mindiff2 = " << mindiff2 << std::endl;
+	    
+	    if( mindiff2 > pow(3.5,2) ) found = false;
+	    
+	    if(found){
+	      //std::cout << "found matching hodoscope cluster, mindiff2 = " << mindiff2 << std::endl;
+	      x_bcp+= xhodo*weightx_hodo; 
+	      y_bcp+= yhodo*weighty_hodo;
+	      z_bcp+= TH->GetOrigin().Z()*(weightx_hodo+weighty_hodo);
+	      
+	      sumweights_x += weightx_hodo;
+	      sumweights_y += weighty_hodo;
+	      sumweights_z += weightx_hodo + weighty_hodo;
+	      npts++;
+	    }
+	  }//end if inherits from hodoscope
+	}//end loop on non-tracking detectors
+
+	//std::cout << x_bcp << " " << x_bcp/sumweights_x << endl;
+
 	//if we're here we've found the totalshower
 	//if(npts){
 	x_bcp/=sumweights_x;
 	y_bcp/=sumweights_y;
 	//z_bcp/=npts;
-	
-	//std::cout << "Back constraint point x, y, z: " 
-	//	  << x_bcp << ", " << y_bcp << ", "<< z_bcp 
-	//	  << endl;
+	z_bcp /= sumweights_z;
+	//std::cout << "Back constraint point x, y, z: " << x_bcp << ", " << y_bcp << ", "<< z_bcp << endl << endl;
 	
         // to account for the angle and position offsets of the detector stack: 
 	// simplest approximate way to do it: 
@@ -585,9 +776,18 @@ Int_t SBSBigBite::CoarseReconstruct()
 
 	double Efudge = Etot * fECaloFudgeFactor;
 	
-	double xp_bcp = ( fPtheta_00000 + fPtheta_10000 * x_bcp - Efudge * ( fOpticsAngle + fXptar_10000 * x_bcp ) ) /
-	  ( Efudge * (fXptar_00100 - 1.0 - fXptar_10000*z_bcp) + fPtheta_10000 * z_bcp - fPtheta_00100 );
-	
+	double xp_bcp;
+	if( fPrecon_flag != 1 ){
+	  xp_bcp = ( fPtheta_00000 + fPtheta_10000 * x_bcp - Efudge * ( fOpticsAngle + fXptar_10000 * x_bcp ) ) /
+	    ( Efudge * (fXptar_00100 - 1.0 - fXptar_10000*z_bcp) + fPtheta_10000 * z_bcp - fPtheta_00100 );
+	} else { //Using alternate formalism. In this case, the formula differs a fair bit:
+	  double Mthx = fXptar_10000;
+	  double Mthxp = fXptar_00100;
+	 
+	  xp_bcp = ( Efudge * ( fOpticsAngle + Mthx * x_bcp ) - fA_pth1*(1.0 + (fB_pth1 + fC_pth1*fMagDist)*Mthx * x_bcp ) ) /
+	    (fA_pth1*(fB_pth1+fC_pth1*fMagDist)*(Mthxp - z_bcp * Mthx) + Efudge*(1.0 + Mthx * z_bcp - Mthxp) );
+       
+	}
 	// The dy equation is correct under the assumption ytarget = 0: can we refine?
 	// double dx = (Etot*10.*TMath::DegToRad() -fb_pinv[0] + x_bcp * (Etot*fb_xptar[1]-fb_pinv[1])) /
 	// (-fb_pinv[1]*z_bcp+fb_pinv[6]+Etot*(fb_xptar[1]*z_bcp+1-fb_xptar[6]));
@@ -630,8 +830,10 @@ Int_t SBSBigBite::CoarseReconstruct()
 	
 	fFrontConstraintX.push_back(x_fcp + fFrontConstraintX0);
 	fFrontConstraintY.push_back(y_fcp + fFrontConstraintY0);
+	fFrontConstraintZ.push_back( z_fcp );
 	fBackConstraintX.push_back(x_bcp + fBackConstraintX0);
 	fBackConstraintY.push_back(y_bcp + fBackConstraintY0);
+	fBackConstraintZ.push_back(z_bcp);
 	
 	// std::cout << "Front constraint point x, y, z: " 
 	// 	      << x_fcp << ", " << y_fcp << ", "<< z_fcp 
@@ -924,8 +1126,15 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //   phat_fp_fit.Z() * spec_zaxis_fp;
   
   //thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
+
+  if( fPrecon_flag != 1 ){
+    p_fit = pthetabend_fit/thetabend_fit;
+  } else {
+    double delta = pthetabend_fit;
+    double p_firstorder = fA_pth1 * ( 1.0 + (fB_pth1 + fC_pth1*fMagDist)*xptar_fit ) / thetabend_fit;
+    p_fit = p_firstorder * (1.0 + delta);
+  }
   
-  p_fit = pthetabend_fit/thetabend_fit;
   vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
   
   pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1.) );
@@ -954,7 +1163,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     }
     //cout << var->GetName() << endl;
   }
-  f_xtg_exp.push_back(xtar);
+  //  f_xtg_exp.push_back(xtar);
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
@@ -1013,8 +1222,8 @@ void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
       
       for(int i=0; i<TH->GetNClusters(); i++){
 	SBSTimingHodoscopeCluster* clus = TH->GetCluster(i);
-	if(clus->GetXmean()-clus->GetSize()*TH->SizeCol()/2<x_track && 
-	   x_track<clus->GetXmean()+clus->GetSize()*TH->SizeCol()/2){
+	if(clus->GetXmean()-clus->GetSize()*TH->SizeRow()/2<x_track && 
+	   x_track<clus->GetXmean()+clus->GetSize()*TH->SizeRow()/2){
 	  //std::cout << clus->GetSize() << " " << clus->GetTmean() << " " << clus->GetXmean() << " " << clus->GetYmean() << " " << clus->GetToTmean() << std::endl;
 	  the_track->SetTime(clus->GetTmean());
 	}  
@@ -1130,22 +1339,23 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
     // then, GRINCH PID
     // match a GRINCH cluster to a track:
     // again, the grinch has to be found for anything to be done.
+    //cout << "find SBSGRINCH detector" << endl;
     if(theNonTrackDetector->InheritsFrom("SBSGRINCH")){
       SBSGRINCH* GRINCH = reinterpret_cast<SBSGRINCH*>(theNonTrackDetector);
       
       //x, y of track at z = Z_GRINCH
-      double x_track = the_track->GetX(GRINCH->GetZ());
+      double x_track = the_track->GetX(GRINCH->GetOrigin().Z());
       //double y_track = the_track->GetY()+
       //the_track->GetPhi()*GRINCH->GetOrigin().Z();
       
       //cout << "x, y track = " << x_track << ", " 
-      //<< the_track->GetY()+the_track->GetPhi()*GRINCH->GetZ() << endl;
+      //   << the_track->GetY(GRINCH->GetOrigin().Z()) << endl;
       
       //cout << GRINCH->GetNumClusters() << " GRINCH clusters " << endl;
       int NGRINCHPMTs_match = 0;
       
       for(int i = 0; i<GRINCH->GetNumClusters(); i++){
-	SBSGRINCH_Cluster* gc_clus = GRINCH->GetCluster(i);
+	SBSCherenkov_Cluster* gc_clus = GRINCH->GetCluster(i);
 	//cout << "N hits = " << gc_clus->GetNHits() << endl;
 	//cout << "x,y grinch " << gc_clus->GetXcenter() << ", "
 	//   << gc_clus->GetYcenter() << endl;
@@ -1157,8 +1367,10 @@ void SBSBigBite::CalcTrackPID(THaTrack* the_track)
       }
       
       proba_grinch(NGRINCHPMTs_match, the_track->GetP(), eproba, piproba);
-      pidinfo->SetProb(1, 0, eproba);
-      pidinfo->SetProb(1, 1, piproba);
+      //cout << eproba << " " << piproba << endl;
+      //commented out while I figure what is wrong.
+      //pidinfo->SetProb(1, 0, eproba);
+      //pidinfo->SetProb(1, 1, piproba);
     }
     
     pidinfo->CombinePID();

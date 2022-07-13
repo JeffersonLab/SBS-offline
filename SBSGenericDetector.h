@@ -122,13 +122,11 @@ class SBSGenericDetector : public THaNonTrackingDetector {
   //class SBSGenericDetector : public THaShower {
 
 public:
-  SBSGenericDetector( const char* name, const char* description = "",
-      THaApparatus* a = NULL);
+  explicit SBSGenericDetector( const char* name, const char* description = "",
+                               THaApparatus* a = nullptr);
   virtual ~SBSGenericDetector();
 
   virtual void Clear( Option_t* opt="" );
-  virtual void ClearEvent();
-  virtual void ClearOutputVariables();
 
   void SetModeADC(SBSModeADC::Mode mode);
   void SetModeTDC(SBSModeTDC::Mode mode) { fModeTDC = mode; }
@@ -157,8 +155,8 @@ public:
   virtual SBSElement* MakeElement(Double_t x, Double_t y, Double_t z, Int_t row,
       Int_t col, Int_t layer, Int_t id = 0);
   
-  Double_t SizeRow(){ return fSizeRow; };
-  Double_t SizeCol(){ return fSizeCol; };
+  Double_t SizeRow() const { return fSizeRow; };
+  Double_t SizeCol() const { return fSizeCol; };
   
 protected:
 
@@ -219,8 +217,12 @@ protected:
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
 
+private:
+  void ClearOutputVariables();
+
   ClassDef(SBSGenericDetector,0)     //Generic shower detector class
 };
+
 /*inline Int_t SBSGenericDetector::blkidx(Int_t row, Int_t col, Int_t layer)
 {
   return fNlayers*(fNcols[row]*row + col) + layer;

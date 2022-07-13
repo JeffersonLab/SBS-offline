@@ -15,8 +15,8 @@ class TClonesArray;
 
 class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrackerBase {
  public:
-  SBSGEMSpectrometerTracker( const char *name, const char *description = "",
-	       THaApparatus *app = 0 );
+  explicit SBSGEMSpectrometerTracker( const char *name, const char *description = "",
+                                      THaApparatus *app = nullptr );
 
   virtual ~SBSGEMSpectrometerTracker();
 
@@ -45,6 +45,8 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrack
  private:
   // std::vector <SBSGEMModule *> fPlanes; storing the modules moved to SBSGEMTrackerBase
 
+  bool fTestTrackInitialized;
+  
   TClonesArray *fTestTracks; 
   //bool fIsMC; moved to SBSGEMTrackerBase
 	

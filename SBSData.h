@@ -29,6 +29,7 @@ namespace SBSData {
     Double_t tcal; //< Calibration constant for TDC value
     Double_t acal; //< Calibration constant for ADC amplitude (peak)
     Double_t trigcal; //< ratio Trig amp to FADC amp
+    Double_t timeoffset; //<  time offset (ns) for ADC time
     UInt_t NSB; //< Programmed # of samples before threshold in FADC
     UInt_t NSA; //< Programmed # of samples after threshold in FADC
     Int_t NPedBin; //< Programmed # of samples used in pedestal average in FADC
@@ -49,6 +50,7 @@ namespace SBSData {
     Double_t tcal; //< Calibration constant for TDC value
     Double_t acal; //< Calibration constant for ADC amplitude (peak)
     Double_t trigcal; //< ratio Trig amp to FADC amp
+    Double_t timeoffset; //<  time offset (ns) for ADC time
     UInt_t FixThresBin; //<Fixed Threshold Bin when no peak found
     UInt_t NSB; //<Number of bins before Threshold Bin integrate when Threshold Bin found
     UInt_t NSA; //<Number of bins after Threshold Bin integrate when Threshold Bin found
@@ -94,6 +96,7 @@ namespace SBSData {
       Double_t GetGoodTimeCut()              const { return fADC.GoodTimeCut;}
       Double_t GetAmpCal()                  const { return fADC.acal; }
       Double_t GetTrigCal()                  const { return fADC.trigcal; }
+      Double_t GetTimeOffset()                  const { return fADC.timeoffset; }
       UInt_t GetNSA()                      const { return fADC.NSA; }
       UInt_t GetNSB()                      const { return fADC.NSB; }
       Int_t GetNPedBin()                      const { return fADC.NPedBin; }
@@ -120,6 +123,7 @@ namespace SBSData {
       void SetGoodTimeCut(Double_t var) { fADC.GoodTimeCut = var; }
       void SetAmpCal(Double_t var) { fADC.acal = var; }
       void SetTrigCal(Double_t var) { fADC.trigcal = var; }
+      void SetTimeOffset(Double_t var) { fADC.timeoffset = var; }
       void SetGoodHit(Int_t i) { fADC.good_hit = i; }
       void SetChanTomV(Double_t var) { fADC.ChanTomV = var; }
       void SetADCParam(Double_t i1,Int_t i2,Int_t i3, Int_t i4,Double_t i5) { fADC.ChanTomV=i1;fADC.NSB=i2;fADC.NSA=i3;fADC.NPedBin=i4;fADC.GoodTimeCut=i5;}
@@ -191,29 +195,31 @@ namespace SBSData {
   // Samples (e.g. ADC Waveform data)
   class Waveform {
     public:
-      Waveform(Double_t ped = 0.0, Double_t gain = 1.0, Double_t ChanTomV = 0.48828,Double_t GoodTimeCut = 1.0, Double_t tcal = 4.0);
-      virtual ~Waveform() {};
+      explicit Waveform( Double_t ped = 0.0, Double_t gain = 1.0, Double_t ChanTomV = 0.48828,
+                       Double_t GoodTimeCut = 1.0, Double_t tcal = 4.0 );
+      virtual ~Waveform() = default;;
 
       // Getters
-      Double_t GetPed()  const { return fSamples.ped; }
-      Double_t GetGain() const { return fSamples.cal; }
-      Double_t GetThres() const { return fSamples.thres; }
-      Double_t GetChanTomV() const { return fSamples.ChanTomV; }
-      Double_t GetAmpCal() const { return fSamples.acal; }
-      Double_t GetTrigCal() const { return fSamples.trigcal; }
-      UInt_t GetFixThresBin() const { return fSamples.FixThresBin; }
-      UInt_t GetNSB() const { return fSamples.NSB; }
-      UInt_t GetNSA() const { return fSamples.NSA; }
-      UInt_t GetNPedBin() const { return fSamples.NPedBin; }
-      Double_t GetGoodTimeCut()              const { return fSamples.GoodTimeCut;}
-      Int_t GetGoodHitIndex()            const { return fSamples.good_hit; }
+      Double_t GetPed()         const { return fSamples.ped; }
+      Double_t GetGain()        const { return fSamples.cal; }
+      Double_t GetThres()       const { return fSamples.thres; }
+      Double_t GetChanTomV()    const { return fSamples.ChanTomV; }
+      Double_t GetAmpCal()      const { return fSamples.acal; }
+      Double_t GetTrigCal()     const { return fSamples.trigcal; }
+      Double_t GetTimeOffset()  const { return fSamples.timeoffset; }
+      UInt_t GetFixThresBin()   const { return fSamples.FixThresBin; }
+      UInt_t GetNSB()           const { return fSamples.NSB; }
+      UInt_t GetNSA()           const { return fSamples.NSA; }
+      UInt_t GetNPedBin()       const { return fSamples.NPedBin; }
+      Double_t GetGoodTimeCut() const { return fSamples.GoodTimeCut;}
+      Int_t GetGoodHitIndex()   const { return fSamples.good_hit; }
       std::vector<Double_t>& GetDataRaw() { return fSamples.samples_raw; }
       std::vector<Double_t>& GetData() { return fSamples.samples; }
-      PulseADCData GetPulse() { return fSamples.pulse; }
-      SingleData GetIntegral()   { return fSamples.pulse.integral; }
-      SingleData GetTime()   { return fSamples.pulse.time; }
-      SingleData GetAmplitude()   { return fSamples.pulse.amplitude; }
-      Double_t GetTimeData()         const { return fSamples.pulse.time.val; }
+      PulseADCData GetPulse()   const { return fSamples.pulse; }
+      SingleData GetIntegral()  const { return fSamples.pulse.integral; }
+      SingleData GetTime()      const { return fSamples.pulse.time; }
+      SingleData GetAmplitude() const { return fSamples.pulse.amplitude; }
+      Double_t GetTimeData()    const { return fSamples.pulse.time.val; }
 
       // Setters
       void SetValTime(Double_t var)  { fSamples.pulse.time.val = var; }
@@ -224,13 +230,14 @@ namespace SBSData {
       void SetGoodTimeCut(Double_t var) { fSamples.GoodTimeCut = var; }
       void SetAmpCal(Double_t var) { fSamples.acal = var; }
       void SetTrigCal(Double_t var) { fSamples.trigcal = var; }
+      void SetTimeOffset(Double_t var) { fSamples.timeoffset = var; }
       void SetGoodHit(Int_t i) { fSamples.good_hit = i; }
       void SetWaveformParam(Double_t var,Int_t i1,Int_t i2,Int_t i3, Int_t i4) { fSamples.thres = var;fSamples.FixThresBin=i1;fSamples.NSB=i2;fSamples.NSA=i3;fSamples.NPedBin=i4;}
       // Process data sets raw value, ped-subtracted and calibrated data
       virtual void Process(std::vector<Double_t> &var);
 
       // Do we have samples data for this event?
-      Bool_t HasData() { return fHasData; }
+      Bool_t HasData() const { return fHasData; }
 
       // Clear event
       virtual void Clear();

@@ -29,8 +29,8 @@
 class SBSRaster : public THaBeamDet {
 
 public:
-  SBSRaster( const char* name, const char* description = "",
-		   THaApparatus* a = NULL );
+  explicit SBSRaster( const char* name, const char* description = "",
+                      THaApparatus* a = nullptr );
   virtual ~SBSRaster();
 
   virtual void       Clear( Option_t* ="" );

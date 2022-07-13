@@ -10,6 +10,7 @@
 #include "TVector2.h"
 //#include <THaTrackingDetector.h>
 
+
 //class THaRunBase;
 //class THaApparatus;
 //class THaEvData;
@@ -28,38 +29,40 @@ public:
   void Clear(); //clear out all the event-specific data structures
 
   //These can change event-by-event:
-  void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; }
-  void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; }
-  void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; }
-  void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; }
+  inline void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; fConstraintPoint_Front_IsInitialized = true; }
+  inline void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; fConstraintPoint_Back_IsInitialized = true; }
+  inline void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; fConstraintWidth_Front_IsInitialized = true; }
+  inline void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; fConstraintWidth_Back_IsInitialized = true; }
 
-  void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); }
-  void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); }
-  void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); }
-  void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); }
+  inline void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); fConstraintPoint_Front_IsInitialized = true; }
+  inline void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); fConstraintPoint_Back_IsInitialized = true; }
+  inline void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); fConstraintWidth_Front_IsInitialized = true; }
+  inline void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); fConstraintWidth_Back_IsInitialized = true; }
 
-  void SetPmin( double pmin ){ fPmin_track = pmin; }
-  void SetPmax( double pmax ){ fPmax_track = pmax; }
-  void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
+  inline void SetPmin( double pmin ){ fPmin_track = pmin; }
+  inline void SetPmax( double pmax ){ fPmax_track = pmax; }
+  inline void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
 
-  void SetXpTarmin( double xpmin ){ fxptarmin_track = xpmin; }
-  void SetXpTarmax( double xpmax ){ fxptarmax_track = xpmax; }
-  void SetXpTarRange( double xpmin, double xpmax ){ fxptarmin_track = xpmin; fxptarmax_track = xpmax; }
+  inline void SetXpTarmin( double xpmin ){ fxptarmin_track = xpmin; }
+  inline void SetXpTarmax( double xpmax ){ fxptarmax_track = xpmax; }
+  inline void SetXpTarRange( double xpmin, double xpmax ){ fxptarmin_track = xpmin; fxptarmax_track = xpmax; }
 
-  void SetYpTarmin( double ypmin ){ fyptarmin_track = ypmin; }
-  void SetYpTarmax( double ypmax ){ fyptarmax_track = ypmax; }
-  void SetYpTarRange( double ypmin, double ypmax ){ fyptarmin_track = ypmin; fyptarmax_track = ypmax; }
+  inline void SetYpTarmin( double ypmin ){ fyptarmin_track = ypmin; }
+  inline void SetYpTarmax( double ypmax ){ fyptarmax_track = ypmax; }
+  inline void SetYpTarRange( double ypmin, double ypmax ){ fyptarmin_track = ypmin; fyptarmax_track = ypmax; }
 
-  void SetYTarmin( double ymin ){ fytarmin_track = ymin; }
-  void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
-  void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
+  inline void SetYTarmin( double ymin ){ fytarmin_track = ymin; }
+  inline void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
+  inline void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
 
   bool CheckConstraint( double xtr, double ytr, double xptr, double yptr );
   
-  void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
+  inline void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
+  inline void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
+
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
   virtual ~SBSGEMTrackerBase(); 
@@ -72,6 +75,8 @@ protected:
   bool fUseOpticsConstraint; //default to FALSE:
   //bool fUseFrontTrackerConstraint; //default to FALSE:
   
+  bool fNegSignalStudy;
+
   //1D and 2D clustering: 
   void hit_reconstruction();
   //track-finding: 
@@ -79,15 +84,17 @@ protected:
 
   // Fill arrays of "good" hits (hits that end up on fitted tracks)
   void fill_good_hit_arrays();
-  
+
   //Utility methods: initialization:
   void CompleteInitialization(); //do some extra initialization that we want to reuse:
   void LoadPedestals(const char *fname);
+  void LoadCM(const char *fname);
   void InitLayerCombos();
   void InitGridBins(); //initialize 
   void InitEfficiencyHistos(const char *dname ); //initialize efficiency histograms
   void CalcEfficiency(); //essentially, divide "did hit/should hit" histograms
 
+  void PrintNegEvents( const char *fname );
   void PrintGeometry( const char *fname );
   
   Long64_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
@@ -122,8 +129,6 @@ protected:
   void AddNewTrack( const std::map<int,int> &hitcombo, const std::vector<double> &BestTrack, double chi2ndf, const std::vector<double> &uresid, const std::vector<double> &vresid );
 
   void PurgeHits(int itrack);
-
-  
   
   //Data members:
   std::vector <SBSGEMModule *> fModules; //array of SBSGEMModules:
@@ -139,6 +144,10 @@ protected:
 
   bool fSubtractPedBeforeCommonMode; //flag only applies to pedestal-mode analysis
   
+  bool fCommonModePlotsFlagIsSet; 
+  int fCommonModePlotsFlag; 
+  //bool fMakeCommonModePlots; //this will get propagated down to the modules
+
   // bool fPedestalsInitialized;
   
   bool fIsMC;
@@ -195,6 +204,12 @@ protected:
   TVector2 fConstraintSlope_Min; //Min and max slope along X and Y
   TVector2 fConstraintSlope_Max; //Min and max slope along X and Y
 
+  bool fConstraintPoint_Front_IsInitialized;
+  bool fConstraintPoint_Back_IsInitialized;
+  bool fConstraintWidth_Front_IsInitialized;
+  bool fConstraintWidth_Back_IsInitialized;
+  bool fConstraintInitialized;
+  
   //Optics-based constraints:
   double fPmin_track; //GeV
   double fPmax_track; //GeV
@@ -324,6 +339,8 @@ protected:
   std::vector<double> fHitVTime; // cluster-mean time, V strips
   std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
+  std::vector<double> fHitUTimeMaxStripFit; //fitted strip t0
+  std::vector<double> fHitVTimeMaxStripFit; //fitted strip t0
   std::vector<double> fHitDeltaT; // TU - TV;
   std::vector<double> fHitTavg; //(TU+TV)/2
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
@@ -362,9 +379,25 @@ protected:
 
   std::vector<int> fNstripsU_layer;
   std::vector<int> fNstripsV_layer;
+  std::vector<int> fNstripsU_layer_neg;
+  std::vector<int> fNstripsV_layer_neg;
+  std::vector<int> fNstripsU_layer_neg_hit;
+  std::vector<int> fNstripsV_layer_neg_hit;
+  std::vector<int> fNstripsU_layer_neg_miss;
+  std::vector<int> fNstripsV_layer_neg_miss;
   std::vector<int> fNclustU_layer;
   std::vector<int> fNclustV_layer;
+  std::vector<int> fNclustU_layer_neg;
+  std::vector<int> fNclustV_layer_neg;
+  std::vector<int> fNclustU_layer_miss;
+  std::vector<int> fNclustV_layer_miss;
   std::vector<int> fN2Dhit_layer;
+
+  std::vector<int> neg_event;
+  std::vector<int> neg_MPD;
+  std::vector<int> neg_APV;
+  std::vector<int> neg_strip;
+  std::vector<int> is_neg;
 
   //"did hit" and "should hit" by module (numerators and denominators for efficiency determination)
   std::vector<int> fDidHit_Module;
@@ -386,6 +419,24 @@ protected:
   TClonesArray *hefficiency_y_layer;
   TClonesArray *hefficiency_xy_layer;
 
+  TClonesArray *hdidnothit_x_layer;
+  TClonesArray *hdidnothit_y_layer;
+
+  TClonesArray *hdidhit_fullreadout_x_layer;
+  TClonesArray *hdidhit_fullreadout_y_layer;
+
+  TClonesArray *hneghit_x_layer;
+  TClonesArray *hneghit_y_layer;
+
+  TClonesArray *hneghit1D_x_layer;
+  TClonesArray *hneghit1D_y_layer;
+
+  TClonesArray *hneghit_good_x_layer;
+  TClonesArray *hneghit_good_y_layer;
+
+  TClonesArray *hneghit_good1D_x_layer;
+  TClonesArray *hneghit_good1D_y_layer;
+
   double fBinSize_efficiency2D; //Efficiency bin sizes for 1D and 2D plots
   double fBinSize_efficiency1D; //define bin size for efficiency plots (assume equal bin width along X and Y, default to 1 cm)
   
@@ -394,10 +445,11 @@ protected:
   bool fDumpGeometryInfo; //default to FALSE
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fpedfile_cmr; 
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq; 
   // input files for (optional) loading of pedestals from database:
 
   std::string fpedfilename;
+  std::string fcmfilename;
   
 };
 

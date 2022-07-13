@@ -87,7 +87,7 @@ Bool_t SBSTimingHodoscopeCluster::AddElement(SBSTimingHodoscopeBar* bar) {
 }
 
 //_____________________________________________________________
-void SBSTimingHodoscopeCluster::ClearEvent() {
+void SBSTimingHodoscopeCluster::Clear( Option_t* ) {
   fMult=0;fXmean=fYmean=fTmean=0.;
   fElements.clear();
 }

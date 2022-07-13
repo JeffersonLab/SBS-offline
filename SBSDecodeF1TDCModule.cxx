@@ -52,14 +52,14 @@ SBSDecodeF1TDCModule::~SBSDecodeF1TDCModule() = default;
 void SBSDecodeF1TDCModule::CommonInit() {
   //fTdcData = new Int_t[NTDCCHAN*MAXHIT];
   //fNumHits = new Int_t[NTDCCHAN*MAXHIT];
-  fDebugFile=0;
+  fDebugFile=nullptr;
   //fDebugFile = new std::ofstream("hcal_tdc_test_decoder.log");
   Clear();
   IsInit = kTRUE;
   nF1=0;
   F1slots.resize(50);
-  for(size_t i = 0; i < F1slots.size(); i++) {
-    F1slots[i] = 0;
+  for(int & F1slot : F1slots) {
+    F1slot = 0;
   }
   //F1slots = new Int_t[50];
   //memset(F1slots, 0, 50*sizeof(Int_t));
@@ -249,7 +249,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
                 if(raw<trigTime) // That means the roll-over already happened
                   raw_cor += (pow(2,16)-1);
 		// if(raw<trigTime) std::cout << " chan = " << chan << " raw " << raw << " raw_cor  " << raw_cor << " trig time =  " << trigTime << std::endl; 
-	      /*Int_t status = */sldat->loadData("tdc",chan,raw_cor,raw);
+		/*Int_t status = */sldat->loadData("tdc",chan,raw_cor,0); // set LE
               }
 
 		  if((*loc)!=0xf1daffff && nF1>0 && f1slot!=30) { // Make sure memory is allocated to save data

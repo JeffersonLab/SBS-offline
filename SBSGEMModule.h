@@ -6,6 +6,7 @@
 #include <set>
 #include <map>
 #include <array>
+#include <deque>
 
 //using namespace std;
 
@@ -32,6 +33,7 @@ struct mpdmap_t {
   UInt_t pos;
   UInt_t invert;
   UInt_t axis; //needed to add axis to the decode map
+  UInt_t index;
 };
 
 //Clustering results can be held in a simple C struct, as a cluster is just a collection of basic data types (not even arrays):
@@ -41,6 +43,7 @@ struct sbsgemhit_t { //2D reconstructed hits
   //Track info:
   Bool_t keep;     //Should this cluster be considered for tracking? We use this variable to implement "cluster quality" cuts (thresholds, XY ADC and time correlation, etc.)
   Bool_t ontrack;  //Is this cluster on any track?
+  Bool_t highquality; //is this a "high quality" hit?
   Int_t trackidx; //Index of track containing this cluster (within the array of tracks found by the parent SBSGEMTracker
   UInt_t iuclust;  //Index in (1D) U cluster array of the "U" cluster used to define this 2D hit.
   UInt_t ivclust;  //Index in (1D) V cluster array of the "V" cluster used to define this 2D hit.
@@ -97,6 +100,11 @@ struct sbsgemcluster_t {  //1D clusters;
   Double_t t_sigma; //unclear what we might use this for
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
   std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
+  UInt_t rawstrip; //Raw APV strip number before decoding 
+  UInt_t rawMPD; //Raw MPD number before decoding 
+  UInt_t rawAPV; //Raw APV number before decoding 
+  bool isneg; //Cluster is from negative strips
+  bool isnegontrack; //Cluster is from negative strips
   bool keep;
 };
 
@@ -121,8 +129,8 @@ struct sbsgemcluster_t {  //1D clusters;
 class SBSGEMModule : public THaSubDetector {
  public:
 
-  SBSGEMModule( const char *name, const char *description = "",
-		THaDetectorBase* parent = 0 );
+  explicit SBSGEMModule( const char *name, const char *description = "",
+                         THaDetectorBase* parent = nullptr );
 
   virtual ~SBSGEMModule();
 
@@ -139,6 +147,8 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
+  void SetMakeCommonModePlots( int cmplots=0 ){ fMakeCommonModePlots = cmplots != 0; fCommonModePlots_DBoverride = true; }
+  
   //Don't call this method directly, it is called by find_2Dhits. Call that instead:
   void find_clusters_1D(SBSGEM::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
   void find_2Dhits(); // Version with no arguments assumes no constraint points
@@ -164,14 +174,16 @@ class SBSGEMModule : public THaSubDetector {
   //function to convert from APV channel number to strip number ordered by position:
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
 
-  void PrintPedestals( std::ofstream &dbfile_ped, std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_cmr );
+  void PrintPedestals( std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_CM );
 
-  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo); //default to "sorting" method:
+  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, Double_t CM_online=0, UInt_t nhits=128 ); //default to "sorting" method:
   
   void fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool max=false );
 
   double FitStripTime( int striphitindex, double RMS=20.0 ); // "dumb" fit method 
 
+  void UpdateRollingCommonModeAverage(int iapv, double CM_sample);
+  
   TF1 *fStripTimeFunc;
 
   bool fIsDecoded;
@@ -190,6 +202,14 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<mpdmap_t>    fMPDmap; //this may need to be modified
   std::vector<Int_t>       fChanMapData;
 
+  // vectors to keep track of rolling common-mode mean and RMS, using sorting method.
+  // These will follow the same ordering as fMPDmap:
+  //std::vector<Double_t> fCommonModeRollingFirstEvent_by_APV; //need to keep track of first event in the rolling average for updating the calculation:
+  std::vector<std::deque<Double_t> > fCommonModeResultContainer_by_APV;
+  std::vector<Double_t> fCommonModeRollingAverage_by_APV;
+  std::vector<Double_t> fCommonModeRollingRMS_by_APV;
+  std::vector<UInt_t> fNeventsRollingAverage_by_APV;
+  
   SBSGEM::APVmap_t fAPVmapping; //choose APV channel --> strip mapping; there are only three possible values supported for now (see SBSGEM::APVmap_t)
 
   std::array<std::vector<UInt_t>, 4 > APVMAP;
@@ -217,7 +237,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fEventCount_by_APV; //MPD event counter by APV:
   std::vector<double> fTimeStamp_ns_by_APV; //Coarse time stamp - T0 + fine time stamp % 6
   
-  ////
+  //What should we use to hold the rolling average of common-mode means?
   
   Bool_t fPedestalMode;
   //Bool_t fPedestalsInitialized;
@@ -226,6 +246,9 @@ class SBSGEMModule : public THaSubDetector {
   
   Double_t fZeroSuppressRMS;
   Bool_t fZeroSuppress;
+  
+  Bool_t fNegSignalStudy;
+
   //Moved to the MPD module class:
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
   
@@ -233,7 +256,7 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 
                      // 1 = pedestal subtraction WAS done online, even for full readout events, only subtract the common-mode
 
-  Bool_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
+  Int_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
   Bool_t fUseStripTimingCuts; // Apply strip timing cuts:
   
 
@@ -251,6 +274,13 @@ class SBSGEMModule : public THaSubDetector {
   
   
   //In principle we will eventually also require some time walk corrections
+
+  Bool_t fMeasureCommonMode; //Default = false; use full-readout events to measure the common-mode mean and rms in real time
+  UInt_t fNeventsCommonModeLookBack; // number of events to use for rolling average; default = 100
+
+  Bool_t fCorrectCommonMode; //Default = false; use rolling common-mode mean and calculated common-mode values to detect a condition where negative pulses bias the common-mode down and attempt to correct it.
+  UInt_t fCorrectCommonModeMinStrips;
+  Double_t fCorrectCommonMode_Nsigma;
   
   //Strip cuts: 
   
@@ -259,6 +289,9 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fCommonModeNstripRejectLow; //default = 28;
   Int_t fCommonModeNumIterations; //number of iterations for Danning Method: default = 3
   Int_t fCommonModeMinStripsInRange; //Minimum strips in range for Danning Method: default = 10;
+  Double_t fCommonModeBinWidth_Nsigma; //Bin width for "histogramming-method" common-mode calculation, in units of the RMS in a particular APV, default = 2
+  Double_t fCommonModeScanRange_Nsigma; //Scan range for common-mode histogramming method calculation, in units of RMS, +/- Nsigma about the mean, default = 4
+  Double_t fCommonModeStepSize_Nsigma; //Step size in units of RMS, default = 1/5:
 
   //same as in MPDModule: unavoidable to duplicate this definition unless someone smarter than I cam
   //can come up with a way to do so:
@@ -266,7 +299,15 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fChan_TimeStamp_low;
   UInt_t fChan_TimeStamp_high;
   UInt_t fChan_MPD_EventCount;
+  UInt_t fChan_MPD_Debug;
   
+  //Trigger/reference time information: 
+  UInt_t fCrate_RefTime; 
+  UInt_t fSlot_RefTime; 
+  UInt_t fChan_RefTime; 
+  Double_t fRefTime_GoodTimeCut;
+  Double_t fRefTime_CAL; 
+
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   //Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
@@ -299,9 +340,13 @@ class SBSGEMModule : public THaSubDetector {
   //BASIC DECODED STRIP HIT INFO:
   //By the time the information is populated here, the ADC values are already assumed to be pedestal/common-mode subtracted and/or zero-suppressed as appropriate:
   Int_t fNstrips_hit; //total Number of strips fired (after common-mode subtraction and zero suppression)
+  Int_t fNstrips_hit_pos; //total Number of strips fired after positive zero suppression
+  Int_t fNstrips_hit_neg; //total Number of strips fired after negative zero suppression
   Int_t fNdecoded_ADCsamples; //= fNstrips_hit * fN_MPD_TIME_SAMP
   UInt_t fNstrips_hitU; //total number of U strips fired
   UInt_t fNstrips_hitV; //total number of V strips fired
+  UInt_t fNstrips_hitU_neg; //total number of U strips fired negative
+  UInt_t fNstrips_hitV_neg; //total number of V strips fired negative
 
   // Number of strips passing basic zero suppression thresholds:
   UInt_t fNstrips_keep;
@@ -330,8 +375,19 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripIsU; // is this a U strip? 0/1
   std::vector<UInt_t> fStripIsV; // is this a V strip? 0/1
   std::vector<UInt_t> fStripOnTrack; //Is this strip on any track?
+  std::vector<UInt_t> fStripIsNeg; //Is this strip negative?
+  std::vector<UInt_t> fStripIsNegU; //Is this strip negative?
+  std::vector<UInt_t> fStripIsNegV; //Is this strip negative?
+  std::vector<UInt_t> fStripIsNegOnTrack; //Is this strip negative and on a track?
+  std::vector<UInt_t> fStripIsNegOnTrackU; //Is this strip negative and on a track?
+  std::vector<UInt_t> fStripIsNegOnTrackV; //Is this strip negative and on a track?
+  std::vector<UInt_t> fStripRaw; //Raw strip numbers on track?
+  std::vector<UInt_t> fStripEvent; //strip raw info
+  std::vector<UInt_t> fStripMPD; //strip raw info
+  std::vector<UInt_t> fStripADC_ID; //strip raw info
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<bool> fKeepStrip; //keep this strip?
+  std::vector<bool> fNegStrip; //Does this strip pass negative zero suppression? - neg pulse study
   //std::vector<Int_t> fStripKeep; //Strip passes timing cuts (and part of a cluster)?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
@@ -354,6 +410,12 @@ class SBSGEMModule : public THaSubDetector {
 
   UInt_t fNclustU; // number of U clusters found
   UInt_t fNclustV; // number of V clusters found
+  UInt_t fNclustU_pos; // number of positive U clusters found
+  UInt_t fNclustV_pos; // number of positive V clusters found
+  UInt_t fNclustU_neg; // number of negative U clusters found
+  UInt_t fNclustV_neg; // number of negative V clusters found
+  UInt_t fNclustU_total; // Number of U clusters found in entire active area, without enforcing search region constraint
+  UInt_t fNclustV_total; // Number of U clusters found in entire active area, without enforcing search region constraint
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
 
@@ -405,6 +467,8 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeRMSU;
   std::vector<Double_t> fCommonModeRMSV;
 
+  
+  
   double fCommonModeRange_nsigma; //default = 5
   
   ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -483,6 +547,8 @@ class SBSGEMModule : public THaSubDetector {
   bool fEfficiencyInitialized;
   bool fMakeCommonModePlots; //diagnostic plots for offline common-mode stuff: default = false;
   bool fCommonModePlotsInitialized;
+  bool fCommonModePlots_DBoverride;
+
 
   bool fMakeEventInfoPlots;
   bool fEventInfoPlotsInitialized;
@@ -492,12 +558,16 @@ class SBSGEMModule : public THaSubDetector {
   TH2D *fCommonModeDistU_Sorting;
   TH2D *fCommonModeDistU_Danning;
   TH2D *fCommonModeDiffU; //difference between sorting and danning mode calculations:
+  TH2D *fCommonModeCorrectionU;
+  TH2D *fCommonModeNotCorrectionU;
 
   //If applicable, make common mode. In principle these should all be broken down by APV, but let's leave as 1D for now.
   TH2D *fCommonModeDistV; //Distribution of calculated common-mode (minus common-mode mean) using chosen method:
   TH2D *fCommonModeDistV_Sorting;
   TH2D *fCommonModeDistV_Danning;
   TH2D *fCommonModeDiffV; //difference between sorting and danning mode calculations:
+  TH2D *fCommonModeCorrectionV;
+  TH2D *fCommonModeNotCorrectionV;
   
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;
@@ -549,6 +619,13 @@ class SBSGEMModule : public THaSubDetector {
   TH2D *hADCfrac_vs_timesample_allstrips; //All fired strips
   TH2D *hADCfrac_vs_timesample_goodstrips;  //strips on good tracks
   TH2D *hADCfrac_vs_timesample_maxstrip; //max strip in cluster on good track
+
+  //Let's make hard-coded, automated cluster-based "occupancy" histos for tracking, with or without external constraint:
+  //Basic idea: count number of found clusters within constraint region, normalize to area of search region and some kind of "effective time window":
+  TH1D *hClusterBasedOccupancyUstrips;
+  TH1D *hClusterBasedOccupancyVstrips;
+  TH1D *hClusterMultiplicityUstrips;
+  TH1D *hClusterMultiplicityVstrips;
   
   //Comment out for now, uncomment later if we deem these interesting:
   // TClonesArray *hrawADCs_by_strip_sampleU;
