@@ -376,8 +376,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   int row, col;
   
   if(strcmp(detname.c_str(), "bb.ps")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBPSTF1.nhits << " " << simev->Tgmn->Earm_BBPS_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBPSTF1_hit_nhits << " " << simev->Tgmn->Earm_BBPS_dighit_nchan << endl;
     samps.clear();
+    assert(simev->Tgmn->b_Earm_BBPS_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_BBPS_dighit_nchan; j++){
       loadevt = false;
       //if(simev->Tgmn->Earm_BBPS_dighit_samp->at(j)==0)cout << "SBSSimDecoder, BBPS " << simev->Tgmn->Earm_BBPS_dighit_chan->at(j);// << endl;
@@ -455,9 +456,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   if(strcmp(detname.c_str(), "bb.sh")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBSHTF1.nhits << " " << simev->Tgmn->Earm_BBSH_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBSHTF1_hit_nhits << " " << simev->Tgmn->Earm_BBSH_dighit_nchan << endl;
     samps.clear();
-    
+    assert(simev->Tgmn->b_Earm_BBSH_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_BBSH_dighit_nchan; j++){
       loadevt = false;
       //if(simev->Tgmn->Earm_BBSH_dighit_samp->at(j)==0)cout << "SBSSimDecoder, BBSH " << simev->Tgmn->Earm_BBSH_dighit_chan->at(j);// << endl;
@@ -548,6 +549,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     myev->push_back(0);
     */
     int ntdc = 0;
+    assert(simev->Tgmn->b_Earm_BBHodo_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_BBHodo_dighit_nchan; j++){
       ntdc = 0;
       lchan = simev->Tgmn->Earm_BBHodo_dighit_chan->at(j);
@@ -593,7 +595,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   if(strcmp(detname.c_str(), "bb.grinch")==0){
     int ntdc = 0;
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
+    //if(simev->Tgmn->b_Earm_GRINCH_dighit_nchan==0)
+    //cout << "*** Warning: your GRINCH variables are probably missing in the tree you are analyzing. " << endl << " consider using another file or removing the grinch for your analysis " << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_GRINCH_hit_nhits << " " << simev->Tgmn->b_Earm_GRINCH_dighit_nchan << " " << simev->Tgmn->Earm_GRINCH_dighit_nchan << endl;
+    assert(simev->Tgmn->b_Earm_GRINCH_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Earm_GRINCH_dighit_nchan; j++){
       ntdc = 0;
       //cout << j << " " << simev->Tgmn->Earm_GRINCH_dighit_chan->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_adc->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_l->at(j) << " " << simev->Tgmn->Earm_GRINCH_dighit_tdc_t->at(j) << endl;
@@ -642,6 +647,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     samps.clear();  
     strips.clear();  
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Earm_BBGEM_dighit_nstrips << endl;
+    assert(simev->Tgmn->b_Earm_BBGEM_dighit_nstrips);
     for(int j = 0; j<simev->Tgmn->Earm_BBGEM_dighit_nstrips; j++){
       loadevt = false;
       mod = simev->Tgmn->Earm_BBGEM_dighit_module->at(j);
@@ -692,10 +698,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   }
   
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
-    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Harm_HCalScint.nhits << " " << simev->Tgmn->Harm_HCal_dighit_nchan << endl;
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Harm_HCalScint_hit_nhits << " " << simev->Tgmn->Harm_HCal_dighit_nchan << endl;
     samps.clear();
     times.clear();
     
+    assert(simev->Tgmn->b_Harm_HCal_dighit_nchan);
     for(int j = 0; j<simev->Tgmn->Harm_HCal_dighit_nchan; j++){
       loadevt = false;
       lchan = simev->Tgmn->Harm_HCal_dighit_chan->at(j);

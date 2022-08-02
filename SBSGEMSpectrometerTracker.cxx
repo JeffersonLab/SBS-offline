@@ -32,6 +32,8 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   
   fIsSpectrometerTracker = true; //used by tracker base
   fUseOpticsConstraint = false;
+
+  fUseSlopeConstraint = false;
   
   fTestTrackInitialized = false;
 
@@ -134,6 +136,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "gridedgetolerancey", &fGridEdgeToleranceY, kDouble, 0, 1},
     { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
+    { "constraintwidth_theta", &fConstraintWidth_theta, kDouble, 0, 1},
+    { "constraintwidth_phi", &fConstraintWidth_phi, kDouble, 0, 1},
     { "useopticsconstraint", &useopticsconstraint, kInt, 0, 1},
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
@@ -356,12 +360,13 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     fname_dbcm.Form( "db_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daqped.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daqcm.Form( "daq_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-
+    
     
     //fpedfile_dbase.open( fname_dbase.Data() );
     fCMfile_dbase.open( fname_dbcm.Data() );
     fpedfile_daq.open( fname_daqped.Data() );
     fCMfile_daq.open( fname_daqcm.Data() );
+    
     
     TString sdate = run->GetDate().AsString();
     sdate.Prepend( "#" );
@@ -549,11 +554,17 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.ADCmaxsampV", "max sample of max V strip", "fHitVADCmaxsample" },
     { "hit.ADCmaxsampUclust", "max U cluster-summed ADC time sample", "fHitUADCmaxclustsample" },
     { "hit.ADCmaxsampVclust", "max V cluster-summed ADC time sample", "fHitVADCmaxclustsample" },
+    { "hit.DeconvADCmaxstripU", "deconv ADC sum of max U strip", "fHitUADCmaxstrip_deconv" },
+    { "hit.DeconvADCmaxstripV", "deconv ADC sum of max V strip", "fHitVADCmaxstrip_deconv" },
+    { "hit.DeconvADCmaxsampU", "deconv max sample of max U strip", "fHitUADCmaxsample_deconv" },
+    { "hit.DeconvADCmaxsampV", "deconv max sample of max V strip", "fHitVADCmaxsample_deconv" },
     { "hit.ADCasym", "Hit ADC asymmetry: (ADCU - ADCV)/(ADCU + ADCV)", "fHitADCasym" },
     { "hit.Utime", "cluster timing based on U strips", "fHitUTime" },
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
     { "hit.UtimeMaxStrip", "cluster timing based on U strips", "fHitUTimeMaxStrip" },
     { "hit.VtimeMaxStrip", "cluster timing based on V strips", "fHitVTimeMaxStrip" },
+    { "hit.UtimeMaxStripDeconv", "cluster timing based on U strips", "fHitUTimeMaxStripDeconv" },
+    { "hit.VtimeMaxStripDeconv", "cluster timing based on V strips", "fHitVTimeMaxStripDeconv" },
     { "hit.UtimeMaxStripFit", "Strip fitted t0 for max strip in cluster", "fHitUTimeMaxStripFit" },
     { "hit.VtimeMaxStripFit", "Strip fitted t0 for max strip in cluster", "fHitVTimeMaxStripFit" },
     { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
@@ -562,6 +573,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.isampmaxVclust", "peak time sample in cluster-summed V ADC samples", "fHitIsampMaxVclust" },
     { "hit.isampmaxUstrip", "peak time sample in max U strip", "fHitIsampMaxUstrip" },
     { "hit.isampmaxVstrip", "peak time sample in max V strip", "fHitIsampMaxVstrip" },
+    { "hit.isampmaxUstripDeconv", "peak time sample in max U strip", "fHitIsampMaxUstripDeconv" },
+    { "hit.isampmaxVstripDeconv", "peak time sample in max V strip", "fHitIsampMaxVstripDeconv" },
     { "hit.ccor_clust", "correlation coefficient between cluster-summed U and V samples", "fHitCorrCoeffClust" },
     { "hit.ccor_strip", "correlation coefficient between U and V samples on strips with max ADC", "fHitCorrCoeffMaxStrip" },
     { "hit.ENABLE_CM_U", "Enable CM flag for max U strip in this hit", "fHitU_ENABLE_CM" },
@@ -582,6 +595,18 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.ADCfrac3_Vmax", "Max V strip ADC3/ADCsum", "fHitADCfrac3_MaxVstrip" },
     { "hit.ADCfrac4_Vmax", "Max V strip ADC4/ADCsum", "fHitADCfrac4_MaxVstrip" },
     { "hit.ADCfrac5_Vmax", "Max V strip ADC5/ADCsum", "fHitADCfrac5_MaxVstrip" },
+    { "hit.DeconvADC0_Umax", "Max U strip Deconv ADC0", "fHitDeconvADC0_MaxUstrip" },
+    { "hit.DeconvADC1_Umax", "Max U strip Deconv ADC1", "fHitDeconvADC1_MaxUstrip" },
+    { "hit.DeconvADC2_Umax", "Max U strip deconv ADC2", "fHitDeconvADC2_MaxUstrip" },
+    { "hit.DeconvADC3_Umax", "Max U strip deconv ADC3", "fHitDeconvADC3_MaxUstrip" },
+    { "hit.DeconvADC4_Umax", "Max U strip deconv ADC4", "fHitDeconvADC4_MaxUstrip" },
+    { "hit.DeconvADC5_Umax", "Max U strip deconv ADC5", "fHitDeconvADC5_MaxUstrip" },
+    { "hit.DeconvADC0_Vmax", "Max V strip deconv ADC0", "fHitDeconvADC0_MaxVstrip" },
+    { "hit.DeconvADC1_Vmax", "Max V strip deconv ADC1", "fHitDeconvADC1_MaxVstrip" },
+    { "hit.DeconvADC2_Vmax", "Max V strip deconv ADC2", "fHitDeconvADC2_MaxVstrip" },
+    { "hit.DeconvADC3_Vmax", "Max V strip deconv ADC3", "fHitDeconvADC3_MaxVstrip" },
+    { "hit.DeconvADC4_Vmax", "Max V strip deconv ADC4", "fHitDeconvADC4_MaxVstrip" },
+    { "hit.DeconvADC5_Vmax", "Max V strip deconv ADC5", "fHitDeconvADC5_MaxVstrip" },    
     { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
     { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
     { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },

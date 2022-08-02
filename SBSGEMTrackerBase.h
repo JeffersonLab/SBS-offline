@@ -39,6 +39,9 @@ public:
   inline void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); fConstraintWidth_Front_IsInitialized = true; }
   inline void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); fConstraintWidth_Back_IsInitialized = true; }
 
+  inline void SetConstraintWidth_theta( double dth ){ fConstraintWidth_theta = dth; }
+  inline void SetConstraintWidth_phi( double dph ){ fConstraintWidth_phi = dph; }
+  
   inline void SetPmin( double pmin ){ fPmin_track = pmin; }
   inline void SetPmax( double pmax ){ fPmax_track = pmax; }
   inline void SetMomentumRange( double pmin, double pmax ){ fPmin_track = pmin; fPmax_track = pmax; }
@@ -201,9 +204,13 @@ protected:
   TVector2 fConstraintWidth_Front;
   TVector2 fConstraintWidth_Back;
 
-  TVector2 fConstraintSlope_Min; //Min and max slope along X and Y
-  TVector2 fConstraintSlope_Max; //Min and max slope along X and Y
+  double fConstraintWidth_theta;
+  double fConstraintWidth_phi;
 
+  //For now these aren't used
+  // TVector2 fConstraintSlope_Min; //Min and max slope along X and Y
+  // TVector2 fConstraintSlope_Max; //Min and max slope along X and Y
+  
   bool fConstraintPoint_Front_IsInitialized;
   bool fConstraintPoint_Back_IsInitialized;
   bool fConstraintWidth_Front_IsInitialized;
@@ -329,8 +336,12 @@ protected:
   std::vector<double> fHitVADC; // cluster ADC sum, V strips
   std::vector<double> fHitUADCmaxstrip; //ADC sum on max U strip
   std::vector<double> fHitVADCmaxstrip; //ADC sum on max V strip
+  std::vector<double> fHitUADCmaxstrip_deconv; //ADC sum on max U strip, deconvoluted
+  std::vector<double> fHitVADCmaxstrip_deconv; //ADC sum on max V strip, deconvoluted
   std::vector<double> fHitUADCmaxsample; //max ADC sample on max U strip
   std::vector<double> fHitVADCmaxsample; //max ADC sample on max V strip
+  std::vector<double> fHitUADCmaxsample_deconv; //max deconvoluted ADC sample on max U strip
+  std::vector<double> fHitVADCmaxsample_deconv; //max deconvoluted ADC sample on max V strip
   std::vector<double> fHitUADCmaxclustsample;
   std::vector<double> fHitVADCmaxclustsample;
   std::vector<double> fHitADCasym; // (ADCU-ADCV)/(ADCU + ADCV)
@@ -341,28 +352,46 @@ protected:
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
   std::vector<double> fHitUTimeMaxStripFit; //fitted strip t0
   std::vector<double> fHitVTimeMaxStripFit; //fitted strip t0
+  std::vector<double> fHitUTimeMaxStripDeconv; //fitted strip t0
+  std::vector<double> fHitVTimeMaxStripDeconv; //fitted strip t0
   std::vector<double> fHitDeltaT; // TU - TV;
   std::vector<double> fHitTavg; //(TU+TV)/2
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
   std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster
   std::vector<double> fHitIsampMaxVstrip; //same but for max strip in cluster
+  std::vector<double> fHitIsampMaxUstripDeconv; //Same but for max strip in cluster, deconvoluted
+  std::vector<double> fHitIsampMaxVstripDeconv; //same but for max strip in cluster, deconvoluted
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
   std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC.
   //For pulse shape studies:
   std::vector<double> fHitADCfrac0_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac1_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac2_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac3_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac4_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac5_MaxUstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac0_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac1_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac2_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac3_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac4_MaxVstrip; //time sample 0 of max U strip
-  std::vector<double> fHitADCfrac5_MaxVstrip; //time sample 0 of max U strip
-
+  std::vector<double> fHitADCfrac1_MaxUstrip; //time sample 1 of max U strip
+  std::vector<double> fHitADCfrac2_MaxUstrip; //time sample 2 of max U strip
+  std::vector<double> fHitADCfrac3_MaxUstrip; //time sample 3 of max U strip
+  std::vector<double> fHitADCfrac4_MaxUstrip; //time sample 4 of max U strip
+  std::vector<double> fHitADCfrac5_MaxUstrip; //time sample 5 of max U strip
+  std::vector<double> fHitADCfrac0_MaxVstrip; //time sample 0 of max V strip
+  std::vector<double> fHitADCfrac1_MaxVstrip; //time sample 1 of max V strip
+  std::vector<double> fHitADCfrac2_MaxVstrip; //time sample 2 of max V strip
+  std::vector<double> fHitADCfrac3_MaxVstrip; //time sample 3 of max V strip
+  std::vector<double> fHitADCfrac4_MaxVstrip; //time sample 4 of max V strip
+  std::vector<double> fHitADCfrac5_MaxVstrip; //time sample 5 of max V strip
+  //Deconvoluted ADC samples: 
+  std::vector<double> fHitDeconvADC0_MaxUstrip; //time sample 0 of max U strip
+  std::vector<double> fHitDeconvADC1_MaxUstrip; //time sample 1 of max U strip
+  std::vector<double> fHitDeconvADC2_MaxUstrip; //time sample 2 of max U strip
+  std::vector<double> fHitDeconvADC3_MaxUstrip; //time sample 3 of max U strip
+  std::vector<double> fHitDeconvADC4_MaxUstrip; //time sample 4 of max U strip
+  std::vector<double> fHitDeconvADC5_MaxUstrip; //time sample 5 of max U strip
+  std::vector<double> fHitDeconvADC0_MaxVstrip; //time sample 0 of max V strip
+  std::vector<double> fHitDeconvADC1_MaxVstrip; //time sample 1 of max V strip
+  std::vector<double> fHitDeconvADC2_MaxVstrip; //time sample 2 of max V strip
+  std::vector<double> fHitDeconvADC3_MaxVstrip; //time sample 3 of max V strip
+  std::vector<double> fHitDeconvADC4_MaxVstrip; //time sample 4 of max V strip
+  std::vector<double> fHitDeconvADC5_MaxVstrip; //time sample 5 of max V strip
+  
+  
   //And I THINK that's all we need to get started!
   std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
   std::vector<UInt_t> fHitU_CM_GOOD;
@@ -445,7 +474,7 @@ protected:
   bool fDumpGeometryInfo; //default to FALSE
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq; 
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq, fCMbiasfile_dbase; 
   // input files for (optional) loading of pedestals from database:
 
   std::string fpedfilename;
