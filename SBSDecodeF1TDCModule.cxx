@@ -156,7 +156,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
    // To account for multiple slots
    Int_t lastSlot = 0;
    Int_t idxSlot = -1;
-   Int_t trigTime = 0;
+   trigTime = 0;
    Int_t raw_cor = 0;
    // Expect the F1 first word to be an event counter
    //  The second word should be 0xf1daffff
@@ -245,11 +245,8 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
               // For now, only load data when our slot number matches that of
               // the base class
               if((Int_t)fSlot == f1slot) {
-                raw_cor =  raw-trigTime;
-                if(raw<trigTime) // That means the roll-over already happened
-                  raw_cor += (pow(2,16)-1);
-		// if(raw<trigTime) std::cout << " chan = " << chan << " raw " << raw << " raw_cor  " << raw_cor << " trig time =  " << trigTime << std::endl; 
-		/*Int_t status = */sldat->loadData("tdc",chan,raw_cor,0); // set LE
+                raw_cor =  raw;
+                 sldat->loadData("tdc",chan,raw_cor,trigTime); // 
               }
 
 		  if((*loc)!=0xf1daffff && nF1>0 && f1slot!=30) { // Make sure memory is allocated to save data

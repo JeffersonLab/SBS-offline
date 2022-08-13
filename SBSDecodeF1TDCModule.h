@@ -40,6 +40,7 @@ public:
 
    Int_t GetNumHits(Int_t chan);// const { return fNumHits; };
    Int_t Decode(const UInt_t *p) { return 0; };
+   Int_t GetTriggerTime()  { return trigTime; };
 
    // For multiple slots
    Int_t GetNumSlots() const { return nF1; };
@@ -59,6 +60,7 @@ private:
    EResolution fResol;
    Bool_t IsInit;
    Int_t slotmask, chanmask, datamask;
+   Int_t trigTime;
 
    // For multiple slots
    Int_t nF1;
