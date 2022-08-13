@@ -122,8 +122,12 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "dxdydz",         &dxyz,     kDoubleV, 3},  ///< element spacing (dx,dy,dz)
     { "row_offset_pattern",        &row_offset_pattern,   kDoubleV, 0, true }, ///< [Optional] conflicts with ncols
     { "is_mc",      &is_mc, kInt,    0, true }, ///< Optional channel map
+    { "F1_RollOver",      &fF1_RollOver, kInt,    0, true }, ///< 
+    { "F1_TimeWindow",      &fF1_TimeWindow, kInt,    0, true }, ///< 
     { 0 } ///< Request must end in a NULL
   };
+  fF1_RollOver = 64964;
+  fF1_TimeWindow = 13000;
   err = LoadDB( file, date, config_request, fPrefix );
   if(err) {
     fclose(file);
@@ -1132,7 +1136,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   //
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   Double_t reftime  = 0;
-  //
+  // For VETROC the TDC hits are not in time order. Need to arrange in time order.
   std::vector<TDCHits> tdchit;
   if(fModeTDC == SBSModeTDC::kTDC )  {
     for(Int_t ihit = 0; ihit < nhit; ihit++) {
@@ -1150,13 +1154,22 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
       
     } else {
        Int_t nhits = refblk->TDC()->GetNHits(); 
-       Double_t MinDiff = 10000.;
+      Double_t MinDiff = 10000.;
        Int_t HitIndex = 0;
        Double_t RefCent = refblk->TDC()->GetGoodTimeCut();
        for (Int_t ih=0;ih<nhits;ih++) {
-	 if (abs(refblk->TDC()->GetData(ih)-RefCent) < MinDiff) {
+ 	 Double_t tempdata= refblk->TDC()->GetData(ih);
+	 if (d->GetModel() == 6401) {
+ 	    tempdata= refblk->TDC()->GetDataRaw(ih);
+            Int_t trigtime = refblk->TDC()->GetTrigTime(ih);
+	    if ( trigtime>tempdata) tempdata+=fF1_RollOver;
+	  Double_t cal=refblk->TDC()->GetCal();
+	  Double_t offset=refblk->TDC()->GetOffset();
+	  tempdata=(tempdata-trigtime-offset)*cal;
+	 }
+	 if (abs(tempdata-RefCent) < MinDiff) {
            HitIndex = ih;
-	   MinDiff = abs(refblk->TDC()->GetData(ih)-RefCent);
+	   MinDiff = abs(tempdata-RefCent);
 	 }
        }      
        reftime = refblk->TDC()->GetDataRaw(HitIndex);
@@ -1170,18 +1183,30 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   Int_t elemID=blk->GetID();
   for(Int_t ihit = 0; ihit < nhit; ihit++) {
         if(fModeTDC == SBSModeTDC::kTDCSimple) {
-	  if (evdata.GetRawData(d->crate, d->slot, chan, ihit) ==0) { // only process LE
-    blk->TDC()->ProcessSimple(elemID,evdata.GetData(d->crate, d->slot, chan, ihit) - reftime,ihit);
+	  UInt_t rawdata = evdata.GetData(d->crate, d->slot, chan, ihit);
+	   if (!IsRef && d->GetModel() == 6401) { // F1 TDC
+	     if ( abs(rawdata-reftime) > fF1_TimeWindow) {
+	       if (rawdata > reftime) reftime+=fF1_RollOver; 
+	       if (rawdata <= reftime) rawdata+=fF1_RollOver; 
+	     } 
+	   }
+	  UInt_t TrigTime = 0;
+	   Int_t LeadingEdge=0;
+	  if (d->GetModel() == 6401) {
+	    TrigTime = evdata.GetRawData(d->crate, d->slot, chan, ihit); // for F1 "raw" is trigger time
+	  } else {
+	    LeadingEdge=evdata.GetRawData(d->crate, d->slot, chan, ihit); // for other TDC "raw" is the leading edge bit
 	  }
+	  if (LeadingEdge ==0) blk->TDC()->ProcessSimple(elemID,rawdata - reftime,ihit,TrigTime);
 	} else {
-      edge = tdchit[ihit].edge;
+          edge = tdchit[ihit].edge;
       //           std::cout << ihit << " " << evdata.GetData(d->crate, d->slot, chan, ihit) - reftime << " " << edge << std::endl;
-    if (edge ==1 && ihit ==0) continue; // skip first hit if trailing edge
-    if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
-    blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
-  }
+          if (edge ==1 && ihit ==0) continue; // skip first hit if trailing edge
+          if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
+          blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
+       }
   if (!blk->TDC()->HasData()) {
-          Double_t val=tdchit[0].rawtime ;
+         Double_t val=tdchit[0].rawtime ;
 	  blk->TDC()->Process(elemID,val - reftime , edge);
 	  /*
             if (nhit==1)  {	 
@@ -1240,7 +1265,13 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     fRefGood.TDClayer.push_back(blk->GetLayer());
     fRefGood.TDCelemID.push_back(blk->GetID());
         const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
-        fRefGood.t.push_back(hit.le.val);
+	Double_t tempval=hit.le.val;
+        if(fModeTDC == SBSModeTDC::kTDCSimple) { // need to recalculate for F1 data
+	  Double_t cal=blk->TDC()->GetCal();
+	  Double_t offset=blk->TDC()->GetOffset();
+	  tempval= (hit.le.raw-hit.TrigTime-offset)*cal;
+	}
+        fRefGood.t.push_back(tempval);
         fRefGood.t_mult.push_back(blk->TDC()->GetNHits());
         if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
           fRefGood.t_te.push_back(hit.te.val);
@@ -1262,7 +1293,13 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
             const std::vector<SBSData::TDCHit> &hits = blk->TDC()->GetAllHits();
             for( const auto &hit : hits) {
               fRefRaw.TDCelemID.push_back(hit.elemID);
-              fRefRaw.t.push_back(hit.le.val);
+	      Double_t tempval=hit.le.val;
+              if(fModeTDC == SBSModeTDC::kTDCSimple) { // need to recalculate for F1 data
+	         Double_t cal=blk->TDC()->GetCal();
+	         Double_t offset=blk->TDC()->GetOffset();
+	         tempval= (hit.le.raw-hit.TrigTime-offset)*cal;
+	      }
+	         fRefRaw.t.push_back(tempval);
                if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
               fRefRaw.t_te.push_back(hit.te.val);
               fRefRaw.t_ToT.push_back(hit.ToT.val);
