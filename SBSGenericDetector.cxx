@@ -1205,20 +1205,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
           if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
           blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
        }
-  if (!blk->TDC()->HasData()) {
-         Double_t val=tdchit[0].rawtime ;
-	  blk->TDC()->Process(elemID,val - reftime , edge);
-	  /*
-            if (nhit==1)  {	 
-	  std::cout << "Only one hit in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum() << std::endl;
-       } else if (nhit==2) {
-	  std::cout << "Only two hits in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum()<< std::endl;	 
-       } else {
-	  /std::cout << "More than two hits in time but not LE ref index = "  << d->refindex << " nhits = " << nhit  << " val = " << val << " event num = " << evdata.GetEvNum()<< std::endl;
-       }	 
-	  */
-  }
-  }
+   }
 
   return nhit;
 }
