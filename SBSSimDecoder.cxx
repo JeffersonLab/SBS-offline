@@ -118,6 +118,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"mc_vx",   "MC vertex x",   "fVx"},
     {"mc_vy",   "MC vertex y",   "fVy"},
     {"mc_vz",   "MC vertex z",   "fVz"},
+    {"mc_ep",   "MC Initial momentum of the final state electron in GeV",   "fEp"},
+    {"mc_np",   "MC Initial momentum of the final state nucleon in GeV",   "fNp"},
     {"mc_nucl",  "MC Initial (struck) nucleon type: 1 = proton, 0 = neutron",   "fNucl"},
     {"mc_fnucl",  "MC Final-state (detected) nucleon type: 1 = proton, 0 = neutron",   "fFnucl"},
     {"nbbtracks",   "number of BB MC tracks",   "fNBBtracks"},
@@ -225,6 +227,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fVx = simEvent->Tgmn->ev_vx;
   fVy = simEvent->Tgmn->ev_vy;
   fVz = simEvent->Tgmn->ev_vz;
+  fEp = simEvent->Tgmn->ev_ep;
+  fNp = simEvent->Tgmn->ev_np;
   fNucl = simEvent->Tgmn->ev_nucl;
   fFnucl = simEvent->Tgmn->ev_nucl;
   fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
