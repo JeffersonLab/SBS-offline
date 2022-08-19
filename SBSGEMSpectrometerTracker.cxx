@@ -319,7 +319,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 
   //Triggers decoding of each module:
 
-  Int_t stripcounter = 0;
+  //Int_t stripcounter = 0;
   for( auto& module: fModules ) {
 
     module->Decode(evdata);
@@ -327,7 +327,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
     //std::cout << "Decoding module " << (*it)->GetName() << ", nstrips fired = " << (*it)->fNstrips_hit << std::endl;
 
 
-    stripcounter += module->fNstrips_hit;
+    //stripcounter += module->fNstrips_hit;
     //std::cout << "done..." << std::endl;
   }
 
@@ -547,7 +547,14 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.eresidv", "v hit residual with fitted track (exclusive method)", "fHitEResidV" },
     { "hit.ADCU", "cluster ADC sum, U strips", "fHitUADC" },
     { "hit.ADCV", "cluster ADC sum, V strips", "fHitVADC" },
+    { "hit.ADCU_deconv", "cluster deconvoluted ADC sum, U strips", "fHitUADCclust_deconv" },
+    { "hit.ADCV_deconv", "cluster deconvoluted ADC sum, V strips", "fHitVADCclust_deconv" },
+    { "hit.ADCmaxsampUclust_deconv", "max deconv. cluster-summed ADC sample, U strips", "fHitUADCclust_maxsamp_deconv" },
+    { "hit.ADCmaxsampVclust_deconv", "max deconv. cluster-summed ADC sample, V strips", "fHitVADCclust_maxsamp_deconv" },
+    { "hit.ADCmaxcomboUclust_deconv", "max deconv. cluster-summed two-sample combo, U strips", "fHitUADCclust_maxcombo_deconv" },
+    { "hit.ADCmaxcomboVclust_deconv", "max deconv. cluster-summed two-sample comboe, V strips", "fHitVADCclust_maxcombo_deconv" },
     { "hit.ADCavg", "cluster ADC average", "fHitADCavg" },
+    { "hit.ADCavg_deconv", "cluster ADC average deconvoluted (ADCU+ADCV)/2", "fHitADCavg_deconv" },
     { "hit.ADCmaxstripU", "ADC sum of max U strip", "fHitUADCmaxstrip" },
     { "hit.ADCmaxstripV", "ADC sum of max V strip", "fHitVADCmaxstrip" },
     { "hit.ADCmaxsampU", "max sample of max U strip", "fHitUADCmaxsample" },
@@ -558,9 +565,14 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.DeconvADCmaxstripV", "deconv ADC sum of max V strip", "fHitVADCmaxstrip_deconv" },
     { "hit.DeconvADCmaxsampU", "deconv max sample of max U strip", "fHitUADCmaxsample_deconv" },
     { "hit.DeconvADCmaxsampV", "deconv max sample of max V strip", "fHitVADCmaxsample_deconv" },
+    { "hit.DeconvADCmaxcomboU", "deconv max two-sample combo of max U strip", "fHitUADCmaxcombo_deconv" },
+    { "hit.DeconvADCmaxcomboV", "deconv max two-sample combo of max V strip", "fHitVADCmaxcombo_deconv" },
     { "hit.ADCasym", "Hit ADC asymmetry: (ADCU - ADCV)/(ADCU + ADCV)", "fHitADCasym" },
+    { "hit.ADCasym_deconv", "Hit ADC asymmetry (deconv): (ADCU-ADCV)/(ADCU+ADCV)", "fHitADCasym_deconv" },
     { "hit.Utime", "cluster timing based on U strips", "fHitUTime" },
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
+    { "hit.UtimeDeconv", "U strip deconvoluted cluster time", "fHitUTimeDeconv" },
+    { "hit.VtimeDeconv", "V strip deconvoluted cluster time", "fHitVTimeDeconv" },
     { "hit.UtimeMaxStrip", "cluster timing based on U strips", "fHitUTimeMaxStrip" },
     { "hit.VtimeMaxStrip", "cluster timing based on V strips", "fHitVTimeMaxStrip" },
     { "hit.UtimeMaxStripDeconv", "cluster timing based on U strips", "fHitUTimeMaxStripDeconv" },
@@ -569,14 +581,24 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.VtimeMaxStripFit", "Strip fitted t0 for max strip in cluster", "fHitVTimeMaxStripFit" },
     { "hit.deltat", "cluster U time - V time", "fHitDeltaT" },
     { "hit.Tavg", "hit T average", "fHitTavg" },
+    { "hit.deltat_deconv", "deconvoluted cluster U time - Vtime", "fHitDeltaTDeconv" },
+    { "hit.Tavg_deconv", "deconvoluted average U,V cluster time", "fHitTavgDeconv" },
     { "hit.isampmaxUclust", "peak time sample in cluster-summed U ADC samples", "fHitIsampMaxUclust" },
     { "hit.isampmaxVclust", "peak time sample in cluster-summed V ADC samples", "fHitIsampMaxVclust" },
+    { "hit.isampmaxUclustDeconv", "peak time sample max. deconv. U cluster sum", "fHitIsampMaxUclustDeconv" },
+    { "hit.isampmaxVclustDeconv", "peak time sample max. deconv. V cluster sum", "fHitIsampMaxVclustDeconv" },
     { "hit.isampmaxUstrip", "peak time sample in max U strip", "fHitIsampMaxUstrip" },
     { "hit.isampmaxVstrip", "peak time sample in max V strip", "fHitIsampMaxVstrip" },
     { "hit.isampmaxUstripDeconv", "peak time sample in max U strip", "fHitIsampMaxUstripDeconv" },
     { "hit.isampmaxVstripDeconv", "peak time sample in max V strip", "fHitIsampMaxVstripDeconv" },
+    { "hit.icombomaxUstripDeconv", "peak time sample combo in max U strip", "fHitIcomboMaxUstripDeconv" },
+    { "hit.icombomaxVstripDeconv", "peak time sample combo in max V strip", "fHitIcomboMaxVstripDeconv" },
+    { "hit.icombomaxUclustDeconv", "max two-sample combo deconvoluted U cluster", "fHitIcomboMaxUclustDeconv" },
+    { "hit.icombomaxVclustDeconv", "max two-sample combo deconvoluted V cluster", "fHitIcomboMaxVclustDeconv" },
     { "hit.ccor_clust", "correlation coefficient between cluster-summed U and V samples", "fHitCorrCoeffClust" },
     { "hit.ccor_strip", "correlation coefficient between U and V samples on strips with max ADC", "fHitCorrCoeffMaxStrip" },
+    { "hit.ccor_clust_deconv", "correlation coefficient between cluster-summed U and V deconvoluted samples", "fHitCorrCoeffClustDeconv" },
+    { "hit.ccor_strip_deconv", "correlation coefficient between U and V max strip deconvoluted samples", "fHitCorrCoeffMaxStripDeconv" },
     { "hit.ENABLE_CM_U", "Enable CM flag for max U strip in this hit", "fHitU_ENABLE_CM" },
     { "hit.ENABLE_CM_V", "Enable CM flag for max V strip in this hit", "fHitV_ENABLE_CM" },
     { "hit.CM_GOOD_U", "Enable CM flag for max U strip in this hit", "fHitU_CM_GOOD" },
