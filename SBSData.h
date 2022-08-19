@@ -69,7 +69,8 @@ namespace SBSData {
     SingleData te; //< Trailing edge time
     SingleData ToT;   //< Time-over-Threshold (if trailing edge provided)
     Int_t elemID; //< Element ID
-  };
+    UInt_t TrigTime; //< F1 trigger time
+ };
 
   ///////////////////////////////////////////////////////////////////////////////
   // TDC data structure
@@ -162,6 +163,7 @@ namespace SBSData {
       SingleData GetTrail(UInt_t i) const { return GetHit(i).te;    }
       TDCHit GetGoodHit()           const { return fTDC.hits[fTDC.good_hit]; }
       Int_t GetNHits()                    { return fTDC.hits.size();    }
+      UInt_t GetTrigTime(UInt_t i)  const { return GetHit(i).TrigTime;   }
       std::vector<TDCHit> GetAllHits() const { return  fTDC.hits; }
 
       // Helper functions to get leading edge info
@@ -177,7 +179,7 @@ namespace SBSData {
       
       // Process data sets raw value, ped-subtracted and calibrated data
       virtual void Process(Int_t elemID, Double_t var, Double_t edge = 0);
-      virtual void ProcessSimple(Int_t elemID, Double_t var, Int_t nhit);
+      virtual void ProcessSimple(Int_t elemID, Double_t var, Int_t nhit,UInt_t TrigTime);
 
       // Do we have TDC data for this event?
       Bool_t HasData() { return fHasData; }

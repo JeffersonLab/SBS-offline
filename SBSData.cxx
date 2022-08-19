@@ -61,12 +61,14 @@ namespace SBSData {
     SetGoodTimeCut(GoodTimeCut);
   }
 
-  void TDC::ProcessSimple(Int_t elemID, Double_t val, Int_t nhit)
+  void TDC::ProcessSimple(Int_t elemID, Double_t val, Int_t nhit,UInt_t TrigTime)
   {
     fTDC.hits.push_back(TDCHit());
-    TDCHit *hit = &fTDC.hits[nhit];
+    Int_t size = fTDC.hits.size();
+    TDCHit *hit = &fTDC.hits[size-1];
     hit->elemID = elemID;
-      hit->le.raw = val;
+     hit->TrigTime = TrigTime;
+     hit->le.raw = val;
       hit->le.val = (val-fTDC.offset)*fTDC.cal;
       hit->te.raw = 0;
       hit->te.val = 0;
@@ -91,6 +93,7 @@ namespace SBSData {
     }
     TDCHit *hit = &fTDC.hits[idx];
     hit->elemID = elemID;
+    hit->TrigTime = 0;
     if( edge == 0 ) { // Leading edge
       hit->le.raw = val;
       hit->le.val = (val-fTDC.offset)*fTDC.cal;

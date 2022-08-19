@@ -178,6 +178,8 @@ protected:
   Bool_t fDisableRefTDC; //< Reference TDC may be optionally disabled
   Bool_t fStoreEmptyElements; //< Do not store data for empty elements in rootfile
   Bool_t fIsMC; // flag to indicate if data are simulated;
+  Int_t fF1_RollOver;
+  Int_t fF1_TimeWindow;
   
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)
