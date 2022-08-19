@@ -142,18 +142,26 @@ namespace SBSData {
     for(size_t i = 0; i < vals.size(); i++ ) {
       fSamples.samples_raw[i] = vals[i]*fSamples.ChanTomV;
     }
-    // First determine pedestal in first four samples
-    Double_t pedsum=0;
-    Int_t NPedsum=GetNPedBin();
+    // Determining pedestal in first and last four samples. Will choose the
+    // minimum of the two.
+    Double_t pedsum_fsamps=0, pedsum_lsamps=0;
+    Int_t NPedsum=GetNPedBin(), totTimeSamps=vals.size();
+    
     NPedsum= TMath::Min(NPedsum,int(vals.size()));
-    //       std::cout << " Npedsum = " << NPedsum << " " << GetNPedBin() << std::endl ;
-    for(Int_t i = 0; i <NPedsum ; i++ ) {
-      pedsum+=fSamples.samples_raw[i];
+    // std::cout << " Npedsum = " << NPedsum << " " << GetNPedBin() << std::endl;
+    
+    for(Int_t i = 0; i < NPedsum ; i++ ) {
+      // Computing pedestal using first N samples
+      pedsum_fsamps += fSamples.samples_raw[i];
+      // Computing pedestal using last N samples
+      pedsum_lsamps += fSamples.samples_raw[(totTimeSamps-1)-i];
     }
-    SetPed(pedsum/NPedsum);
+   
+    SetPed( TMath::Min(pedsum_fsamps,pedsum_lsamps)/NPedsum );
     for(size_t i = 0; i < vals.size(); i++ ) {
       fSamples.samples[i] = (fSamples.samples_raw[i]-fSamples.ped)*fSamples.cal;
     }
+    
     // Try and fixd sample threshold crossing above the pedestal
     Double_t ThresVal=GetThres(); // mV
     UInt_t ThresCrossBin=TMath::Max(NPedsum-1,0);

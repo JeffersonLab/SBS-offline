@@ -156,6 +156,10 @@ protected:
   Double_t fVx;
   Double_t fVy;
   Double_t fVz;
+  Double_t fEp;
+  Double_t fNp;
+  Int_t fNucl;
+  Int_t fFnucl;
   Int_t fNBBtracks;
   std::vector<Int_t> fBBtrack_Nhits;
   std::vector<Int_t> fBBtrack_TID;
