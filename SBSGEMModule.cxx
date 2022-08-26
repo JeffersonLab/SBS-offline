@@ -115,7 +115,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCM_online.resize( fN_MPD_TIME_SAMP );
   
   //default to 
-  fMAX2DHITS = 250000;
+  //fMAX2DHITS = 250000;
+  fMAX2DHITS = 100000;
 
   fRMS_ConversionFactor = sqrt(fN_MPD_TIME_SAMP); //=2.45
 
@@ -3266,7 +3267,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   //fHits.clear();
   fHits.resize( std::min( fNclustU*fNclustV, fMAX2DHITS ) );
 
-  // if( fNclustU * fNclustV > fMAX2DHITS ){
+  //if( fNclustU * fNclustV > fMAX2DHITS ){
   //   std::cout << "Warning in SBSGEMModule::fill_2D_hit_arrays(): 
   // }
 
@@ -3285,6 +3286,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   
   //This routine is simple: just form all possible 2D hits from combining one "U" cluster with one "V" cluster. Here we assume that find_clusters_1D has already
   //been called, if that is NOT the case, then this routine will just do nothing:
+  bool maxhits_exceeded = false;
+
   for( UInt_t iu=0; iu<fNclustU; iu++ ){
     for( UInt_t iv=0; iv<fNclustV; iv++ ){
 
@@ -3325,8 +3328,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	//Check if candidate 2D hit is inside the constraint region before doing anything else:
 	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
 	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax &&
-	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) &&
-	    fN2Dhits < fMAX2DHITS ){
+	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) ){
     
 	  hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
 	  hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
@@ -3402,12 +3404,20 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  
 	  //Okay, that should be everything. Now add it to the 2D hit array:
 	  //fHits.push_back( hittemp );
-	  if( add_hit ) fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
+	  if( add_hit && fN2Dhits < fMAX2DHITS ) {
+	    fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
+	  } else if( add_hit ){ //
+	    maxhits_exceeded = true;
+	  }
 	  //fN2Dhits++;
 	} //end check that 2D point is inside track search region
       } //end check that both U and V clusters passed filtering criteria:
     } //end loop over "V" clusters
   } //end loop over "U" clusters
+
+  if( maxhits_exceeded ){
+    std::cout << "Warning in [SBSGEMModule::fill_2D_hit_arrays()]: good 2D hit candidates exceeded user maximum of " << fMAX2DHITS << " for module " << GetName() << ", 2D hit list truncated" << std::endl;
+  }
 
   fHits.resize( fN2Dhits );
   

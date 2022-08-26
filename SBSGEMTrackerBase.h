@@ -100,8 +100,8 @@ protected:
   void PrintNegEvents( const char *fname );
   void PrintGeometry( const char *fname );
   
-  Long64_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
-  Long64_t InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
+  Double_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
+  Double_t InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
   //Retrieve the global position of a hit by module and hit index:
   TVector3 GetHitPosGlobal( int modidx, int clustidx );

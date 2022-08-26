@@ -871,12 +871,12 @@ void SBSGEMTrackerBase::InitGridBins() {
 }
 
 //Initialize the "hit list" arrays that are used by the track-finding algorithm: these arrays are UNCHANGING throughout the iterations of track-finding:
-Long64_t SBSGEMTrackerBase::InitHitList(){
-
+Double_t SBSGEMTrackerBase::InitHitList(){
   //clear out any old information:
   layers_with_2Dhits.clear();
+  layerswithfreehits.clear();
 
-  Long64_t ncombos_all_layers=1;
+  Double_t ncombos_all_layers=1;
   
   for( int layer=0; layer<fNlayers; layer++ ){
 
@@ -891,13 +891,14 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
       int module = *imod;
       n2Dhits_tot += fModules[module]->fN2Dhits;
     }
+
+    //std::cout << "layer, n2Dhits_tot = " << layer << ", " << n2Dhits_tot << std::endl;
+
     modindexhit2D[layer].resize( n2Dhits_tot );
     clustindexhit2D[layer].resize( n2Dhits_tot );
     hitused2D[layer].resize( n2Dhits_tot );
     gridbinhit2D[layer].resize( n2Dhits_tot );
 
-
-    
     freehitlist_layer[layer].resize( n2Dhits_tot );
     
     N2Dhits_layer[layer] = 0;
@@ -908,6 +909,7 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
     int ngridbins = fGridNbinsX_layer[layer]*fGridNbinsY_layer[layer];
     for( int ibin=0; ibin<ngridbins; ibin++ ){
       Nfreehits_binxy_layer[layer][ibin] = 0;
+      freehitlist_binxy_layer[layer][ibin].clear(); //clear this out in case there might be something left over from a previous event!
     }
     
     //loop over the hits a second time, this time count up how many are "good"
@@ -929,15 +931,15 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
 
 	  //also populate the "free hit" lists:
 
-	  freehitlist_layer[layer][ngoodhits] = ngoodhits;
+	  freehitlist_layer[layer][ngoodhits] = ngoodhits; //potentially problematic
 
 	  int binxytemp = GetGridBin( module, ihit );
 
 	  gridbinhit2D[layer][ngoodhits] = binxytemp; 
 	  
-	  if( binxytemp >= 0 ){
+	  if( binxytemp >= 0 && binxytemp < ngridbins ){
 	    //int nhitsbin = Nfreehits_binxy_layer[layer][binxytemp];
-	    Nfreehits_binxy_layer[layer][binxytemp]++;
+	    Nfreehits_binxy_layer[layer][binxytemp]++; //also potentially problematic
 	    //binswithfreehits_layer[layer].push_back( binxytemp );
 	  }
 
@@ -997,7 +999,7 @@ Long64_t SBSGEMTrackerBase::InitHitList(){
   
 }
 
-Long64_t SBSGEMTrackerBase::InitFreeHitList(){ 
+Double_t SBSGEMTrackerBase::InitFreeHitList(){
   //We should clear these things out at the beginning of each iteration just in case:
   layerswithfreehits.clear();
   //freehitlist_layer.clear();
@@ -1009,7 +1011,30 @@ Long64_t SBSGEMTrackerBase::InitFreeHitList(){
   //freehitlist_goodxy.clear();
   //binswithfreehits_layer.clear();
   
-  Long64_t Ncombos=1;
+  layerswithfreehits_goodxy.clear();
+
+  // Anything that doesn't get cleared out each event or 
+  // each track-finding iteration but relies on a "counter" variable to keep track of the number of hits should get initialized to zero for
+  // and/or cleared for ALL layers at the beginning of each track-finding iteration: 
+  // ALL layers here:
+  for( int ilayer=0; ilayer<fNlayers; ilayer++ ){
+    Nfreehits_layer[ilayer] = 0;
+    
+    int nbins_gridxy = fGridNbinsX_layer[ilayer]*fGridNbinsY_layer[ilayer];
+    
+    for( int ibin=0; ibin<nbins_gridxy; ibin++ ){
+      Nfreehits_binxy_layer[ilayer][ibin] = 0;
+    }
+
+    binswithfreehits_layer[ilayer].clear();
+
+    //probably unnecessary, but good to be safe:
+    freehitlist_goodxy[ilayer].clear();
+    //NOTE: freehitlist_binxy_layer[ilayer][ibin] has already been resized to its maximum possible size in InitHitList; we will rely on the counter 
+    //variable to avoid mixing in old event data by accident
+  }
+
+  Double_t Ncombos=1.0;
 
   //This is called at the beginning of each track-finding iteration:
   for( auto ilay = layers_with_2Dhits.begin(); ilay != layers_with_2Dhits.end(); ++ilay ){
@@ -1051,7 +1076,7 @@ Long64_t SBSGEMTrackerBase::InitFreeHitList(){
 	
 	int binxytemp = GetGridBin( module, clustidx );
 
-	if( binxytemp >= 0 ){
+	if( binxytemp >= 0 && binxytemp < nbins_gridxy ){
 	  //Nfreehits_binxy_layer[layer][binxytemp]++;
 	  freehitlist_binxy_layer[layer][binxytemp][Nfreehits_binxy_layer[layer][binxytemp]] = ihit; //Here again, ihit locates this hit within the unchanging "hit list" array
 	  binswithfreehits_layer[layer].insert( binxytemp );
@@ -1191,13 +1216,13 @@ void SBSGEMTrackerBase::find_tracks(){
   //It is assumed that when we reach this stage, the hit reconstruction will have already been called. 
 
   //Initialize the (unchanging) hit list that will be used by the rest of the tracking procedure:
-  /*Long64_t Ncombos_allhits_all_layers = */
+  /*Double_t Ncombos_allhits_all_layers = */
   InitHitList();
 
   
   //std::cout << 
   
-  // std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized hit lists, number of layers fired = "
+  //std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized hit lists, number of layers fired = "
   // 	    << layers_with_2Dhits.size() << ", total hit combinations = " << Ncombos_allhits_all_layers << std::endl;
   //At this stage the static "hit lists" that we need for the tracking are initialized. Let's get started:
   
@@ -1222,9 +1247,9 @@ void SBSGEMTrackerBase::find_tracks(){
 
       //This happens once per track-finding iteration: if any tracks were found on the previous iteration, then their hits (and any others sharing the same 1D U or V clusters)
       //will have been marked as used, reducing the number of "available" hits for finding additional tracks:
-      Long64_t Ncombos_free = InitFreeHitList(); 
+      Double_t Ncombos_free = InitFreeHitList(); 
 
-      if( Ncombos_free > fMaxHitCombinations_Total ){
+      if( Ncombos_free > (double) fMaxHitCombinations_Total ){
 	std::cout << "Warning in [SBSGEMTrackerBase::find_tracks]: total potential hit combinations = "
 		  << Ncombos_free << ", exceeds user maximum of " << fMaxHitCombinations_Total
 		  << ", skipping tracking..." << std::endl;
@@ -1569,12 +1594,16 @@ void SBSGEMTrackerBase::find_tracks(){
 			  //	      for( int khit=0; khit<(int)freehitlist_binxy_layer[layer][binxy].size(); khit++ ){
 			  //we are no longer guaranteed that the size of the vector equals the number of free hits for these
 			  // "hit list" arrays"
-			  for ( int khit=0; khit<Nfreehits_binxy_layer[layer][binxy]; khit++ ){
-			    //this step can be computationally expensive:
-			    freehitlist_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
-			    layerswithfreehits_goodxy.insert( layer );
+
+			  if( binswithfreehits_layer[layer].find( binxy ) != binswithfreehits_layer[layer].end() ){
+
+			    for ( int khit=0; khit<Nfreehits_binxy_layer[layer][binxy]; khit++ ){
+			      //this step can be computationally expensive:
+			      freehitlist_goodxy[layer].push_back( freehitlist_binxy_layer[layer][binxy][khit] );
+			      layerswithfreehits_goodxy.insert( layer );
+			    }
 			  }
-			}  
+			}
 		      }
 		    }
 
