@@ -4,6 +4,7 @@
 #include "TDatime.h"
 #include "THaEvData.h"
 #include "THaApparatus.h"
+#include "THaRun.h"
 #include "TRotation.h"
 #include "TH1D.h"
 #include "TH2D.h"
@@ -1202,7 +1203,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
     
-    
+    if(fCODA_BUILD_ALL_SAMPLES != -1){
+      BUILD_ALL_SAMPLES = fCODA_BUILD_ALL_SAMPLES;
+      fPedSubFlag = (fCODA_BUILD_ALL_SAMPLES == 0);
+    }
+    if(fCODA_CM_ENABLED != -1) CM_ENABLED = fCODA_CM_ENABLED;
+ 
+
     // if( cm_flags_found ){
     //   std::cout << "cm flag defaults overridden by raw data, effChan = " << effChan << ", CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
     // }
@@ -3207,7 +3214,14 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   //Here we can create some histograms that will be written to the ROOT file:
   //This is a natural place to do the hit maps/efficiency maps:
   fZeroSuppress = fZeroSuppress && !fPedestalMode; 
+  fCODA_BUILD_ALL_SAMPLES = r->GetDAQInfo("VTP_MPDRO_BUILD_ALL_SAMPLES") == "1";
+  fCODA_CM_ENABLED = r->GetDAQInfo("VTP_MPDRO_ENABLE_CM") == "1";
   
+  if(r->GetNConfig() == 0){
+    fCODA_BUILD_ALL_SAMPLES = -1;
+    fCODA_CM_ENABLED = -1;
+  }
+
   //pulled these lines out of the if-block below to avoid code duplication:
   TString appname = (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName();
   appname.ReplaceAll(".","_");
