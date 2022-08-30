@@ -60,7 +60,7 @@ public:
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
 
-  bool CheckConstraint( double xtr, double ytr, double xptr, double yptr );
+  bool CheckConstraint( double xtr, double ytr, double xptr, double yptr, bool coarse=false );
   
   inline void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
   
@@ -100,12 +100,14 @@ protected:
   void PrintNegEvents( const char *fname );
   void PrintGeometry( const char *fname );
   
-  Long64_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
-  Long64_t InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
+  Double_t InitHitList(); //Initialize (unchanging) "hit list" arrays used by track-finding: this only happens at the beginning of tracking
+  Double_t InitFreeHitList(); //Initialize "free hit list" arrays used on each track-finding iteration
 
   //Retrieve the global position of a hit by module and hit index:
   TVector3 GetHitPosGlobal( int modidx, int clustidx );
 
+  int GetGridBin( int modidx, int clustidx );
+  
   //Calculate the intersection of a track with the plane of a module's active area:
   TVector3 TrackIntersect( int module, TVector3 track_origin, TVector3 track_direction, double &sintersect );
 
@@ -244,24 +246,29 @@ protected:
   //Define and initialize the "hit lists" and other arrays that we will need to do the tracking:
   //These "hit list" arrays will NOT be modified throughout the track-finding procedure, except at the beginning:
   std::set<int> layers_with_2Dhits; //list of tracking layers with at least one 2D hit reconstructed (within the track search region)
-  std::map<int,int> N2Dhits_layer; // key = layer, mapped value = total number of reconstructed 2D hits
-  std::map<int,std::vector<int> > modindexhit2D; //key = layer, mapped value = module index of hits in that layer:
-  std::map<int,std::vector<int> > clustindexhit2D; //key = layer, mapped value = index of hits within 2D cluster array of module in question
-  std::map<int,std::vector<bool> > hitused2D; //flag to tell each track-finding iteration whether hit was already used in a previous track
-
+  //std::map<int,int> N2Dhits_layer; // key = layer, mapped value = total number of reconstructed 2D hits
+  std::vector<int> N2Dhits_layer; 
+  std::vector<std::vector<int> > modindexhit2D; //key = layer, mapped value = module index of hits in that layer:
+  std::vector<std::vector<int> > clustindexhit2D; //key = layer, mapped value = index of hits within 2D cluster array of module in question
+  std::vector<std::vector<bool> > hitused2D; //flag to tell each track-finding iteration whether hit was already used in a previous track
+  std::vector<std::vector<int> > gridbinhit2D;
+  
   //////////////////// "Free hit list" arrays used on individual track-finding iterations: /////////////////////////////
-  std::map<int,int> Nfreehits_layer; //key = layer, mapped value = number of unused hits available:
+  std::vector<int> Nfreehits_layer; //key = layer, mapped value = number of unused hits available:
   std::set<int> layerswithfreehits; //list of layers with at least one unused hit
-  std::map<int,std::vector<int> > freehitlist_layer; //list of unused hits mapped by layer: index in the unchanging array defined above (clustindex2D)
+  std::vector<std::vector<int> > freehitlist_layer; //list of unused hits mapped by layer: index in the unchanging array defined above (clustindex2D)
+  
   std::map<int,int> freehitcounter; //When using a "brute force" track-finding algorithm, this counter is used for looping over hit combinations ("odometer" algorithm)
   
   
   //Hit lists mapped by grid bin:
-  std::map<int, std::vector<int> > Nfreehits_binxy_layer; //number of free hits by grid bin in each layer
-  std::map<int, std::vector<std::vector<int> > > freehitlist_binxy_layer; //list of free hits by layer and 2D grid bin; again, the "hit list" contains the index in the unchanging array clustindex2D
+  std::vector<std::vector<int> > Nfreehits_binxy_layer; //number of free hits by grid bin in each layer
+  std::vector<std::vector<std::vector<int> > > freehitlist_binxy_layer; //list of free hits by layer and 2D grid bin; again, the "hit list" contains the index in the unchanging array clustindex2D
+  std::vector<std::set<int> > binswithfreehits_layer; //List of X/Y grid bins with free hits by layer;
   
   //Array to hold the "reduced free hit list":
-  std::map<int,std::vector<int> > freehitlist_goodxy;
+  std::vector<std::vector<int> > freehitlist_goodxy;
+  std::set<int> layerswithfreehits_goodxy;
   
   //////////////////// Tracking results: //////////////////////////////
   
@@ -334,6 +341,14 @@ protected:
   std::vector<double> fHitEResidV; //V tracking residual ("exclusive");
   std::vector<double> fHitUADC; // cluster ADC sum, U strips
   std::vector<double> fHitVADC; // cluster ADC sum, V strips
+  //additional cluster-level deconvoluted variables:
+  std::vector<double> fHitUADCclust_deconv; //deconvoluted cluster ADC sum, U strips
+  std::vector<double> fHitVADCclust_deconv; //deconvoluted cluster ADC sum, V strips
+  std::vector<double> fHitUADCclust_maxsamp_deconv; //max deconvoluted cluster-summed U ADC sample
+  std::vector<double> fHitVADCclust_maxsamp_deconv; //max deconvoluted cluster-summed V ADC sample
+  std::vector<double> fHitUADCclust_maxcombo_deconv; //max deconvoluted cluster-summed two-sample combo, U strips
+  std::vector<double> fHitVADCclust_maxcombo_deconv; //max deconvoluted cluster-summed two-sample combo, V strips
+  //
   std::vector<double> fHitUADCmaxstrip; //ADC sum on max U strip
   std::vector<double> fHitVADCmaxstrip; //ADC sum on max V strip
   std::vector<double> fHitUADCmaxstrip_deconv; //ADC sum on max U strip, deconvoluted
@@ -342,28 +357,54 @@ protected:
   std::vector<double> fHitVADCmaxsample; //max ADC sample on max V strip
   std::vector<double> fHitUADCmaxsample_deconv; //max deconvoluted ADC sample on max U strip
   std::vector<double> fHitVADCmaxsample_deconv; //max deconvoluted ADC sample on max V strip
+  std::vector<double> fHitUADCmaxcombo_deconv; //max two-sample combination max U strip
+  std::vector<double> fHitVADCmaxcombo_deconv; //max two-sample combination max V strip
   std::vector<double> fHitUADCmaxclustsample;
   std::vector<double> fHitVADCmaxclustsample;
   std::vector<double> fHitADCasym; // (ADCU-ADCV)/(ADCU + ADCV)
   std::vector<double> fHitADCavg; //(ADCU+ADCV)/2
+  //new variables for deconvoluted ADC values:
+  std::vector<double> fHitADCasym_deconv; //U/V asymmetry of cluster-summed deconvoluted ADC "max combo"
+  std::vector<double> fHitADCavg_deconv; //U/V average of cluster-summed deconvoluted ADC "max combo"
+  //
   std::vector<double> fHitUTime; // cluster-mean time, U strips
   std::vector<double> fHitVTime; // cluster-mean time, V strips
+  //New deconvoluted hit time 
+  std::vector<double> fHitUTimeDeconv; //cluster-mean time, deconvoluted, U strips
+  std::vector<double> fHitVTimeDeconv; //cluster-mean time, deconvoluted, V strips
+  //
   std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
   std::vector<double> fHitUTimeMaxStripFit; //fitted strip t0
   std::vector<double> fHitVTimeMaxStripFit; //fitted strip t0
-  std::vector<double> fHitUTimeMaxStripDeconv; //fitted strip t0
-  std::vector<double> fHitVTimeMaxStripDeconv; //fitted strip t0
+  std::vector<double> fHitUTimeMaxStripDeconv; //deconvoluted strip time
+  std::vector<double> fHitVTimeMaxStripDeconv; //deconvoluted strip time
   std::vector<double> fHitDeltaT; // TU - TV;
   std::vector<double> fHitTavg; //(TU+TV)/2
+  //
+  std::vector<double> fHitDeltaTDeconv;
+  std::vector<double> fHitTavgDeconv;
+  //
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
   std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster
   std::vector<double> fHitIsampMaxVstrip; //same but for max strip in cluster
   std::vector<double> fHitIsampMaxUstripDeconv; //Same but for max strip in cluster, deconvoluted
   std::vector<double> fHitIsampMaxVstripDeconv; //same but for max strip in cluster, deconvoluted
+  std::vector<double> fHitIcomboMaxUstripDeconv; //
+  std::vector<double> fHitIcomboMaxVstripDeconv;
+  //additional new variables related to deconvolution, max sample and max combo for cluster-summed quantities:
+  std::vector<double> fHitIsampMaxUclustDeconv; 
+  std::vector<double> fHitIsampMaxVclustDeconv;
+  std::vector<double> fHitIcomboMaxUclustDeconv;
+  std::vector<double> fHitIcomboMaxVclustDeconv; 
+  //
   std::vector<double> fHitCorrCoeffClust; // cluster U/V correlation coefficient
   std::vector<double> fHitCorrCoeffMaxStrip; // U/V correlation coefficient, strips with largest ADC.
+  //New variables to hold correlation coefficients for deconvoluted samples max strip and cluster-level:
+  std::vector<double> fHitCorrCoeffClustDeconv; //correlation coefficient between cluster-summed deconvoluted U and V samples
+  std::vector<double> fHitCorrCoeffMaxStripDeconv; //correlation coefficient between max strip U and V deconv. ADC samples
+  //
   //For pulse shape studies:
   std::vector<double> fHitADCfrac0_MaxUstrip; //time sample 0 of max U strip
   std::vector<double> fHitADCfrac1_MaxUstrip; //time sample 1 of max U strip

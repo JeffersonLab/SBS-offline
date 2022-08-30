@@ -82,7 +82,12 @@ struct sbsgemhit_t { //2D reconstructed hits
   Double_t tdiff;   //tu - tv
   Double_t corrcoeff_clust; //"Cluster" level XY correlation coefficient
   Double_t corrcoeff_strip; //Correlation coefficient of best XY strip pair, used to "seed" the cluster
-  
+  Double_t corrcoeff_clust_deconv; //"Cluster" level XY correlation coefficient, deconvoluted samples
+  Double_t corrcoeff_strip_deconv; //Correlation coefficient of maximum X and Y strips
+  Double_t ADCasymDeconv; //Same as ADC asym but for deconvoluted ADC "max combo"
+  Double_t EhitDeconv; //Same as "Ehit" but for deconvoluted ADC "max combo"
+  Double_t thitDeconv; // same as "thit" but using deconvoluted ADC samples
+  Double_t tdiffDeconv; // same as "tdiff" but using deconvoluted ADC Samples.
 };
   
 struct sbsgemcluster_t {  //1D clusters;
@@ -91,13 +96,21 @@ struct sbsgemcluster_t {  //1D clusters;
   UInt_t istriphi;
   UInt_t istripmax;
   UInt_t isampmax; //time sample in which the cluster-summed ADC samples peaks:
+  UInt_t isampmaxDeconv; //time sample in which the deconvoluted cluster-summed ADC samples peaks.
+  UInt_t icombomaxDeconv; //2nd time sample of max two-sample combo for cluster-summed deconvoluted ADC samples
   std::vector<Double_t> ADCsamples; //cluster-summed ADC samples (accounting for split fraction)
+  //New variables:
+  std::vector<Double_t> DeconvADCsamples; //cluster-summed deconvoluted ADC ssamples (accounting for split fraction)
   Double_t hitpos_mean;  //ADC-weighted mean coordinate along the direction measured by the strip
   Double_t hitpos_sigma; //ADC-weighted RMS coordinate deviation from the mean along the direction measured by the strip
-  Double_t clusterADCsum; //Sum of ADCs over all samples on all strips
+  Double_t clusterADCsum; //Sum of ADCs over all samples on all strips, accounting for split fraction and first/last sample suppression
+  Double_t clusterADCsumDeconv; //sum of all deconvoluted ADC samples over all strips in the cluster
+  Double_t clusterADCsumDeconvMaxCombo; //sum over all strips in the cluster of max two-sample combo 
   std::vector<Double_t> stripADCsum; //Sum of individual strip ADCs over all samples on all strips; accounting for split fraction
+  std::vector<Double_t> DeconvADCsum; //Sum of individual deconvoluted ADC samples over all samples on all strips; accounting for split fraction
   Double_t t_mean; //reconstructed hit time
   Double_t t_sigma; //unclear what we might use this for
+  Double_t t_mean_deconv; //cluster-summed mean deconvoluted hit time.
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
   std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
   UInt_t rawstrip; //Raw APV strip number before decoding 
@@ -164,7 +177,7 @@ class SBSGEMModule : public THaSubDetector {
   void filter_2Dhits(); 
   
   //Utility function to calculate correlation coefficient between U and V time samples:
-  Double_t CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples );
+  Double_t CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples, int firstsample=0 );
   Double_t StripTSchi2( int hitindex );
   
   //Utility functions to compute "module local" X and Y coordinates from U and V (strip coordinates) to "transport" coordinates (x,y) and vice-versa:
@@ -414,8 +427,10 @@ class SBSGEMModule : public THaSubDetector {
   //std::vector<Int_t> fStripKeep; //Strip passes timing cuts (and part of a cluster)?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<UInt_t> fMaxSampDeconv; //Sample with largest deconvoluted ADC value
+  std::vector<UInt_t> fMaxSampDeconvCombo; //1st sample of two-sample combination with largest deconvoluted ADC
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
   std::vector<Double_t> fADCmaxDeconv; //Largest deconvoluted ADC sample
+  std::vector<Double_t> fADCmaxDeconvCombo; //Largest combination of two deconvoluted samples
   std::vector<Double_t> fTmeanDeconv; //mean deconvoluted strip time
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
@@ -504,6 +519,11 @@ class SBSGEMModule : public THaSubDetector {
   //     CLUSTERING PARAMETERS (to be read from database and/or given sensible default values)        //
   ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+  //Making our clustering algorithm a little more "fancy": 
+  
+  Int_t fClusteringFlag; //Which quantities to use for clustering?
+  Int_t fDeconvolutionFlag; //reject strips failing basic deconvolution criteria?
+  
   Double_t fThresholdSample; //Threshold on the (gain-matched and pedestal-subtracted) max. sample on a strip to keep that strip for clustering 
   Double_t fThresholdStripSum; //Threshold on the sum of (pedestal-subtracted) ADC samples on a strip
   Double_t fThresholdClusterSum; //Threshold on the sum of (pedestal-subtracted) ADC samples 
