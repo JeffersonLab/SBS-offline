@@ -115,7 +115,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCM_online.resize( fN_MPD_TIME_SAMP );
   
   //default to 
-  fMAX2DHITS = 250000;
+  //fMAX2DHITS = 250000;
+  fMAX2DHITS = 100000;
 
   fRMS_ConversionFactor = sqrt(fN_MPD_TIME_SAMP); //=2.45
 
@@ -171,6 +172,9 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fCommonModeStepSize_Nsigma = 0.2; //sigma/5 for step size:
 
   fCommonModeDanningMethod_NsigmaCut = 3.0; //Default to 3 sigma
+
+  fClusteringFlag = 0; //"standard" clustering based on sum of six time samples on a strip
+  fDeconvolutionFlag = 1; //Set "keep strip" flag based on deconvoluted ADC samples
   
   return;
 }
@@ -325,6 +329,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "deconvolution_tau", &fStripTau, kDouble, 0, 1, 1 },
     { "CMbiasU", &fCMbiasU, kDoubleV, 0, 1, 1 },
     { "CMbiasV", &fCMbiasV, kDoubleV, 0, 1, 1 },
+    { "clustering_flag", &fClusteringFlag, kInt, 0, 1, 1 },
+    { "deconvolution_flag", &fDeconvolutionFlag, kInt, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -596,8 +602,10 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fKeepStrip.resize( nstripsmax );
   fMaxSamp.resize( nstripsmax );
   fMaxSampDeconv.resize( nstripsmax );
+  fMaxSampDeconvCombo.resize( nstripsmax );
   fADCmax.resize( nstripsmax );
   fADCmaxDeconv.resize( nstripsmax );
+  fADCmaxDeconvCombo.resize( nstripsmax );
   fTmean.resize( nstripsmax );
   fTmeanDeconv.resize( nstripsmax );
   fTsigma.resize( nstripsmax );
@@ -850,8 +858,10 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.DeconvADCsum", "Sum of deconvoluted ADC samples on a strip", kDouble, 0, &(fADCsumsDeconv[0]), &fNstrips_hit },
     { "strip.isampmax", "sample in which max ADC occurred on a strip", kUInt, 0, &(fMaxSamp[0]), &fNstrips_hit },
     { "strip.isampmaxDeconv", "sample in which max deconvoluted ADC occurred", kUInt, 0, &(fMaxSampDeconv[0]), &fNstrips_hit },
+    { "strip.isampmaxDeconvCombo", "first of max. pair of deconvoluted samples", kUInt, 0, &(fMaxSampDeconvCombo[0]), &fNstrips_hit },
     { "strip.ADCmax", "Value of max ADC sample on a strip", kDouble, 0, &(fADCmax[0]), &fNstrips_hit },
     { "strip.DeconvADCmax", "Value of max deconvoluted ADC sample", kDouble, 0, &(fADCmaxDeconv[0]), &fNstrips_hit },
+    { "strip.DeconvADCmaxCombo", "max sum of two adjacent deconv. samples", kDouble, 0, &(fADCmaxDeconvCombo[0]), &fNstrips_hit },
     { "strip.Tmean", "ADC-weighted mean strip time", kDouble, 0, &(fTmean[0]), &fNstrips_hit },
     { "strip.Tsigma", "ADC-weighted rms strip time", kDouble, 0, &(fTsigma[0]), &fNstrips_hit },
     { "strip.TmeanDeconv", "ADC-weighted mean deconvoluted strip time", kDouble, 0, &(fTmeanDeconv[0]), &fNstrips_hit },
@@ -901,7 +911,11 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
 
   if( ret != kOK )
     return ret;
-  
+
+  //Note: for both 1D clusters and 2D hits,
+  //we should add some of the new variables relating to deconvolution in these arrays, but
+  //that should take a lower priority than the ones in SBSGEMSpectrometerTracker relating to hits that
+  //end up on good tracks
 
   RVarDef varclust[] = {
     { "clust.nclustu",   "Number of clusters in u",   "fNclustU_pos" },
@@ -1884,24 +1898,26 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  // 1 = suppress peaking in first and last sample
 	  // -1 = suppress peaking in first sample only (or other negative number)
 	  // -2 = suppress peaking in last sample only:
-	  if( fSuppressFirstLast != 0 ){
-	    bool peakfirst = iSampMax == 0;
-	    bool peaklast = iSampMax+1 == fN_MPD_TIME_SAMP;
-	    
-	    if( peakfirst ){
-	      if( fSuppressFirstLast > 0 || fSuppressFirstLast != -2 ){
-		fKeepStrip[fNstrips_hit] = false;
-	      }
-	    } else if( peaklast ){
-	      if( fSuppressFirstLast > 0 || fSuppressFirstLast == -2 ){
-		fKeepStrip[fNstrips_hit] = false;
+	  if( fDeconvolutionFlag == 0 ){ //if "deconvolution flag" is non-zero, then set "keep strip" based on deconvoluted variables
+	    if( fSuppressFirstLast != 0 ){
+	      bool peakfirst = iSampMax == 0;
+	      bool peaklast = iSampMax+1 == fN_MPD_TIME_SAMP;
+	      
+	      if( peakfirst ){
+		if( fSuppressFirstLast > 0 || fSuppressFirstLast != -2 ){
+		  fKeepStrip[fNstrips_hit] = false;
+		}
+	      } else if( peaklast ){
+		if( fSuppressFirstLast > 0 || fSuppressFirstLast == -2 ){
+		  fKeepStrip[fNstrips_hit] = false;
+		}
 	      }
 	    }
-	  }
-
-	  if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
-	    fKeepStrip[fNstrips_hit] = false;
-	    //fStripKeep[fNstrips_hit] = 0;
+	    
+	    if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
+	      fKeepStrip[fNstrips_hit] = false;
+	      //fStripKeep[fNstrips_hit] = 0;
+	    }
 	  }
 
 	  //std::cout << "axis, Int_t(axis) = " << axis << ", " << Int_t(axis) << std::endl;
@@ -1914,6 +1930,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  int imaxdeconv=0;
 
 	  double Tsum_deconv = 0.0;
+
+	  double maxcombo = 0.0;
+	  std::vector<double> combostemp(fN_MPD_TIME_SAMP+1,0.0);
+	  int imaxcombo=0;
 	  
 	  for( Int_t isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	    fADCsamples[fNstrips_hit][isamp] = ADCtemp[isamp];
@@ -1927,6 +1947,25 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	    ADCsum_deconv += Adeconvtemp;
 
+	    if( isamp==0 ){
+	      combostemp[isamp] = Adeconvtemp;
+	      maxcombo = combostemp[isamp];
+	      imaxcombo=isamp;
+	    } else {
+	      combostemp[isamp] = Adeconvtemp + fADCsamples_deconv[fNstrips_hit][isamp-1];
+	      if( combostemp[isamp] > maxcombo ){
+		maxcombo = combostemp[isamp];
+		imaxcombo = isamp;
+	      }
+	    }
+	    if( isamp == 5 ){
+	      combostemp[fN_MPD_TIME_SAMP] = Adeconvtemp;
+	      if( combostemp[fN_MPD_TIME_SAMP] > maxcombo ){
+		maxcombo = combostemp[isamp];
+		imaxcombo = fN_MPD_TIME_SAMP;
+	      }
+	    }
+	    
 	    if( isamp == 0 || Adeconvtemp > maxdeconv ){
 	      imaxdeconv = isamp;
 	      maxdeconv = Adeconvtemp;
@@ -1944,7 +1983,6 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      hADCfrac_vs_timesample_allstrips->Fill( isamp, ADCtemp[isamp]/ADCsum_temp );
 	    }
 	  }
-
 	  
 	  fADCsumsDeconv[fNstrips_hit] = ADCsum_deconv;
 	  //fStripTrackIndex.push_back( -1 ); //This could be modified later based on tracking results
@@ -1971,8 +2009,20 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  //	  fADCmax.push_back( maxADC );
 	  fADCmax[fNstrips_hit] = maxADC;
 	  fADCmaxDeconv[fNstrips_hit] = maxdeconv;
+	  fADCmaxDeconvCombo[fNstrips_hit] = maxcombo;
 
 	  fMaxSampDeconv[fNstrips_hit] = imaxdeconv;
+	  fMaxSampDeconvCombo[fNstrips_hit] = imaxcombo;
+
+	  if( fDeconvolutionFlag != 0 ){
+	    if( fSuppressFirstLast != 0 && imaxcombo == 0 || imaxcombo == fN_MPD_TIME_SAMP ){
+	      fKeepStrip[fNstrips_hit] = false;
+	    }
+	    if( maxcombo <= fZeroSuppressRMS * rmstemp ){
+	      fKeepStrip[fNstrips_hit] = false;
+	    }
+	  }
+	  
 	  fTmeanDeconv[fNstrips_hit] = Tsum_deconv/ADCsum_deconv;
 	  
 	  //	  fTmean.push_back( Tsum/ADCsum_temp );
@@ -2332,10 +2382,12 @@ void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_w
   // find_clusters_1D; i.e., the peak is required to be within |peak position - constraint center| <= constraint width
   find_clusters_1D(SBSGEM::kUaxis, ucenter, (umax-umin)/2.0 ); //U clusters
   find_clusters_1D(SBSGEM::kVaxis, vcenter, (vmax-vmin)/2.0 );  //V clusters
-  
+
   //Now make 2D clusters
-  
-  fill_2D_hit_arrays();
+
+  if( fNclustU > 0 && fNclustV > 0 ){
+    fill_2D_hit_arrays();
+  }
 }
 
 
@@ -2395,10 +2447,30 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
   std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently:
   std::map<UShort_t, Double_t> pedrms_strip;
-
+  std::map<UShort_t, Double_t> ADC_strip; // These are the (configuration-dependent) quantities we use for clustering. They depend on the values of fClusteringFlag and fSuppressFirstLast
+  std::map<UShort_t, Double_t> ADC_maxsamp; //
+  std::map<UShort_t, Double_t> Tmean_strip; //strip mean time with first and/or last samples removed (if applicable) 
+  std::map<UShort_t, Double_t> Tsigma_strip; //strip rms time with first and/or last samples removed (if applicable)
+  
   std::set<UShort_t> striplist_neg;  //same as above but for negative strips
   std::map<UShort_t, UInt_t> hitindex_neg;
   std::map<UShort_t, Double_t> pedrms_strip_neg;
+
+  UShort_t FirstSampleCorrCoeff=0;
+  UShort_t NsampCorrCoeff=fN_MPD_TIME_SAMP;
+
+  // if( fSuppressFirstLast != 0 ){
+  //   if( fSuppressFirstLast > 0 ){ //suppress first and last time samples
+  //     FirstSampleCorrCoeff = 1;
+  //     NsampCorrCoeff = fN_MPD_TIME_SAMP-2;
+  //   } else if( fSuppressFirstLast == -2 ){ //exclude last time sample only:
+  //     FirstSampleCorrCoeff = 0;
+  //     NsampCorrCoeff = fN_MPD_TIME_SAMP-1;
+  //   } else { //negative value other than -2: exclude first time sample only:
+  //     FirstSampleCorrCoeff = 1;
+  //     NsampCorrCoeff = fN_MPD_TIME_SAMP-1;
+  //   }
+  // }
   
   for( int ihit=0; ihit<fNstrips_hit; ihit++ ){
     if( fAxis[ihit] == axis && fKeepStrip[ihit] ){
@@ -2412,6 +2484,58 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 	} else {
 	  pedrms_strip[fStrip[ihit]] = fPedRMSV[fStrip[ihit]];
 	}
+
+	ADC_strip[fStrip[ihit]] = fADCsums[ihit];
+	ADC_maxsamp[fStrip[ihit]] = fADCmax[ihit];
+	Tmean_strip[fStrip[ihit]] = fTmean[ihit];
+	Tsigma_strip[fStrip[ihit]] = fTsigma[ihit];
+
+	//the commented lines below are experimental. Don't use for now:
+	// if( fClusteringFlag == 1 ){ //Use deconvoluted ADCs instead of shaped samples for the clustering
+	//   ADC_strip[fStrip[ihit]] = fADCmaxDeconvCombo[ihit]; //max. of two adjacent deconvoluted time samples
+	//   ADC_maxsamp[fStrip[ihit]] = fADCmaxDeconv[ihit]; //max. of any single deconvoluted time sample
+	//   Tmean_strip[fStrip[ihit]] = fTmeanDeconv[ihit];
+	//   //Tsigma_strip[fStrip[ihit]] = fTsigma[ihit];
+	// } else { //check first and last time sample suppression flags:
+	//   if( fSuppressFirstLast != 0 ){ //exclude first and/or last time sample
+	//     double Tmean_all = fTmean[ihit];
+	//     double Tsigma_all = fTsigma[ihit];
+	//     double oldTsum = fADCsums[ihit]*Tmean_all;
+	//     double oldT2sum = fADCsums[ihit]*(pow(Tsigma_all,2) + pow(Tmean_all,2) );
+	//     double tsampfirst = fSamplePeriod * 0.5;
+	//     double tsamplast = fSamplePeriod * (fN_MPD_TIME_SAMP-0.5);
+	//     double sampfirst = fADCsamples[ihit][0];
+	//     double samplast = fADCsamples[ihit][fN_MPD_TIME_SAMP-1];
+
+	//     double newTsum = oldTsum;
+	//     double newT2sum = oldT2sum;
+	    
+	//     if( fSuppressFirstLast > 0 ) { //exclude first and last time sample:
+	//       ADC_strip[fStrip[ihit]] = fADCsums[ihit] - sampfirst - samplast;
+
+	//       newTsum = oldTsum - tsampfirst * sampfirst - tsamplast * samplast;
+	//       newT2sum = oldT2sum - pow(tsampfirst,2) * sampfirst - pow(tsamplast,2)*samplast;
+
+	//     } else if( fSuppressFirstLast == -2 ){ //exclude last time sample only:
+	//       ADC_strip[fStrip[ihit]] = fADCsums[ihit] - samplast;
+
+	//       newTsum = oldTsum - tsamplast * samplast;
+	//       newT2sum = oldT2sum - pow(tsamplast,2)*samplast;
+	      
+	//     } else { //negative value other than -2: exclude first time sample only:
+	//       ADC_strip[fStrip[ihit]] -= fADCsamples[ihit][0];
+
+	//       newTsum = oldTsum - tsampfirst * sampfirst;
+	//       newT2sum = oldT2sum - pow(tsampfirst,2)*sampfirst;
+	      
+	//     }
+
+	//     Tmean_strip[fStrip[ihit]] = newTsum / ADC_strip[fStrip[ihit]];
+	//     Tsigma_strip[fStrip[ihit]] = sqrt( newT2sum/ ADC_strip[fStrip[ihit]] - pow(Tmean_strip[fStrip[ihit]],2) );
+	    
+	//   } 
+	// }
+	
       }
     }
     //Also add strips for negative signal clustering if fNegSignalStudy is true
@@ -2439,16 +2563,19 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     //int hitidx = hitindex[strip];
     islocalmax[strip] = false;
 
-    double sumstrip = fADCsums[hitindex[strip]];
+    //double sumstrip = fADCsums[hitindex[strip]];
+    double sumstrip = ADC_strip[strip];  
     double sumleft = 0.0;
     double sumright = 0.0;
 
     
     if( striplist.find( strip - 1 ) != striplist.end() ){
-      sumleft = fADCsums[hitindex[strip-1]]; //if strip - 1 is found in strip list, hitindex is guaranteed to have been initialized above
+      //sumleft = fADCsums[hitindex[strip-1]]; //if strip - 1 is found in strip list, hitindex is guaranteed to have been initialized above
+      sumleft = ADC_strip[strip-1]; //if strip - 1 is found in strip list, hitindex is guaranteed to have been initialized above
     }
     if( striplist.find( strip + 1 ) != striplist.end() ){
-      sumright = fADCsums[hitindex[strip+1]];
+      //sumright = fADCsums[hitindex[strip+1]];
+      sumright = ADC_strip[strip+1];
     }
 
     //apply additional thresholds on max. sample and strip sum for local maxima:
@@ -2456,13 +2583,14 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     //from decoding
     if( sumstrip >= sumleft && sumstrip >= sumright && 
 	sumstrip >= fThresholdStripSum &&
-	fADCmax[hitindex[strip]] >= fThresholdSample ){ //new local max:
+	ADC_maxsamp[strip] >= fThresholdSample ){
+	//	fADCmax[hitindex[strip]] >= fThresholdSample ){ //new local max:
       islocalmax[strip] = true;
       localmaxima.insert( strip );
     } 
   } // end loop over list of strips along this axis:
 
-  //  cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
+  //cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;
   
   vector<int> peakstoerase; 
 
@@ -2471,7 +2599,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   for( std::set<UShort_t>::iterator i=localmaxima.begin(); i != localmaxima.end(); ++i ){
     int stripmax = *i;
 
-    double ADCmax = fADCsums[hitindex[stripmax]];
+    //double ADCmax = fADCsums[hitindex[stripmax]];
+    double ADCmax = ADC_strip[stripmax];
     double prominence = ADCmax;
 
     int striplo = stripmax, striphi = stripmax;
@@ -2483,7 +2612,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     while( striplist.find( striphi+1 ) != striplist.end() ){
       striphi++;
 
-      Double_t ADCtest = fADCsums[hitindex[striphi]];
+      //Double_t ADCtest = fADCsums[hitindex[striphi]];
+      Double_t ADCtest = ADC_strip[striphi];
       
       if( ADCtest < ADCminright && !higherpeakright ){ //as long as we haven't yet found a higher peak to the right, this is the lowest point between the current maximum and the next higher peak to the right:
 	ADCminright = ADCtest;
@@ -2497,7 +2627,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
     while( striplist.find(striplo-1) != striplist.end() ){
       striplo--;
-      Double_t ADCtest = fADCsums[hitindex[striplo]];
+      //Double_t ADCtest = fADCsums[hitindex[striplo]];
+      Double_t ADCtest = ADC_strip[striplo];
       if( ADCtest < ADCminleft && !higherpeakleft ){ //as long as we haven't yet found a higher peak to the left, this is the lowest point between the current maximum and the next higher peak to the left:
 	ADCminleft = ADCtest;
       }
@@ -2546,17 +2677,15 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   clusters.resize( localmaxima.size() );
 
   //nclust_tot = localmaxima.size();
-
-  
-    
   
   //Cluster formation and cluster splitting from remaining local maxima:
   for( auto i = localmaxima.begin(); i != localmaxima.end(); ++i ){
     int stripmax = *i;
     int striplo = stripmax;
     int striphi = stripmax;
-    double ADCmax = fADCsums[hitindex[stripmax]];
-
+    //double ADCmax = fADCsums[hitindex[stripmax]];
+    double ADCmax = ADC_strip[stripmax];
+    
     bool found_neighbor_low = true;
 
     //double Tfit = 
@@ -2569,14 +2698,23 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       
       found_neighbor_low = striplist.find( striplo - 1 ) != striplist.end() && stripmax - striplo < maxsep;
 
-      if( found_neighbor_low && fUseStripTimingCuts ){
+      if( found_neighbor_low && fUseStripTimingCuts && fDeconvolutionFlag == 0 ){
 	//check time difference and correlation coefficient of the candidate strip
 	//with the max strip:
 	double Tdiff = fTmean[hitindex[striplo-1]] - fTmean[hitindex[stripmax]];
 	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_low = false;
-	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex[striplo-1]], fADCsamples[hitindex[stripmax]] );
-	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_low = false;
       }
+      
+      double Ccoeff = CorrCoeff( NsampCorrCoeff, fADCsamples[hitindex[striplo-1]], fADCsamples[hitindex[stripmax]], FirstSampleCorrCoeff );
+
+      double Ccoeff_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[hitindex[striplo-1]], fADCsamples_deconv[hitindex[stripmax]] );
+      // if( fDeconvolutionFlag != 0 ){
+      // 	Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[hitindex[striplo-1]], fADCsamples_deconv[hitindex[stripmax]] );
+      // }
+
+      //if the greater of the two correlation coefficients (shaped samples vs. deconvoluted samples) is too low, don't add this strip:
+      if( std::max( Ccoeff, Ccoeff_deconv ) < fStripAddCorrCoeffCut ) found_neighbor_low = false;
+	
 
       //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
       //fails the cuts, stop growing the cluster in this direction
@@ -2595,14 +2733,21 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       
       found_neighbor_high = striplist.find( striphi + 1 ) != striplist.end() && striphi - stripmax < maxsep;
 
-      if( found_neighbor_high && fUseStripTimingCuts ){
+      if( found_neighbor_high && fUseStripTimingCuts && fDeconvolutionFlag == 0 ){
 	//check time difference and correlation coefficient of the candidate strip
 	//with the max strip:
 	double Tdiff = fTmean[hitindex[striphi+1]] - fTmean[hitindex[stripmax]];
 	if( fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_high = false;
-	double Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[hitindex[striphi+1]], fADCsamples[hitindex[stripmax]] );
-	if( Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_high = false;
       }
+      
+      double Ccoeff = CorrCoeff( NsampCorrCoeff, fADCsamples[hitindex[striphi+1]], fADCsamples[hitindex[stripmax]], FirstSampleCorrCoeff );
+
+      
+      double Ccoeff_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[hitindex[striphi+1]], fADCsamples_deconv[hitindex[stripmax]] );
+      
+      
+      if( std::max(Ccoeff,Ccoeff_deconv) < fStripAddCorrCoeffCut ) found_neighbor_high = false;
+      
 
       //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
       //fails the cuts, stop growing the cluster in this direction
@@ -2614,7 +2759,10 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
     double sumx = 0.0, sumx2 = 0.0, sumADC = 0.0, sumt = 0.0, sumt2 = 0.0;
     double sumwx = 0.0;
-
+    double sumtdeconv = 0.0;
+    double sumADCdeconv = 0.0;
+    //double sumADCdeconv_combo = 0.0;
+    
     map<int,double> splitfraction;
     vector<double> stripADCsum(nstrips);
 
@@ -2632,7 +2780,9 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     clusttemp.istriphi = striphi;
     clusttemp.istripmax = stripmax;
     clusttemp.ADCsamples.resize(fN_MPD_TIME_SAMP);
+    clusttemp.DeconvADCsamples.resize( fN_MPD_TIME_SAMP );
     clusttemp.stripADCsum.clear();
+    clusttemp.DeconvADCsum.clear();
     clusttemp.hitindex.clear();
     clusttemp.rawstrip = fStripRaw[hitindex[stripmax]];
     clusttemp.rawMPD = fStripMPD[hitindex[stripmax]];
@@ -2640,6 +2790,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
     for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){ //initialize cluster-summed ADC samples to zero:
       clusttemp.ADCsamples[isamp] = 0.0;
+      clusttemp.DeconvADCsamples[isamp] = 0.0;
     }
       
     for( int istrip=striplo; istrip<=striphi; istrip++ ){
@@ -2648,26 +2799,34 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       double maxweight = sumweight;
       for( int jstrip=istrip-maxsep; jstrip<=istrip+maxsep; jstrip++ ){
 	if( localmaxima.find( jstrip ) != localmaxima.end() && jstrip != stripmax ){
-	  sumweight += fADCsums[hitindex[jstrip]]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) );
+	  sumweight += ADC_strip[jstrip]/( 1.0 + pow( (jstrip-istrip)*pitch/fSigma_hitshape, 2 ) );
 	}
       }
    
       splitfraction[istrip] = maxweight/sumweight;
 
       double hitpos = (istrip + 0.5 - 0.5*Nstrips) * pitch + offset; //local hit position along direction measured by these strips
-      double ADCstrip = fADCsums[hitindex[istrip]] * splitfraction[istrip];
-      double tstrip = fTmean[hitindex[istrip]];
+      double ADCstrip = ADC_strip[istrip] * splitfraction[istrip];
+      //double tstrip = fTmean[hitindex[istrip]];
+      double tstrip = Tmean_strip[istrip];
+
+      double tstrip_deconv = fTmeanDeconv[hitindex[istrip]];
+      double ADCstrip_deconv = fADCsumsDeconv[hitindex[istrip]]*splitfraction[istrip];
       
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 	clusttemp.ADCsamples[isamp] += fADCsamples[hitindex[istrip]][isamp]*splitfraction[istrip];
+	clusttemp.DeconvADCsamples[isamp] += fADCsamples_deconv[hitindex[istrip]][isamp]*splitfraction[istrip];
       }
       
       clusttemp.stripADCsum.push_back( ADCstrip );
-
+      clusttemp.DeconvADCsum.push_back( ADCstrip_deconv );
+      
       clusttemp.hitindex.push_back( hitindex[istrip] ); //do we use this anywhere? Yes, it is good to keep track of this if we want to access raw strip info later on 
-	
       sumADC += ADCstrip;
-	
+
+      sumADCdeconv += ADCstrip_deconv;
+      //sumADCdeconv_combo += fADCmaxDeconvCombo[hitindex[istrip]]*splitfraction[istrip];
+      
       if( std::abs( istrip - stripmax ) <= std::max(UShort_t(1),std::min(maxsepcoord,maxsep)) ){ 
 	sumx += hitpos * ADCstrip;
 	sumx2 += pow(hitpos,2) * ADCstrip;
@@ -2675,23 +2834,53 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 	//use same strip cuts for cluster timing determination as for position reconstruction: may revisit later:
 	sumt += tstrip * ADCstrip;
 	sumt2 += pow(tstrip,2) * ADCstrip;
+	sumtdeconv += tstrip_deconv * ADCstrip;
       } 
     }
-    
+    clusttemp.isampmaxDeconv = 0;
+    clusttemp.icombomaxDeconv = 0;
     clusttemp.isampmax = 0; //figure out time sample in which peak of cluster-summed ADC values occurs:
     double maxADC = 0.0;
+    double maxADC_deconv = 0.0;
+    double maxADCcombo_deconv = 0.0;
+    
     for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
       if( isamp == 0 || clusttemp.ADCsamples[isamp] > maxADC ){
 	maxADC = clusttemp.ADCsamples[isamp];
 	clusttemp.isampmax = isamp;
       }
+
+      if( isamp == 0 || clusttemp.DeconvADCsamples[isamp] > maxADC_deconv ){
+	maxADC_deconv = clusttemp.DeconvADCsamples[isamp];
+	clusttemp.isampmaxDeconv = isamp;
+      }
+
+      double combotemp = clusttemp.DeconvADCsamples[isamp];
+      if( isamp == 0 ){
+	clusttemp.icombomaxDeconv = 0;
+	maxADCcombo_deconv = combotemp;
+      } else {
+	combotemp += clusttemp.DeconvADCsamples[isamp-1];
+	if( combotemp > maxADCcombo_deconv ){
+	  maxADCcombo_deconv = combotemp;
+	  clusttemp.icombomaxDeconv = isamp; 
+	}
+      }
+      if( isamp + 1 == fN_MPD_TIME_SAMP && clusttemp.DeconvADCsamples[isamp] > maxADCcombo_deconv ){
+	maxADCcombo_deconv = clusttemp.DeconvADCsamples[isamp];
+	clusttemp.icombomaxDeconv = fN_MPD_TIME_SAMP;
+      }	
     }
     
     clusttemp.hitpos_mean = sumx / sumwx;
     clusttemp.hitpos_sigma = sqrt( sumx2/sumwx - pow(clusttemp.hitpos_mean,2) );
     clusttemp.clusterADCsum = sumADC;
+    clusttemp.clusterADCsumDeconv = sumADCdeconv;
+    clusttemp.clusterADCsumDeconvMaxCombo = maxADCcombo_deconv;
     clusttemp.t_mean = sumt / sumwx;
     clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
+
+    clusttemp.t_mean_deconv = sumtdeconv/sumwx;
     
     //initialize "keep" flag for all 1D clusters to true:
     clusttemp.keep = true;
@@ -2712,7 +2901,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       nclust_tot++;
     }
     
-      //Hopefully this works correctly:
+    //Hopefully this works correctly:
     if( fabs( clusttemp.hitpos_mean - constraint_center ) <= constraint_width ){
 
       //Fit max strip time for hits in constraint region:
@@ -2767,8 +2956,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
   //std::cout << "number of clusters found = " << nclust << std::endl;
   
-  filter_1Dhits(SBSGEM::kUaxis);
-  filter_1Dhits(SBSGEM::kVaxis);
+  filter_1Dhits(axis);
+  // filter_1Dhits(SBSGEM::kVaxis);
 
 
   ////// Below is an exact copy of the parts above but clusters negative strips instead. This works by adding -1 factors
@@ -3069,11 +3258,6 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
 }
 
-
-
-
-
-
 void SBSGEMModule::fill_2D_hit_arrays(){
   //Clear out the 2D hit array to get rid of any leftover junk from prior events:
   //fHits.clear();
@@ -3083,12 +3267,27 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   //fHits.clear();
   fHits.resize( std::min( fNclustU*fNclustV, fMAX2DHITS ) );
 
-  // if( fNclustU * fNclustV > fMAX2DHITS ){
+  //if( fNclustU * fNclustV > fMAX2DHITS ){
   //   std::cout << "Warning in SBSGEMModule::fill_2D_hit_arrays(): 
+  // }
+
+  int nsamp_corr = fN_MPD_TIME_SAMP;
+  int firstsamp_corr = 0;
+
+  //the following commented lines are experimental:
+  // if( fSuppressFirstLast > 0 ){
+  //   nsamp_corr = fN_MPD_TIME_SAMP-2;
+  //   firstsamp_corr = 1;
+  // }
+  // if( fSuppressFirstLast < 0 ){
+  //   nsamp_corr = fN_MPD_TIME_SAMP-1;
+  //   firstsamp_corr = (fSuppressFirstLast == -2 ? 0 : 1);
   // }
   
   //This routine is simple: just form all possible 2D hits from combining one "U" cluster with one "V" cluster. Here we assume that find_clusters_1D has already
   //been called, if that is NOT the case, then this routine will just do nothing:
+  bool maxhits_exceeded = false;
+
   for( UInt_t iu=0; iu<fNclustU; iu++ ){
     for( UInt_t iv=0; iv<fNclustV; iv++ ){
 
@@ -3129,8 +3328,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	//Check if candidate 2D hit is inside the constraint region before doing anything else:
 	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
 	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax &&
-	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) &&
-	    fN2Dhits < fMAX2DHITS ){
+	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) ){
     
 	  hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
 	  hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
@@ -3148,10 +3346,17 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  hittemp.zghit = hitpos_global.Z();
 	
 	  hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
+
+	  hittemp.ADCasymDeconv = (fUclusters[iu].clusterADCsumDeconvMaxCombo-fVclusters[iv].clusterADCsumDeconvMaxCombo)/(fUclusters[iu].clusterADCsumDeconvMaxCombo+fVclusters[iv].clusterADCsumDeconvMaxCombo);
+
+	  hittemp.EhitDeconv = 0.5*(fUclusters[iu].clusterADCsumDeconvMaxCombo+fVclusters[iv].clusterADCsumDeconvMaxCombo);
+	  
 	  hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean;
-	
+	  hittemp.tdiffDeconv = fUclusters[iu].t_mean_deconv - fVclusters[iv].t_mean_deconv;
+	  hittemp.thitDeconv = 0.5*(fUclusters[iu].t_mean_deconv + fVclusters[iv].t_mean_deconv);
+	  
 	  //Calculate correlation coefficients:
-	  hittemp.corrcoeff_clust = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples );
+	  hittemp.corrcoeff_clust = CorrCoeff( nsamp_corr, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples, firstsamp_corr );
 	
 	  //compute index of strip with max ADC sum within cluster strip array:
 	  UInt_t ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
@@ -3161,8 +3366,14 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  UInt_t uhitidx = fUclusters[iu].hitindex[ustripidx];
 	  UInt_t vhitidx = fVclusters[iv].hitindex[vstripidx];
 	
-	  hittemp.corrcoeff_strip = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples[uhitidx], fADCsamples[vhitidx] );
+	  hittemp.corrcoeff_strip = CorrCoeff( nsamp_corr, fADCsamples[uhitidx], fADCsamples[vhitidx], firstsamp_corr );
 
+	  hittemp.corrcoeff_clust_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].DeconvADCsamples, fVclusters[iv].DeconvADCsamples );
+	  hittemp.corrcoeff_strip_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[uhitidx], fADCsamples_deconv[vhitidx] );
+	  hittemp.ADCasymDeconv = (fUclusters[iu].clusterADCsumDeconvMaxCombo - fVclusters[iv].clusterADCsumDeconvMaxCombo)/
+	    (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
+	  hittemp.EhitDeconv = 0.5 * (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
+	  
 	  //A "high-quality" hit is one that passes all the filtering criteria (might add more later):
 	  hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
 	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
@@ -3170,7 +3381,12 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	    fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
 	    hittemp.corrcoeff_clust >= fCorrCoeffCut &&
 	    hittemp.corrcoeff_strip >= fCorrCoeffCut && 
-	    fabs( hittemp.tdiff ) <= fTimeCutUVdiff; 
+	    fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
+	    fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
+	    hittemp.corrcoeff_clust_deconv >= fCorrCoeffCut &&
+	    hittemp.corrcoeff_strip_deconv >= fCorrCoeffCut ;
+
+	  //cutting on deconvoluted ADC quantities could be dangerous before further study...
 
 	  bool add_hit = true;
 	  //we need special handling if we want to use single-strip clusters: 
@@ -3179,19 +3395,29 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	    //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
 	    add_hit = false;
 	    if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
-		hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut ){
+		hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
+		hittemp.corrcoeff_clust_deconv >= fCorrCoeffCut &&
+		hittemp.corrcoeff_strip_deconv >= fCorrCoeffCut ){
 	      add_hit = true;
 	    }
 	  }
 	  
 	  //Okay, that should be everything. Now add it to the 2D hit array:
 	  //fHits.push_back( hittemp );
-	  if( add_hit ) fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
+	  if( add_hit && fN2Dhits < fMAX2DHITS ) {
+	    fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
+	  } else if( add_hit ){ //
+	    maxhits_exceeded = true;
+	  }
 	  //fN2Dhits++;
 	} //end check that 2D point is inside track search region
       } //end check that both U and V clusters passed filtering criteria:
     } //end loop over "V" clusters
   } //end loop over "U" clusters
+
+  if( maxhits_exceeded ){
+    std::cout << "Warning in [SBSGEMModule::fill_2D_hit_arrays()]: good 2D hit candidates exceeded user maximum of " << fMAX2DHITS << " for module " << GetName() << ", 2D hit list truncated" << std::endl;
+  }
 
   fHits.resize( fN2Dhits );
   
@@ -3857,14 +4083,14 @@ Int_t   SBSGEMModule::End( THaRunBase* r){ //Calculates efficiencies and writes 
 }
 
 //utility method to calculate correlation coefficient of U and V samples: 
-Double_t SBSGEMModule::CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples ){
+Double_t SBSGEMModule::CorrCoeff( int nsamples, const std::vector<double> &Usamples, const std::vector<double> &Vsamples, int firstsample ){
   Double_t sumu=0.0, sumv=0.0, sumu2=0.0, sumv2=0.0, sumuv=0.0;
 
-  if ( (int)Usamples.size() < nsamples || (int)Vsamples.size() < nsamples ){
+  if ( (int)Usamples.size() < firstsample+nsamples || (int)Vsamples.size() < firstsample+nsamples ){
     return -10.0; //nonsense value, correlation coefficient by definition is -1 < c < 1
   }
   
-  for( int isamp=0; isamp<nsamples; isamp++ ){
+  for( int isamp=firstsample; isamp<firstsample+nsamples; isamp++ ){
     sumu += Usamples[isamp];
     sumv += Vsamples[isamp];
     sumu2 += pow(Usamples[isamp],2);
