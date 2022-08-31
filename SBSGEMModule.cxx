@@ -1216,18 +1216,20 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     CM_OUT_OF_RANGE = cm_flags/4;
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
-    
+    /*
     if(fCODA_BUILD_ALL_SAMPLES != -1){
       BUILD_ALL_SAMPLES = fCODA_BUILD_ALL_SAMPLES;
       fPedSubFlag = (fCODA_BUILD_ALL_SAMPLES == 0);
     }
     if(fCODA_CM_ENABLED != -1) CM_ENABLED = fCODA_CM_ENABLED;
- 
-
+    */
+    
+    
     // if( cm_flags_found ){
-    //   std::cout << "cm flag defaults overridden by raw data, effChan = " << effChan << ", CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
+    //std::cout << "cm flag defaults overridden by raw data, effChan = " << effChan << ", CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
     // }
     
+    //cout<<BUILD_ALL_SAMPLES<<" "<<CM_ENABLED<<endl;
     //fOnlineZeroSuppression = !BUILD_ALL_SAMPLES;
     if( !BUILD_ALL_SAMPLES && !CM_ENABLED ) { //This should never happen: skip this APV card
       continue;
@@ -1274,7 +1276,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
     if( CM_ENABLED ){ //try to decode MPD debug headers and see if the results make any sense:
       nhits_MPD_debug = evdata.GetNumHits( it->crate, it->slot, fChan_MPD_Debug );
-
+      
       if( nhits_MPD_debug > 0 ){ //we expect to get three words per APV card:
 	UInt_t wcount=0;
 
@@ -1313,7 +1315,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
 
-
+   
     if( nsamp > 0 ){
 
       //      assert(nsamp%fN_MPD_TIME_SAMP==0); //this is making sure that the number of samples is equal to an integer multiple of the number of time samples per strip
@@ -1342,7 +1344,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	int isamp = iraw%fN_MPD_TIME_SAMP;
 	  
 	Int_t ADC = Int_t( decoded_rawADC );
-	  
+	
 	rawStrip[iraw] = strip;
 	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
@@ -1501,7 +1503,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      
 	      // std::cout << "iAPV, nAPVsU, nAPVsV, axis = " << iAPV << ", " << fNAPVs_U << ", "
 	      // 		<< fNAPVs_V << ", " << axis << std::endl;
-	      
+	    
 	      if( axis == SBSGEM::kUaxis ){
 		cm_mean = fCommonModeMeanU[iAPV];
 
@@ -1617,7 +1619,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       
       } //End check !CM_ENABLED && BUILD_ALL_SAMPLES
       
-      
+    
       if( CM_ENABLED && fCorrectCommonMode ){
 	// Under certain conditions we want to attempt to correct the ADC values for all strips on an APV card using either
 	// the rolling average over a certain number of previous events, or the CM mean from the database.
@@ -1626,7 +1628,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// 2) The number of strips with ADC values within some number of std. deviations of the "expected" CM must exceed some threshold to allow us to
 	//    to obtain a new estimate of the "true" common-mode for that event
 	// If both 1) and 2) are satisfied, then we will attempt a new common-mode calculation using the strips that passed zero suppression using the online common-mode calculation.
-
+      
 	for(int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
 
 	  UInt_t ngood=0;
@@ -1671,7 +1673,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       //std::cout << "finished common mode " << std::endl;
       // Last loop over all the strips and samples in the data and populate/calculate global variables that are passed to track-finding:
       //Int_t ihit = 0;
-            
+    
       for( Int_t istrip = 0; istrip < nstrips; ++istrip ) {
 
 	//The following loop is no longer necessary if we always do a loop over the data to populate the "local" hit arrays:
@@ -1809,6 +1811,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	//fill pedestal diagnostic histograms if and only if we are in pedestal mode or plot common mode 
 	// AND the CM_ENABLED is not set, meaning we did cm and ped subtraction offline
+      
 	if( (fPedestalMode || fMakeCommonModePlots) && !CM_ENABLED ){ 
 	  int iAPV = strip/fN_APV25_CHAN;
 	  
@@ -1863,7 +1866,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	if(!fZeroSuppress ||
 	   ( ADCsum_temp/double(fN_MPD_TIME_SAMP) > fZeroSuppressRMS*rmstemp ) ){ //Default threshold is 5-sigma!
 	  //Increment hit count and populate decoded data structures:
-	 
+	  //cout<<ADCsum_temp/double(fN_MPD_TIME_SAMP)<<endl;
 	  //threshold on the average ADC
 	  
 	  //Slight reorganization: compute Tmean and Tsigma before applying gain correction:
@@ -3442,8 +3445,8 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   fZeroSuppress = fZeroSuppress && !fPedestalMode; 
   fCODA_BUILD_ALL_SAMPLES = r->GetDAQInfo("VTP_MPDRO_BUILD_ALL_SAMPLES") == "1";
   fCODA_CM_ENABLED = r->GetDAQInfo("VTP_MPDRO_ENABLE_CM") == "1";
-  
-  if(r->GetNConfig() == 0){
+    
+  if(r->GetDAQInfo("VTP_MPDRO_ENABLE_CM").empty()){
     fCODA_BUILD_ALL_SAMPLES = -1;
     fCODA_CM_ENABLED = -1;
   }
