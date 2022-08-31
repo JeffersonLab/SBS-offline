@@ -1179,6 +1179,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     Bool_t CM_ENABLED = fCommonModeFlag != 0 && fCommonModeFlag != 1 && !fPedestalMode;
     Bool_t BUILD_ALL_SAMPLES = !fOnlineZeroSuppression;
     Bool_t CM_OUT_OF_RANGE = false;
+
+    //Initialize default values based on the run "DAQ info":
+    if(fCODA_BUILD_ALL_SAMPLES != -1){
+      BUILD_ALL_SAMPLES = fCODA_BUILD_ALL_SAMPLES;
+      fPedSubFlag = (fCODA_BUILD_ALL_SAMPLES == 0);
+    }
+    if(fCODA_CM_ENABLED != -1) CM_ENABLED = fCODA_CM_ENABLED;
+ 
     
     UInt_t cm_flags=4*CM_OUT_OF_RANGE + 2*CM_ENABLED + BUILD_ALL_SAMPLES;
     UInt_t nhits_cm_flag=evdata.GetNumHits( it->crate, it->slot, fChan_CM_flags );
@@ -1216,15 +1224,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     CM_OUT_OF_RANGE = cm_flags/4;
     CM_ENABLED = cm_flags/2;
     BUILD_ALL_SAMPLES = cm_flags%2;
-    /*
-    if(fCODA_BUILD_ALL_SAMPLES != -1){
-      BUILD_ALL_SAMPLES = fCODA_BUILD_ALL_SAMPLES;
-      fPedSubFlag = (fCODA_BUILD_ALL_SAMPLES == 0);
-    }
-    if(fCODA_CM_ENABLED != -1) CM_ENABLED = fCODA_CM_ENABLED;
-    */
-    
-    
+
     // if( cm_flags_found ){
     //std::cout << "cm flag defaults overridden by raw data, effChan = " << effChan << ", CM_ENABLED = " << CM_ENABLED << ", BUILD_ALL_SAMPLES = " << BUILD_ALL_SAMPLES << std::endl;
     // }
