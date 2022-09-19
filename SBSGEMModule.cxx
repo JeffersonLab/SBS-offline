@@ -1273,7 +1273,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     UInt_t CMcalc[fN_MPD_TIME_SAMP];
     Int_t CMcalc_signed[fN_MPD_TIME_SAMP];
     
-    
+  
     if( CM_ENABLED ){ //try to decode MPD debug headers and see if the results make any sense:
       nhits_MPD_debug = evdata.GetNumHits( it->crate, it->slot, fChan_MPD_Debug );
       
@@ -1310,8 +1310,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  // }
 	}
       }
-      
-    } //End check if CM_ENABLED
+    }//End check if CM_ENABLED
     
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
 
@@ -1380,6 +1379,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       
       if( fullreadout ){ //then we need to calculate the common-mode:
 	//declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
+
 	
 	//std::cout << "Common-mode calculation: " << std::endl;
 	
@@ -4394,7 +4394,7 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
       return GetCommonMode( isamp, 0, apvinfo );
     }
     
-  } else if( flag == 3 ) { //Online Danning method with cm min set to 0
+  } else if( flag == 3 ) { //Online Danning method with cm min set to 0 used during GMn
     int iAPV = apvinfo.pos;
     double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
     double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
@@ -4433,7 +4433,44 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     return CM_2/n_keep;
     
     
-  } else { //"offline" Danning method (default): requires apv info for cm-mean and cm-rms values:
+  } else if( flag == 4 ) { //Online Danning method for GEn
+    int iAPV = apvinfo.pos;
+    double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
+    double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
+    
+
+    double cm_temp = 0.0;
+    
+    for( int iter=0; iter<3; iter++ ){
+
+      double cm_min = cm_mean - fCommonModeRange_nsigma*cm_rms;
+      double cm_max = cm_mean + fCommonModeRange_nsigma*cm_rms;
+      double sumADCinrange = 0.0;
+      int n_keep = 0;
+
+      for( int ihit=0; ihit<nhits; ihit++ ){
+	int iraw=isamp + fN_MPD_TIME_SAMP * ihit;
+	
+	double ADCtemp = fPedSubADC_APV[iraw];
+	double rmstemp = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
+	
+	if(iter != 0){
+	  cm_min = cm_temp - fCommonModeDanningMethod_NsigmaCut*2.5*rmstemp;
+	  cm_max = cm_temp + fCommonModeDanningMethod_NsigmaCut*2.5*rmstemp;
+	}
+
+	if( ADCtemp >= cm_min && ADCtemp <= cm_max ){
+	  n_keep++;
+	  sumADCinrange += ADCtemp;
+	}
+      }
+
+      cm_temp = sumADCinrange / n_keep;
+    }
+  
+    return cm_temp;
+            
+    } else { //"offline" Danning method (default): requires apv info for cm-mean and cm-rms values:
     int iAPV = apvinfo.pos;
     double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
     double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
