@@ -1273,8 +1273,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     UInt_t CMcalc[fN_MPD_TIME_SAMP];
     Int_t CMcalc_signed[fN_MPD_TIME_SAMP];
     
-    
-    //if( CM_ENABLED ){ //try to decode MPD debug headers and see if the results make any sense:
+  
+    if( CM_ENABLED ){ //try to decode MPD debug headers and see if the results make any sense:
       nhits_MPD_debug = evdata.GetNumHits( it->crate, it->slot, fChan_MPD_Debug );
       
       if( nhits_MPD_debug > 0 ){ //we expect to get three words per APV card:
@@ -1309,7 +1309,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  // 	      << ", online calculated common-mode = " << CMcalc_signed[isamp] << std::endl;
 	  // }
 	}
-      } //End check if CM_ENABLED
+      }
+    }//End check if CM_ENABLED
     
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
 
@@ -1378,6 +1379,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       
       if( fullreadout ){ //then we need to calculate the common-mode:
 	//declare temporary array to hold common mode values for this APV card and, if necessary, calculate them:
+
 	
 	//std::cout << "Common-mode calculation: " << std::endl;
 	
