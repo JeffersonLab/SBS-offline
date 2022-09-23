@@ -108,15 +108,6 @@ class SBSScalerHelicityReader {
       UInt_t fHelicityRing[kHelRingDepth];
       UInt_t fPatternRing[kHelRingDepth];
       UInt_t fTimeStampRing[kHelRingDepth];
-      UInt_t fRingFinalQrtHel;
-      UInt_t fRingFinalEvtNum;
-      UInt_t fRingFinalPatNum;
-      UInt_t fRingFinalSeed;
-      UInt_t fRingPattPhase;
-
-      Long_t fScalerYield[32];
-      Long_t fScalerDiff[32];
-
 
       UInt_t fT3Ring[kHelRingDepth];
       UInt_t fU3Ring[kHelRingDepth];

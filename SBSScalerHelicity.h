@@ -77,6 +77,19 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
       // Long64_t fScalerCumulativePlus[32];
       // Long64_t fScalerCumulativeMinus[32];
 
+      UInt_t fRingFinalQrtHel;
+      UInt_t fRingFinalEvtNum;
+      UInt_t fRingFinalPatNum;
+      UInt_t fRingFinalSeed;
+      UInt_t fRingPattPhase;
+      UInt_t fRingHelicitySum;
+
+      Long_t fTimeStampYield;
+      Long_t fTimeStampDiff;
+      Long_t fScalerYield[32];
+      Long_t fScalerDiff[32];
+
+
       UInt_t fRing_NSeed; //number of event collected for seed
       UInt_t fRingU3plus, fRingU3minus;
       UInt_t fRingT3plus, fRingT3minus;

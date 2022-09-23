@@ -37,7 +37,6 @@ SBSScalerHelicityReader::SBSScalerHelicityReader()
    fNegGate(false),    // Invert polarity of gate, so that 0=active
    fFADCLow_min(37000),  fFADCLow_max(49000),
    fFADCHigh_min(80000), fFADCHigh_max(92000),
-   fRingFinalEvtNum(1),fRingFinalPatNum(0),fRingFinalSeed(0),
    fVerbosity(0),
    fHistoR{}
 {
@@ -217,6 +216,7 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
 {
    // Obtain the present data from the event for QWEAK helicity mode.
    const UInt_t *lbuff;
+   static UInt_t evt_in_pattern;
 
    static const char* here = "SBSScalerHelicityReader::ReadData";
 
@@ -306,42 +306,21 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
 	 if(fVerbosity>0) std::cout << std::dec << "[SBSScalerHelicityReader::ReadDatabase]: Numread = " << numread << std::endl;
 	 fIRing = numread;
 	 for (UInt_t i=0; i<numread; i++){
-	   UInt_t qrthel = lbuff[index+1];
-	   Long_t helsign = +1;
-	   if ((qrthel & 0x1)==0) helsign = -1;
-	   fRingFinalQrtHel = qrthel;
+	   UInt_t qrthel     = lbuff[index+1];
 	   fTimeStampRing[i] = lbuff[index+0];
 	   fHelicityRing[i]  = (qrthel & 0x1);
 	   fPatternRing[i]   = (qrthel & 0x10);
-	   //  Keep track of event and pattern number
-	   fRingFinalEvtNum++;
-	   fRingPattPhase++;
-	   if ((qrthel & 0x10)==0x10){
-	     fRingFinalPatNum++;
-	     fRingPattPhase = 0;
-	     fRingFinalSeed = ((fRingFinalSeed<<1)&0x3ffffffe)|(qrthel & 0x1);
-	     // std::cout << "Ring seed value: " << std::hex << fRingFinalSeed
-	     // 	       << std::dec << "; qrthel==" << qrthel
-	     // 	       <<std::endl;
+	   for (UInt_t j=0; j<nchan; j++){
+	     fScalerRing[i][j]=lbuff[index+2+j];
 	   }
-	    for (UInt_t j=0; j<nchan; j++){
-	       fScalerRing[i][j]=lbuff[index+2+j];
-	       if (fRingPattPhase==0){
-		 fScalerYield[j] = +1 * lbuff[index+2+j];
-		 fScalerDiff[j]  = helsign * lbuff[index+2+j];
-	       } else {
-		 fScalerYield[j] += +1 * lbuff[index+2+j];
-		 fScalerDiff[j]  += helsign * lbuff[index+2+j];
-	       }
-	    }
-	    /*
-	       std::cout << "\n\nindex : Clock, qrthel, chan0, chan9, chan15:  "
-	       << std::dec << index <<" : "<< std::hex 
-	       << lbuff[index] << " " << lbuff[index+1] << " "
-	       << lbuff[index+2] << " " << lbuff[index+11] 
-	       << " " << lbuff[index+17] << std::endl;
-	       */
-	    index += nchan+2;
+	   /*
+	     std::cout << "\n\nindex : Clock, qrthel, chan0, chan9, chan15:  "
+	     << std::dec << index <<" : "<< std::hex 
+	     << lbuff[index] << " " << lbuff[index+1] << " "
+	     << lbuff[index+2] << " " << lbuff[index+11] 
+	     << " " << lbuff[index+17] << std::endl;
+	   */
+	   index += nchan+2;
 	 }
       }
    }

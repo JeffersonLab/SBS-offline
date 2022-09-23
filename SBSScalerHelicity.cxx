@@ -27,6 +27,7 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
    fOffsetTIRvsRing(3), fQWEAKDelay(8), fMAXBIT(30),
    fQWEAKNPattern(4), HWPIN(true), fQrt(1), fTSettle(0),fValidHel(false),
    fHelicityLastTIR(0),fPatternLastTIR(0), fErrorCode(0), fRing_NSeed(0),
+   fRingFinalEvtNum(1),fRingFinalPatNum(0),fRingFinalSeed(0),
    fRingU3plus(0),fRingU3minus(0),
    fRingT3plus(0),fRingT3minus(0),
    fRingT5plus(0),fRingT5minus(0),
@@ -47,6 +48,7 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
 : fOffsetTIRvsRing(3), fQWEAKDelay(8), fMAXBIT(30),
    fQWEAKNPattern(4), HWPIN(true), fQrt(1), fTSettle(0),fValidHel(false),
    fHelicityLastTIR(0),fPatternLastTIR(0), fErrorCode(0), fRing_NSeed(0),
+   fRingFinalEvtNum(1),fRingFinalPatNum(0),fRingFinalSeed(0),
    fRingU3plus(0),fRingU3minus(0),
    fRingT3plus(0),fRingT3minus(0),
    fRingT5plus(0),fRingT5minus(0),
@@ -61,6 +63,12 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
       fScalerCumulative[j] = 0;
    }
    fFADCQrtHel = 0;
+
+   for (UInt_t j=0; j<32; j++){
+     fScalerYield[j] = 0;
+     fScalerDiff[j]  = 0;
+   }
+   fRingPattPhase = 0;
 }
 //_____________________________________________________________________________
 SBSScalerHelicity::~SBSScalerHelicity()
@@ -388,6 +396,13 @@ void SBSScalerHelicity::Clear( Option_t* opt ) {
    fRingTimeplus = 0;
    fRingTimeminus = 0;
    fErrorCode = 0;
+   
+   //   for (UInt_t j=0; j<32; j++){
+   //     fScalerYield[j] = 0;
+   //     fScalerDiff[j]  = 0;
+   //   }
+   //   fRingPattPhase = 0;
+
 }
 //_____________________________________________________________________________
 Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
@@ -426,6 +441,8 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
    if(fVerbosity>0) std::cout << "[SBSScalerHelicity::Decode]: Filling histograms... " << std::endl; 
 
    fEvtype = evdata.GetEvType();
+   int trig_num = evdata.GetEvNum();
+   fRingU3plus = trig_num;   
    /*
     *    *  TODO:  the follow funcitons were for the "old" data structure, and should
     *       *         be reconsidered if they should be adapted or removed.
@@ -438,13 +455,50 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
     *                         else
     *                             fValidHel=false;
     *                               */
-   FillHisto();
 
    // assign variables that will get to the tree 
    fBranch_seed         = fRing_NSeed; 
    fBranch_errCode      = fErrorCode;
 
-   if(fHelScalerTree) fHelScalerTree->Fill();
+   Long_t helsign;
+   if (fIRing>0){
+     for (UInt_t i=0; i<fIRing; i++){
+       fRingFinalQrtHel = fPatternRing[i] + fHelicityRing[i];
+       //  Get the sign from the reported helicity
+       if (fHelicityRing[i]==0) helsign = -1;
+       else                     helsign = +1;
+       //  Increment event number and pattern number/phase counters.  Maintain the reported seed value.
+       fRingFinalEvtNum++;
+       if (fPatternRing[i]==0x10){
+	 fRingPattPhase = 0;
+	 fRingHelicitySum = helsign;
+	 fRingFinalPatNum++;
+	 fRingFinalSeed = ((fRingFinalSeed<<1)&0x3ffffffe)|fHelicityRing[i];
+	 //  Run the algorithm to get the pattern sign for delayed reporting?
+       } else {
+	 fRingPattPhase++;
+	 fRingHelicitySum += helsign;
+       }
+       //  Bulid the helicity-independent and -dependent sums. 
+       if (fRingPattPhase==0){
+	 fTimeStampYield = 0;
+	 fTimeStampDiff  = 0;
+       }
+       fTimeStampYield += fTimeStampRing[i];
+       fTimeStampDiff  += helsign * fTimeStampRing[i];
+       for (UInt_t j=0; j<32; j++){
+	 if (fRingPattPhase==0){
+	   fScalerYield[j] = 0;
+	   fScalerDiff[j]  = 0;
+	 }
+	 fScalerYield[j] += +1 * fScalerRing[i][j];
+	 fScalerDiff[j]  += helsign * fScalerRing[i][j];
+       }
+       //  Fill histograms and tree values for each scaler read
+       FillHisto();
+       if(fHelScalerTree) fHelScalerTree->Fill();
+     }
+   }
    
    if(fVerbosity>0) std::cout << "[SBSScalerHelicity::Decode]: --> Done. " << std::endl; 
 
