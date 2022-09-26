@@ -1,5 +1,5 @@
-#ifndef ROOT_TreeSearch_SBSBigBite
-#define ROOT_TreeSearch_SBSBigBite
+#ifndef SBSBigBite_h
+#define SBSBigBite_h
 
 #include "THaSpectrometer.h"
 
