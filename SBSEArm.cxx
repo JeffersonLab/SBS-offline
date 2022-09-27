@@ -32,10 +32,45 @@ SBSEArm::SBSEArm( const char* name, const char* description ) :
   fBackConstraintY0 = 0.0;
 }
 
+
+Int_t SBSEArm::DefineVariables( EMode mode ){
+  THaSpectrometer::DefineVariables(mode);
+  
+  if( mode == kDefine and fIsSetup ) return kOK;
+  fIsSetup = ( mode == kDefine );
+  
+  
+  
+  RVarDef constraintvars[] = {
+    { "x_fcp", "front track constraint x", "fFrontConstraintX" },
+    { "y_fcp", "front track constraint y", "fFrontConstraintY" },
+    { "z_fcp", "front track constraint z", "fFrontConstraintZ" },
+    { "x_bcp", "back track constraint x", "fBackConstraintX" },
+    { "y_bcp", "back track constraint y", "fBackConstraintY" },
+    { "z_bcp", "back track constraing z", "fBackConstraintZ" },
+    { nullptr }
+  };
+  DefineVarsFromList( constraintvars, mode );
+  
+  return 0;
+}
+
 //_____________________________________________________________________________
 SBSEArm::~SBSEArm()
 {
   // Destructor
+}
+
+
+void SBSEArm::Clear( Option_t *opt )
+{
+  THaSpectrometer::Clear(opt);
+  fFrontConstraintX.clear();
+  fFrontConstraintY.clear();
+  fFrontConstraintZ.clear();
+  fBackConstraintX.clear();
+  fBackConstraintY.clear();
+  fBackConstraintZ.clear();
 }
 
 
@@ -141,6 +176,14 @@ Int_t SBSEArm::CoarseReconstruct()
      x_fcp = fGEMorigin.X();
      y_fcp = fGEMorigin.Y();
      z_fcp = fGEMorigin.Z();
+
+
+     fFrontConstraintX.push_back(x_fcp);
+     fFrontConstraintY.push_back(y_fcp);
+     fFrontConstraintZ.push_back(z_fcp);
+     fBackConstraintX.push_back(x_bcp);
+     fBackConstraintY.push_back(y_bcp);
+     fBackConstraintZ.push_back(z_bcp);
 
      TIter next2( fTrackingDetectors );
      while( auto* theTrackDetector =
