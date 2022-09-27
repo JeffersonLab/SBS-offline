@@ -11,6 +11,7 @@
 #include "SBSGEMSpectrometerTracker.h"
 #include "THaTrack.h"
 #include "SBSRasteredBeam.h"
+#include "THaTrackingDetector.h"
 
 using namespace std;
 
