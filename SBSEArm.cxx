@@ -86,39 +86,6 @@ THaSpectrometer( name, description )
 
 }
 
-void SBSEArm::Clear( Option_t *opt ){
-  THaSpectrometer::Clear(opt);
-  fFrontConstraintX.clear();
-  fFrontConstraintY.clear();
-  fFrontConstraintZ.clear();
-  fBackConstraintX.clear();
-  fBackConstraintY.clear();
-  fBackConstraintZ.clear();
-}
-
-
-Int_t SBSEArm::DefineVariables( EMode mode ){
-  THaSpectrometer::DefineVariables(mode);
-  
-  if( mode == kDefine and fIsSetup ) return kOK;
-  fIsSetup = ( mode == kDefine );
-  
-  
-  
-  RVarDef constraintvars[] = {
-    { "x_fcp", "front track constraint x", "fFrontConstraintX" },
-    { "y_fcp", "front track constraint y", "fFrontConstraintY" },
-    { "z_fcp", "front track constraint z", "fFrontConstraintZ" },
-    { "x_bcp", "back track constraint x", "fBackConstraintX" },
-    { "y_bcp", "back track constraint y", "fBackConstraintY" },
-    { "z_bcp", "back track constraing z", "fBackConstraintZ" },
-    { nullptr }
-  };
-  DefineVarsFromList( constraintvars, mode );
-  
-  return 0;
-}
-
 //_____________________________________________________________________________
 SBSEArm::~SBSEArm()
 {
