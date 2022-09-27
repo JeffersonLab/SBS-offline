@@ -224,7 +224,7 @@ if(NOT EXISTS ${SBS_REPLAY_PATH})
 endif()	
 
 if( EXISTS ${SBS_REPLAY_PATH} )
-    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts:${SBS_REPLAY_PATH}/onlineGUIconfig")
+    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts:${SBS_REPLAY_PATH}/onlineGUIconfig: ${SBS_REPLAY_PATH}/onlineGUIconfig/scripts")
 else()
     set(SBS_MACRO_PATH ".")
 endif()
