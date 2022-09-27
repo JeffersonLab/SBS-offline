@@ -1,5 +1,5 @@
-#ifndef ROOT_TreeSearch_SBSBigBite
-#define ROOT_TreeSearch_SBSBigBite
+#ifndef SBSBigBite_h
+#define SBSBigBite_h
 
 #include "THaSpectrometer.h"
 
@@ -110,6 +110,19 @@ protected:
   std::vector<int> f_ok;
   std::vector<int> f_ol;
   std::vector<int> f_om;
+
+  int fForwardOpticsOrder;
+  std::vector<double> fb_xfp;
+  std::vector<double> fb_yfp;
+  std::vector<double> fb_xpfp;
+  std::vector<double> fb_ypfp;
+  //AJRP: changed the exponents to integers here for speed:
+  std::vector<int> f_foi;
+  std::vector<int> f_foj;
+  std::vector<int> f_fok;
+  std::vector<int> f_fol;
+  std::vector<int> f_fom;
+  
     
   Double_t fPtheta_00000;
   Double_t fPtheta_10000;
