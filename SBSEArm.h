@@ -3,6 +3,9 @@
 
 #include "THaSpectrometer.h"
 
+class TList;
+class THaTrack;
+
 class SBSEArm : public THaSpectrometer {
 
 public:

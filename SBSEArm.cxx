@@ -12,6 +12,7 @@
 #include "THaTrack.h"
 #include "SBSRasteredBeam.h"
 #include "THaTrackingDetector.h"
+#include "TClass.h"
 
 using namespace std;
 
@@ -24,6 +25,9 @@ THaSpectrometer( name, description )
 {
   // Constructor. Defines standard detectors
 
+  fOpticsOrder = -1; //default to zero for optics order. Not sure if this causes a seg fault, but safer.
+
+  SetPID( false );
 
   fFrontConstraintWidthX = 1.5;
   fFrontConstraintWidthY = 1.5;
@@ -42,12 +46,43 @@ THaSpectrometer( name, description )
   InitOpticsAxes( fOpticsAngle );
 
   fGEMtheta = fOpticsAngle;
-  fGEMphi   = 180.0*TMath::DegToRad();
+  fGEMphi   = 0.0*TMath::DegToRad();
   fGEMorigin = fOpticsOrigin; 
 
   InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
 
   fPrecon_flag = 0;
+
+  fFrontConstraintX.clear();
+  fFrontConstraintY.clear();
+  fFrontConstraintZ.clear();
+  fBackConstraintX.clear();
+  fBackConstraintY.clear();
+  fBackConstraintZ.clear();
+
+  fb_xptar.clear();
+  fb_yptar.clear();
+  fb_ytar.clear();
+  fb_pinv.clear();
+
+  f_oi.clear();
+  f_oj.clear();
+  f_ok.clear();
+  f_ol.clear();
+  f_om.clear();
+
+  fb_xfp.clear();
+  fb_yfp.clear();
+  fb_xpfp.clear();
+  fb_ypfp.clear();
+
+  f_foi.clear();
+  f_foj.clear();
+  f_fok.clear();
+  f_fol.clear();
+  f_fom.clear();
+
+  
 
 }
 
@@ -155,7 +190,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "gemphi", &gemphideg, kDouble, 0, 1, 1},
     { "opticstheta", &opticsthetadeg, kDouble, 0, 1, 1},
     { "optics_origin", &optics_origin, kDoubleV, 0, 1, 1},
-    { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
+    { "optics_order",    &fOpticsOrder, kInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "preconflag", &fPrecon_flag, kUInt, 0, 1, 1 },
     {0}
@@ -264,6 +299,7 @@ Int_t SBSEArm::DefineVariables( EMode mode ){
   };
   DefineVarsFromList( constraintvars, mode );
   
+  return 0;
 }
 
 //_____________________________________________________________________________
@@ -546,7 +582,18 @@ Int_t SBSEArm::TrackCalc()
 Int_t SBSEArm::CoarseTrack()
 {
   // Coarse track Reconstruction
-  //std::cout << " SBSBigBite::CoarseTrack()...";
+  // std::cout << " SBSEArm::CoarseTrack()..." << std::endl;
+
+  // if( !fTrackingDetectors ) {
+  //   cerr << "fTrackingDetectors == NULL?" << endl;
+  //   exit(1);
+  // }
+  // cout << fTrackingDetectors->IsA()->GetName() << endl;
+  
+  // fTrackingDetectors->Print();
+  
+  //  std::cout << " fTrackingDetectors->Print() invoked..." << std::endl;
+
   THaSpectrometer::CoarseTrack();
   // TODO
   //std::cout << " call SBSBigBite::CoarseTrack" << std::endl;
@@ -584,37 +631,36 @@ Int_t SBSEArm::CoarseReconstruct()
 	  E_max = HCalClusters[i]->GetE();
 	}
       }
-          
 
       x_bcp = HCalClusters[i_max]->GetX() + HCal->GetOrigin().X();
       y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
       z_bcp = HCal->GetOrigin().Z();
           
+      x_fcp = fGEMorigin.X();
+      y_fcp = fGEMorigin.Y();
+      z_fcp = fGEMorigin.Z();
 
-     x_fcp = fGEMorigin.X();
-     y_fcp = fGEMorigin.Y();
-     z_fcp = fGEMorigin.Z();
+      fFrontConstraintX.push_back( x_fcp );
+      fFrontConstraintY.push_back( y_fcp );
+      fFrontConstraintZ.push_back( z_fcp );
+
+      fBackConstraintX.push_back( x_bcp );
+      fBackConstraintY.push_back( y_bcp );
+      fBackConstraintZ.push_back( z_bcp );
 
 
-     fFrontConstraintX.push_back(x_fcp);
-     fFrontConstraintY.push_back(y_fcp);
-     fFrontConstraintZ.push_back(z_fcp);
-     fBackConstraintX.push_back(x_bcp);
-     fBackConstraintY.push_back(y_bcp);
-     fBackConstraintZ.push_back(z_bcp);
-
-     TIter next2( fTrackingDetectors );
-     while( auto* theTrackDetector =
-	    static_cast<THaTrackingDetector*>( next2() )) {
-       if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
-	 SBSGEMSpectrometerTracker* SBSGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
-	 //std::cout << "setting constraints for tracks" << std::endl;
-	 SBSGEM->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
-	 SBSGEM->SetBackConstraintPoint(x_bcp + fBackConstraintX0, y_bcp + fBackConstraintY0, z_bcp);
-	 SBSGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
-	 				   fFrontConstraintWidthY);
-	 SBSGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
-	 			       fBackConstraintWidthY);
+      TIter next2( fTrackingDetectors );
+      while( auto* theTrackDetector =
+	     static_cast<THaTrackingDetector*>( next2() )) {
+	if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
+	  SBSGEMSpectrometerTracker* SBSGEM = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+	  //std::cout << "setting constraints for tracks" << std::endl;
+	  SBSGEM->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
+	  SBSGEM->SetBackConstraintPoint(x_bcp + fBackConstraintX0, y_bcp + fBackConstraintY0, z_bcp);
+	  SBSGEM->SetFrontConstraintWidth(fFrontConstraintWidthX, 
+					  fFrontConstraintWidthY);
+	  SBSGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
+					 fBackConstraintWidthY);
 
 	 
 	}//End inherits from SBSGEMSpectrometerTracker
