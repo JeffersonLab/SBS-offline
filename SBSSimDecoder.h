@@ -181,6 +181,59 @@ protected:
   Double_t fBBPS_esum;
   Double_t fBBSH_esum;
   
+  //PTrack & SDTrack indices
+  //SD: GEM, Hodo, PS, SH, HCAL 
+  std::vector<Int_t> fBBGEMhit_ptridx;
+  std::vector<Int_t> fBBGEMhit_sdtridx;
+  std::vector<Int_t> fBBGEMtrack_ptridx;
+  std::vector<Int_t> fBBGEMtrack_sdtridx;
+  std::vector<Int_t> fBBHODOhit_ptridx;
+  std::vector<Int_t> fBBHODOhit_sdtridx;
+  std::vector<Int_t> fBBPSTF1hit_ptridx;
+  std::vector<Int_t> fBBPSTF1hit_sdtridx;
+  std::vector<Int_t> fBBSHTF1hit_ptridx;
+  std::vector<Int_t> fBBSHTF1hit_sdtridx;
+  std::vector<Int_t> fHCALhit_ptridx;
+  std::vector<Int_t> fHCALhit_sdtridx;
+  
+  //PTrack & SDTrack branches
+  Int_t fPTrack_ntracks;
+  std::vector<Int_t> fPTrack_TID; 
+  std::vector<Int_t> fPTrack_PID; 
+  std::vector<Double_t> fPTrack_posx; 
+  std::vector<Double_t> fPTrack_posy;
+  std::vector<Double_t> fPTrack_posz;
+  std::vector<Double_t> fPTrack_momx;   
+  std::vector<Double_t> fPTrack_momy;
+  std::vector<Double_t> fPTrack_momz;
+  std::vector<Double_t> fPTrack_polx;
+  std::vector<Double_t> fPTrack_poly;
+  std::vector<Double_t> fPTrack_polz;
+  std::vector<Double_t> fPTrack_Etot;
+  std::vector<Double_t> fPTrack_T;                     
+  Double_t fSDTrack_ntracks;
+  std::vector<Int_t> fSDTrack_TID; 
+  std::vector<Int_t> fSDTrack_MID; 
+  std::vector<Int_t> fSDTrack_PID;
+  std::vector<Double_t> fSDTrack_posx; 
+  std::vector<Double_t> fSDTrack_posy;
+  std::vector<Double_t> fSDTrack_posz;
+  std::vector<Double_t> fSDTrack_momx;   
+  std::vector<Double_t> fSDTrack_momy;
+  std::vector<Double_t> fSDTrack_momz;
+  std::vector<Double_t> fSDTrack_polx;
+  std::vector<Double_t> fSDTrack_poly;
+  std::vector<Double_t> fSDTrack_polz;  
+  std::vector<Double_t> fSDTrack_Etot;
+  std::vector<Double_t> fSDTrack_T; 
+  std::vector<Double_t> fSDTrack_vx; 
+  std::vector<Double_t> fSDTrack_vy;
+  std::vector<Double_t> fSDTrack_vz; 
+  std::vector<Double_t> fSDTrack_vnx; 
+  std::vector<Double_t> fSDTrack_vny;
+  std::vector<Double_t> fSDTrack_vnz;  
+  std::vector<Double_t> fSDTrack_vEkin;  
+  
   //TH1D* h1_sizeHCal;
   //TH1D* h1_sizeGEMs;
   

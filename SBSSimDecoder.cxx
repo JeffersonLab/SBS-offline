@@ -105,7 +105,7 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   SimDecoder::DefineVariables( mode );
   
   cout << "Read SBSSimDecoder variables " << endl;
-  
+
   RVarDef vars[] = {
     {"mc_sigma",   "MC cross section",   "fSigma"},
     {"mc_omega",   "MC phase spece generation",   "fOmega"},
@@ -142,6 +142,54 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_y"},
     {"bbps_esum",   "BBPS total energy sum",   "fBBPS_esum"},
     {"bbsh_esum",   "BBSH total energy sum",   "fBBSH_esum"},
+    {"bbgemhit_ptridx",    "Primary track index for BBGEM SD",        "fBBGEMhit_ptridx"},
+    {"bbgemhit_sdtridx",   "SD track index for BBGEM SD",             "fBBGEMhit_sdtridx"},
+    {"bbgemtrack_ptridx",  "Primary track index for BBGEM Track SD",  "fBBGEMtrack_ptridx"},
+    {"bbgemtrack_sdtridx", "SD track index for BBGEM Track SD",       "fBBGEMtrack_sdtridx"},
+    {"bbhodohit_ptridx",   "Primary track index for BBHodo SD",       "fBBHODOhit_ptridx"},
+    {"bbhodohit_sdtridx",  "SD track index for BBHodo SD",            "fBBHODOhit_sdtridx"},
+    {"bbpshit_ptridx",   "Primary track index for BBPSTF1 SD",        "fBBPSTF1hit_ptridx"},
+    {"bbpshit_sdtridx",  "SD track index for BBPSTF1 SD",             "fBBPSTF1hit_sdtridx"},
+    {"bbshhit_ptridx",   "Primary track index for BBSHTF1 SD",        "fBBSHTF1hit_ptridx"},
+    {"bbshhit_sdtridx",  "SD track index for BBSHTF1 SD",             "fBBSHTF1hit_sdtridx"},
+    {"hcalhit_ptridx",   "Primary track index for HCalScint SD",      "fHCALhit_ptridx"},
+    {"hcalhit_sdtridx",  "SD track index for HCalScint SD",           "fHCALhit_sdtridx"},
+    {"ptrack_ntracks",   "Primary track ntracks", "fPTrack_ntacks"},
+    {"ptrack_tid",       "Primary track TID",     "fPTrack_TID"},
+    {"ptrack_pid",       "Primary track PID",     "fPTrack_PID"},
+    {"ptrack_posx",      "Primary track posx",    "fPTrack_posx"},
+    {"ptrack_posy",      "Primary track posy",    "fPTrack_posy"},
+    {"ptrack_posz",      "Primary track posz",    "fPTrack_posz"},
+    {"ptrack_momx",      "Primary track momx",    "fPTrack_momx"},
+    {"ptrack_momy",      "Primary track momy",    "fPTrack_momy"},
+    {"ptrack_momz",      "Primary track momz",    "fPTrack_momz"},
+    {"ptrack_polx",      "Primary track polx",    "fPTrack_polx"},
+    {"ptrack_poly",      "Primary track poly",    "fPTrack_poly"},
+    {"ptrack_polz",      "Primary track polz",    "fPTrack_polz"},
+    {"ptrack_etot",      "Primary track Etot",    "fPTrack_Etot"},
+    {"ptrack_t",         "Primary track T",       "fPTrack_T"},
+    {"sdtrack_ntracks",  "SD track ntracks",      "fSDTrack_ntacks"},
+    {"sdtrack_tid",      "SD track TID",          "fSDTrack_TID"},
+    {"sdtrack_mid",      "SD track MID",          "fSDTrack_MID"},
+    {"sdtrack_pid",      "SD track PID",          "fSDTrack_PID"},
+    {"sdtrack_posx",     "SD track posx",    "fSDTrack_posx"},
+    {"sdtrack_posy",     "SD track posy",    "fSDTrack_posy"},
+    {"sdtrack_posz",     "SD track posz",    "fSDTrack_posz"},
+    {"sdtrack_momx",     "SD track momx",    "fSDTrack_momx"},
+    {"sdtrack_momy",     "SD track momy",    "fSDTrack_momy"},
+    {"sdtrack_momz",     "SD track momz",    "fSDTrack_momz"},
+    {"sdtrack_polx",     "SD track polx",    "fSDTrack_polx"},
+    {"sdtrack_poly",     "SD track poly",    "fSDTrack_poly"},
+    {"sdtrack_polz",     "SD track polz",    "fSDTrack_polz"},
+    {"sdtrack_etot",     "SD track Etot",    "fSDTrack_Etot"},
+    {"sdtrack_t",        "SD track T",       "fSDTrack_T"},
+    {"sdtrack_vx",       "SD track vx",    "fSDTrack_vx"},
+    {"sdtrack_vy",       "SD track vy",    "fSDTrack_vy"},
+    {"sdtrack_vz",       "SD track vz",    "fSDTrack_vz"},
+    {"sdtrack_vnx",      "SD track vnx",    "fSDTrack_vnx"},
+    {"sdtrack_vny",      "SD track vny",    "fSDTrack_vny"},
+    {"sdtrack_vnz",      "SD track vnz",    "fSDTrack_vnz"},
+    {"sdtrack_vEkin",    "SD track vEkin",  "fSDTrack_vEkin"},
     { 0 }
   };
 
@@ -251,6 +299,54 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fBBGEMhit_y = *(simEvent->Tgmn->Earm_BBGEM_hit_ty);
   fBBPS_esum = simEvent->Tgmn->Earm_BBPSTF1_det_esum;
   fBBSH_esum = simEvent->Tgmn->Earm_BBSHTF1_det_esum;
+  fBBGEMhit_ptridx = *(simEvent->Tgmn->Earm_BBGEM_hit_ptridx);
+  fBBGEMhit_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_hit_sdtridx);
+  fBBGEMtrack_ptridx = *(simEvent->Tgmn->Earm_BBGEM_Track_ptridx);
+  fBBGEMtrack_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_Track_sdtridx);
+  fBBHODOhit_ptridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_ptridx);
+  fBBHODOhit_sdtridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_sdtridx);
+  fBBPSTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_ptridx);
+  fBBPSTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_sdtridx);
+  fBBSHTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_ptridx);
+  fBBSHTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_sdtridx);
+  fHCALhit_ptridx = *(simEvent->Tgmn->Harm_HCalScint_hit_ptridx);
+  fHCALhit_sdtridx = *(simEvent->Tgmn->Harm_HCalScint_hit_sdtridx);
+  fPTrack_ntracks = simEvent->Tgmn->PTrack_ntracks;
+  fPTrack_TID = *(simEvent->Tgmn->PTrack_TID);
+  fPTrack_PID = *(simEvent->Tgmn->PTrack_PID);
+  fPTrack_posx = *(simEvent->Tgmn->PTrack_posx);
+  fPTrack_posy = *(simEvent->Tgmn->PTrack_posy);
+  fPTrack_posz = *(simEvent->Tgmn->PTrack_posz);
+  fPTrack_momx = *(simEvent->Tgmn->PTrack_momx);
+  fPTrack_momy = *(simEvent->Tgmn->PTrack_momy);
+  fPTrack_momz = *(simEvent->Tgmn->PTrack_momz);
+  fPTrack_polx = *(simEvent->Tgmn->PTrack_polx);
+  fPTrack_poly = *(simEvent->Tgmn->PTrack_poly);
+  fPTrack_polz = *(simEvent->Tgmn->PTrack_polz);
+  fPTrack_Etot = *(simEvent->Tgmn->PTrack_Etot);
+  fPTrack_T = *(simEvent->Tgmn->PTrack_T);
+  fSDTrack_ntracks = simEvent->Tgmn->SDTrack_ntracks;
+  fSDTrack_TID = *(simEvent->Tgmn->SDTrack_TID);
+  fSDTrack_MID = *(simEvent->Tgmn->SDTrack_MID);
+  fSDTrack_PID = *(simEvent->Tgmn->SDTrack_PID);
+  fSDTrack_posx = *(simEvent->Tgmn->SDTrack_posx);
+  fSDTrack_posy = *(simEvent->Tgmn->SDTrack_posy);
+  fSDTrack_posz = *(simEvent->Tgmn->SDTrack_posz);
+  fSDTrack_momx = *(simEvent->Tgmn->SDTrack_momx);
+  fSDTrack_momy = *(simEvent->Tgmn->SDTrack_momy);
+  fSDTrack_momz = *(simEvent->Tgmn->SDTrack_momz);
+  fSDTrack_polx = *(simEvent->Tgmn->SDTrack_polx);
+  fSDTrack_poly = *(simEvent->Tgmn->SDTrack_poly);
+  fSDTrack_polz = *(simEvent->Tgmn->SDTrack_polz);
+  fSDTrack_Etot = *(simEvent->Tgmn->SDTrack_Etot);
+  fSDTrack_T = *(simEvent->Tgmn->SDTrack_T);
+  fSDTrack_vx = *(simEvent->Tgmn->SDTrack_vx);
+  fSDTrack_vy = *(simEvent->Tgmn->SDTrack_vy);
+  fSDTrack_vz = *(simEvent->Tgmn->SDTrack_vz);
+  fSDTrack_vnx = *(simEvent->Tgmn->SDTrack_vnx);
+  fSDTrack_vny = *(simEvent->Tgmn->SDTrack_vny);
+  fSDTrack_vnz = *(simEvent->Tgmn->SDTrack_vnz);
+  fSDTrack_vEkin = *(simEvent->Tgmn->SDTrack_vEkin);
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
