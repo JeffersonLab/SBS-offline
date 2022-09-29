@@ -1157,8 +1157,9 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     if(app->InheritsFrom("SBSRasteredBeam")){
       SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
       //double xbeam = RasterBeam->GetPosition().X();
-      ybeam = RasterBeam->GetPosition().Y();
-      xbeam = RasterBeam->GetPosition().X();
+      //units for beam position are mm, we need to convert to meters for spectrometer optics
+      ybeam = RasterBeam->GetPosition().Y()/1000.; 
+      xbeam = RasterBeam->GetPosition().X()/1000.;
       xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
     }
     //cout << var->GetName() << endl;
