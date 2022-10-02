@@ -26,6 +26,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block)
     fE = block->GetE();
     fEblk = block->GetE();
     fMult = 1;
+    fAgain = block->GetAgain();
     fAtime  = block->GetAtime();
     fTDCtime  = block->GetTDCtime();
     fRow  = block->GetRow();
@@ -45,6 +46,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk)
     fE = 0;
     fEblk = 0;
     fMult = 0;
+    fAgain = 0.;
     fAtime = 0;
     fTDCtime = 0;
     fRow  = -1;
@@ -61,6 +63,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster() {
     fE = kBig;
     fEblk = 0;
     fMult = 0;
+    fAgain = 0.;
     fAtime = 0;
     fTDCtime = 0;
     fRow  = -1;
@@ -85,6 +88,7 @@ void SBSCalorimeterCluster::AddElement(SBSElement* block) {
         if(block->GetE() > fEblk) {
           fEblk = block->GetE();
           fAtime = block->GetAtime();
+	  fAgain = block->GetAgain();
           fTDCtime = block->GetTDCtime();
           fRow = block->GetRow();
           fCol = block->GetCol();
@@ -104,6 +108,7 @@ void SBSCalorimeterCluster::AddElement(SBSElement* block) {
 void SBSCalorimeterCluster::Clear( Option_t* opt ) {
     fMult=0;fX=fY=fE=0.;
     fEblk=0;
+    fAgain=0.;
     fAtime=0;
     fTDCtime=0;
     fRow=fCol=-1;

@@ -22,6 +22,7 @@ public:
     Double_t GetX() const {return fX;}
     Double_t GetY() const {return fY;}
     Double_t GetE() const {return fE;}
+    Double_t GetAgain() const {return fAgain;}
     Double_t GetAtime() const {return fAtime;}
     Double_t GetTDCtime() const {return fTDCtime;}
     Double_t GetEblk() const {return fEblk;}
@@ -37,6 +38,7 @@ public:
     void SetX(Double_t var) {fX=var;}
     void SetY(Double_t var) {fY=var;}
     void SetE(Double_t var) {fE=var;}
+    void SetAgain(Double_t var) {fAgain=var;}
     void SetAtime(Double_t var) {fAtime=var;}
     void SetTDCtime(Double_t var) {fTDCtime=var;}
     void SetEblk(Double_t var) {fEblk=var;}
@@ -58,8 +60,8 @@ private:
 
     Double_t fX;       // x position of the center
     Double_t fY;       // y position of the center
-
     Double_t fE;       // Energy deposit in block
+    Double_t fAgain;   // ADC gain coefficient (GeV/pC)
     Double_t fAtime;       // ADC time  of block with highest E
     Double_t fTDCtime;       // TDC time  of block with highest E
     Double_t fEblk;    // Energy of block with highest E

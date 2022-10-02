@@ -193,28 +193,30 @@ void SBSBBShower::MakeMainCluster(Int_t iclust)
   if(!fClusters.empty() && iclust >= 0 && iclust < fClusters.size() ) {
     SBSCalorimeterCluster *clus = fClusters[iclust];
     fMainclus.e.push_back(clus->GetE());
+    fMainclus.again.push_back(clus->GetAgain());
     fMainclus.atime.push_back(clus->GetAtime());
     fMainclus.tdctime.push_back(clus->GetTDCtime());
-    fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
     fMainclus.x.push_back(clus->GetX());
     fMainclus.y.push_back(clus->GetY());
     fMainclus.n.push_back(clus->GetMult());
     fMainclus.blk_e.push_back(clus->GetEblk());
-    fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
+    //fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
     fMainclus.id.push_back(clus->GetElemID());
     fMainclus.row.push_back(clus->GetRow());
     fMainclus.col.push_back(clus->GetCol());
     fBestClusterIndex = iclust;
   } else { //Make an "empty" cluster:
     fMainclus.e.push_back( 0.0 );
+    fMainclus.again.push_back( 0.0 );
     fMainclus.atime.push_back( -1000.0 );
     fMainclus.tdctime.push_back( -1000.0 );
-    fMainclus.e_c.push_back( 0.0 );
+    //fMainclus.e_c.push_back( 0.0 );
     fMainclus.x.push_back( 0.0 );
     fMainclus.y.push_back( 0.0 );
     fMainclus.n.push_back( 0 );
     fMainclus.blk_e.push_back( 0.0 );
-    fMainclus.blk_e_c.push_back( 0.0 );
+    //fMainclus.blk_e_c.push_back( 0.0 );
     fMainclus.id.push_back( -1 );
     fMainclus.row.push_back( -1 );
     fMainclus.col.push_back( -1 );

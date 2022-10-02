@@ -56,16 +56,17 @@ struct SBSCalBlocks {
 
 struct SBSCalorimeterOutput {
   std::vector<Double_t> e;   //< []
+  std::vector<Double_t> again;   //< []
   std::vector<Double_t> atime;   //< []
   std::vector<Double_t> tdctime;   //< []
-  std::vector<Double_t> e_c;   //< []
+  //std::vector<Double_t> e_c;   //< []
   std::vector<Double_t> x;   //< []
   std::vector<Double_t> y;   //< []
   std::vector<Double_t> row; //< []
   std::vector<Double_t> col; //< []
   std::vector<Int_t>   n;   // Number of elements
   std::vector<Double_t> blk_e;   // block energy of max energy block
-  std::vector<Double_t> blk_e_c; // block corrected energy of max energy block
+  //std::vector<Double_t> blk_e_c; // block corrected energy of max energy block
   std::vector<Int_t>   id;      // block id of max energy block
 };
    
@@ -84,13 +85,14 @@ public:
 
   // Get information from the main cluster
   Double_t GetE();             //< Main cluster energy
+  Double_t GetAgain();         //< Pedestal subtracted ADC integral (pC)
   Double_t GetAtime();         //< Main cluster ADC time of max block
   Double_t GetTDCtime();         //< Main cluster ADC time of max block
-  Double_t GetECorrected();    //< Main cluster corrected energy
+  /* Double_t GetECorrected();    //< Main cluster corrected energy */
   Double_t GetX();             //< Main cluster energy average x
   Double_t GetY();             //< Main cluster energy average y
   Double_t GetEBlk();          //< Main cluster energy of max block in cluster
-  Double_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster
+  /* Double_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster */
   Int_t GetNblk();            //< Number of blocks in main cluster
   Int_t GetBlkID();           //< ID/block number of max energy block in cluster
   Int_t GetRow();             //< Main cluster row of max block
@@ -186,6 +188,10 @@ inline Double_t SBSCalorimeter::GetE() {
   return GetVVal(fMainclus.e);
 }
 
+inline Double_t SBSCalorimeter::GetAgain() {
+  return GetVVal(fMainclus.again);
+}
+
 inline Double_t SBSCalorimeter::GetAtime() {
   return GetVVal(fMainclus.atime);
 }
@@ -194,17 +200,17 @@ inline Double_t SBSCalorimeter::GetTDCtime() {
   return GetVVal(fMainclus.tdctime);
 }
 
-inline Double_t SBSCalorimeter::GetECorrected() {
-  return GetVVal(fMainclus.e_c);
-}
+/* inline Double_t SBSCalorimeter::GetECorrected() { */
+/*   return GetVVal(fMainclus.e_c); */
+/* } */
 
 inline Double_t SBSCalorimeter::GetEBlk() {
   return GetVVal(fMainclus.blk_e);
 }
 
-inline Double_t SBSCalorimeter::GetEBlkCorrected() {
-  return GetVVal(fMainclus.blk_e_c);
-}
+/* inline Double_t SBSCalorimeter::GetEBlkCorrected() { */
+/*   return GetVVal(fMainclus.blk_e_c); */
+/* } */
 
 inline Double_t SBSCalorimeter::GetX() {
   return GetVVal(fMainclus.x);

@@ -622,7 +622,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	// TODO: so far we use only the "main" cluster... 
 	//       we might want to check the others...
 	//y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
-	Etot+= BBTotalShower->GetShower()->GetECorrected();
+	//Etot+= BBTotalShower->GetShower()->GetECorrected();
+	Etot+= BBTotalShower->GetShower()->GetE();
 
 	double weightxSH = pow(fSigmaX_shower,-2);
 	double weightySH = pow(fSigmaY_shower,-2);
@@ -648,8 +649,10 @@ Int_t SBSBigBite::CoarseReconstruct()
 	double weightxPS = pow(fSigmaX_preshower,-2);
 	double weightyPS = pow(fSigmaY_preshower,-2);
 	
-	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
-	EpsEtotRatio = BBTotalShower->GetPreShower()->GetECorrected()/Etot;
+	// Etot+= BBTotalShower->GetPreShower()->GetECorrected();
+	// EpsEtotRatio = BBTotalShower->GetPreShower()->GetECorrected()/Etot;
+	Etot+= BBTotalShower->GetPreShower()->GetE();
+	EpsEtotRatio = BBTotalShower->GetPreShower()->GetE()/Etot;
 	fEpsEtotRatio.push_back(EpsEtotRatio);
 	fEtot.push_back(Etot);
 	// x_bcp+= BBTotalShower->GetPreShower()->GetX()/(pow(BBTotalShower->GetPreShower()->SizeRow(), 2)/12.);
