@@ -381,6 +381,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
       return kInitError;
     }
 
+    //I seem to be able to write anything except a std::cout 
+    
     fb_xfp.resize( nterms );
     fb_yfp.resize( nterms );
     fb_xpfp.resize( nterms );
@@ -393,15 +395,15 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     f_fom.resize(nterms);
 
     for(unsigned int i=0; i<nterms; i++){
-      fb_xfp[i] = optics_param[9*i];
-      fb_yfp[i] = optics_param[9*i+1];
-      fb_xpfp[i] = optics_param[9*i+2];
-      fb_ypfp[i] = optics_param[9*i+3];
-      f_fom[i] = int(optics_param[9*i+4]);
-      f_fol[i] = int(optics_param[9*i+5]);
-      f_fok[i] = int(optics_param[9*i+6]);
-      f_foj[i] = int(optics_param[9*i+7]);
-      f_foi[i] = int(optics_param[9*i+8]);
+      fb_xfp[i] = foptics_param[9*i];
+      fb_yfp[i] = foptics_param[9*i+1];
+      fb_xpfp[i] = foptics_param[9*i+2];
+      fb_ypfp[i] = foptics_param[9*i+3];
+      f_fom[i] = int(foptics_param[9*i+4]);
+      f_fol[i] = int(foptics_param[9*i+5]);
+      f_fok[i] = int(foptics_param[9*i+6]);
+      f_foj[i] = int(foptics_param[9*i+7]);
+      f_foi[i] = int(foptics_param[9*i+8]);
     }
   }
   
@@ -1267,14 +1269,18 @@ void SBSBigBite::CalcFpCoords( THaTrack *track ){
 	      yfp_fit += fb_yfp[ipar] * term;
 	      xpfp_fit += fb_xpfp[ipar] * term;
 	      ypfp_fit += fb_ypfp[ipar] * term;
+	      ipar++;
 	    }
 	  }
 	}
       }
     }
 
-    std::cout << " 
+    // std::cout << "(xptar, yptar, xtar, ytar, p (GeV) ) = (" << xptar << ", " << yptar << ", " << xtar << ", " << ytar << ", " << p << ")" << std::endl;
 
+    // std::cout << "Fitted (xfp, yfp, xpfp, ypfp) = (" << xfp_fit << ", " << yfp_fit << ", " << xpfp_fit << ", " << ypfp_fit << ")" << std::endl;
+      
+      
     //now the "fit" focal plane coordinates are in the ideal optics system. Should we translate to the "detector" system? YES! because here is the best place to do so:
     TVector3 pos_optics( xfp_fit, yfp_fit, 0.0 );
     TVector3 dir_optics( xpfp_fit, ypfp_fit, 1.0 );

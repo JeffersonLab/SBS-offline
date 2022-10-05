@@ -8,7 +8,6 @@ class THaTrack;
 class TH2D;
 
 class SBSBigBite : public THaSpectrometer {
-
 public:
   SBSBigBite( const char *name, const char *description );
   virtual ~SBSBigBite();
