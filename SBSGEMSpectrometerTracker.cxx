@@ -117,7 +117,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
   int useslopeconstraint = fUseSlopeConstraint ? 1 : 0;
-
+  int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   
   DBRequest request[] = {
@@ -159,6 +159,15 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "xpfp_max", &fxpfpmax, kDouble, 0, 1, 1 },
     { "ypfp_min", &fypfpmin, kDouble, 0, 1, 1 },
     { "ypfp_max", &fypfpmax, kDouble, 0, 1, 1 },
+    { "useforwardopticsconstraint", &useforwardopticsconstraint, kInt, 0, 1, 1 },
+    { "dxfp0", &fdxfp0, kDouble, 0, 1, 1 },
+    { "dyfp0", &fdyfp0, kDouble, 0, 1, 1 },
+    { "dxpfp0", &fdxpfp0, kDouble, 0, 1, 1 },
+    { "dypfp0", &fdypfp0, kDouble, 0, 1, 1 },
+    { "dxfpcut", &fdxfpcut, kDouble, 0, 1, 1 },
+    { "dyfpcut", &fdyfpcut, kDouble, 0, 1, 1 },
+    { "dxpfpcut", &fdxpfpcut, kDouble, 0, 1, 1 },
+    { "dypfpcut", &fdypfpcut, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -187,7 +196,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //std::cout << "pedestal file name = " << fpedfilename << std::endl;
   
   fUseOpticsConstraint = (useopticsconstraint != 0 );
-
+   
+  fUseForwardOpticsConstraint = (useforwardopticsconstraint != 0 );
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
@@ -751,10 +761,26 @@ bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, T
     double yptartemp = trtemp->GetTPhi();
     double ytartemp = trtemp->GetTY();
 
-    return ( fxptarmin_track <= xptartemp && xptartemp <= fxptarmax_track &&
-	     fyptarmin_track <= yptartemp && yptartemp <= fyptarmax_track &&
-	     fytarmin_track <= ytartemp && ytartemp <= fytarmax_track &&
-	     fPmin_track <= Ptemp && Ptemp <= fPmax_track );
+    bool goodtarget =
+      ( fxptarmin_track <= xptartemp && xptartemp <= fxptarmax_track &&
+	fyptarmin_track <= yptartemp && yptartemp <= fyptarmax_track &&
+	fytarmin_track <= ytartemp && ytartemp <= fytarmax_track &&
+	fPmin_track <= Ptemp && Ptemp <= fPmax_track );
+
+    bool goodtgtfp = true;
+
+    if( goodtarget && trtemp->HasDet() && fUseForwardOpticsConstraint ){ //non-standard use of the "detector coordinates", perhaps a bit risky, but when we have our SBSSpectrometer base class, this should be a standard interpretation/usage of these coordinates, and we currently don't use the "Det" coordinates in our SBSBigBite or SBSEArm classes in any other way
+      double xfpforward_temp = trtemp->GetDX();
+      double yfpforward_temp = trtemp->GetDY();
+      double xpfpforward_temp = trtemp->GetDTheta();
+      double ypfpforward_temp = trtemp->GetDPhi();
+
+      goodtgtfp = fabs( xtemp - xfpforward_temp - fdxfp0 ) <= fdxfpcut &&
+	fabs( ytemp - yfpforward_temp - fdyfp0 ) <= fdyfpcut &&
+	fabs( xptemp - xpfpforward_temp - fdxpfp0 ) <= fdxpfpcut &&
+	fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut;
+    }
+    return goodtarget && goodtgtfp;
   } else {
     return false;
   }

@@ -199,6 +199,7 @@ protected:
   double fTrackChi2Cut; //chi2/NDF cut for track validity
 
   bool fUseConstraint;
+  bool fUseForwardOpticsConstraint;
   // "Constraint points" to restrict the search region for track-finding:
   TVector3 fConstraintPoint_Front;
   TVector3 fConstraintPoint_Back;
@@ -226,6 +227,10 @@ protected:
   double fyptarmin_track, fyptarmax_track;
   double fytarmin_track, fytarmax_track;
 
+  // forward optics constraints: if applicable 
+  double fdxfp0, fdyfp0, fdxpfp0, fdypfp0;
+  double fdxfpcut, fdyfpcut, fdxpfpcut, fdypfpcut;
+  
   bool fUseSlopeConstraint;
   double fxpfpmin, fxpfpmax;
   double fypfpmin, fypfpmax;
