@@ -40,6 +40,21 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
 
       void SetVerbosity(int v) { fVerbosity = v; } 
 
+      void SetHelicityDelay(Int_t delay){
+	if (delay<0) {
+	  std::cerr << "****  Helicity Delay cannot be negative.  Force to zero." 
+		    << std::endl;
+	  fHelicityDelay = 0;
+	}
+	else if (delay>64) {
+	  std::cerr << "****  Helicity Delay cannot be greater than 64.  Force to zero." 
+		    << std::endl;
+	} else {
+	  fHelicityDelay = delay;
+	}
+      }
+
+
    protected:
       virtual void  FillHisto();
       void  CheckTIRvsRing( UInt_t eventnumber );
@@ -58,6 +73,7 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
       UInt_t fQWEAKNPattern; // maximum of event in the pattern
       Bool_t HWPIN;
 
+      Int_t fHelicityDelay;
 
       Int_t fQrt;
       Int_t fTSettle;

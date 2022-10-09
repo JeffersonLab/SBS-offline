@@ -25,7 +25,9 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
       THaApparatus* app ):
    THaHelicityDet( name, description, app ),
    fOffsetTIRvsRing(3), fQWEAKDelay(8), fMAXBIT(30),
-   fQWEAKNPattern(4), HWPIN(true), fQrt(1), fTSettle(0),fValidHel(false),
+   fQWEAKNPattern(4), HWPIN(true), 
+   fHelicityDelay(2),
+   fQrt(1), fTSettle(0),fValidHel(false),
    fHelicityLastTIR(0),fPatternLastTIR(0), fErrorCode(0), fRing_NSeed(0),
    fRingFinalEvtNum(1),fRingFinalPatNum(0),fRingFinalSeed(0),
    fRingU3plus(0),fRingU3minus(0),
@@ -46,7 +48,9 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
 //_____________________________________________________________________________
    SBSScalerHelicity::SBSScalerHelicity()
 : fOffsetTIRvsRing(3), fQWEAKDelay(8), fMAXBIT(30),
-   fQWEAKNPattern(4), HWPIN(true), fQrt(1), fTSettle(0),fValidHel(false),
+   fQWEAKNPattern(4), HWPIN(true),
+   fHelicityDelay(2),
+   fQrt(1), fTSettle(0),fValidHel(false),
    fHelicityLastTIR(0),fPatternLastTIR(0), fErrorCode(0), fRing_NSeed(0),
    fRingFinalEvtNum(1),fRingFinalPatNum(0),fRingFinalSeed(0),
    fRingU3plus(0),fRingU3minus(0),
@@ -99,22 +103,18 @@ Int_t SBSScalerHelicity::DefineVariables( EMode mode )
       return ret;
 
    const RVarDef var[] = {
-      { "qrt",      "actual qrt for TIR event",        "fQrt" },
-      { "hel",      "actual helicity for TIR event",   "fHelicity" },
-      { "tsettle",  "TSettle for TIR event",           "fTSettle"},
-      { "U3plus",   "U3 plus",                         "fRingU3plus"},
-      { "U3minus",  "U3 minus",                        "fRingU3minus"},
-      { "T3plus",   "T3 plus",                         "fRingT3plus"},
-      { "T3minus",  "T3 minus",                        "fRingT3minus"},
-      { "T5plus",   "T5 plus",                         "fRingT5plus"},
-      { "T5minus",  "T5 minus",                        "fRingT5minus"},
-      { "T10plus",  "T10 plus",                        "fRingT10plus"},
-      { "T10minus", "T10 minus",                       "fRingT10minus"},
-      { "Timeminus","Time minus",                      "fRingTimeminus"},
-      { "Timeplus", "Time plus",                       "fRingTimeplus"},
+      { "hel", "True helicity for event",              "fHelicity" },
+      { "lhrs.fadc.hel", "Helicity bit in LHRS FADC",  "fFADCHelicity"},
+      { "lhrs.fadc.pat", "PatternSync in LHRS FADC",   "fFADCPatSync"},
+      { "lhrs.fadc.tsettle", "Tsettle in LHRS FADC",   "fFADCTSettle"},
+      { "errcode", "Helicity prediction error code",   "fHelErrorCond"},
+      { "evtcount", "Number of helicity events",       "fNumEvents"},
+      { "patcount", "Number of helicity patterns",     "fNumPatterns"},
+      { "patphase", "Event phase within pattern",      "fPatternPhase"},
+      { "seed", "Helicity seed value",                 "fSeedValue"},
       { nullptr }
    };
-   //  cout << "now actually defining stuff, prefix = " << fPrefix << endl;
+   cout << "now actually defining stuff, prefix = " << fPrefix << endl;
    return DefineVarsFromList( var, mode );
 }
 //_____________________________________________________________________________
@@ -126,36 +126,7 @@ void SBSScalerHelicity::PrintEvent( UInt_t evtnum )
    cout << "  evtype " << fEvtype<<endl;
    cout << " event number ="<<evtnum<<endl;
    cout << " == Input register data =="<<endl;
-   cout << " helicity="<<fHelicityTir<<" Pattern ="<<fPatternTir
-      <<" TSettle="<<fTSettleTir<<" TimeStamp="<<fTimeStampTir<<endl;
-   cout << " == Ring data =="<<endl;
-   UInt_t sumu3=0;
-   UInt_t sumt3=0;
-   UInt_t sumt5=0;
-   UInt_t sumt10=0;
-   UInt_t sumtime=0;
 
-   for (UInt_t i=0;i<fIRing;i++)
-   {
-      cout<<" iring="<< i<<" helicity="<<fHelicityRing[i]
-	 <<" Pattern="<<fPatternRing[i]<<" timestamp="<<fTimeStampRing[i]
-	 <<" T3="<<fT3Ring[i]<<" T5="<<fT5Ring[i]<<" T10="<<fT10Ring[i]
-	 <<" U3="<<fU3Ring[i]
-	 <<endl;
-      sumu3+=fU3Ring[i];
-      sumt3+=fT3Ring[i];
-      sumt5+=fT5Ring[i];
-      sumt10+=fT10Ring[i];
-      sumtime+=fTimeStampRing[i];
-   }
-
-   cout<<" == outputs ==\n";
-   cout<<" fQrt="<<fQrt<<" Helicity="<<fHelicity<<" TSettle="<<fTSettle<<endl;
-   cout<<" U3  plus="<<fRingU3plus<<"  minus="<<fRingU3minus<<" sum u3="<<sumu3<<endl;
-   cout<<" T3  plus="<<fRingT3plus<<"  minus="<<fRingT3minus<<" sum t3="<<sumt3<<endl;
-   cout<<" T5  plus="<<fRingT5plus<<"  minus="<<fRingT5minus<<" sum t5="<<sumt5<<endl;
-   cout<<" T10 plus="<<fRingT10plus<<"  minus="<<fRingT10minus<<" sum t10="<<sumt10<<endl;
-   cout<<" time plus="<<fRingTimeplus<<" minus="<<fRingTimeminus<<" sum time="<<sumtime<<endl;
    cout<<" +++++++++++++++++++++++++++++++++++++\n";
 }
 //_____________________________________________________________________________
@@ -407,7 +378,7 @@ void SBSScalerHelicity::Clear( Option_t* opt ) {
 //_____________________________________________________________________________
 Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
 {
-
+  static  Long_t helsign=0, patsign=0;
    // Decode Helicity data.
    // Return 1 if helicity was assigned, 0 if not, <0 if error.
 
@@ -460,7 +431,6 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
    fBranch_seed         = fRing_NSeed; 
    fBranch_errCode      = fErrorCode;
 
-   Long_t helsign;
    if (fIRing>0){
      for (UInt_t i=0; i<fIRing; i++){
        fRingFinalQrtHel = fPatternRing[i] + fHelicityRing[i];
@@ -471,14 +441,22 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
        fRingFinalEvtNum++;
        if (fPatternRing[i]==0x10){
 	 fRingPattPhase = 0;
-	 fRingHelicitySum = helsign;
+	 fRingHelicitySum = 0;
 	 fRingFinalPatNum++;
 	 fRingFinalSeed = ((fRingFinalSeed<<1)&0x3ffffffe)|fHelicityRing[i];
-	 //  Run the algorithm to get the pattern sign for delayed reporting?
+	 //  Run the algorithm to get the pattern sign for delayed reporting
+	 UInt_t tmpnewbit = fRingFinalSeed & 0x1;
+	 UInt_t tmpseed = fRingFinalSeed;
+	 for (size_t idelay=0; idelay<fHelicityDelay; idelay++){
+	   tmpnewbit = RanBit30(tmpseed);
+	 }
+	 if (tmpnewbit == fHelicityRing[i]) patsign = +1;
+	 else                               patsign = -1;
        } else {
 	 fRingPattPhase++;
-	 fRingHelicitySum += helsign;
        }
+       helsign *= patsign;
+       fRingHelicitySum += helsign;
        //  Bulid the helicity-independent and -dependent sums. 
        if (fRingPattPhase==0){
 	 fTimeStampYield = 0;
@@ -499,6 +477,36 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
        if(fHelScalerTree) fHelScalerTree->Fill();
      }
    }
+
+   // UInt_t tmpseed = fRingFinalSeed;
+   // if (tmpseed != fSeedValue) {
+   //   std::cout << "fRingFinalSeed != fSeedValue: " << std::hex
+   // 	       << tmpseed << " " << fSeedValue <<std::dec <<std::endl;
+   // } else {
+   //   std::cout << "ok" << std::endl;
+   // }
+
+   //  Calculate the true helicity
+   if (fHelErrorCond==0){
+     UInt_t tmpseed = fSeedValue;
+     UInt_t tmpnewbit = fSeedValue & 0x1;
+     for (size_t idelay=0; idelay<fHelicityDelay; idelay++){
+       tmpnewbit = RanBit30(tmpseed);
+     }
+     // if (tmpseed != fSeedValue) {
+     //   std::cout << "tmpseed != fSeedValue: " << std::hex
+     // 		 << tmpseed << " " << fSeedValue <<std::dec <<std::endl;
+     // }
+     if (tmpnewbit==0) fHelicity = kMinus;
+     else              fHelicity = kPlus;
+     if (fPatternPhase==1 || fPatternPhase==2){
+       if (tmpnewbit==0) fHelicity = kPlus;
+       else              fHelicity = kMinus;
+     }
+   } else {
+     fHelicity = kUnknown;
+   }
+
    
    if(fVerbosity>0) std::cout << "[SBSScalerHelicity::Decode]: --> Done. " << std::endl; 
 
