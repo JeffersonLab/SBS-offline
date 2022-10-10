@@ -26,6 +26,7 @@ public:
   Double_t GetY()     const { return fY; }
   Double_t GetZ()     const { return fZ; }
   Double_t GetE()     const { return fE; }
+  Double_t GetAgain()     const { return fAgain; }
   Double_t GetAtime()     const { return fAtime; }
   Double_t GetTDCtime()     const { return fTDCtime; }
   Int_t   GetRow()   const { return fRow; }
@@ -42,6 +43,7 @@ public:
   void SetY(Double_t var)    { fY = var; }
   void SetZ(Double_t var)    { fZ = var; }
   void SetE(Double_t var)    { fE = var; }
+  void SetAgain(Double_t var)    { fAgain = var; }
   void SetAtime(Double_t var)    { fAtime = var; }
   void SetTDCtime(Double_t var)    { fTDCtime = var; }
   void SetRow(Int_t var)    { fRow = var; }
@@ -66,6 +68,7 @@ protected:
   Double_t fY;       ///< relative y position of the center
   Double_t fZ;       ///< relative z position of the center
   Double_t fE;       ///< calibrated energy of event in this block
+  Double_t fAgain;   ///< ADC gain coefficient (GeV/pC)
   Double_t fAtime;       ///< ADC time of event in this block
   Double_t fTDCtime;       ///< TDC time of event in this block
 

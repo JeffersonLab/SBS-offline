@@ -276,6 +276,8 @@ class SBSGEMModule : public THaSubDetector {
 
   //Moved to the MPD module class:
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
+  Int_t fCODA_BUILD_ALL_SAMPLES;
+  Int_t fCODA_CM_ENABLED;
   
   Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method, 2 = histogramming method, 3 = "online" Danning-method
   Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 

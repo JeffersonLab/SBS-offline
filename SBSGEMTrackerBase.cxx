@@ -95,6 +95,14 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   
   fCommonModePlotsFlag = 0; 
   fCommonModePlotsFlagIsSet = false;
+
+  fUseForwardOpticsConstraint = false;
+  //default values for forward optics constraint center and width:
+  fdxfp0 = fdyfp0 = fdxpfp0 = fdypfp0 = 0.0;
+  fdxfpcut = 0.05;
+  fdyfpcut = 0.05;
+  fdxpfpcut = 0.01;
+  fdypfpcut = 0.01;
   
 }
 

@@ -110,7 +110,7 @@ include(${ROOT_USE_FILE})
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 ##----------------------------------------------------------------------------
 ## Setup the PODD Analyzer
-find_package(Podd 1.6 REQUIRED)
+find_package(Podd 1.7 REQUIRED)
 
 ##----------------------------------------------------------------------------
 ## Check for SStream support
@@ -182,33 +182,49 @@ endforeach()
 # cmake_path wasn't introduced until cmake 3.20, not yet available on ifarm by default
 #cmake_path(SET DEFAULT_SBS_REPLAY_PATH "${PROJECT_SOURCE_DIR}/../SBS-replay")
 
+option( GEN "Use GEN-replay instead of SBS-replay as default replay directory" false )
 
+set(REPLAYDIR SBS-replay)
+if( GEN )
+    set(REPLAYDIR GEN-replay)
+endif()
 
 if( DEFINED ENV{SBS_REPLAY} )
     set( DEFAULT_SBS_REPLAY_PATH $ENV{SBS_REPLAY} )
 else() # look in directory 
-   get_filename_component( DEFAULT_SBS_REPLAY_PATH ../SBS-replay ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR})
+   get_filename_component( DEFAULT_SBS_REPLAY_PATH ../${REPLAYDIR} ABSOLUTE BASE_DIR ${PROJECT_SOURCE_DIR})
 endif()		   
 
-set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to SBS-replay installation")
+set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to ${REPLAYDIR} installation")
 
-if( NOT ${SBS_REPLAY_PATH} MATCHES "/SBS-replay$" )
-    string(APPEND SBS_REPLAY_PATH "/SBS-replay")
+# check if sbs_replay_path set by default from environment matches SBS-replay or GEN-replay, adjust if needed:
+if( NOT ${SBS_REPLAY_PATH} MATCHES "/${REPLAYDIR}$" )
+  if( ${SBS_REPLAY_PATH} MATCHES "/SBS-replay$" )
+    message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment matches SBS-replay but GEN-replay option was given on the command-line, switching to SBS-replay" )
+    set(REPLAYDIR SBS-replay)
+  elseif( ${SBS_REPLAY_PATH} MATCHES "/GEN-replay$" )
+    message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment matches GEN-replay but SBS-replay option was given on the command-line, switching to GEN-replay" )
+    set(REPLAYDIR GEN-replay)
+  else() 
+    message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment doesn't match a supported configuration, appending ${REPLAYDIR}, YMMV..." )
+  endif()
+# 
+  string(APPEND SBS_REPLAY_PATH "/${REPLAYDIR}")
 endif()
 
 if(NOT EXISTS ${SBS_REPLAY_PATH})
   if( EXISTS ${DEFAULT_SBS_REPLAY_PATH} )
-    message( WARNING "SBS-replay not found in ${SBS_REPLAY_PATH}, reverting to replay installation found in ${DEFAULT_SBS_REPLAY_PATH}" )
-    set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to SBS-replay installation" FORCE)
+    message( WARNING "${REPLAYDIR} not found in ${SBS_REPLAY_PATH}, reverting to replay installation found in ${DEFAULT_SBS_REPLAY_PATH}" )
+    set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to ${REPLAYDIR} installation" FORCE)
   elseif(${DEFAULT_SBS_REPLAY_PATH} STREQUAL ${SBS_REPLAY_PATH})
-    message(WARNING "SBS-replay not found in default location ${DEFAULT_SBS_REPLAY_PATH}. You can still build SBS-offline, but the \"replay\" and \"scripts\" directories under SBS-replay won't be automatically added to ROOT's macro path in the .rootrc file. To fix this, set environment variable SBS_REPLAY to point to your SBS-replay installation and/or re-run cmake with -DSBS_REPLAY_PATH=/path/to/your/custom/SBS-replay/")
+    message(WARNING "${REPLAYDIR} not found in default location ${DEFAULT_SBS_REPLAY_PATH}. You can still build SBS-offline, but the \"replay\" and \"scripts\" directories under ${REPLAYDIR} won't be automatically added to ROOT's macro path in the .rootrc file. To fix this, set environment variable SBS_REPLAY to point to your ${REPLAYDIR} installation and/or re-run cmake with -DSBS_REPLAY_PATH=/path/to/your/custom/${REPLAYDIR}/")
   else()
-    message(WARNING "SBS-replay not found in either its default location ${DEFAULT_SBS_REPLAY_PATH} or user-specified location ${SBS_REPLAY_PATH}. You can still build SBS-offline, but the \"replay\" and \"scripts\" directories under SBS-replay won't be automatically added to ROOT's macro path in the .rootrc file. To fix this, set environment variable SBS_REPLAY to point to your SBS-replay installation and/or re-run cmake with -DSBS_REPLAY_PATH=/path/to/your/custom/SBS-replay/")
+    message(WARNING "${REPLAYDIR} not found in either its default location ${DEFAULT_SBS_REPLAY_PATH} or user-specified location ${SBS_REPLAY_PATH}. You can still build SBS-offline, but the \"replay\" and \"scripts\" directories under ${REPLAYDIR} won't be automatically added to ROOT's macro path in the .rootrc file. To fix this, set environment variable SBS_REPLAY to point to your ${REPLAYDIR} installation and/or re-run cmake with -DSBS_REPLAY_PATH=/path/to/your/custom/${REPLAYDIR}/")
   endif()	   
 endif()	
 
 if( EXISTS ${SBS_REPLAY_PATH} )
-    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts:${SBS_REPLAY_PATH}/onlineGUIconfig")
+    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts:${SBS_REPLAY_PATH}/onlineGUIconfig: ${SBS_REPLAY_PATH}/onlineGUIconfig/scripts")
 else()
     set(SBS_MACRO_PATH ".")
 endif()
@@ -224,7 +240,7 @@ configure_file( ${PROJECT_SOURCE_DIR}/rootlogon_install.C ${PROJECT_BINARY_DIR}/
 
 #install the library under ${CMAKE_INSTALL_PREFIX}/lib
 INSTALL(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-#install the relevant directories: DB, replay, scripts in the top-level installation folder (these have been moved to SBS-replay repository)
+#install the relevant directories: DB, replay, scripts in the top-level installation folder (these have been moved to ${REPLAYDIR} repository)
 #INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB DESTINATION ${CMAKE_INSTALL_PREFIX})
 #INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/DB_UVA_EEL_COSMIC_JAN2021 DESTINATION ${CMAKE_INSTALL_PREFIX})
 #INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/replay DESTINATION ${CMAKE_INSTALL_PREFIX})

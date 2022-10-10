@@ -110,6 +110,9 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   h1_y_fcpVbcp = new TH2D("h1_y_fcpVbcp", ";y_{bcp} (m);y_{fcp} (m)", 100, -0.5, 0.5, 100, -0.5, 0.5);
   h1_dyVdx = new TH2D("h1_dyVdx",";dx/dz;dy/dz", 100, -0.5, 0.5, 50, -0.25, 0.25);
   */
+
+  fUseForwardOptics = false;
+  fForwardOpticsOrder = -1;
 }
 
 //_____________________________________________________________________________
@@ -192,6 +195,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   std::vector<Double_t> firstgem_offset;
   
   std::vector<Double_t> optics_param;
+  std::vector<Double_t> foptics_param;
+  
   std::vector<Double_t> pssh_pidproba;
   std::vector<Double_t> pcal_pidproba;
   std::vector<Double_t> grinch_pidproba;
@@ -237,6 +242,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "ysigma_preshower", &fSigmaY_preshower, kDouble, 0, 1, 1 },
     { "xsigma_hodo", &fSigmaX_hodo, kDouble, 0, 1, 1 },
     { "ysigma_hodo", &fSigmaY_hodo, kDouble, 0, 1, 1 },
+    { "forwardoptics_order", &fForwardOpticsOrder, kInt, 0, 1, 1 },
+    { "forwardoptics_parameters", &foptics_param, kDoubleV, 0, 1, 1 },
     {0}
   };
     
@@ -347,6 +354,56 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 	fYtar_01000 = fb_ytar[i];
       if(f_om[i]==0 && f_ol[i]==0 && f_ok[i]==0 && f_oj[i]==1 && f_oi[i]==0)
 	fYtar_00010 = fb_ytar[i];
+    }
+  }
+
+  if( fForwardOpticsOrder >= 0 ){
+    unsigned int nterms=0;
+    for(int i = 0; i<=fForwardOpticsOrder; i++){ //x 
+      for( int j=0; j<=fForwardOpticsOrder-i; j++){ //y
+	for( int k=0; k<=fForwardOpticsOrder-i-j; k++){
+	  for( int l=0; l<=fForwardOpticsOrder-i-j-k; l++){
+	    for( int m=0; m<=fForwardOpticsOrder-i-j-k-l; m++ ){
+	      nterms++;
+	    }
+	  }
+	}
+      }
+    }
+    cout << nterms << " lines of parameters expected for optics of order " << fForwardOpticsOrder << endl;
+
+    unsigned int nparams = 9*nterms;
+    if(nparams!=foptics_param.size()){
+      std::cerr << "Warning: mismatch between " << foptics_param.size()
+		<< " forward optics parameters provided and " << nparams*9
+		<< " forward optics parameters expected!" << std::endl;
+      std::cerr << " Fix database! " << std::endl;
+      return kInitError;
+    }
+
+    //I seem to be able to write anything except a std::cout 
+    
+    fb_xfp.resize( nterms );
+    fb_yfp.resize( nterms );
+    fb_xpfp.resize( nterms );
+    fb_ypfp.resize( nterms );
+
+    f_foi.resize(nterms);
+    f_foj.resize(nterms);
+    f_fok.resize(nterms);
+    f_fol.resize(nterms);
+    f_fom.resize(nterms);
+
+    for(unsigned int i=0; i<nterms; i++){
+      fb_xfp[i] = foptics_param[9*i];
+      fb_yfp[i] = foptics_param[9*i+1];
+      fb_xpfp[i] = foptics_param[9*i+2];
+      fb_ypfp[i] = foptics_param[9*i+3];
+      f_fom[i] = int(foptics_param[9*i+4]);
+      f_fol[i] = int(foptics_param[9*i+5]);
+      f_fok[i] = int(foptics_param[9*i+6]);
+      f_foj[i] = int(foptics_param[9*i+7]);
+      f_foi[i] = int(foptics_param[9*i+8]);
     }
   }
   
@@ -622,7 +679,8 @@ Int_t SBSBigBite::CoarseReconstruct()
 	// TODO: so far we use only the "main" cluster... 
 	//       we might want to check the others...
 	//y_bcp+= BBTotalShower->GetShower()->GetY()/(BBTotalShower->GetShower()->SizeCol()/sqrt(12));
-	Etot+= BBTotalShower->GetShower()->GetECorrected();
+	//Etot+= BBTotalShower->GetShower()->GetECorrected();
+	Etot+= BBTotalShower->GetShower()->GetE();
 
 	double weightxSH = pow(fSigmaX_shower,-2);
 	double weightySH = pow(fSigmaY_shower,-2);
@@ -648,8 +706,10 @@ Int_t SBSBigBite::CoarseReconstruct()
 	double weightxPS = pow(fSigmaX_preshower,-2);
 	double weightyPS = pow(fSigmaY_preshower,-2);
 	
-	Etot+= BBTotalShower->GetPreShower()->GetECorrected();
-	EpsEtotRatio = BBTotalShower->GetPreShower()->GetECorrected()/Etot;
+	// Etot+= BBTotalShower->GetPreShower()->GetECorrected();
+	// EpsEtotRatio = BBTotalShower->GetPreShower()->GetECorrected()/Etot;
+	Etot+= BBTotalShower->GetPreShower()->GetE();
+	EpsEtotRatio = BBTotalShower->GetPreShower()->GetE()/Etot;
 	fEpsEtotRatio.push_back(EpsEtotRatio);
 	fEtot.push_back(Etot);
 	// x_bcp+= BBTotalShower->GetPreShower()->GetX()/(pow(BBTotalShower->GetPreShower()->SizeRow(), 2)/12.);
@@ -911,7 +971,12 @@ Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
     CalcOpticsCoords(theTrack);
 
-    if(fOpticsOrder>=0)CalcTargetCoords(theTrack);
+    if(fOpticsOrder>=0){
+      CalcTargetCoords(theTrack);
+      if(fForwardOpticsOrder>=0){ //also calculate forward from target as consistency check:
+	CalcFpCoords( theTrack );
+      }
+    }
   }
   
   //sort on other criteria than chi^2
@@ -1157,8 +1222,9 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     if(app->InheritsFrom("SBSRasteredBeam")){
       SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
       //double xbeam = RasterBeam->GetPosition().X();
-      ybeam = RasterBeam->GetPosition().Y();
-      xbeam = RasterBeam->GetPosition().X();
+      //units for beam position are mm, we need to convert to meters for spectrometer optics
+      ybeam = RasterBeam->GetPosition().Y()/1000.; 
+      xbeam = RasterBeam->GetPosition().X()/1000.;
       xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
     }
     //cout << var->GetName() << endl;
@@ -1175,6 +1241,68 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //   << "   " << track->GetVertexZ() << endl;
   
   //std::cout << "Done." << std::endl;
+}
+
+//_____________________________________________________________________________
+void SBSBigBite::CalcFpCoords( THaTrack *track ){
+  if( track->HasTarget() ){
+    double xtar = track->GetTX();
+    double ytar = track->GetTY();
+    double xptar = track->GetTTheta();
+    double yptar = track->GetTPhi();
+    double p = track->GetP();
+
+    double xfp_fit = 0.0;
+    double yfp_fit = 0.0;
+    double xpfp_fit = 0.0;
+    double ypfp_fit = 0.0;
+
+    int ipar=0;
+    //forward optics expansion is (xfp, yfp, xpfp, ypfp) = sum_ijklm C_(xyxpyp)^ijklm * xptar^i yptar^j ytar^k (1/p)^l (xtar)^m:
+    for( int i=0; i<=fForwardOpticsOrder; i++ ){
+      for( int j=0; j<=fForwardOpticsOrder-i; j++ ){
+	for( int k=0; k<=fForwardOpticsOrder-i-j; k++ ){
+	  for( int l=0; l<=fForwardOpticsOrder-i-j-k; l++ ){
+	    for( int m=0; m<=fForwardOpticsOrder-i-j-k-l; m++ ){
+	      double term = pow( xptar, m )*pow( yptar, l )*pow( ytar, k ) * pow( 1.0/p, j ) * pow( xtar, i );
+	      xfp_fit += fb_xfp[ipar] * term;
+	      yfp_fit += fb_yfp[ipar] * term;
+	      xpfp_fit += fb_xpfp[ipar] * term;
+	      ypfp_fit += fb_ypfp[ipar] * term;
+	      ipar++;
+	    }
+	  }
+	}
+      }
+    }
+
+    // std::cout << "(xptar, yptar, xtar, ytar, p (GeV) ) = (" << xptar << ", " << yptar << ", " << xtar << ", " << ytar << ", " << p << ")" << std::endl;
+
+    // std::cout << "Fitted (xfp, yfp, xpfp, ypfp) = (" << xfp_fit << ", " << yfp_fit << ", " << xpfp_fit << ", " << ypfp_fit << ")" << std::endl;
+      
+      
+    //now the "fit" focal plane coordinates are in the ideal optics system. Should we translate to the "detector" system? YES! because here is the best place to do so:
+    TVector3 pos_optics( xfp_fit, yfp_fit, 0.0 );
+    TVector3 dir_optics( xpfp_fit, ypfp_fit, 1.0 );
+    dir_optics = dir_optics.Unit();
+
+    TVector3 posglobal_optics = fOpticsOrigin + pos_optics.X() * fOpticsXaxis_global + pos_optics.Y() * fOpticsYaxis_global + pos_optics.Z() * fOpticsZaxis_global;
+
+    TVector3 dirglobal_optics = dir_optics.X() * fOpticsXaxis_global + dir_optics.Y() * fOpticsYaxis_global + dir_optics.Z() * fOpticsZaxis_global;
+
+    double sintersect = ( fGEMorigin - posglobal_optics ).Dot( fGEMzaxis_global )/( dirglobal_optics.Dot( fGEMzaxis_global ) );
+
+    TVector3 TrackGEMintersect_global = posglobal_optics + sintersect * dirglobal_optics;
+
+    double xGEM = (TrackGEMintersect_global - fGEMorigin).Dot( fGEMxaxis_global );
+    double yGEM = (TrackGEMintersect_global - fGEMorigin).Dot( fGEMyaxis_global );
+
+    double xpGEM = dirglobal_optics.Dot( fGEMxaxis_global )/dirglobal_optics.Dot( fGEMzaxis_global );
+    double ypGEM = dirglobal_optics.Dot( fGEMyaxis_global )/dirglobal_optics.Dot( fGEMzaxis_global );
+
+    track->SetD( xGEM, yGEM, xpGEM, ypGEM );
+    
+  }
 }
 
 //_____________________________________________________________________________
