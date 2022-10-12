@@ -166,7 +166,7 @@ protected:
   
   long fMaxHitCombinations; //default = 10000; this is for "outer" layers
   long fMaxHitCombinations_InnerLayers; //default = 10000?
-  long fMaxHitCombinations_Total; //default = 100000000
+  double fMaxHitCombinations_Total; //default = 100000000
   bool fTryFastTrack; //default = true?
   
   // The use of maps here instead of vectors may be slightly algorithmically inefficient, but it DOES guarantee that the maps are

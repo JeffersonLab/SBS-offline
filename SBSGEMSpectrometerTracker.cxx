@@ -128,7 +128,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
     { "maxhitcombos_inner", &fMaxHitCombinations_InnerLayers, kInt, 0, 1},
-    { "maxhitcombos_total", &fMaxHitCombinations_Total, kLong, 0, 1},
+    { "maxhitcombos_total", &fMaxHitCombinations_Total, kDouble, 0, 1},
     { "tryfasttrack", &fasttrack_flag, kInt, 0, 1 },
     { "gridbinwidthx", &fGridBinWidthX, kDouble, 0, 1},
     { "gridbinwidthy", &fGridBinWidthY, kDouble, 0, 1},

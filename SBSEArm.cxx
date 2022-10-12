@@ -609,9 +609,13 @@ Int_t SBSEArm::CoarseReconstruct()
       y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
       z_bcp = HCal->GetOrigin().Z();
           
-      x_fcp = fGEMorigin.X();
-      y_fcp = fGEMorigin.Y();
-      z_fcp = fGEMorigin.Z();
+      //x_fcp = fGEMorigin.X();
+      //y_fcp = fGEMorigin.Y();
+      //z_fcp = fGEMorigin.Z();
+
+      x_fcp = 0.0;
+      y_fcp = 0.0;
+      z_fcp = 0.0;
 
       fFrontConstraintX.push_back( x_fcp );
       fFrontConstraintY.push_back( y_fcp );
