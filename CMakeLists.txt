@@ -182,7 +182,7 @@ endforeach()
 # cmake_path wasn't introduced until cmake 3.20, not yet available on ifarm by default
 #cmake_path(SET DEFAULT_SBS_REPLAY_PATH "${PROJECT_SOURCE_DIR}/../SBS-replay")
 
-option( GEN "Use GEN-replay instead of SBS-replay as default replay directory" true )
+option( GEN "Use GEN-replay instead of SBS-replay as default replay directory" false )
 
 set(REPLAYDIR SBS-replay)
 if( GEN )
@@ -224,7 +224,7 @@ if(NOT EXISTS ${SBS_REPLAY_PATH})
 endif()	
 
 if( EXISTS ${SBS_REPLAY_PATH} )
-    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts:${SBS_REPLAY_PATH}/onlineGUIconfig")
+    set(SBS_MACRO_PATH ".:${SBS_REPLAY_PATH}/replay:${SBS_REPLAY_PATH}/scripts:${SBS_REPLAY_PATH}/onlineGUIconfig: ${SBS_REPLAY_PATH}/onlineGUIconfig/scripts")
 else()
     set(SBS_MACRO_PATH ".")
 endif()

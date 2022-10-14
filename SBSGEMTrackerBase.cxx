@@ -28,7 +28,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fMaxHitCombinations = 10000;
   fMaxHitCombinations_InnerLayers = 100000;
-  fMaxHitCombinations_Total = 10000000000;
+  fMaxHitCombinations_Total = 10000000000.0;
   fTryFastTrack = true;
 
   //moved zero suppression/common-mode parameters to module class
@@ -95,6 +95,14 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   
   fCommonModePlotsFlag = 0; 
   fCommonModePlotsFlagIsSet = false;
+
+  fUseForwardOpticsConstraint = false;
+  //default values for forward optics constraint center and width:
+  fdxfp0 = fdyfp0 = fdxpfp0 = fdypfp0 = 0.0;
+  fdxfpcut = 0.05;
+  fdyfpcut = 0.05;
+  fdxpfpcut = 0.01;
+  fdypfpcut = 0.01;
   
 }
 
@@ -1249,11 +1257,11 @@ void SBSGEMTrackerBase::find_tracks(){
       //will have been marked as used, reducing the number of "available" hits for finding additional tracks:
       Double_t Ncombos_free = InitFreeHitList(); 
 
-      if( Ncombos_free > (double) fMaxHitCombinations_Total ){
-	std::cout << "Warning in [SBSGEMTrackerBase::find_tracks]: total potential hit combinations = "
-		  << Ncombos_free << ", exceeds user maximum of " << fMaxHitCombinations_Total
-		  << ", skipping tracking..." << std::endl;
-	break;
+      if( Ncombos_free > fMaxHitCombinations_Total ){
+      	std::cout << "Warning in [SBSGEMTrackerBase::find_tracks]: total potential hit combinations = "
+      		  << Ncombos_free << ", exceeds user maximum of " << fMaxHitCombinations_Total
+      		  << ", skipping tracking..." << std::endl;
+      	break;
       }
       
       // std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized 'free hit list', nhitsrequired = " << nhitsrequired 
@@ -1350,6 +1358,8 @@ void SBSGEMTrackerBase::find_tracks(){
 	      // so binx = bin % nbinsx
 	      // biny = bin / nbinsx
 
+	      //TO-DO: populate a list of "valid" bin combinations once at the beginning of analysis. 
+	      //Or maybe this is not worth the effort
 	      int ibinx = ibin % fGridNbinsX_layer[minlayer];
 	      int ibiny = ibin / fGridNbinsX_layer[minlayer];
 

@@ -15,7 +15,7 @@ ClassImp(SBSElement);
 // Constructor for generic Element (no-data)
 SBSElement::SBSElement(Double_t x, Double_t y,
     Double_t z, Int_t row, Int_t col, Int_t layer, Int_t id) :
-  fX(x), fY(y), fZ(z), fE(0), fAtime(kBig), fTDCtime(kBig), fRow(row), fCol(col), fLayer(layer),
+  fX(x), fY(y), fZ(z), fE(0), fAgain(0), fAtime(kBig), fTDCtime(kBig), fRow(row), fCol(col), fLayer(layer),
   fStat(0), fID(id), fADC(nullptr), fTDC(nullptr), fWaveform(nullptr)
 {
 }
@@ -47,6 +47,7 @@ Bool_t SBSElement::HasADCData()
 void SBSElement::Clear( Option_t* opt )
 {
   fE = 0; // Reset calibrated energy for given event
+  fAgain = 0.;
   fStat = 0; // Reset status to 0, unseen
   if(fADC)
     fADC->Clear();

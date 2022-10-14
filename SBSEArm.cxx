@@ -387,6 +387,8 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
   
   //const double //make it configurable
   const double th_sbs = GetThetaGeo();//retrieve the actual angle
+
+  //th_sbs < 0 for beam right... this makes SBS_zaxis along -x  
   
   TVector3 SBS_zaxis( sin(th_sbs), 0, cos(th_sbs) );
   TVector3 SBS_xaxis(0,-1,0);
@@ -457,9 +459,6 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
     }
   }
 
-  //Let's simplify the bend angle reconstruction to avoid double-counting, even though 
-  //this calculation is almost certainly correct:
-
   TVector3 phat_tgt_fit(xptar_fit, yptar_fit, 1.0 );
   phat_tgt_fit = phat_tgt_fit.Unit();
 
@@ -492,7 +491,12 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
     //double p_firstorder = fA_pth1 * ( 1.0 + (fB_pth1 + fC_pth1*fMagDist)*xptar_fit ) / thetabend_fit;
     //p_fit = p_firstorder * (1.0 + delta);
     //}
-  
+
+  //For SBS, which is on beam right, we have ytar = vz * sin(|theta|) - yptar * vz * cos(theta)
+  // i.e., ytar = vz * ( sin(|theta|) - yptar * cos(theta) )
+  // --> vz = ytar/(sin(|theta|) - yptar * cos(theta) )
+  // But this is the same thing as -ytar/(sin(-|theta|) + yptar * cos(theta))
+  // So ASSUMING th_sbs < 0 for beam right, the formula below can be used unchanged: 
   vz_fit = -ytar_fit / (sin(th_sbs) + cos(th_sbs)*yptar_fit);
   
   pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1.) );
@@ -500,7 +504,11 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
   py = yptar_fit * pz;
 
   TVector3 pvect_SBS = TVector3(px, py, pz);
-  
+
+  //In SBS transport coordinates, py is toward small angles, px is vertically down (toward the floor), pz is along spectrometer central axis. To translate to HALL coordinates, we have:
+  // x to beam left, y vertically up, and z along the beam direction:
+
+  //since th_sbs < 0 for beam right, the formula below can be used unchanged (I think):
   px = +pvect_SBS.Z()*sin(th_sbs)+pvect_SBS.Y()*cos(th_sbs);
   py = -pvect_SBS.X();
   pz = pvect_SBS.Z()*cos(th_sbs)-pvect_SBS.Y()*sin(th_sbs);
@@ -515,8 +523,8 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
     if(app->InheritsFrom("SBSRasteredBeam")){
       SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
       //double xbeam = RasterBeam->GetPosition().X();
-      ybeam = RasterBeam->GetPosition().Y();
-      xbeam = RasterBeam->GetPosition().X();
+      ybeam = RasterBeam->GetPosition().Y()/1000.0; //if this is given in mm, we need to convert to meters (also for BB)
+      xbeam = RasterBeam->GetPosition().X()/1000.0;
       xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
     }
     //cout << var->GetName() << endl;
@@ -603,9 +611,13 @@ Int_t SBSEArm::CoarseReconstruct()
       y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
       z_bcp = HCal->GetOrigin().Z();
           
-      x_fcp = fGEMorigin.X();
-      y_fcp = fGEMorigin.Y();
-      z_fcp = fGEMorigin.Z();
+      //x_fcp = fGEMorigin.X();
+      //y_fcp = fGEMorigin.Y();
+      //z_fcp = fGEMorigin.Z();
+
+      x_fcp = 0.0;
+      y_fcp = 0.0;
+      z_fcp = 0.0;
 
       fFrontConstraintX.push_back( x_fcp );
       fFrontConstraintY.push_back( y_fcp );

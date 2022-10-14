@@ -8,7 +8,6 @@ class THaTrack;
 class TH2D;
 
 class SBSBigBite : public THaSpectrometer {
-
 public:
   SBSBigBite( const char *name, const char *description );
   virtual ~SBSBigBite();
@@ -40,8 +39,9 @@ protected:
   virtual Int_t DefineVariables( EMode mode = kDefine );
   virtual void  DefinePidParticles();
 
-  void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
+  void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from "focal plane" coords
   void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords
+  void CalcFpCoords( THaTrack* the_track ); //
   void CalcTrackTiming( THaTrack* the_track );
   void CalcTrackPID( THaTrack* the_track );
     
@@ -111,6 +111,8 @@ protected:
   std::vector<int> f_ol;
   std::vector<int> f_om;
 
+  bool fUseForwardOptics; //default to false: turning this on will enable forward optics-based track search constraints
+  
   int fForwardOpticsOrder;
   std::vector<double> fb_xfp;
   std::vector<double> fb_yfp;

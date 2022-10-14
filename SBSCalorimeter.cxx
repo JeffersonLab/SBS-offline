@@ -199,11 +199,12 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
   RVarDef vars[] = {
     { "nclus", "Number of clusters meeting threshold", "fNclus" },
     { "e",      "Energy (MeV) of largest cluster",    "GetE()" },
-    { "e_c",    "Corrected Energy (MeV) of largest cluster",    "GetECorrected()" },
+    //{ "e_c",    "Corrected Energy (MeV) of largest cluster",    "GetECorrected()" },
+    { "againblk",    "ADC gain coeff. of highest energy block in the largest cluster",  "GetAgain()" },
     { "atimeblk", "ADC time of highest energy block in the largest cluster", "GetAtime()" },
     { "tdctimeblk", "TDC time of highest energy block in the largest cluster", "GetTDCtime()" },
     { "eblk",   "Energy (MeV) of highest energy block in the largest cluster",    "GetEBlk()" },
-    { "eblk_c", "Corrected Energy (MeV) of highest energy block in the largest cluster",    "GetEBlkCorrected()" },
+    //{ "eblk_c", "Corrected Energy (MeV) of highest energy block in the largest cluster",    "GetEBlkCorrected()" },
     { "rowblk", "Row of block with highest energy in the largest cluster",    "GetRow()" },
     { "colblk", "Col of block with highest energy in the largest cluster",    "GetCol()" },
     { "x",      "x-position (mm) of largest cluster", "GetX()" },
@@ -239,7 +240,8 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     // Store all blocks in main cluster
     RVarDef vars_raw[] = {
       { "clus_blk.e", "Energy of block in main cluster", "fMainclusblk.e"},
-      { "clus_blk.e_c","Energy calibrated of block in main cluster", "fMainclusblk.e_c"},
+      //{ "clus_blk.e_c","Energy calibrated of block in main cluster", "fMainclusblk.e_c"},
+      { "clus_blk.again","ADC gain coeff. of block in main cluster", "fMainclusblk.again"},
       { "clus_blk.x", "x-position of block in main cluster", "fMainclusblk.x"},
       { "clus_blk.y", "y-position of block in main cluster", "fMainclusblk.y"},
       { "clus_blk.row","block row in main cluster",    "fMainclusblk.row" },
@@ -260,7 +262,8 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       { "clus.e", "Energy of cluster", "fOutclus.e"},
       { "clus.atime", "ADC time of cluster", "fOutclus.atime"},
       { "clus.tdctime", "TDC time of cluster", "fOutclus.tdctime"},
-      { "clus.e_c","Energy calibrated of cluster", "fOutclus.e_c"},
+      //{ "clus.e_c","Energy calibrated of cluster", "fOutclus.e_c"},
+      { "clus.again","ADC gain coeff. of cluster", "fOutclus.again"},
       { "clus.x", "x-position of cluster", "fOutclus.x"},
       { "clus.y", "y-position of cluster", "fOutclus.y"},
       { "clus.row","block row in cluster with highest energy",    "fOutclus.row" },
@@ -268,7 +271,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       { "clus.id","block number in cluster",    "fOutclus.id" },
       { "clus.nblk","number of blocks in cluster",    "fOutclus.n" },
       { "clus.eblk", "Energy of block with highest energy in cluster", "fOutclus.blk_e"},
-      { "clus.eblk_c","Energy calibrated of block with highest energy in cluster", "fOutclus.blk_e_c"},
+      // { "clus.eblk_c","Energy calibrated of block with highest energy in cluster", "fOutclus.blk_e_c"},
       { 0 }
     };
     err = DefineVarsFromList( vars_raw, mode );
@@ -318,12 +321,16 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	if(fModeADC != SBSModeADC::kWaveform) {
 	  const SBSData::PulseADCData &ahit = blk->ADC()->GetGoodHit();
 	  blk->SetE(ahit.integral.val);
+	  //blk->SetAintp(ahit.integral.val / blk->ADC()->GetGain());
+	  blk->SetAgain(blk->ADC()->GetGain() / blk->ADC()->GetTrigCal());
 	  blk->SetAtime(ahit.time.val);
 	  fGoodBlocks.e.push_back(ahit.integral.val);
 	  fGoodBlocks.ADCTime.push_back(ahit.time.val);
 	} else {
 	  SBSData::Waveform *wave = blk->Waveform();
 	  blk->SetE(wave->GetIntegral().val);
+	  //blk->SetAintp(wave->GetIntegral().val / wave->GetGain());
+	  blk->SetAgain(wave->GetGain() / wave->GetTrigCal());
 	  blk->SetAtime(wave->GetTime().val);
 	  fGoodBlocks.e.push_back(wave->GetIntegral().val);
 	  fGoodBlocks.ADCTime.push_back(wave->GetTime().val);
@@ -422,14 +429,15 @@ Int_t SBSCalorimeter::FindClusters()
   if(!fClusters.empty()) {
     SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
     fMainclus.e.push_back(clus->GetE());
-    fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    fMainclus.again.push_back(clus->GetAgain());
     fMainclus.atime.push_back(clus->GetAtime());
     fMainclus.tdctime.push_back(clus->GetTDCtime());
     fMainclus.x.push_back(clus->GetX());
     fMainclus.y.push_back(clus->GetY());
     fMainclus.n.push_back(clus->GetMult());
     fMainclus.blk_e.push_back(clus->GetEblk());
-    fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
+    // fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
     fMainclus.id.push_back(clus->GetElemID());
     fMainclus.row.push_back(clus->GetRow());
     fMainclus.col.push_back(clus->GetCol());
@@ -457,7 +465,8 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
       for(Int_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
         fMainclusblk.e.push_back(blk->GetE());
-        fMainclusblk.e_c.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));
+        //fMainclusblk.e_c.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));
+	fMainclusblk.again.push_back(blk->GetAgain());
         fMainclusblk.atime.push_back(blk->GetAtime());        
         fMainclusblk.tdctime.push_back(blk->GetTDCtime());        
         fMainclusblk.x.push_back(blk->GetX());
@@ -474,14 +483,15 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     // Now store the remaining clusters (up to fMaxNclus)
     Int_t nres = TMath::Min(Int_t(fMaxNclus),Int_t(fClusters.size()));
     fOutclus.e.reserve(nres);
-    fOutclus.e_c.reserve(nres);
+    //fOutclus.e_c.reserve(nres);
+    fOutclus.again.reserve(nres);
     fOutclus.atime.reserve(nres);
     fOutclus.tdctime.reserve(nres);
     fOutclus.x.reserve(nres);
     fOutclus.y.reserve(nres);
     fOutclus.n.reserve(nres);
     fOutclus.blk_e.reserve(nres);
-    fOutclus.blk_e_c.reserve(nres);
+    // fOutclus.blk_e_c.reserve(nres);
     fOutclus.row.reserve(nres);
     fOutclus.col.reserve(nres);
     fOutclus.id.reserve(nres);
@@ -490,14 +500,15 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     for( const auto* cluster: fClusters ) {
       if(nclus < fMaxNclus) { // Keep adding them until we reach fMaxNclus
         fOutclus.e.push_back(cluster->GetE());
-        fOutclus.e_c.push_back(cluster->GetE()*(fConst + fSlope*fAccCharge));
+        //fOutclus.e_c.push_back(cluster->GetE()*(fConst + fSlope*fAccCharge));
+        fOutclus.again.push_back(cluster->GetAgain());
         fOutclus.atime.push_back(cluster->GetAtime());
         fOutclus.tdctime.push_back(cluster->GetTDCtime());
         fOutclus.x.push_back(cluster->GetX());
         fOutclus.y.push_back(cluster->GetY());
         fOutclus.n.push_back(cluster->GetMult());
         fOutclus.blk_e.push_back(cluster->GetEblk());
-        fOutclus.blk_e_c.push_back(cluster->GetEblk()*(fConst + fSlope*fAccCharge));
+        // fOutclus.blk_e_c.push_back(cluster->GetEblk()*(fConst + fSlope*fAccCharge));
         fOutclus.row.push_back(cluster->GetRow());
         fOutclus.col.push_back(cluster->GetCol());
         fOutclus.id.push_back(cluster->GetElemID());
@@ -525,7 +536,8 @@ void SBSCalorimeter::ClearOutputVariables()
 void SBSCalorimeter::ClearCaloOutput(SBSCalorimeterOutput &out)
 {
   out.e.clear();
-  out.e_c.clear();
+  // out.e_c.clear();
+  out.again.clear();
   out.atime.clear();
   out.tdctime.clear();
   out.x.clear();
@@ -534,6 +546,6 @@ void SBSCalorimeter::ClearCaloOutput(SBSCalorimeterOutput &out)
   out.col.clear();
   out.n.clear();
   out.blk_e.clear();
-  out.blk_e_c.clear();
+  // out.blk_e_c.clear();
   out.id.clear();
 }
