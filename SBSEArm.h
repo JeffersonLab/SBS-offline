@@ -12,6 +12,7 @@ public:
   SBSEArm( const char *name, const char *description );
   virtual ~SBSEArm();
 
+
   virtual void  Clear( Option_t* opt="");
   
   virtual Int_t FindVertices( TClonesArray& tracks );
@@ -52,10 +53,11 @@ protected:
   std::vector<double> fBackConstraintX;
   std::vector<double> fBackConstraintY;
   std::vector<double> fBackConstraintZ;
-  
+
   TVector3 fGEMorigin;  //Absolute position of GEM origin relative to target center, in TARGET transport coordinates
   Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
   Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
+
 
   Double_t fMagDist; //mandatory parameter from run database
   

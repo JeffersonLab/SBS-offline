@@ -370,7 +370,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     fname_dbcm.Form( "db_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daqped.Form( "daq_ped_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
     fname_daqcm.Form( "daq_cmr_%s_%s_run%d.dat", specname.Data(), detname.Data(), runnum );
-    
+    std::cout<<"\n\n\n"<<specname<<" "<<detname<<"\n\n\n";
     
     //fpedfile_dbase.open( fname_dbase.Data() );
     fCMfile_dbase.open( fname_dbcm.Data() );
@@ -383,7 +383,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     
     TString message;
 
-    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
+    message.Form( "# Copy file into sbs-onl@sbsvtp#:~/cfg/pedestals for online pedestal subtraction" );
     fCMfile_daq << sdate << std::endl;
     fCMfile_daq << message << std::endl;
     fCMfile_daq << "# format = crate, slot, mpd, adc_ch, CM min, CM max"
@@ -395,7 +395,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
     fCMfile_dbase << "# format = crate, slot, mpd, adc_ch, CM mean, CM RMS"
 		  << std::endl;
     
-    message.Form( "# Copy file into sbs-onl@sbsvtp3:~/cfg/pedestals for online pedestal subtraction" );
+    message.Form( "# Copy file into sbs-onl@sbsvtp#:~/cfg/pedestals for online pedestal subtraction" );
     
     fpedfile_daq << sdate << std::endl;
     fpedfile_daq <<  message << std::endl;

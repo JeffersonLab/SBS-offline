@@ -86,16 +86,6 @@ THaSpectrometer( name, description )
 
 }
 
-void SBSEArm::Clear( Option_t *opt ){
-  THaSpectrometer::Clear(opt);
-  fFrontConstraintX.clear();
-  fFrontConstraintY.clear();
-  fFrontConstraintZ.clear();
-  fBackConstraintX.clear();
-  fBackConstraintY.clear();
-  fBackConstraintZ.clear();
-}
-
 //_____________________________________________________________________________
 SBSEArm::~SBSEArm()
 {
@@ -123,6 +113,18 @@ Int_t SBSEArm::ReadRunDatabase( const TDatime &date ){
   
   return kOK;
 }
+
+void SBSEArm::Clear( Option_t *opt )
+{
+  THaSpectrometer::Clear(opt);
+  fFrontConstraintX.clear();
+  fFrontConstraintY.clear();
+  fFrontConstraintZ.clear();
+  fBackConstraintX.clear();
+  fBackConstraintY.clear();
+  fBackConstraintZ.clear();
+}
+
 
 Int_t SBSEArm::ReadDatabase( const TDatime& date )
 {
@@ -638,6 +640,7 @@ Int_t SBSEArm::CoarseReconstruct()
 					  fFrontConstraintWidthY);
 	  SBSGEM->SetBackConstraintWidth(fBackConstraintWidthX, 
 					 fBackConstraintWidthY);
+
 	 
 	}//End inherits from SBSGEMSpectrometerTracker
       }//End over tracking detectors
