@@ -280,6 +280,7 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fCODA_CM_ENABLED;
   
   Int_t fCommonModeFlag; //default = 0 = sorting method, 1 = Danning method, 2 = histogramming method, 3 = "online" Danning-method
+  Int_t fCommonModeOnlFlag; //default = 3 = Danning method during GMn, 4 = Danning method during GEn
   Int_t fPedSubFlag; //default = 0 (pedestal subtraction NOT done for full readout events). 
                      // 1 = pedestal subtraction WAS done online, even for full readout events, only subtract the common-mode
   Double_t fCommonModeDanningMethod_NsigmaCut;

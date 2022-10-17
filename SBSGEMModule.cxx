@@ -42,6 +42,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fOnlineZeroSuppression = kFALSE;
 
   fCommonModeFlag = 0; //"sorting" method
+  fCommonModeOnlFlag = 3; // 3 = Danning method during GMn, 4 = Danning method during GEn
   //Default: discard highest and lowest 28 strips for "sorting method" common-mode calculation:
   fCommonModeNstripRejectHigh = 28; 
   fCommonModeNstripRejectLow = 28;
@@ -296,6 +297,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "commonmode_rmsU", &fCommonModeRMSU, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_rmsV", &fCommonModeRMSV, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_flag", &fCommonModeFlag, kInt, 0, 1, 1}, //optional, search up the tree
+    { "commonmode_online_flag", &fCommonModeOnlFlag, kInt, 0, 1, 1}, //optional, search up the tree
     { "commonmode_nstriplo", &fCommonModeNstripRejectLow, kInt, 0, 1, 1}, //optional, search up the tree:
     { "commonmode_nstriphi", &fCommonModeNstripRejectHigh, kInt, 0, 1, 1}, //optional, search:
     { "commonmode_niter", &fCommonModeNumIterations, kInt, 0, 1, 1},
@@ -1405,7 +1407,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      //cm_histo = cm_danning;
 	      //}
 	      double cm_sorting = GetCommonMode( isamp, 0, *it );
-	      double cm_danning_online = GetCommonMode( isamp, 3, *it );
+	      double cm_danning_online = GetCommonMode( isamp, fCommonModeOnlFlag, *it );
 	      //double cm_danning_offline = GetCommonMode( isamp, 4, *it, cm_danning_online ); //Artificially zero suppress this calculation to check the CM correction algorithm
 
 	      fCM_online[isamp] = cm_danning_online;
@@ -1536,7 +1538,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	      if( fCorrectCommonMode ){
 		//always calculate online CM if doing corrections:
-		fCM_online[isamp] = GetCommonMode( isamp, 3, *it ); 
+		fCM_online[isamp] = GetCommonMode( isamp, fCommonModeOnlFlag, *it ); 
 	      }
 
 	    }
