@@ -25,8 +25,11 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
       THaApparatus* app ):
    THaHelicityDet( name, description, app ),
    fOffsetTIRvsRing(3), fQWEAKDelay(8), fMAXBIT(30),
-   fQWEAKNPattern(4), HWPIN(true), fQrt(1), fTSettle(0),fValidHel(false),
+   fQWEAKNPattern(4), HWPIN(true), 
+   fHelicityDelay(2),
+   fQrt(1), fTSettle(0),fValidHel(false),
    fHelicityLastTIR(0),fPatternLastTIR(0), fErrorCode(0), fRing_NSeed(0),
+   fRingFinalEvtNum(1),fRingFinalPatNum(0),fRingFinalSeed(0),
    fRingU3plus(0),fRingU3minus(0),
    fRingT3plus(0),fRingT3minus(0),
    fRingT5plus(0),fRingT5minus(0),
@@ -45,8 +48,11 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
 //_____________________________________________________________________________
    SBSScalerHelicity::SBSScalerHelicity()
 : fOffsetTIRvsRing(3), fQWEAKDelay(8), fMAXBIT(30),
-   fQWEAKNPattern(4), HWPIN(true), fQrt(1), fTSettle(0),fValidHel(false),
+   fQWEAKNPattern(4), HWPIN(true),
+   fHelicityDelay(2),
+   fQrt(1), fTSettle(0),fValidHel(false),
    fHelicityLastTIR(0),fPatternLastTIR(0), fErrorCode(0), fRing_NSeed(0),
+   fRingFinalEvtNum(1),fRingFinalPatNum(0),fRingFinalSeed(0),
    fRingU3plus(0),fRingU3minus(0),
    fRingT3plus(0),fRingT3minus(0),
    fRingT5plus(0),fRingT5minus(0),
@@ -60,6 +66,13 @@ SBSScalerHelicity::SBSScalerHelicity( const char* name, const char* description,
    for (UInt_t j=0; j<32; j++){
       fScalerCumulative[j] = 0;
    }
+   fFADCQrtHel = 0;
+
+   for (UInt_t j=0; j<32; j++){
+     fScalerYield[j] = 0;
+     fScalerDiff[j]  = 0;
+   }
+   fRingPattPhase = 0;
 }
 //_____________________________________________________________________________
 SBSScalerHelicity::~SBSScalerHelicity()
@@ -90,22 +103,18 @@ Int_t SBSScalerHelicity::DefineVariables( EMode mode )
       return ret;
 
    const RVarDef var[] = {
-      { "qrt",      "actual qrt for TIR event",        "fQrt" },
-      { "hel",      "actual helicity for TIR event",   "fHelicity" },
-      { "tsettle",  "TSettle for TIR event",           "fTSettle"},
-      { "U3plus",   "U3 plus",                         "fRingU3plus"},
-      { "U3minus",  "U3 minus",                        "fRingU3minus"},
-      { "T3plus",   "T3 plus",                         "fRingT3plus"},
-      { "T3minus",  "T3 minus",                        "fRingT3minus"},
-      { "T5plus",   "T5 plus",                         "fRingT5plus"},
-      { "T5minus",  "T5 minus",                        "fRingT5minus"},
-      { "T10plus",  "T10 plus",                        "fRingT10plus"},
-      { "T10minus", "T10 minus",                       "fRingT10minus"},
-      { "Timeminus","Time minus",                      "fRingTimeminus"},
-      { "Timeplus", "Time plus",                       "fRingTimeplus"},
+      { "hel", "True helicity for event",              "fHelicity" },
+      { "lhrs.fadc.hel", "Helicity bit in LHRS FADC",  "fFADCHelicity"},
+      { "lhrs.fadc.pat", "PatternSync in LHRS FADC",   "fFADCPatSync"},
+      { "lhrs.fadc.tsettle", "Tsettle in LHRS FADC",   "fFADCTSettle"},
+      { "errcode", "Helicity prediction error code",   "fHelErrorCond"},
+      { "evtcount", "Number of helicity events",       "fNumEvents"},
+      { "patcount", "Number of helicity patterns",     "fNumPatterns"},
+      { "patphase", "Event phase within pattern",      "fPatternPhase"},
+      { "seed", "Helicity seed value",                 "fSeedValue"},
       { nullptr }
    };
-   //  cout << "now actually defining stuff, prefix = " << fPrefix << endl;
+   cout << "now actually defining stuff, prefix = " << fPrefix << endl;
    return DefineVarsFromList( var, mode );
 }
 //_____________________________________________________________________________
@@ -117,36 +126,7 @@ void SBSScalerHelicity::PrintEvent( UInt_t evtnum )
    cout << "  evtype " << fEvtype<<endl;
    cout << " event number ="<<evtnum<<endl;
    cout << " == Input register data =="<<endl;
-   cout << " helicity="<<fHelicityTir<<" Pattern ="<<fPatternTir
-      <<" TSettle="<<fTSettleTir<<" TimeStamp="<<fTimeStampTir<<endl;
-   cout << " == Ring data =="<<endl;
-   UInt_t sumu3=0;
-   UInt_t sumt3=0;
-   UInt_t sumt5=0;
-   UInt_t sumt10=0;
-   UInt_t sumtime=0;
 
-   for (UInt_t i=0;i<fIRing;i++)
-   {
-      cout<<" iring="<< i<<" helicity="<<fHelicityRing[i]
-	 <<" Pattern="<<fPatternRing[i]<<" timestamp="<<fTimeStampRing[i]
-	 <<" T3="<<fT3Ring[i]<<" T5="<<fT5Ring[i]<<" T10="<<fT10Ring[i]
-	 <<" U3="<<fU3Ring[i]
-	 <<endl;
-      sumu3+=fU3Ring[i];
-      sumt3+=fT3Ring[i];
-      sumt5+=fT5Ring[i];
-      sumt10+=fT10Ring[i];
-      sumtime+=fTimeStampRing[i];
-   }
-
-   cout<<" == outputs ==\n";
-   cout<<" fQrt="<<fQrt<<" Helicity="<<fHelicity<<" TSettle="<<fTSettle<<endl;
-   cout<<" U3  plus="<<fRingU3plus<<"  minus="<<fRingU3minus<<" sum u3="<<sumu3<<endl;
-   cout<<" T3  plus="<<fRingT3plus<<"  minus="<<fRingT3minus<<" sum t3="<<sumt3<<endl;
-   cout<<" T5  plus="<<fRingT5plus<<"  minus="<<fRingT5minus<<" sum t5="<<sumt5<<endl;
-   cout<<" T10 plus="<<fRingT10plus<<"  minus="<<fRingT10minus<<" sum t10="<<sumt10<<endl;
-   cout<<" time plus="<<fRingTimeplus<<" minus="<<fRingTimeminus<<" sum time="<<sumtime<<endl;
    cout<<" +++++++++++++++++++++++++++++++++++++\n";
 }
 //_____________________________________________________________________________
@@ -195,29 +175,58 @@ Int_t SBSScalerHelicity::Begin( THaRunBase* )
    TString branchInfo;
 
    int j=0;
-   const int NB = 49;
+   const int NB = 130;
    TString branchName[NB];
    branchName[0]  = Form("%s.error.code"           ,armName.Data());
    branchName[1]  = Form("%s.ring.seed"            ,armName.Data());
    branchName[2]  = Form("%s.ring.seedReported"    ,armName.Data());
    branchName[3]  = Form("%s.ring.seedActual"      ,armName.Data());
    branchName[4]  = Form("%s.ring.phaseReported"   ,armName.Data());
-   branchName[5]  = Form("%s.ring.polarityReported",armName.Data());
-   branchName[6]  = Form("%s.ring.polarityActual"  ,armName.Data());
-   branchName[7]  = Form("%s.ring.U3Plus"          ,armName.Data());
-   branchName[8]  = Form("%s.ring.U3Minus"         ,armName.Data());
-   branchName[9]  = Form("%s.ring.T3Plus"          ,armName.Data());
-   branchName[10] = Form("%s.ring.T3Minus"         ,armName.Data());
-   branchName[11] = Form("%s.ring.T5Plus"          ,armName.Data());
-   branchName[12] = Form("%s.ring.T5Minus"         ,armName.Data());
-   branchName[13] = Form("%s.ring.T10Plus"         ,armName.Data());
-   branchName[14] = Form("%s.ring.T10Minus"        ,armName.Data());
-   branchName[15] = Form("%s.ring.TimePlus"        ,armName.Data());
-   branchName[16] = Form("%s.ring.TimeMinus"       ,armName.Data());
+   //   branchName[5]  = Form("%s.ring.polarityReported",armName.Data());
+   //   branchName[6]  = Form("%s.ring.polarityActual"  ,armName.Data());
+   branchName[5]  = Form("%s.ring.UnewPlus"        ,armName.Data());
+   branchName[6] = Form("%s.ring.UnewMinus"        ,armName.Data());
+   branchName[7]  = Form("%s.ring.DnewPlus"        ,armName.Data());
+   branchName[8]  = Form("%s.ring.DnewMinus"       ,armName.Data());
+   branchName[9] = Form("%s.ring.U1Plus"           ,armName.Data());
+   branchName[10] = Form("%s.ring.U1Minus"         ,armName.Data());
+   branchName[11] = Form("%s.ring.D1Plus"          ,armName.Data());
+   branchName[12] = Form("%s.ring.D1Minus"         ,armName.Data());
+   branchName[13] = Form("%s.ring.D3Plus"          ,armName.Data());
+   branchName[14] = Form("%s.ring.D3Minus"         ,armName.Data());
+   branchName[15] = Form("%s.ring.D10Plus"         ,armName.Data());
+   branchName[16] = Form("%s.ring.D10Minus"        ,armName.Data());
 
    for(int i=0;i<32;i++){
       j = 17 + i;
       branchName[j] = Form("%s.cumulative.Ch%d",armName.Data(),i);
+   }
+
+   branchName[49] = Form("%s.hel.ErrorCode"        ,armName.Data());
+   branchName[50] = Form("%s.hel.EvtNum"           ,armName.Data());
+   branchName[51] = Form("%s.hel.PattNum"          ,armName.Data());
+   branchName[52] = Form("%s.hel.PattPhase"        ,armName.Data());
+   branchName[53] = Form("%s.hel.PatternSeed"      ,armName.Data());
+   branchName[54] = Form("%s.hel.PatternPolarity"  ,armName.Data());
+   branchName[55] = Form("%s.hel.EvtPolarity"      ,armName.Data());
+   branchName[56] = Form("%s.hel.ReportedQrtHel"   ,armName.Data());
+
+   branchName[57] = Form("%s.ring.FinalQrtHel"     ,armName.Data());
+   branchName[58] = Form("%s.ring.FinalEvtNum"     ,armName.Data());
+   branchName[59] = Form("%s.ring.FinalPatNum"     ,armName.Data());
+   branchName[60] = Form("%s.ring.FinalSeed"       ,armName.Data());
+
+   branchName[61] = Form("%s.fadc.ReportedHelicity",armName.Data());
+   branchName[62] = Form("%s.fadc.PatternSync"     ,armName.Data());
+   branchName[63] = Form("%s.fadc.TSettle"         ,armName.Data());
+   branchName[64] = Form("%s.fadc.ReportedQrtHel"  ,armName.Data());
+
+   branchName[65] = Form("%s.ring.PattPhase"       ,armName.Data());
+
+   for(int i=0;i<32;i++){
+      j = 66 + 2*i;
+      branchName[j]   = Form("%s.Yield.Ch%d",armName.Data(),i);
+      branchName[j+1] = Form("%s.Diff.Ch%d",armName.Data(),i);
    }
 
    if(!fHelScalerTree){
@@ -262,7 +271,55 @@ Int_t SBSScalerHelicity::Begin( THaRunBase* )
 	 j = 17 + i; 
 	 branchInfo = Form("%s/L",branchName[j].Data()); 
 	 fHelScalerTree->Branch(branchName[j].Data(),&fScalerCumulative[i],branchInfo.Data()); 
-      } 
+      }
+      branchInfo = Form("%s/i",branchName[49].Data());
+      fHelScalerTree->Branch(branchName[49].Data(),&fHelErrorCond,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[50].Data());
+      fHelScalerTree->Branch(branchName[50].Data(),&fNumEvents,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[51].Data());
+      fHelScalerTree->Branch(branchName[51].Data(),&fNumPatterns,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[52].Data());
+      fHelScalerTree->Branch(branchName[52].Data(),&fPatternPhase,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[53].Data());
+      fHelScalerTree->Branch(branchName[53].Data(),&fSeedValue,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[54].Data());
+      fHelScalerTree->Branch(branchName[54].Data(),&fPatternHel,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[55].Data());
+      fHelScalerTree->Branch(branchName[55].Data(),&fEventPolarity,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[56].Data());
+      fHelScalerTree->Branch(branchName[56].Data(),&fReportedQrtHel,branchInfo.Data());
+
+      branchInfo = Form("%s/i",branchName[57].Data());
+      fHelScalerTree->Branch(branchName[57].Data(),&fRingFinalQrtHel,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[58].Data());
+      fHelScalerTree->Branch(branchName[58].Data(),&fRingFinalEvtNum,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[59].Data());
+      fHelScalerTree->Branch(branchName[59].Data(),&fRingFinalPatNum,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[60].Data());
+      fHelScalerTree->Branch(branchName[60].Data(),&fRingFinalSeed,branchInfo.Data());
+
+      branchInfo = Form("%s/i",branchName[61].Data());
+      fHelScalerTree->Branch(branchName[61].Data(),&fFADCHelicity,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[62].Data());
+      fHelScalerTree->Branch(branchName[62].Data(),&fFADCPatSync,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[63].Data());
+      fHelScalerTree->Branch(branchName[63].Data(),&fFADCTSettle,branchInfo.Data());
+      branchInfo = Form("%s/i",branchName[64].Data());
+      fHelScalerTree->Branch(branchName[64].Data(),&fFADCQrtHel,branchInfo.Data());
+
+      branchInfo = Form("%s/i",branchName[65].Data());
+      fHelScalerTree->Branch(branchName[65].Data(),&fRingPattPhase,branchInfo.Data());
+
+      for(int i=0;i<32;i++){
+	j = 66 + 2*i;
+	branchInfo = Form("%s/L",branchName[j].Data()); 
+	fHelScalerTree->Branch(branchName[j].Data(),&fScalerYield[i],branchInfo.Data());
+	j = 66 + 2*i + 1;
+	branchInfo = Form("%s/L",branchName[j].Data()); 
+	fHelScalerTree->Branch(branchName[j].Data(),&fScalerDiff[i],branchInfo.Data());
+      }
+
+
    }
 
    return 0;
@@ -310,11 +367,18 @@ void SBSScalerHelicity::Clear( Option_t* opt ) {
    fRingTimeplus = 0;
    fRingTimeminus = 0;
    fErrorCode = 0;
+   
+   //   for (UInt_t j=0; j<32; j++){
+   //     fScalerYield[j] = 0;
+   //     fScalerDiff[j]  = 0;
+   //   }
+   //   fRingPattPhase = 0;
+
 }
 //_____________________________________________________________________________
 Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
 {
-
+  static  Long_t helsign=0, patsign=0;
    // Decode Helicity data.
    // Return 1 if helicity was assigned, 0 if not, <0 if error.
 
@@ -348,6 +412,8 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
    if(fVerbosity>0) std::cout << "[SBSScalerHelicity::Decode]: Filling histograms... " << std::endl; 
 
    fEvtype = evdata.GetEvType();
+   int trig_num = evdata.GetEvNum();
+   fRingU3plus = trig_num;   
    /*
     *    *  TODO:  the follow funcitons were for the "old" data structure, and should
     *       *         be reconsidered if they should be adapted or removed.
@@ -360,13 +426,87 @@ Int_t SBSScalerHelicity::Decode( const THaEvData& evdata )
     *                         else
     *                             fValidHel=false;
     *                               */
-   FillHisto();
 
    // assign variables that will get to the tree 
    fBranch_seed         = fRing_NSeed; 
    fBranch_errCode      = fErrorCode;
 
-   if(fHelScalerTree) fHelScalerTree->Fill();
+   if (fIRing>0){
+     for (UInt_t i=0; i<fIRing; i++){
+       fRingFinalQrtHel = fPatternRing[i] + fHelicityRing[i];
+       //  Get the sign from the reported helicity
+       if (fHelicityRing[i]==0) helsign = -1;
+       else                     helsign = +1;
+       //  Increment event number and pattern number/phase counters.  Maintain the reported seed value.
+       fRingFinalEvtNum++;
+       if (fPatternRing[i]==0x10){
+	 fRingPattPhase = 0;
+	 fRingHelicitySum = 0;
+	 fRingFinalPatNum++;
+	 fRingFinalSeed = ((fRingFinalSeed<<1)&0x3ffffffe)|fHelicityRing[i];
+	 //  Run the algorithm to get the pattern sign for delayed reporting
+	 UInt_t tmpnewbit = fRingFinalSeed & 0x1;
+	 UInt_t tmpseed = fRingFinalSeed;
+	 for (size_t idelay=0; idelay<fHelicityDelay; idelay++){
+	   tmpnewbit = RanBit30(tmpseed);
+	 }
+	 if (tmpnewbit == fHelicityRing[i]) patsign = +1;
+	 else                               patsign = -1;
+       } else {
+	 fRingPattPhase++;
+       }
+       helsign *= patsign;
+       fRingHelicitySum += helsign;
+       //  Bulid the helicity-independent and -dependent sums. 
+       if (fRingPattPhase==0){
+	 fTimeStampYield = 0;
+	 fTimeStampDiff  = 0;
+       }
+       fTimeStampYield += fTimeStampRing[i];
+       fTimeStampDiff  += helsign * fTimeStampRing[i];
+       for (UInt_t j=0; j<32; j++){
+	 if (fRingPattPhase==0){
+	   fScalerYield[j] = 0;
+	   fScalerDiff[j]  = 0;
+	 }
+	 fScalerYield[j] += +1 * fScalerRing[i][j];
+	 fScalerDiff[j]  += helsign * fScalerRing[i][j];
+       }
+       //  Fill histograms and tree values for each scaler read
+       FillHisto();
+       if(fHelScalerTree) fHelScalerTree->Fill();
+     }
+   }
+
+   // UInt_t tmpseed = fRingFinalSeed;
+   // if (tmpseed != fSeedValue) {
+   //   std::cout << "fRingFinalSeed != fSeedValue: " << std::hex
+   // 	       << tmpseed << " " << fSeedValue <<std::dec <<std::endl;
+   // } else {
+   //   std::cout << "ok" << std::endl;
+   // }
+
+   //  Calculate the true helicity
+   if (fHelErrorCond==0){
+     UInt_t tmpseed = fSeedValue;
+     UInt_t tmpnewbit = fSeedValue & 0x1;
+     for (size_t idelay=0; idelay<fHelicityDelay; idelay++){
+       tmpnewbit = RanBit30(tmpseed);
+     }
+     // if (tmpseed != fSeedValue) {
+     //   std::cout << "tmpseed != fSeedValue: " << std::hex
+     // 		 << tmpseed << " " << fSeedValue <<std::dec <<std::endl;
+     // }
+     if (tmpnewbit==0) fHelicity = kMinus;
+     else              fHelicity = kPlus;
+     if (fPatternPhase==1 || fPatternPhase==2){
+       if (tmpnewbit==0) fHelicity = kPlus;
+       else              fHelicity = kMinus;
+     }
+   } else {
+     fHelicity = kUnknown;
+   }
+
    
    if(fVerbosity>0) std::cout << "[SBSScalerHelicity::Decode]: --> Done. " << std::endl; 
 
