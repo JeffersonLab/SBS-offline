@@ -35,8 +35,8 @@ SBSScalerHelicityReader::SBSScalerHelicityReader()
    fQWEAKDebug(0),      // Debug level
    fHaveROCs(false),   // Required ROCs are defined
    fNegGate(false),    // Invert polarity of gate, so that 0=active
-   fFADCLow_min(37000),  fFADCLow_max(49000),
-   fFADCHigh_min(80000), fFADCHigh_max(92000),
+   fFADCLow_min(30000),  fFADCLow_max(60000),
+   fFADCHigh_min(75000), fFADCHigh_max(95000),
    fVerbosity(0),
    fHistoR{}
 {
@@ -245,6 +245,7 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
    fFADCTSettle  = evdata.GetData( Decoder::kPulseIntegral,10,14,13,0 );
 
    UInt_t hel, patsync, tsettle;
+   UInt_t hel_sbs, patsync_sbs, tsettle_sbs;
    if (fFADCHelicity>=fFADCLow_min && fFADCHelicity<=fFADCLow_max){
      hel = 0;
    }
@@ -280,6 +281,42 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
    fFADCHelicity_sbs = evdata.GetData( Decoder::kPulseIntegral,1,20,14,0 );
    fFADCPatSync_sbs  = evdata.GetData( Decoder::kPulseIntegral,1,20,13,0 );
    fFADCTSettle_sbs  = evdata.GetData( Decoder::kPulseIntegral,1,20,12,0 );
+   //  Compare to LHRS
+   if (fFADCHelicity_sbs>=fFADCLow_min && fFADCHelicity_sbs<=fFADCLow_max){
+     hel_sbs = 0;
+   }
+   else if (fFADCHelicity_sbs>=fFADCHigh_min && fFADCHelicity_sbs<=fFADCHigh_max){
+     hel_sbs = 1;
+   }
+   else {
+     hel_sbs = 0x1000;
+   }
+   if (fFADCPatSync_sbs>=fFADCLow_min && fFADCPatSync_sbs<=fFADCLow_max){
+     patsync_sbs = 0;
+   }
+   else if (fFADCPatSync_sbs>=fFADCHigh_min && fFADCPatSync_sbs<=fFADCHigh_max){
+     patsync_sbs = 0x10;
+   }
+   else {
+     patsync_sbs = 0x2000;
+   }
+   if (fFADCTSettle_sbs>=fFADCLow_min && fFADCTSettle_sbs<=fFADCLow_max){
+     tsettle_sbs = 0;
+   }
+   else if (fFADCTSettle_sbs>=fFADCHigh_min && fFADCTSettle_sbs<=fFADCHigh_max){
+     tsettle_sbs = 0x100;
+   }
+   else {
+     tsettle_sbs = 0x4000;
+   }
+   
+
+
+
+
+
+
+
    UInt_t hroc = fROCinfo[kHel].roc;
    UInt_t len = evdata.GetRocLength(hroc);
    //  if (len <= 4) 
@@ -325,14 +362,16 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
       }
    }
    //  Set the bank info for the helicity summary
-   bankinfo.roc = 10;
+   bankinfo.roc = 10;  //LHRS helicity scaler crate
    bankinfo.bankid = 0xab11;
 
+   Bool_t found_lhrs_bank = kFALSE;
    lbuff = GetBankBuffer(evdata, bankinfo);
    if (bankinfo.length==9){
       /* std::cout <<std::hex << lbuff[0] << " " <<lbuff[1]
        *           <<std::endl;
        */
+      found_lhrs_bank = kTRUE;
       fHelErrorCond   = lbuff[2];
       fNumEvents      = lbuff[3];
       fNumPatterns    = lbuff[4];
@@ -360,8 +399,94 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
 	 << fFADCHelicity_sbs << ", QRT="
 	 << fFADCPatSync_sbs  << ", MPS="
 	 << fFADCTSettle_sbs  << std::endl;
-	 */
+      */
    }
+   // Check the SBS crate copy too.
+   bankinfo.roc = 1;  //SBS helciity scaler crate
+   bankinfo.bankid = 0xab11;
+
+   lbuff = GetBankBuffer(evdata, bankinfo);
+   if (bankinfo.length==9){
+      /* std::cout <<std::hex << lbuff[0] << " " <<lbuff[1]
+       *           <<std::endl;
+       */
+      UInt_t sbs_HelErrorCond   = lbuff[2];
+      UInt_t sbs_NumEvents      = lbuff[3];
+      UInt_t sbs_NumPatterns    = lbuff[4];
+      UInt_t sbs_PatternPhase   = lbuff[5];
+      UInt_t sbs_SeedValue      = lbuff[6];
+      UInt_t sbs_PatternHel     = (sbs_SeedValue & 0x1);
+      UInt_t sbs_EventPolarity  = lbuff[7];
+      UInt_t sbs_ReportedQrtHel = lbuff[8];
+
+      if (fHelErrorCond!=sbs_HelErrorCond) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fHelErrorCond: "
+		  << fHelErrorCond << " " << sbs_HelErrorCond << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+      if (fNumEvents!=sbs_NumEvents) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fNumEvents: "
+		  << fNumEvents << " " << sbs_NumEvents << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+      if (fNumPatterns!=sbs_NumPatterns) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fNumPatterns: "
+		  << fNumPatterns << " " << sbs_NumPatterns << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+      if (fPatternPhase!=sbs_PatternPhase) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fPatternPhase: "
+		  << fPatternPhase << " " << sbs_PatternPhase << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+      if (fSeedValue!=sbs_SeedValue) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fSeedValue: "
+		  << fSeedValue << " " << sbs_SeedValue << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+      if (fPatternHel!=sbs_PatternHel) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fPatternHel: "
+		  << fPatternHel << " " << sbs_PatternHel << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+      if (fEventPolarity!=sbs_EventPolarity) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fEventPolarity: "
+		  << fEventPolarity << " " << sbs_EventPolarity << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+      if (fReportedQrtHel!=sbs_ReportedQrtHel) {
+	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fReportedQrtHel: "
+		  << fReportedQrtHel << " " << sbs_ReportedQrtHel << std::endl;
+	fHelErrorCond |= 0x01000000;
+      }
+   }
+
+   //  Compare the FADC helicity bits & set error code if disagree.
+   if (hel!=hel_sbs || patsync!=patsync_sbs || tsettle!=tsettle_sbs){
+     if(fVerbosity>0) std::cerr << here << " Mismatch between LHRS and SBS FADC helicity bits: "
+	       << "(hel, patsync,tsettle) " << hel<<":"<<hel_sbs <<" "
+	       << patsync<<":"<<patsync_sbs <<" "
+	       << tsettle<<":"<<tsettle_sbs << std::endl;
+     fHelErrorCond |= 0x10000000;
+   }
+   if (fHelErrorCond!=16 && tsettle==0 &&  hel!= fPatternHel^fEventPolarity){
+     if(fVerbosity>0) std::cerr << here << " Mismatch between FADC helicity bit and value expected from predictor: "
+	       << hel << " " << "fPatternHel==" << fPatternHel
+	       << " fEventPolarity=="<<fEventPolarity << " "
+	       << (fPatternHel^fEventPolarity) << std::endl;
+     fHelErrorCond |= 0x20000000;
+   }
+   if (fHelErrorCond!=16 && tsettle==0 &&  (patsync==16)!=(fPatternPhase==0)){
+     if(fVerbosity>0) std::cerr << here << " Mismatch between FADC pattern sync bit and value expected from predictor: "
+	       << (patsync==16) << " " << (fPatternPhase==0) << std::endl;
+     fHelErrorCond |= 0x40000000;
+   }
+   if (tsettle!=0){
+     //  Set an error bit if we're in the tsettle.  Maybe don't need this...
+     fHelErrorCond |= 0x80000000;
+   }
+
+
 
    // if(fIRing>kHelRingDepth)
    //   {
