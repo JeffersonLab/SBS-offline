@@ -1505,7 +1505,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      
 	      // std::cout << "iAPV, nAPVsU, nAPVsV, axis = " << iAPV << ", " << fNAPVs_U << ", "
 	      // 		<< fNAPVs_V << ", " << axis << std::endl;
-	    
+	      if(!CM_OUT_OF_RANGE){
 	      if( axis == SBSGEM::kUaxis ){
 		cm_mean = fCommonModeMeanU[iAPV];
 
@@ -1529,7 +1529,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 		// if(CommonModeCorrection[isamp] != 0.0) fCommonModeCorrectionV->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
 		// else fCommonModeNotCorrectionV->Fill( iAPV, cm_sorting - (cm_danning_online - CommonModeCorrection[isamp]));
 	      }
-	    
+	      }
 	      //std::cout << "Done..." << std::endl;
 	      
 	    } else if( !fPedestalMode ) { //if not doing diagnostic plots, just calculate whichever way the user wanted:
@@ -3639,15 +3639,15 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     //std::cout << "SBSGEMModule::Begin: making common-mode histograms for module " << GetName() << std::endl;
     //U strips:
    
-    fCommonModeDistU = new TH2D( TString::Format( "hcommonmodeU_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU = new TH2D( TString::Format( "hcommonmodeU_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -200.0,200.0 );
 
-    fCommonModeDistU_Histo = new TH2D( TString::Format( "hcommonmodeU_histo_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (Histogram)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU_Histo = new TH2D( TString::Format( "hcommonmodeU_histo_%s", detname.Data() ), "U/X strips common-mode (user); APV card; Common-mode - Common-mode mean (Histogram)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -200.0,200.0 );
     
     
-    fCommonModeDistU_Sorting = new TH2D( TString::Format( "hcommonmodeU_sorting_%s", detname.Data() ), "U/X strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU_Sorting = new TH2D( TString::Format( "hcommonmodeU_sorting_%s", detname.Data() ), "U/X strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -200.0,200.0 );
     
     
-    fCommonModeDistU_Danning = new TH2D( TString::Format( "hcommonmodeU_danning_%s", detname.Data() ), "U/X strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistU_Danning = new TH2D( TString::Format( "hcommonmodeU_danning_%s", detname.Data() ), "U/X strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_U, -0.5, fNAPVs_U-0.5, 500, -200.0,200.0 );
     
    
     fCommonModeDiffU = new TH2D( TString::Format( "hcommonmodeU_diff_%s", detname.Data() ), "U/X strips (all events); APV card; Common-mode (User) - Common-mode (Danning online)", fNAPVs_U, -0.5, fNAPVs_U-0.5, 200, -100.0, 100.0 );
@@ -3664,15 +3664,14 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     fCommonModeResidualBias_vs_OccupancyU = new TH2D( TString::Format( "hcommonmodeU_bias_vs_occupancy_%s", detname.Data() ), "U/X strips; APV in-range occupancy; residual bias (corr. - true)", 100, 0.0, 1.0, 200, -100, 100 );
 
     //V strips:
-    
-    fCommonModeDistV = new TH2D( TString::Format( "hcommonmodeV_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV = new TH2D( TString::Format( "hcommonmodeV_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (user)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -200.0,200.0 );
 
-    fCommonModeDistV_Histo = new TH2D( TString::Format( "hcommonmodeV_histo_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (Histogram)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV_Histo = new TH2D( TString::Format( "hcommonmodeV_histo_%s", detname.Data() ), "V/Y strips common-mode (user); APV card; Common-mode - Common-mode mean (Histogram)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -200.0,200.0 );
     
-    fCommonModeDistV_Sorting = new TH2D( TString::Format( "hcommonmodeV_sorting_%s", detname.Data() ), "V/Y strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV_Sorting = new TH2D( TString::Format( "hcommonmodeV_sorting_%s", detname.Data() ), "V/Y strips common-mode (Sorting); APV card; Common-mode (Sorting) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -200.0,200.0 );
     
     
-    fCommonModeDistV_Danning = new TH2D( TString::Format( "hcommonmodeV_danning_%s", detname.Data() ), "V/Y strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -1000.0,1000.0 );
+    fCommonModeDistV_Danning = new TH2D( TString::Format( "hcommonmodeV_danning_%s", detname.Data() ), "V/Y strips common-mode (Danning); APV card; Common-mode (Danning) - Common-mode mean", fNAPVs_V, -0.5, fNAPVs_V-0.5, 500, -200.0,200.0 );
     
     
     fCommonModeDiffV = new TH2D( TString::Format( "hcommonmodeV_diff_%s", detname.Data() ), "V/Y strips (all events); APV card; Common-mode (User) - Common-mode (Danning online)", fNAPVs_V, -0.5, fNAPVs_V-0.5, 200, -100.0,100.0 );
@@ -4281,6 +4280,8 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     //int ngoodhits=0;
     vector<double> sortedADCs(nhits);
 
+    
+
     if( nhits < fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange ){
       Error(Here("SBSGEMModule::GetCommonMode()"), "Sorting-method common-mode calculation requested with nhits %d less than minimum %d required", nhits, fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange );
 
@@ -4299,11 +4300,11 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     double cm_temp = 0.0;
     int stripcount=0;
 
-    
     for( int k=fCommonModeNstripRejectLow; k<nhits-fCommonModeNstripRejectHigh; k++ ){
       cm_temp += sortedADCs[k];
       stripcount++;
     }
+
     return  cm_temp/double(stripcount);
   } else if( flag == 2 ) { //Histogramming method (experimental):
     
@@ -4440,8 +4441,11 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     double cm_mean = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeMeanU[iAPV] : fCommonModeMeanV[iAPV];
     double cm_rms = ( apvinfo.axis == SBSGEM::kUaxis ) ? fCommonModeRMSU[iAPV] : fCommonModeRMSV[iAPV];
     
-
+    
+      
     double cm_temp = 0.0;
+
+
     
     for( int iter=0; iter<3; iter++ ){
 
@@ -4450,6 +4454,7 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
       double sumADCinrange = 0.0;
       int n_keep = 0;
 
+      
       for( int ihit=0; ihit<nhits; ihit++ ){
 	int iraw=isamp + fN_MPD_TIME_SAMP * ihit;
 	
@@ -4464,12 +4469,14 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
 	if( ADCtemp >= cm_min && ADCtemp <= cm_max ){
 	  n_keep++;
 	  sumADCinrange += ADCtemp;
+
 	}
       }
-
+   
       cm_temp = sumADCinrange / n_keep;
     }
-  
+   
+    
     return cm_temp;
             
     } else { //"offline" Danning method (default): requires apv info for cm-mean and cm-rms values:
@@ -4515,8 +4522,7 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
 	double maxtemp = cm_max;
 	
 	if( iter > 0 ) {
-	  //Hard coding 3 sigma cut. This works better than 5 sigma. Should we add a new DB variable? Yes, done!
-	  maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut*rmstemp*fRMS_ConversionFactor; //2.45 = sqrt(6), don't want to calculate sqrt every time
+	  	  maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut*rmstemp*fRMS_ConversionFactor; //2.45 = sqrt(6), don't want to calculate sqrt every time
 	  //mintemp = 0.0;
 	  mintemp = cm_temp - fCommonModeDanningMethod_NsigmaCut*rmstemp*fRMS_ConversionFactor;
 	}
