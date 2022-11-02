@@ -731,7 +731,7 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
   return 0;
 }
 
-bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction ){
+bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction, bool coarsecheck ){
   
   // std::cout << "[SBSGEMSpectrometerTracker::PassedOpticsConstraint]: Checking target reconstruction" 
   // 	    << std::endl;
@@ -775,10 +775,17 @@ bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, T
       double xpfpforward_temp = trtemp->GetDTheta();
       double ypfpforward_temp = trtemp->GetDPhi();
 
-      goodtgtfp = fabs( xtemp - xfpforward_temp - fdxfp0 ) <= fdxfpcut &&
-	fabs( ytemp - yfpforward_temp - fdyfp0 ) <= fdyfpcut &&
-	fabs( xptemp - xpfpforward_temp - fdxpfp0 ) <= fdxpfpcut &&
-	fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut;
+      if( coarsecheck ){
+	goodtgtfp = fabs( xtemp - xfpforward_temp - fdxfp0 ) <= fdxfpcut_coarse &&
+	  fabs( ytemp - yfpforward_temp - fdyfp0 ) <= fdyfpcut_coarse &&
+	  fabs( xptemp - xpfpforward_temp - fdxpfp0 ) <= fdxpfpcut_coarse &&
+	  fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut_coarse;
+      } else {
+	goodtgtfp = fabs( xtemp - xfpforward_temp - fdxfp0 ) <= fdxfpcut &&
+	  fabs( ytemp - yfpforward_temp - fdyfp0 ) <= fdyfpcut &&
+	  fabs( xptemp - xpfpforward_temp - fdxpfp0 ) <= fdxpfpcut &&
+	  fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut;
+      }
     }
     return goodtarget && goodtgtfp;
   } else {

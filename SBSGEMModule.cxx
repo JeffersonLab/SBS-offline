@@ -1547,13 +1547,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    //Now handle rolling average common-mode calculation:
 	    
 	    //UpdateRollingCommonModeAverage(apvcounter,commonMode[isamp]);
-	    UpdateRollingAverage( apvcounter, commonMode[isamp],
-				  fCommonModeResultContainer_by_APV,
-				  fCommonModeRollingAverage_by_APV,
-				  fCommonModeRollingRMS_by_APV,
-				  fNeventsRollingAverage_by_APV );
-					    
-	    
+
+	    if( !CM_OUT_OF_RANGE ){
+	      UpdateRollingAverage( apvcounter, commonMode[isamp],
+				    fCommonModeResultContainer_by_APV,
+				    fCommonModeRollingAverage_by_APV,
+				    fCommonModeRollingRMS_by_APV,
+				    fNeventsRollingAverage_by_APV ); 
+	    }
 	  } //loop over time samples
 
 	  if( fCorrectCommonMode ){ //For full readout events we are mainly interested in monitoring the "bias" of the ONLINE calculation,
@@ -1568,7 +1569,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	      double bias = fCM_online[isamp] - Correction - commonMode[isamp];
 
-	      if( Correction != 0. ){
+	      if( Correction != 0. && !CM_OUT_OF_RANGE ){
 		UpdateRollingAverage( apvcounter, bias,
 				      fCMbiasResultContainer_by_APV,
 				      fCommonModeOnlineBiasRollingAverage_by_APV,
@@ -1926,10 +1927,10 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      }
 	    }
 	    
-	    if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
-	      fKeepStrip[fNstrips_hit] = false;
-	      //fStripKeep[fNstrips_hit] = 0;
-	    }
+	    // if( fUseStripTimingCuts && fabs( Tmean_temp - fStripMaxTcut_central ) > fStripMaxTcut_width ){
+	    //   fKeepStrip[fNstrips_hit] = false;
+	    //   //fStripKeep[fNstrips_hit] = 0;
+	    // }
 	  }
 
 	  //std::cout << "axis, Int_t(axis) = " << axis << ", " << Int_t(axis) << std::endl;
@@ -2459,7 +2460,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
   std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently:
   std::map<UShort_t, Double_t> pedrms_strip;
-  std::map<UShort_t, Double_t> ADC_strip; // These are the (configuration-dependent) quantities we use for clustering. They depend on the values of fClusteringFlag and fSuppressFirstLast
+  std::map<UShort_t, Double_t> ADC_strip; // These are the (configuration-dependent) quantities we use for clustering. They depend on the values of fClusteringFlag and fSuppressFirstLast and fDeconvolution_flag
   std::map<UShort_t, Double_t> ADC_maxsamp; //
   std::map<UShort_t, Double_t> Tmean_strip; //strip mean time with first and/or last samples removed (if applicable) 
   std::map<UShort_t, Double_t> Tsigma_strip; //strip rms time with first and/or last samples removed (if applicable)
@@ -2597,9 +2598,14 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 	sumstrip >= fThresholdStripSum &&
 	ADC_maxsamp[strip] >= fThresholdSample ){
 	//	fADCmax[hitindex[strip]] >= fThresholdSample ){ //new local max:
-      islocalmax[strip] = true;
-      localmaxima.insert( strip );
-    } 
+      bool goodtime = true;
+      if( fUseStripTimingCuts && fabs( Tmean_strip[strip] - fStripMaxTcut_central ) > fStripMaxTcut_width ) goodtime = false;
+
+      if( goodtime ){
+	islocalmax[strip] = true;
+	localmaxima.insert( strip );
+      }
+    }
   } // end loop over list of strips along this axis:
 
   //cout << "before peak erasing, n local maxima = " << localmaxima.size() << endl;

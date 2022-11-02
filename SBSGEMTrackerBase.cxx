@@ -1375,7 +1375,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	      double ziavg = fZavgLayer[minlayer];
 	      double zjavg = fZavgLayer[maxlayer];
-
+	      
 	      double xpavg = (xj - xi)/(zjavg-ziavg);
 	      double ypavg = (yj - yi)/(zjavg-ziavg);
 	      double xavg = 0.5 * ( xi - ziavg * xpavg + xj - zjavg * xpavg );
@@ -1383,6 +1383,24 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	      bool constraint_check = CheckConstraint( xavg, yavg, xpavg, ypavg, true );
 	      if( fUseConstraint && !constraint_check ) continue;
+
+	      bool optics_check = true;
+
+	      if( fIsSpectrometerTracker && fUseOpticsConstraint ){
+		//rough tolerances on fp parameters for coarse forward optics check:
+		fdxfpcut_coarse = fGridBinWidthX;
+		fdyfpcut_coarse = fGridBinWidthY;
+		fdxpfpcut_coarse = 2.0*fGridBinWidthX / fabs(zjavg - ziavg);
+		fdypfpcut_coarse = 2.0*fGridBinWidthY / fabs(zjavg - ziavg);
+
+		TVector3 pos_temp( xavg, yavg, 0.0 );
+		TVector3 dir_temp( xpavg, ypavg, 1.0 );
+		dir_temp = dir_temp.Unit();
+		
+		optics_check = PassedOpticsConstraint( pos_temp, dir_temp, true ); 
+	      }
+
+	      if( fUseOpticsConstraint && !optics_check ) continue;
 	      
 	      //then look over all combinations of hits in bin i and bin j:
 	      long ncombos_minmax = Nfreehits_binxy_layer[minlayer][ibin]*Nfreehits_binxy_layer[maxlayer][jbin];
@@ -2870,12 +2888,12 @@ void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
   outfile.close();
 }
  
-bool SBSGEMTrackerBase::PassedOpticsConstraint( TVector3 TrackOrigin, TVector3 TrackDirection ){
+ bool SBSGEMTrackerBase::PassedOpticsConstraint( TVector3 TrackOrigin, TVector3 TrackDirection, bool coarsecheck ){
   // for now, do nothing
   return true;
 }
 
- bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, double yptr, bool coarsecheck ){ //later we should really pass an error matrix of the four track parameters to this routine
+bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, double yptr, bool coarsecheck ){ //later we should really pass an error matrix of the four track parameters to this routine
    // to better optimize the cuts:
   double xproject_bcp = xtr + xptr * fConstraintPoint_Back.Z();
   double yproject_bcp = ytr + yptr * fConstraintPoint_Back.Z();

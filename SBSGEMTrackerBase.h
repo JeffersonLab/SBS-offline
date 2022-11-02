@@ -58,7 +58,7 @@ public:
   inline void SetYTarmax( double ymax ){ fytarmax_track = ymax; }
   inline void SetYTarRange( double ymin, double ymax ){ fytarmin_track = ymin; fytarmax_track = ymax; }
 
-  virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
+  virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction, bool coarse=false );
 
   bool CheckConstraint( double xtr, double ytr, double xptr, double yptr, bool coarse=false );
   
@@ -75,7 +75,6 @@ protected:
 
   bool fIsSpectrometerTracker; //default to true:
   bool fIsPolarimeterTracker; 
-  bool fUseOpticsConstraint; //default to FALSE:
   //bool fUseFrontTrackerConstraint; //default to FALSE:
   
   bool fNegSignalStudy;
@@ -199,6 +198,7 @@ protected:
   double fTrackChi2Cut; //chi2/NDF cut for track validity
 
   bool fUseConstraint;
+  bool fUseOpticsConstraint; //default to FALSE:
   bool fUseForwardOpticsConstraint;
   // "Constraint points" to restrict the search region for track-finding:
   TVector3 fConstraintPoint_Front;
@@ -230,6 +230,10 @@ protected:
   // forward optics constraints: if applicable 
   double fdxfp0, fdyfp0, fdxpfp0, fdypfp0;
   double fdxfpcut, fdyfpcut, fdxpfpcut, fdypfpcut;
+  // Values for coarse forward optics check:
+  // these are calculated from the grid bin width and the Z lever arm between the layers under consideration
+  // at the time the coarse optics check is calculated (needs testing):
+  double fdxfpcut_coarse, fdyfpcut_coarse, fdxpfpcut_coarse, fdypfpcut_coarse; 
   
   bool fUseSlopeConstraint;
   double fxpfpmin, fxpfpmax;

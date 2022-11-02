@@ -38,7 +38,7 @@ class SBSGEMSpectrometerTracker : public THaTrackingDetector, public SBSGEMTrack
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
 
-  virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction );
+  virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction, bool coarsecheck=false );
 
   
   
