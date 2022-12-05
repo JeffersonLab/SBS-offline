@@ -47,6 +47,10 @@ SBSCherenkovDetector::SBSCherenkovDetector( const char* name, const char* descri
 
   fHits             = new TClonesArray("SBSCherenkov_Hit",500);
   fClusters         = new TClonesArray("SBSCherenkov_Cluster",50);
+
+  //set default timing cuts wide open, these values are somewhat arbitrary:
+  fHit_tmin = -1000.0;
+  fHit_tmax = 4000.0; 
   
   Clear();
   //fDebug=1;
@@ -108,8 +112,8 @@ Int_t SBSCherenkovDetector::ReadDatabase( const TDatime& date )
   DBRequest config_request[] = {
     { "xpos", &xpos,    kDoubleV, 0, 1 },
     { "ypos", &ypos,    kDoubleV, 0, 1 },
-   //{ "hit_mintime",           &fHit_tmin,   kDouble, 0, false }, 
-    //{ "hit_maxtime",           &fHit_tmax,   kDouble, 0, false }, 
+    { "hit_mintime",           &fHit_tmin,   kDouble, 0, 1 }, 
+    { "hit_maxtime",           &fHit_tmax,   kDouble, 0, 1 }, 
     { "amp_tot_coeffs",        &amp_tot_coeffs,   kDoubleV, 0, true }, 
     { 0 } ///< Request must end in a NULL
   };
@@ -224,16 +228,19 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
   SBSGenericDetector::CoarseProcess(tracks);
 
   double amp, x, y;
-  double tmin, tmax;
+  //double tmin, tmax;
   
   Int_t nHit = 0;
   SBSCherenkov_Hit* the_hit = nullptr;
   
   for(int k = 0; k<fNGoodTDChits; k++){
-    tmin = -fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
-    tmax = +fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
+    //tmin = -fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
+    //tmax = +fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
     
-    if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
+    //double t0 = fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
+
+    //    if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
+    if( fHit_tmin <= fGood.t[k] && fGood.t[k] <= fHit_tmax ){
       the_hit = new( (*fHits)[nHit++] ) SBSCherenkov_Hit();
       
       the_hit->SetPMTNum(fGood.TDCelemID[k]);

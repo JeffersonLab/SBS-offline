@@ -71,8 +71,10 @@ protected:
   //Int_t   MatchClustersWithTracks( TClonesArray& tracks );
   //Int_t   CleanClustersWithTime();
 
-  //Double_t fHit_tmin;
-  //Double_t fHit_tmax;
+  // We will use one tmin and tmax value for all channels in the detector, the individual channel offsets will be used to align the 
+  // good signal peaks at a common central value
+  Double_t fHit_tmin;
+  Double_t fHit_tmax;
 
   std::vector<Double_t> fAmpToTCoeff;
   
