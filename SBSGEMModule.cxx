@@ -1505,7 +1505,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      
 	      // std::cout << "iAPV, nAPVsU, nAPVsV, axis = " << iAPV << ", " << fNAPVs_U << ", "
 	      // 		<< fNAPVs_V << ", " << axis << std::endl;
-	      if(!CM_OUT_OF_RANGE){
+	      if(!CM_OUT_OF_RANGE || fPedestalMode){
 	      if( axis == SBSGEM::kUaxis ){
 		cm_mean = fCommonModeMeanU[iAPV];
 
