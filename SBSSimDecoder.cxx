@@ -107,21 +107,46 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
   cout << "Read SBSSimDecoder variables " << endl;
 
   RVarDef vars[] = {
+    //simc variables
+    {"simc_sigma",    "MC cross section from SIMC gen.",   "fSigma_simc"},
+    {"simc_Weight",   "MC cross section weight from SIMC gen.",   "fWeight_simc"},
+    {"simc_Q2",       "MC Q2 from SIMC gen.",   "fQ2_simc"},
+    {"simc_xbj",      "MC xbj from SIMC gen.",   "fXbj_simc"},
+    {"simc_nu",       "MC nu from SIMC gen.",   "fNu_simc"},
+    {"simc_W",        "MC W from SIMC gen.",   "fW_simc"},
+    {"simc_epsilon",  "MC epsilon from SIMC gen.",   "fEpsilon_simc"},
+    {"simc_Ebeam",    "MC Ebeam from SIMC gen.",   "fEbeam_simc"},
+    {"simc_p_e",      "MC e momentum from SIMC gen.",   "fEp_simc"},
+    {"simc_theta_e",  "MC e polar angle from SIMC gen.",   "fEtheta_simc"},
+    {"simc_phi_e",    "MC e azimuthal angle from SIMC gen.",   "fEphi_simc"},
+    {"simc_px_e",     "MC e mom. x componant from SIMC gen.",   "fEPx_simc"},
+    {"simc_py_e",     "MC e mom. y componant from SIMC gen.",   "fEPy_simc"},
+    {"simc_pz_e",     "MC e mom. z componant from SIMC gen.",   "fEPz_simc"},
+    {"simc_p_n",      "MC e momentum from SIMC gen.",   "fEp_simc"},
+    {"simc_theta_n",  "MC nucleon polar angle from SIMC gen.",   "fEtheta_simc"},
+    {"simc_phi_n",    "MC nucleon azimuthal angle from SIMC gen.",   "fNphi_simc"},
+    {"simc_px_n",     "MC nucleon mom. x componant from SIMC gen.",   "fNPx_simc"},
+    {"simc_py_n",     "MC nucleon mom. y componant from SIMC gen.",   "fNPy_simc"},
+    {"simc_pz_n",     "MC nucleon mom. z componant from SIMC gen.",   "fNPz_simc"},
+    {"simc_vx",       "MC vertex x co-ordinate from SIMC gen.",   "fVx_simc"},
+    {"simc_vy",       "MC vertex y co-ordinate from SIMC gen.",   "fVy_simc"},
+    {"simc_vz",       "MC vertex z co-ordinate from SIMC gen.",   "fVz_simc"},
+    // ** ^^ **
     {"mc_sigma",   "MC cross section",   "fSigma"},
     {"mc_omega",   "MC phase spece generation",   "fOmega"},
-    {"mc_epx",   "MC electron momentum x",   "fEPx"},
-    {"mc_epy",   "MC electron momentum y",   "fEPy"},
-    {"mc_epz",   "MC electron momentum z",   "fEPz"},
-    {"mc_npx",   "MC nucleon momentum x",   "fNPx"},
-    {"mc_npy",   "MC nucleon momentum y",   "fNPy"},
-    {"mc_npz",   "MC nucleon momentum z",   "fNPz"},
-    {"mc_vx",   "MC vertex x",   "fVx"},
-    {"mc_vy",   "MC vertex y",   "fVy"},
-    {"mc_vz",   "MC vertex z",   "fVz"},
-    {"mc_ep",   "MC Initial momentum of the final state electron in GeV",   "fEp"},
-    {"mc_np",   "MC Initial momentum of the final state nucleon in GeV",   "fNp"},
-    {"mc_nucl",  "MC Initial (struck) nucleon type: 1 = proton, 0 = neutron",   "fNucl"},
-    {"mc_fnucl",  "MC Final-state (detected) nucleon type: 1 = proton, 0 = neutron",   "fFnucl"},
+    {"mc_epx",     "MC electron momentum x",   "fEPx"},
+    {"mc_epy",     "MC electron momentum y",   "fEPy"},
+    {"mc_epz",     "MC electron momentum z",   "fEPz"},
+    {"mc_npx",     "MC nucleon momentum x",   "fNPx"},
+    {"mc_npy",     "MC nucleon momentum y",   "fNPy"},
+    {"mc_npz",     "MC nucleon momentum z",   "fNPz"},
+    {"mc_vx",      "MC vertex x",   "fVx"},
+    {"mc_vy",      "MC vertex y",   "fVy"},
+    {"mc_vz",      "MC vertex z",   "fVz"},
+    {"mc_ep",      "MC Initial momentum of the final state electron in GeV",   "fEp"},
+    {"mc_np",      "MC Initial momentum of the final state nucleon in GeV",   "fNp"},
+    {"mc_nucl",    "MC Initial (struck) nucleon type: 1 = proton, 0 = neutron",   "fNucl"},
+    {"mc_fnucl",   "MC Final-state (detected) nucleon type: 1 = proton, 0 = neutron",   "fFnucl"},
     {"nbbtracks",   "number of BB MC tracks",   "fNBBtracks"},
     {"bbtrack_nhits",   "BB MC track hit mult",   "fBBtrack_Nhits"},
     {"bbtrack_tid",   "BB MC track TID",   "fBBtrack_TID"},
@@ -263,7 +288,31 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   if(fDebug>2)std::cout << "Processing " << here << std::endl;
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
-  
+  //simc variables
+  fSigma_simc = simEvent->Tgmn->simc_sigma;
+  fWeight_simc = simEvent->Tgmn->simc_Weight;
+  fQ2_simc = simEvent->Tgmn->simc_Q2;
+  fXbj_simc = simEvent->Tgmn->simc_xbj;
+  fNu_simc = simEvent->Tgmn->simc_nu;
+  fW_simc = simEvent->Tgmn->simc_W;
+  fEpsilon_simc = simEvent->Tgmn->simc_epsilon;
+  fEbeam_simc = simEvent->Tgmn->simc_Ebeam;
+  fEp_simc = simEvent->Tgmn->simc_p_e;
+  fEtheta_simc = simEvent->Tgmn->simc_theta_e;
+  fEphi_simc = simEvent->Tgmn->simc_phi_e;
+  fEPx_simc = simEvent->Tgmn->simc_px_e;
+  fEPy_simc = simEvent->Tgmn->simc_py_e;
+  fEPz_simc = simEvent->Tgmn->simc_pz_e;
+  fNp_simc = simEvent->Tgmn->simc_p_n;
+  fNtheta_simc = simEvent->Tgmn->simc_theta_n;
+  fNphi_simc = simEvent->Tgmn->simc_phi_n;
+  fNPx_simc = simEvent->Tgmn->simc_px_n;
+  fNPy_simc = simEvent->Tgmn->simc_py_n;
+  fNPz_simc = simEvent->Tgmn->simc_pz_n;
+  fVx_simc = simEvent->Tgmn->simc_vx;
+  fVy_simc = simEvent->Tgmn->simc_vy;
+  fVz_simc = simEvent->Tgmn->simc_vz;
+  //g4sbs variables
   fSigma = simEvent->Tgmn->ev_sigma;
   fOmega = simEvent->Tgmn->ev_solang;
   fEPx = simEvent->Tgmn->ev_epx;
