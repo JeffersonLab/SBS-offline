@@ -24,6 +24,29 @@ public :
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
    // Declaration of leaf types
+   Double_t        simc_sigma;
+   Double_t        simc_Weight;
+   Double_t        simc_Q2;
+   Double_t        simc_xbj;
+   Double_t        simc_nu;
+   Double_t        simc_W;
+   Double_t        simc_epsilon;
+   Double_t        simc_Ebeam;
+   Double_t        simc_p_e;
+   Double_t        simc_theta_e;
+   Double_t        simc_phi_e;
+   Double_t        simc_px_e;
+   Double_t        simc_py_e;
+   Double_t        simc_pz_e;
+   Double_t        simc_p_n;
+   Double_t        simc_theta_n;
+   Double_t        simc_phi_n;
+   Double_t        simc_px_n;
+   Double_t        simc_py_n;
+   Double_t        simc_pz_n;
+   Double_t        simc_vx;
+   Double_t        simc_vy;
+   Double_t        simc_vz;
    Double_t        ev_count;
    Double_t        ev_rate;
    Double_t        ev_solang;
@@ -415,6 +438,29 @@ public :
    std::vector<int>     *Earm_BBGEM_dighit_samp;
 
    // List of branches
+   TBranch        *b_simc_sigma;   //!
+   TBranch        *b_simc_Weight;   //!
+   TBranch        *b_simc_Q2;   //!
+   TBranch        *b_simc_xbj;   //!
+   TBranch        *b_simc_nu;   //!
+   TBranch        *b_simc_W;   //!
+   TBranch        *b_simc_epsilon;   //!
+   TBranch        *b_simc_Ebeam;   //!
+   TBranch        *b_simc_p_e;   //!
+   TBranch        *b_simc_theta_e;   //!
+   TBranch        *b_simc_phi_e;   //!
+   TBranch        *b_simc_px_e;   //!
+   TBranch        *b_simc_py_e;   //!
+   TBranch        *b_simc_pz_e;   //!
+   TBranch        *b_simc_p_n;   //!
+   TBranch        *b_simc_theta_n;   //!
+   TBranch        *b_simc_phi_n;   //!
+   TBranch        *b_simc_px_n;   //!
+   TBranch        *b_simc_py_n;   //!
+   TBranch        *b_simc_pz_n;   //!
+   TBranch        *b_simc_vx;   //!
+   TBranch        *b_simc_vy;   //!
+   TBranch        *b_simc_vz;   //!
    TBranch        *b_ev;   //!
    TBranch        *b_Earm_BBGEM_hit_nhits;   //!
    TBranch        *b_Earm_BBGEM_hit_plane;   //!
@@ -1147,6 +1193,29 @@ void gmn_tree_digitized::Init(TTree *tree)
    fCurrent = -1;
    fChain->SetMakeClass(1);
 
+   fChain->SetBranchAddress("simc.sigma", &simc_sigma, &b_simc_sigma);
+   fChain->SetBranchAddress("simc.Weight", &simc_Weight, &b_simc_Weight);
+   fChain->SetBranchAddress("simc.Q2", &simc_Q2, &b_simc_Q2);
+   fChain->SetBranchAddress("simc.xbj", &simc_xbj, &b_simc_xbj);
+   fChain->SetBranchAddress("simc.nu", &simc_nu, &b_simc_nu);
+   fChain->SetBranchAddress("simc.W", &simc_W, &b_simc_W);
+   fChain->SetBranchAddress("simc.epsilon", &simc_epsilon, &b_simc_epsilon);
+   fChain->SetBranchAddress("simc.Ebeam", &simc_Ebeam, &b_simc_Ebeam);
+   fChain->SetBranchAddress("simc.p_e", &simc_p_e, &b_simc_p_e);
+   fChain->SetBranchAddress("simc.theta_e", &simc_theta_e, &b_simc_theta_e);
+   fChain->SetBranchAddress("simc.phi_e", &simc_phi_e, &b_simc_phi_e);
+   fChain->SetBranchAddress("simc.px_e", &simc_px_e, &b_simc_px_e);
+   fChain->SetBranchAddress("simc.py_e", &simc_py_e, &b_simc_py_e);
+   fChain->SetBranchAddress("simc.pz_e", &simc_pz_e, &b_simc_pz_e);
+   fChain->SetBranchAddress("simc.p_n", &simc_p_n, &b_simc_p_n);
+   fChain->SetBranchAddress("simc.theta_n", &simc_theta_n, &b_simc_theta_n);
+   fChain->SetBranchAddress("simc.phi_n", &simc_phi_n, &b_simc_phi_n);
+   fChain->SetBranchAddress("simc.px_n", &simc_px_n, &b_simc_px_n);
+   fChain->SetBranchAddress("simc.py_n", &simc_py_n, &b_simc_py_n);
+   fChain->SetBranchAddress("simc.pz_n", &simc_pz_n, &b_simc_pz_n);
+   fChain->SetBranchAddress("simc.vx", &simc_vx, &b_simc_vx);
+   fChain->SetBranchAddress("simc.vy", &simc_vy, &b_simc_vy);
+   fChain->SetBranchAddress("simc.vz", &simc_vz, &b_simc_vz);
    fChain->SetBranchAddress("ev", &ev_count, &b_ev);
    fChain->SetBranchAddress("Earm.BBGEM.hit.nhits", &Earm_BBGEM_hit_nhits, &b_Earm_BBGEM_hit_nhits);
    fChain->SetBranchAddress("Earm.BBGEM.hit.plane", &Earm_BBGEM_hit_plane, &b_Earm_BBGEM_hit_plane);
