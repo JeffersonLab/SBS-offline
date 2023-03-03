@@ -469,7 +469,7 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
 	       << tsettle<<":"<<tsettle_sbs << std::endl;
      fHelErrorCond |= 0x10000000;
    }
-   if (fHelErrorCond!=16 && tsettle==0 &&  hel!= fPatternHel^fEventPolarity){
+   if (fHelErrorCond!=16 && tsettle==0 &&  hel!=(fPatternHel^fEventPolarity)){
      if(fVerbosity>0) std::cerr << here << " Mismatch between FADC helicity bit and value expected from predictor: "
 	       << hel << " " << "fPatternHel==" << fPatternHel
 	       << " fEventPolarity=="<<fEventPolarity << " "
