@@ -39,8 +39,22 @@ protected:
   //Double_t fTrackX;      // x pos of Golden Track in RICH plane
   //Double_t fTrackY;      // y pos of Golden Track in RICH plane
 
-  Int_t   FindClusters();
-  Int_t   MatchClustersWithTracks( TClonesArray& tracks );
+  Double_t fMaxSep; // Max separation between PMT and another PMT to count as "neighbors"
+  Double_t fMaxSep2; //square of fMaxSep
+
+  Double_t fTrackMatchXslope;
+  Double_t fTrackMatchX0;
+  Double_t fTrackMatchXsigma; 
+  Double_t fTrackMatchYslope;
+  Double_t fTrackMatchY0;
+  Double_t fTrackMatchYsigma;
+  Double_t fTrackMatchNsigmaCut;
+
+  virtual Int_t   FindClusters();
+  virtual Int_t   MatchClustersWithTracks( TClonesArray& tracks );
+  virtual Int_t   SelectBestCluster(Int_t nmatch=0);
+
+  //  Int_t fBestClusterIndex; //the biggest cluster with a track match, if any matched clusters are found. Perhaps this should go with SBSCherenkov_Detector rather than SBSGRINCH
 
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  DefineVariables( EMode mode = kDefine );

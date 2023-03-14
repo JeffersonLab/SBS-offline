@@ -176,8 +176,10 @@ Int_t SBSCherenkovDetector::DefineVariables( EMode mode )
     { "hit.col",    " PMT hit column",     "fHits.SBSCherenkov_Hit.GetCol()"    },
     { "hit.xhit",   " PMT hit X",          "fHits.SBSCherenkov_Hit.GetX()"      },
     { "hit.yhit",   " PMT hit y",          "fHits.SBSCherenkov_Hit.GetY()"      },
-    { "hit.amp",    " PMT hit ampliutude", "fHits.SBSCherenkov_Hit.GetAmp()"    },
+    { "hit.amp",    " PMT hit amplitude", "fHits.SBSCherenkov_Hit.GetAmp()"    },
     { "hit.time",   " PMT hit time",       "fHits.SBSCherenkov_Hit.GetTime()"   },
+    { "hit.clustindex", " Index of cluster to which this hit belongs", "fHits.SBSCherenkov_Hit.GetClustIndex()" },
+    { "hit.trackindex", " Index of track to which this hit belongs", "fHits.SBSCherenkov_Hit.GetTrackIndex()" },
     { 0 }
   };
   DefineVarsFromList( var1, mode, "" );// (re)define path here...

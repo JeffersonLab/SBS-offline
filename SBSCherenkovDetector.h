@@ -57,6 +57,8 @@ protected:
   TClonesArray*     fHits;          // Array of hits for each event
   TClonesArray*     fClusters;      // Clusters of hits
 
+  Int_t         fBestClusterIndex; //index in the array of "best" cluster
+
   Bool_t  fDoResolve;    // true = resolve overlapping clusters
   Bool_t  fDoTimeFilter; // true = filter the hits in each cluster with timing
   
@@ -68,7 +70,8 @@ protected:
   
   void    DeleteClusters();
   virtual Int_t   FindClusters(){return 0;};
-  //Int_t   MatchClustersWithTracks( TClonesArray& tracks );
+  virtual Int_t   MatchClustersWithTracks( TClonesArray& tracks ){return 0;};
+  virtual Int_t   SelectBestCluster(Int_t nmatch = 0){return 0;};
   //Int_t   CleanClustersWithTime();
 
   // We will use one tmin and tmax value for all channels in the detector, the individual channel offsets will be used to align the 
