@@ -145,6 +145,31 @@ protected:
 	      Int_t &crate, Int_t &slot, UShort_t &chan ) const;
   
   // TODO: function(s) that load(s) the MC track hit
+  // simc variables
+  Double_t fSigma_simc;
+  Double_t fWeight_simc;
+  Double_t fQ2_simc;
+  Double_t fXbj_simc;
+  Double_t fNu_simc;
+  Double_t fW_simc;
+  Double_t fEpsilon_simc;
+  Double_t fEbeam_simc;
+  Double_t fEp_simc;
+  Double_t fEtheta_simc;
+  Double_t fEphi_simc;
+  Double_t fEPx_simc;
+  Double_t fEPy_simc;
+  Double_t fEPz_simc;
+  Double_t fNp_simc;
+  Double_t fNtheta_simc;
+  Double_t fNphi_simc;
+  Double_t fNPx_simc;
+  Double_t fNPy_simc;
+  Double_t fNPz_simc;
+  Double_t fVx_simc;
+  Double_t fVy_simc;
+  Double_t fVz_simc;
+  // g4sbs variables
   Double_t fSigma;
   Double_t fOmega;
   Double_t fEPx;

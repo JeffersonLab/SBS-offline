@@ -1186,14 +1186,15 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 	  UInt_t rawdata = evdata.GetData(d->crate, d->slot, chan, ihit);
 	   if (!IsRef && d->GetModel() == 6401) { // F1 TDC
 	     if ( abs(rawdata-reftime) > fF1_TimeWindow) {
-	       if (rawdata > reftime) reftime+=fF1_RollOver; 
-	       if (rawdata <= reftime) rawdata+=fF1_RollOver; 
+	       if (rawdata > reftime){ reftime+=fF1_RollOver; 
+	       }else if(rawdata <= reftime){ rawdata+=fF1_RollOver;} 
 	     } 
 	   }
 	  UInt_t TrigTime = 0;
 	   Int_t LeadingEdge=0;
 	  if (d->GetModel() == 6401) {
 	    TrigTime = evdata.GetRawData(d->crate, d->slot, chan, ihit); // for F1 "raw" is trigger time
+	    if(IsRef && rawdata<TrigTime) rawdata+=fF1_RollOver; // rollvoer correction  Reftdc[i]
 	  } else {
 	    LeadingEdge=evdata.GetRawData(d->crate, d->slot, chan, ihit); // for other TDC "raw" is the leading edge bit
 	  }
