@@ -63,15 +63,15 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
   fTrackMatchXmin.resize(fNmirror);
   fTrackMatchXmax.resize(fNmirror);
 
-  Double_t mirrx0[fNmirror] = { -0.1580, -0.0193, -0.0047, 0.1968};
-  Double_t mirrxslope[fNmirror] = {0.71, 0.71, 0.71, 0.71};
-  Double_t mirrxmin[fNmirror] = {-0.8, -0.55, -0.1, 0.45};
-  Double_t mirrxmax[fNmirror] = {-0.45, 0.1, 0.6, 0.85};
-  Double_t mirrxsigma[fNmirror] = {0.016, 0.014, 0.015, 0.016};
+  Double_t mirrx0[] = { -0.1580, -0.0193, -0.0047, 0.1968};
+  Double_t mirrxslope[] = {0.71, 0.71, 0.71, 0.71};
+  Double_t mirrxmin[] = {-0.8, -0.55, -0.1, 0.45};
+  Double_t mirrxmax[] = {-0.45, 0.1, 0.6, 0.85};
+  Double_t mirrxsigma[] = {0.016, 0.014, 0.015, 0.016};
 
-  Double_t mirryslope[fNmirror] = {1.57, 2.02, 2.36, 1.36};
-  Double_t mirry0[fNmirror] = {0.04, -0.038, -0.031, -0.0878};
-  Double_t mirrysigma[fNmirror] = {0.08, 0.026, 0.036, 0.023}; 
+  Double_t mirryslope[] = {1.57, 2.02, 2.36, 1.36};
+  Double_t mirry0[] = {0.04, -0.038, -0.031, -0.0878};
+  Double_t mirrysigma[] = {0.08, 0.026, 0.036, 0.023}; 
 			       
 
   for( int imirr=0; imirr<fNmirror; imirr++ ){
