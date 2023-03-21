@@ -38,6 +38,10 @@ public:
   SBSCherenkov_Cluster*     GetCluster(Int_t i) const 
   { return (SBSCherenkov_Cluster*)fClusters->At(i); } 
   
+  SBSCherenkov_Cluster*     GetBestCluster() const 
+  { return GetCluster(fBestClusterIndex); }
+
+  
   Int_t                GetNumHits() const 
     { return fHits->GetLast()+1; }
   Int_t                GetNumClusters() const 
@@ -57,7 +61,11 @@ protected:
   TClonesArray*     fHits;          // Array of hits for each event
   TClonesArray*     fClusters;      // Clusters of hits
 
+  SBSCherenkov_Cluster fBestCluster; //Best cluster object
+
   Int_t         fBestClusterIndex; //index in the array of "best" cluster
+
+  Int_t         fNtrackMatch;
 
   Bool_t  fDoResolve;    // true = resolve overlapping clusters
   Bool_t  fDoTimeFilter; // true = filter the hits in each cluster with timing

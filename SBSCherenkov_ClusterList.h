@@ -144,7 +144,7 @@ class SBSCherenkov_Cluster : public TObject {
   void    SetAmpRMS(Double_t totrms)   { fAmpRMS = totrms; }
   
   void    SetTrack( THaTrack* track ) { fTrack = track; }
-  void    SetTrackIndex( int itr ){ fTrackIndex = itr; }
+  void    SetTrackIndex( Int_t itr ){ fTrackIndex = itr; }
 
   void    MergeCluster( const SBSCherenkov_Cluster& rhs );
   

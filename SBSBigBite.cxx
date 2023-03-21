@@ -173,6 +173,9 @@ Int_t SBSBigBite::ReadRunDatabase( const TDatime &date ){
 
   fOpticsOrigin.SetXYZ( -0.1701, 0.0, 1.1087+fMagDist );
   
+  //Default GEM origin to the same as optics origin; this will be overridden by ReadDatabase
+  fGEMorigin = fOpticsOrigin;
+
   return kOK;
 }
 
