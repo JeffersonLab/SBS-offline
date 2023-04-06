@@ -122,7 +122,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"simc_px_e",     "MC e mom. x componant from SIMC gen.",   "fEPx_simc"},
     {"simc_py_e",     "MC e mom. y componant from SIMC gen.",   "fEPy_simc"},
     {"simc_pz_e",     "MC e mom. z componant from SIMC gen.",   "fEPz_simc"},
-    {"simc_p_n",      "MC e momentum from SIMC gen.",   "fEp_simc"},
+    {"simc_fnucl",    "MC final-state nucleon type from SIMC gen.",   "fFnucl_simc"},
+    {"simc_p_n",      "MC nucleon mom. from SIMC gen.",   "fNp_simc"},
     {"simc_theta_n",  "MC nucleon polar angle from SIMC gen.",   "fEtheta_simc"},
     {"simc_phi_n",    "MC nucleon azimuthal angle from SIMC gen.",   "fNphi_simc"},
     {"simc_px_n",     "MC nucleon mom. x componant from SIMC gen.",   "fNPx_simc"},
@@ -303,6 +304,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fEPx_simc = simEvent->Tgmn->simc_px_e;
   fEPy_simc = simEvent->Tgmn->simc_py_e;
   fEPz_simc = simEvent->Tgmn->simc_pz_e;
+  fFnucl_simc = simEvent->Tgmn->simc_fnucl;
   fNp_simc = simEvent->Tgmn->simc_p_n;
   fNtheta_simc = simEvent->Tgmn->simc_theta_n;
   fNphi_simc = simEvent->Tgmn->simc_phi_n;
