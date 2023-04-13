@@ -441,6 +441,11 @@ protected:
   std::vector<double> fHitDeconvADC4_MaxVstrip; //time sample 4 of max V strip
   std::vector<double> fHitDeconvADC5_MaxVstrip; //time sample 5 of max V strip
   
+  std::vector<double> fHitTSchi2MaxUstrip;
+  std::vector<double> fHitTSchi2MaxVstrip;
+  std::vector<double> fHitTSprobMaxUstrip;
+  std::vector<double> fHitTSprobMaxVstrip;
+  
   
   //And I THINK that's all we need to get started!
   std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
@@ -529,6 +534,19 @@ protected:
 
   std::string fpedfilename;
   std::string fcmfilename;
+
+  //Trigger time TDDC channel information to correct GEM hit times for trigger time (if applicable):
+  Double_t fTrigTime; //trigger time 
+
+  Bool_t fUseTrigTime; //attempt to decode trigger time and use to correct GEM strip time
+  //Trigger/reference time information: 
+  UInt_t fCrate_RefTime; 
+  UInt_t fSlot_RefTime; 
+  UInt_t fChan_RefTime; 
+  Double_t fRefTime_Offset;
+  Double_t fRefTime_CAL;
+
+  //Double_t fRefTime_offset;
   
 };
 

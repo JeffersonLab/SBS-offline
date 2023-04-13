@@ -164,6 +164,10 @@ class SBSGEMModule : public THaSubDetector {
   
   //Don't call this method directly, it is called by find_2Dhits. Call that instead:
   void find_clusters_1D(SBSGEM::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0); //Assuming decode has already been called; this method is fast so we probably don't need to implement constraint points and widths here, or do we?
+
+  //new version to do clustering and spatial splitting in each time sample, and then combine the different time samples
+  void find_clusters_1D_experimental(SBSGEM::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0);
+  
   void find_2Dhits(); // Version with no arguments assumes no constraint points
   void find_2Dhits(TVector2 constraint_center, TVector2 constraint_width); // Version with TVector2 arguments 
 
@@ -203,6 +207,11 @@ class SBSGEMModule : public THaSubDetector {
   void UpdateRollingAverage( int iapv, double val, std::vector<std::deque<Double_t> > &RC, std::vector<Double_t> &AVG, std::vector<Double_t> &RMS, std::vector<UInt_t> &Nevt ); 
   void UpdateRollingCommonModeAverage(int iapv, double CM_sample);
   //void UpdateRollingCommonModeBias( int iapv, double CM_bias ); 
+
+  void CalcDeconvolutedSamples( const std::vector<Double_t> &ADCs, std::vector<Double_t> &DeconvADCs );
+
+  void SetTriggerTime( Double_t ttrig );
+  
   
   TF1 *fStripTimeFunc;
 
@@ -330,14 +339,11 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fChan_TimeStamp_high;
   UInt_t fChan_MPD_EventCount;
   UInt_t fChan_MPD_Debug;
-  
-  //Trigger/reference time information: 
-  UInt_t fCrate_RefTime; 
-  UInt_t fSlot_RefTime; 
-  UInt_t fChan_RefTime; 
-  Double_t fRefTime_GoodTimeCut;
-  Double_t fRefTime_CAL; 
 
+  Double_t fTrigTime; //trigger time; to be decoded once by parent class
+
+  Double_t fMaxTrigTimeCorrection; //Maximum (absolute) correction to be applied to strip times based on trigger time (Default = 25 ns)
+  
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   //Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.
@@ -425,11 +431,11 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripADC_ID; //strip raw info
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.
   std::vector<bool> fKeepStrip; //keep this strip?
-  std::vector<bool> fNegStrip; //Does this strip pass negative zero suppression? - neg pulse study
+  //std::vector<bool> fNegStrip; //Does this strip pass negative zero suppression? - neg pulse study
   //std::vector<Int_t> fStripKeep; //Strip passes timing cuts (and part of a cluster)?
   std::vector<UInt_t> fMaxSamp; //APV25 time sample with maximum ADC;
   std::vector<UInt_t> fMaxSampDeconv; //Sample with largest deconvoluted ADC value
-  std::vector<UInt_t> fMaxSampDeconvCombo; //1st sample of two-sample combination with largest deconvoluted ADC
+  std::vector<UInt_t> fMaxSampDeconvCombo; //last sample of two-sample combination with largest deconvoluted ADC
   std::vector<Double_t> fADCmax; //largest ADC sample on the strip:
   std::vector<Double_t> fADCmaxDeconv; //Largest deconvoluted ADC sample
   std::vector<Double_t> fADCmaxDeconvCombo; //Largest combination of two deconvoluted samples
@@ -437,8 +443,9 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fTmean; //ADC-weighted mean strip time:
   std::vector<Double_t> fTsigma; //ADC-weighted RMS deviation from the mean
   std::vector<Double_t> fStripTfit; //Dumb strip fit:
-  std::vector<Double_t> fStripTdiff; //strip time diff wrt max strip in cluster
+  std::vector<Double_t> fStripTdiff;  //strip time diff wrt max strip in cluster
   std::vector<Double_t> fStripTSchi2; //strip time-sample chi2 wrt "good" pulse shape
+  std::vector<Double_t> fStripTSprob; //p-value associated with strip TS chi2
   std::vector<Double_t> fStripCorrCoeff; //strip correlation coeff wrt max strip in cluster 
   std::vector<Double_t> fTcorr; //Strip time with all applicable corrections; e.g., trigger time, etc.
   std::vector<UInt_t> fStrip_ENABLE_CM; //Flag to indicate whether CM was done online or offline for this strip
@@ -656,6 +663,9 @@ class SBSGEMModule : public THaSubDetector {
   TH1D *hpedestal_subtracted_ADCsU;
   TH1D *hpedestal_subtracted_ADCsV;
 
+  TH1D *hdeconv_ADCsU; //full readout events only
+  TH1D *hdeconv_ADCsV; //full readout events only
+  
   //in pedestal-mode analysis, we 
   TH2D *hcommonmode_mean_by_APV_U;
   TH2D *hcommonmode_mean_by_APV_V;

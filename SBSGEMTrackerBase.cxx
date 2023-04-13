@@ -103,6 +103,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fdyfpcut = 0.05;
   fdxpfpcut = 0.01;
   fdypfpcut = 0.01;
+
+  fUseTrigTime = false; 
   
 }
 
@@ -272,8 +274,15 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitDeconvADC4_MaxVstrip.clear();
   fHitDeconvADC5_MaxVstrip.clear();
 
+  fHitTSchi2MaxUstrip.clear();
+  fHitTSchi2MaxVstrip.clear();
+  fHitTSprobMaxUstrip.clear();
+  fHitTSprobMaxVstrip.clear();
+  
   fclustering_done = false;
   ftracking_done = false;
+
+  //fTrigTime = 0.0;
   
 }
 
@@ -1893,7 +1902,11 @@ void SBSGEMTrackerBase::find_tracks(){
     } //end while(nhitsrequired >= minhits ) 
   } //end check of sufficient layers with hits to do tracking
 
+  //  std::cout << "About to call fill_good_hit_arrays(), ntracks = " << fNtracks_found << std::endl;
+  
   fill_good_hit_arrays();
+
+  //std::cout << "fill_good_hit_arrays() done..." << std::endl;
 
 }
 
@@ -1940,6 +1953,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 
       UInt_t hitidx_umax = uclustinfo->hitindex[uclustinfo->istripmax-uclustinfo->istriplo];
       UInt_t hitidx_vmax = vclustinfo->hitindex[vclustinfo->istripmax-vclustinfo->istriplo];
+
+      // std::cout << "track " << itrack << ", hit " << ihit << ", hit index u maximum = " << hitidx_umax << ", hit index v maximum = " << hitidx_vmax
+      // 		<< " number of strips fired = " << fModules[module]->fNstrips_hit << std::endl;
       
       fHitModule.push_back( module );
       fHitLayer.push_back( layer );
@@ -1965,8 +1981,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       //fHitADCavg.push_back( 0.5*( fHitUADC.back() + fHitVADC.back() ) );
       fHitADCavg.push_back( hitinfo->Ehit ); //This should be equivalent to the line above
       fHitADCavg_deconv.push_back( hitinfo->EhitDeconv );
-      /////// YOU ARE HERE START HERE AFTER DINNER ANDREW//////////
-
+      
+      
       fHitUADCclust_deconv.push_back( uclustinfo->clusterADCsumDeconv );
       fHitVADCclust_deconv.push_back( vclustinfo->clusterADCsumDeconv );
       fHitUADCclust_maxsamp_deconv.push_back( uclustinfo->DeconvADCsamples[uclustinfo->isampmaxDeconv] );
@@ -2000,7 +2016,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitV_CM_GOOD.push_back( fModules[module]->fStrip_CM_GOOD[hitidx_vmax] );
       fHitV_BUILD_ALL_SAMPLES.push_back( fModules[module]->fStrip_BUILD_ALL_SAMPLES[hitidx_vmax] );
       
-      //Need to fill some other new variables:
+      //std::cout << "Need to fill some other new variables: " << std::endl;
       
       fHitIsampMaxUstrip.push_back( fModules[module]->fMaxSamp[hitidx_umax] );
       fHitIsampMaxVstrip.push_back( fModules[module]->fMaxSamp[hitidx_vmax] );
@@ -2059,8 +2075,14 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fHitVstripMax.push_back( vclustinfo->istripmax );
       fHitVstripLo.push_back( vclustinfo->istriplo );
       fHitVstripHi.push_back( vclustinfo->istriphi );
-      //
+
+      fHitTSchi2MaxUstrip.push_back( fModules[module]->fStripTSchi2[hitidx_umax] );
+      fHitTSchi2MaxVstrip.push_back( fModules[module]->fStripTSchi2[hitidx_vmax] );
+      fHitTSprobMaxUstrip.push_back( fModules[module]->fStripTSprob[hitidx_umax] );
+      fHitTSprobMaxVstrip.push_back( fModules[module]->fStripTSprob[hitidx_vmax] );
       
+      //
+      //std::cout << "made it past basic hit info, starting loop over strips..." << std::endl;
           
       
       //Also set the "trackindex" variable and other properties for strips on this track:
@@ -2214,7 +2236,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       fNgoodhits++;
     }
   
-    
+    //std::cout << "done with numerator histograms, filling denominator histograms..." << std::endl;
     
     //if( fMakeEfficiencyPlots ){
     //Now loop on all layers and fill the "should hit" histograms (denominator for track-based efficiency calculation): 
@@ -2491,6 +2513,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 	} // if is in active area or module on track
       } //end loop over list of modules in this tracking layer
     } //end loop over all layers
+    //std::cout << "done with denominator efficiency histograms..." << std::endl;
  
   } //end loop over tracks
   
