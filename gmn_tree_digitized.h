@@ -38,6 +38,7 @@ public :
    Double_t        simc_px_e;
    Double_t        simc_py_e;
    Double_t        simc_pz_e;
+   Int_t           simc_fnucl;
    Double_t        simc_p_n;
    Double_t        simc_theta_n;
    Double_t        simc_phi_n;
@@ -452,6 +453,7 @@ public :
    TBranch        *b_simc_px_e;   //!
    TBranch        *b_simc_py_e;   //!
    TBranch        *b_simc_pz_e;   //!
+   TBranch        *b_simc_fnucl;   //!
    TBranch        *b_simc_p_n;   //!
    TBranch        *b_simc_theta_n;   //!
    TBranch        *b_simc_phi_n;   //!
@@ -1207,6 +1209,7 @@ void gmn_tree_digitized::Init(TTree *tree)
    fChain->SetBranchAddress("simc.px_e", &simc_px_e, &b_simc_px_e);
    fChain->SetBranchAddress("simc.py_e", &simc_py_e, &b_simc_py_e);
    fChain->SetBranchAddress("simc.pz_e", &simc_pz_e, &b_simc_pz_e);
+   fChain->SetBranchAddress("simc.fnucl", &simc_fnucl, &b_simc_fnucl);
    fChain->SetBranchAddress("simc.p_n", &simc_p_n, &b_simc_p_n);
    fChain->SetBranchAddress("simc.theta_n", &simc_theta_n, &b_simc_theta_n);
    fChain->SetBranchAddress("simc.phi_n", &simc_phi_n, &b_simc_phi_n);

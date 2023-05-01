@@ -160,6 +160,7 @@ protected:
   Double_t fEPx_simc;
   Double_t fEPy_simc;
   Double_t fEPz_simc;
+  Int_t    fFnucl_simc;
   Double_t fNp_simc;
   Double_t fNtheta_simc;
   Double_t fNphi_simc;

@@ -42,13 +42,18 @@ protected:
   Double_t fMaxSep; // Max separation between PMT and another PMT to count as "neighbors"
   Double_t fMaxSep2; //square of fMaxSep
 
-  Double_t fTrackMatchXslope;
-  Double_t fTrackMatchX0;
-  Double_t fTrackMatchXsigma; 
-  Double_t fTrackMatchYslope;
-  Double_t fTrackMatchY0;
-  Double_t fTrackMatchYsigma;
-  Double_t fTrackMatchNsigmaCut;
+  Int_t fNmirror; //Number of GRINCH mirrors (define track match cuts separately for each mirror)
+  
+  //make mirror-dependent track match cuts:
+  std::vector<Double_t> fTrackMatchXslope;
+  std::vector<Double_t> fTrackMatchX0;
+  std::vector<Double_t> fTrackMatchXsigma; 
+  std::vector<Double_t> fTrackMatchYslope;
+  std::vector<Double_t> fTrackMatchY0;
+  std::vector<Double_t> fTrackMatchYsigma;
+  std::vector<Double_t> fTrackMatchXmin; //minimum track x projection to consider for this mirror
+  std::vector<Double_t> fTrackMatchXmax; //maximum track x projection to consider for this mirror
+  Double_t fTrackMatchNsigmaCut; //use common cut width for each mirror
 
   virtual Int_t   FindClusters();
   virtual Int_t   MatchClustersWithTracks( TClonesArray& tracks );
