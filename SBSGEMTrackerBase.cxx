@@ -2279,8 +2279,8 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 
 
 	      /// Check modules with full readout and if fNegSignalStudy is enabled for the negative signal study/////
-	      if(fModules[module]->fStrip_BUILD_ALL_SAMPLES[0] && !fModules[module]->fStrip_ENABLE_CM[0] && fModules[module]->fStrip_CM_GOOD[0] && fNegSignalStudy){
-	      
+	      if(fModules[module]->fStrip_BUILD_ALL_SAMPLES[0] && !fModules[module]->fStrip_ENABLE_CM[0] && fNegSignalStudy){
+
 		//Histograms filled if the track passed through the module but no hit was found on the track
 		if(!modules_hit[module]){
 		  ( (TH1D*) (*hdidnothit_x_layer)[ilayer] )->Fill( Intersect.X() );
@@ -2297,7 +2297,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 
 		// loop over all 1D negative strips on modules missing hits
 		for( int istrip=0; istrip < fModules[module]->fNstrips_hit; istrip++){
-	
+		  
 		  if(!fModules[module]->fStripIsNeg[istrip]) continue; //Skip is the strip is not negative
 		  
 
@@ -2462,6 +2462,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 			neg_save = true;
 		      
 			//Fill the strip on track inforamtion for negative strips
+			
 			for( unsigned int istrip=uclust->istriplo; istrip<=uclust->istriphi; istrip++ ){
 			  
 			  int hitidx_i = uclust->hitindex[istrip-uclust->istriplo];
@@ -2482,9 +2483,7 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
 		
 		      }
 		    } //end loop over residual < 2 mm
-
    		  }//end loop over V clusters
-		  
 		}//end loop over U clusters
 	      }//end loop for negative signal study
 	    }

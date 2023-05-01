@@ -25,6 +25,7 @@ public:
   SBSRasteredBeam( const char* name, const char* description ) ;
   virtual ~SBSRasteredBeam() {}
   virtual Int_t Reconstruct() ;
+  virtual Int_t CoarseReconstruct() ;
 
 protected:
   ClassDef(SBSRasteredBeam,0)    // A beam with rastered beam, analyzed event by event using raster currents
