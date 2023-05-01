@@ -165,6 +165,9 @@ protected:
   Double_t fSigmaX_hodo; //default = bar vertical size / sqrt(12)
   Double_t fSigmaY_hodo; //default = hit resolution from left/right time difference
   
+  Double_t fBPM_L; // Distance between BPMA and BPMB
+  Double_t fBPMA_tg; // Distance between BPMA and the target 0 vertex
+
   //for output only... Vectors instead?
   std::vector<double> fFrontConstraintX;
   std::vector<double> fFrontConstraintY;

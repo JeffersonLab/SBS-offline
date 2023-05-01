@@ -13,6 +13,12 @@ SBSRasteredBeam::SBSRasteredBeam( const char* name, const char* description ) :
 Int_t SBSRasteredBeam::Reconstruct()
 {
 
+  return 0;
+}
+//_____________________________________________________________________________
+Int_t SBSRasteredBeam::CoarseReconstruct()
+{
+  
   TIter nextDet( fDetectors ); 
 
   nextDet.Reset();
@@ -29,6 +35,7 @@ Int_t SBSRasteredBeam::Reconstruct()
     theBeamDet->Process();
     fPosition = theBeamDet->GetPosition();
     fDirection = theBeamDet->GetDirection();
+    
   }
   else {
     Error( Here("Reconstruct"), 
@@ -41,9 +48,9 @@ Int_t SBSRasteredBeam::Reconstruct()
 	 static_cast<THaBeamDet*>( nextDet() )) {
     theBeamDet->Process();
   }
-
+  
   Update();
-
+  
   return 0;
 
 }

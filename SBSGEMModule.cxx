@@ -599,6 +599,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fStripIsNegOnTrackV.resize( nstripsmax );
   fStripRaw.resize( nstripsmax );
   fStripEvent.resize( nstripsmax );
+  fStripCrate.resize( nstripsmax );
   fStripMPD.resize( nstripsmax );
   fStripADC_ID.resize( nstripsmax );
   fStripTrackIndex.resize( nstripsmax );
@@ -851,6 +852,9 @@ Int_t SBSGEMModule::DefineVariables( EMode mode ) {
     { "strip.nstrips_keep_lmax", "Number of strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmax },
     { "strip.nstrips_keep_lmaxU", "Number of U/X strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmaxU },
     { "strip.nstrips_keep_lmaxV", "Number of V/Y strips passing local max thresholds and basic timing cuts", kUInt, 0, &fNstrips_keep_lmaxV },
+    { "strip.crate", "strip crate number", kUInt, 0, &(fStripCrate[0]), &fNstrips_hit },
+    { "strip.mpd", "strip mpd number", kUInt, 0, &(fStripMPD[0]), &fNstrips_hit },
+    { "strip.adc_id", "strip adc channel number", kUInt, 0, &(fStripADC_ID[0]), &fNstrips_hit },
     { "strip.istrip", "strip index", kUInt, 0, &(fStrip[0]), &fNstrips_hit },
     { "strip.IsU", "U strip?", kUInt, 0, &(fStripIsU[0]), &fNstrips_hit },
     { "strip.IsV", "V strip?", kUInt, 0, &(fStripIsV[0]), &fNstrips_hit },
@@ -2012,6 +2016,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	  //These are used for saving numbers to a text file for event displays
 	  fStripEvent[fNstrips_hit] = evdata.GetEvNum();
+	  fStripCrate[fNstrips_hit] = it->crate;
 	  fStripMPD[fNstrips_hit] = it->mpd_id;
 	  fStripADC_ID[fNstrips_hit] = it->adc_id;
 	  /// This block above is used for negative signal studies
@@ -2108,8 +2113,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	/////// Negative pulse study, This is an exact copy of the loop above but instead stores the negative ADC info. "Keep" is set
 	/////// to false regardless so these strips will not be used for any of the normal clustering and tracking algorithms. They 
 	/////// are differentiated from positive strips by fStripIsNeg.
-	if(ADCsum_temp/double(fN_MPD_TIME_SAMP) < -1.0*fZeroSuppressRMS*rmstemp && BUILD_ALL_SAMPLES && !CM_ENABLED && !CM_OUT_OF_RANGE && fNegSignalStudy ){
-
+	if(ADCsum_temp/double(fN_MPD_TIME_SAMP) < -1.0*fZeroSuppressRMS*rmstemp && BUILD_ALL_SAMPLES && !CM_ENABLED && fNegSignalStudy ){
+	  
 	  //Increment hit count and populate decoded data structures:
 	 
 	  //threshold on the average ADC
@@ -2202,6 +2207,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	  //These are used for saving numbers to a text file for event displays
 	  fStripEvent[fNstrips_hit] = evdata.GetEvNum();
+	  fStripCrate[fNstrips_hit] = it->crate;
 	  fStripMPD[fNstrips_hit] = it->mpd_id;
 	  fStripADC_ID[fNstrips_hit] = it->adc_id;
 	  //Variables used for negative signal studies
@@ -2552,7 +2558,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       }
     }
     //Also add strips for negative signal clustering if fNegSignalStudy is true
-    if( fAxis[ihit] == axis && fStripIsNeg[ihit] && fStrip_BUILD_ALL_SAMPLES[ihit] && !fStrip_ENABLE_CM[ihit] && fStrip_CM_GOOD[ihit] && fNegSignalStudy){
+    if( fAxis[ihit] == axis && fStripIsNeg[ihit] && fStrip_BUILD_ALL_SAMPLES[ihit] && !fStrip_ENABLE_CM[ihit] && fNegSignalStudy){
       bool newstrip = (striplist_neg.insert( fStrip[ihit] ) ).second;
       
       if( newstrip ){ //should always be true:

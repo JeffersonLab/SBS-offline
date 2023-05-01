@@ -420,6 +420,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripIsNegOnTrackV; //Is this strip negative and on a track?
   std::vector<UInt_t> fStripRaw; //Raw strip numbers on track?
   std::vector<UInt_t> fStripEvent; //strip raw info
+  std::vector<UInt_t> fStripCrate; //strip raw info
   std::vector<UInt_t> fStripMPD; //strip raw info
   std::vector<UInt_t> fStripADC_ID; //strip raw info
   std::vector<Int_t> fStripTrackIndex; // If this strip is included in a cluster that ends up on a good track, we want to record the index in the track array of the track that contains this strip.

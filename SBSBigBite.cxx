@@ -51,6 +51,8 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   fYtar_01000 = 0.0;
   fYtar_00010 = 0.0;
   fECaloFudgeFactor = 1.0;
+  fBPM_L = 5.15;
+  fBPMA_tg = 7.53;
 
   //Default ideal optics angle (central bend angle) to 10 deg:
 
@@ -247,6 +249,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "ysigma_hodo", &fSigmaY_hodo, kDouble, 0, 1, 1 },
     { "forwardoptics_order", &fForwardOpticsOrder, kInt, 0, 1, 1 },
     { "forwardoptics_parameters", &foptics_param, kDoubleV, 0, 1, 1 },
+    { "BPM_separation", &fBPM_L, kDouble, 0, 1, 0 },
+    { "BPMA_dist_to_targ", &fBPMA_tg, kDouble, 0, 1, 0 },
     {0}
   };
     
@@ -1144,6 +1148,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   yptar_fit = 0.0;
   ytar_fit = 0.0;
   pthetabend_fit = 0.0;
+
   
   int ipar = 0;
   for(int i=0; i<=fOpticsOrder; i++){
@@ -1156,6 +1161,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
 	    yptar_fit += fb_yptar[ipar]*term;
 	    ytar_fit += fb_ytar[ipar]*term;
 	    pthetabend_fit += fb_pinv[ipar]*term;
+	    
 	    //pinv_fit += b_pinv(ipar)*term;
 	    // cout << ipar << " " << term << " " 
 	    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " " 
@@ -1179,9 +1185,11 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   TVector3 phat_fp_rot = phat_fp.X() * fOpticsXaxis_global + 
     phat_fp.Y() * fOpticsYaxis_global + 
     phat_fp.Z() * fOpticsZaxis_global; 
+
+  
   
   thetabend_fit = acos( phat_fp_rot.Dot( phat_tgt_fit ) );
-
+  
   // TVector3 phat_tgt_fit_global = phat_tgt_fit.X() * spec_xaxis_tgt +
   //   phat_tgt_fit.Y() * spec_yaxis_tgt +
   //   phat_tgt_fit.Z() * spec_zaxis_tgt;
@@ -1218,21 +1226,43 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //We should move this to before the optics calculations in case we want to actually correct the optics for the beam position:
   double ybeam=0.0,xbeam=0.0;
   
-  //retrieve beam position, if available, to calculate xtar.
+  //retrieve beam position from BPMs
   TIter aiter(gHaApps);
   THaApparatus* app = 0;
+  
+  double BPMAX = 0.0;
+  double BPMAY = 0.0;
+  double BPMBX = 0.0;
+  double BPMBY = 0.0;
+
   while( (app=(THaApparatus*)aiter()) ){
     if(app->InheritsFrom("SBSRasteredBeam")){
-      SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
-      //double xbeam = RasterBeam->GetPosition().X();
-      //units for beam position are mm, we need to convert to meters for spectrometer optics
-      ybeam = RasterBeam->GetPosition().Y()/1000.; 
-      xbeam = RasterBeam->GetPosition().X()/1000.;
-      xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
+      if(app->GetName() != std::string("Lrb")) continue;
+	 
+      TIter next(app->GetDetectors());
+      
+      while( TObject* obj = next() ) {
+	auto* theDetector = dynamic_cast<THaDetector*>( obj );
+	if(theDetector->GetName() == std::string("BPMA")){
+	  SBSBPM* BPM = reinterpret_cast<SBSBPM*>(theDetector);
+	  BPMAX = BPM->GetPosition().X();
+	  BPMAY = BPM->GetPosition().Y();
+	}
+	if(theDetector->GetName() == std::string("BPMB")){
+	  SBSBPM* BPM = reinterpret_cast<SBSBPM*>(theDetector);
+	  BPMBX = BPM->GetPosition().X();
+	  BPMBY = BPM->GetPosition().Y();
+	}
+      }
     }
-    //cout << var->GetName() << endl;
+    //cout << app->GetName() << endl;
   }
   //  f_xtg_exp.push_back(xtar);
+
+  //units for beam position are mm, we need to convert to meters for spectrometer optics
+  xbeam = (BPMBX-BPMAX)/fBPM_L*(fBPMA_tg + vz_fit) + BPMAX;
+  ybeam = (BPMBY-BPMAY)/fBPM_L*(fBPMA_tg + vz_fit) + BPMAY;
+  xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
