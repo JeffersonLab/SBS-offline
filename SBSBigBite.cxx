@@ -1237,7 +1237,10 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
 
   while( (app=(THaApparatus*)aiter()) ){
     if(app->InheritsFrom("SBSRasteredBeam")){
+      if(app->GetName() != std::string("Lrb")) continue;
+	 
       TIter next(app->GetDetectors());
+      
       while( TObject* obj = next() ) {
 	auto* theDetector = dynamic_cast<THaDetector*>( obj );
 	if(theDetector->GetName() == std::string("BPMA")){
