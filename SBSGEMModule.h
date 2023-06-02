@@ -88,6 +88,8 @@ struct sbsgemhit_t { //2D reconstructed hits
   Double_t EhitDeconv; //Same as "Ehit" but for deconvoluted ADC "max combo"
   Double_t thitDeconv; // same as "thit" but using deconvoluted ADC samples
   Double_t tdiffDeconv; // same as "tdiff" but using deconvoluted ADC Samples.
+  Double_t thitFit; //same as "thit" but using "fit times";
+  Double_t tdiffFit; //same as "tdiff" but using "fit times";
 };
   
 struct sbsgemcluster_t {  //1D clusters;
@@ -111,6 +113,7 @@ struct sbsgemcluster_t {  //1D clusters;
   Double_t t_mean; //reconstructed hit time
   Double_t t_sigma; //unclear what we might use this for
   Double_t t_mean_deconv; //cluster-summed mean deconvoluted hit time.
+  Double_t t_mean_fit; //cluster-summed "fit" time.
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
   std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
   UInt_t rawstrip; //Raw APV strip number before decoding 
@@ -201,7 +204,10 @@ class SBSGEMModule : public THaSubDetector {
   void fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool max=false );
 
   double FitStripTime( int striphitindex, double RMS=20.0 ); // "dumb" fit method 
+  void FitClusterTime( sbsgemcluster_t &clus ); //calculate "fit time" for cluster-summed ADC samples
 
+  double CalcFitTime( const std::vector<Double_t> &samples, double RMS=20.0 );
+  
   //Since we have two different kinds of rolling averages to evaluate, we consolidate both codes into one method.
   //Since we can only declare references with initialization, we have to pass the underlying arrays as arguments:
   void UpdateRollingAverage( int iapv, double val, std::vector<std::deque<Double_t> > &RC, std::vector<Double_t> &AVG, std::vector<Double_t> &RMS, std::vector<UInt_t> &Nevt ); 
@@ -295,13 +301,17 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fCommonModeDanningMethod_NsigmaCut;
   
   Int_t fSuppressFirstLast;  // Suppress strips peaking in first or last time sample:
-  Bool_t fUseStripTimingCuts; // Apply strip timing cuts:
+  Int_t fUseStripTimingCuts; // Apply strip timing cuts:
   
-
   Double_t fStripTau; //time constant for strip timing fit
   Double_t fDeconv_weights[3]; //
-  Double_t fStripMaxTcut_central, fStripMaxTcut_width; // Strip timing cuts for local maximum used to seed cluster
+  //Make these fixed-size arrays defined per strip axis direction, this will require some painful code changes but will improve efficiency and S/N
+  Double_t fStripMaxTcut_central[2], fStripMaxTcut_width[2], fStripMaxTcut_sigma[2]; // Strip timing cuts for local maximum used to seed cluster
+  Double_t fStripMaxTcut_central_deconv[2], fStripMaxTcut_width_deconv[2], fStripMaxTcut_sigma_deconv[2]; //Strip timing cuts based on deconvoluted strip time
+  Double_t fStripMaxTcut_central_fit[2], fStripMaxTcut_width_fit[2], fStripMaxTcut_sigma_fit[2]; //Strip timing cuts based on strip "fit" time. 
+  
   Double_t fStripAddTcut_width; //Time cut for adding strips to a cluster
+  //Double_t fStripAddTcut_sigma;
   Double_t fStripAddCorrCoeffCut; //cut on correlation coefficient for adding neighboring strips to a cluster.
   
   //These are database parameters used to reject out-of-time background strips:
@@ -537,11 +547,24 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fThresholdStripSum; //Threshold on the sum of (pedestal-subtracted) ADC samples on a strip
   Double_t fThresholdClusterSum; //Threshold on the sum of (pedestal-subtracted) ADC samples 
 
-  Double_t fADCasymCut;       // Filtering criterion for ADC X/Y (or U/V) asymmetry
-  Double_t fTimeCutUVdiff;    // Filtering criterion for ADC X/Y (or U/V) time difference (this is distinct from any timing cuts relative to
-  //trigger or reference timing at the individual strip level
-  Double_t fCorrCoeffCut;    //Filtering of 2D clusters best on ADC correlation
+  Double_t fThresholdSampleDeconv; //Threshold on the max. deconbo
+  Double_t fThresholdDeconvADCMaxCombo; //Threshold on the maximal sum of two consecutive deconvoluted ADC samples;
+  Double_t fThresholdClusterSumDeconv;
 
+  Double_t fADCratioSigma; // sigma of ADCV/ADCU-1
+  Double_t fADCasymCut,fADCasymSigma;       // Filtering criterion for ADC X/Y (or U/V) asymmetry
+  Double_t fTimeCutUVdiff,fTimeCutUVsigma;    // Filtering criterion for ADC X/Y (or U/V) time difference (this is distinct from any timing cuts relative to
+  //trigger or reference timing at the individual strip level
+  Double_t fTimeCutUVdiffDeconv,fTimeCutUVsigmaDeconv;
+  Double_t fTimeCutUVdiffFit,fTimeCutUVsigmaFit;
+
+  Double_t fHitTimeMean[2], fHitTimeSigma[2];
+  Double_t fHitTimeMeanDeconv[2], fHitTimeSigmaDeconv[2];
+  Double_t fHitTimeMeanFit[2], fHitTimeSigmaFit[2];
+  
+  Double_t fCorrCoeffCut;    //Filtering of 2D clusters based on ADC correlation
+  Double_t fCorrCoeffCutDeconv; //Filtering of 2D clusters based on 
+  
   Int_t fFiltering_flag1D; // controls whether 1D cluster filtering criteria are strict requirements or "soft" requirements
   Int_t fFiltering_flag2D; // controls whether 2D hit association criteria are strict requirements of "soft" requirements
 

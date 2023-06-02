@@ -175,6 +175,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trigtime_chan", &fChan_RefTime, kUInt, 0, 1, 1 },
     { "trigtime_t0", &fRefTime_Offset, kDouble, 0, 1, 1},
     { "trigtime_calib", &fRefTime_CAL, kDouble, 0, 1, 1},
+    { "use_enhanced_chi2", &fUseEnhancedChi2, kInt, 0, 1, 1},
+    { "trackchi2cut_hitquality", &fTrackChi2CutHitQuality, kDouble, 0, 1, 1},
     {0}
   };
 
@@ -580,6 +582,7 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "track.xp", "Track dx/dz (TRANSPORT)", "fXptrack" },
     { "track.yp", "Track dy/dz (TRANSPORT)", "fYptrack" },
     { "track.chi2ndf", "Track Chi2/ndf", "fChi2Track" },
+    { "track.chi2ndf_hitquality", "Track Chi2/ndf for hit ADC and time correlations", "fChi2TrackHitQuality" },
     { "track.besttrack", "Index of 'best' track", "fBestTrackIndex" },
     { "hit.ngoodhits", "Total number of hits on all found tracks", "fNgoodhits" },
     { "hit.trackindex", "Index of track containing this hit", "fHitTrackIndex" },
@@ -636,6 +639,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
     { "hit.UtimeDeconv", "U strip deconvoluted cluster time", "fHitUTimeDeconv" },
     { "hit.VtimeDeconv", "V strip deconvoluted cluster time", "fHitVTimeDeconv" },
+    { "hit.UtimeFit", "cluster timing based on U strips", "fHitUTimeFit" },
+    { "hit.VtimeFit", "cluster timing based on V strips", "fHitVTimeFit" },
     { "hit.UtimeMaxStrip", "cluster timing based on U strips", "fHitUTimeMaxStrip" },
     { "hit.VtimeMaxStrip", "cluster timing based on V strips", "fHitVTimeMaxStrip" },
     { "hit.UtimeMaxStripDeconv", "cluster timing based on U strips", "fHitUTimeMaxStripDeconv" },
@@ -646,6 +651,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.Tavg", "hit T average", "fHitTavg" },
     { "hit.deltat_deconv", "deconvoluted cluster U time - Vtime", "fHitDeltaTDeconv" },
     { "hit.Tavg_deconv", "deconvoluted average U,V cluster time", "fHitTavgDeconv" },
+    { "hit.deltat_fit", "cluster U - V fit time", "fHitDeltaTFit" },
+    { "hit.Tavg_fit", "cluster (U+V)/2 fit time", "fHitTavgFit" },
     { "hit.isampmaxUclust", "peak time sample in cluster-summed U ADC samples", "fHitIsampMaxUclust" },
     { "hit.isampmaxVclust", "peak time sample in cluster-summed V ADC samples", "fHitIsampMaxVclust" },
     { "hit.isampmaxUclustDeconv", "peak time sample max. deconv. U cluster sum", "fHitIsampMaxUclustDeconv" },

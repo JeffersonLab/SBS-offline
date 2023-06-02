@@ -87,6 +87,8 @@ protected:
   //TRotation fOpt2DetRot;// transformation from optics (ideal) to detector (actual)
   //TRotation fDet2OptRot;// transformation from detector (actual) to optics (ideal)
 
+  bool fDownBendingMode; //Default = false:
+  
   UInt_t fPrecon_flag; //Indicate which momentum reconstruction formalism we are using:
   // 0 (default) = expansion of p*thetabend vs fp x, y, x' y'
   // 1 = expansion as p*thetabend = pth(firstorder) * ( 1 + delta ), where
@@ -111,6 +113,21 @@ protected:
   std::vector<int> f_ol;
   std::vector<int> f_om;
 
+  //Only relevant if downbending optics are defined via the DB:
+  int fOpticsOrderDownbend;
+  std::vector<double> fb_xptar_downbend;
+  std::vector<double> fb_yptar_downbend;
+  std::vector<double> fb_ytar_downbend;
+  std::vector<double> fb_pinv_downbend;
+  //AJRP: changed the exponents to integers here for speed:
+  std::vector<int> f_oi_downbend;
+  std::vector<int> f_oj_downbend;
+  std::vector<int> f_ok_downbend;
+  std::vector<int> f_ol_downbend;
+  std::vector<int> f_om_downbend;
+
+  
+  
   bool fUseForwardOptics; //default to false: turning this on will enable forward optics-based track search constraints
   
   int fForwardOpticsOrder;

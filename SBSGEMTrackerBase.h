@@ -125,6 +125,8 @@ protected:
   //CalcLineOfBestFit only calculates the track parameters, does not calculate chi2 or residuals:
   void CalcLineOfBestFit( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
 
+  Double_t CalcTrackChi2HitQuality( const std::map<int,int> &hitcombo );
+  
   // routine to fit the best track to a set of hits, without the overhead of chi2 calculation, useful for "exclusive residuals" calculation:
   //void FitTrackNoChisquaredCalc( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
   
@@ -194,8 +196,11 @@ protected:
   //These variables are arguably redundant with the ones above, but as defined, these include a bit of extra "slop" to account for resolution, misalignments, z staggering of
   // modules within a layer, etc.
   std::map<int, double> fGridXmin_layer, fGridYmin_layer, fGridXmax_layer, fGridYmax_layer;
-  
+
+
+  Int_t fUseEnhancedChi2; //flag to control how we use the "enhanced chi2" in the track-finding (if at all)
   double fTrackChi2Cut; //chi2/NDF cut for track validity
+  double fTrackChi2CutHitQuality; //chi2/NDF cut for hit quality.
 
   bool fUseConstraint;
   bool fUseOpticsConstraint; //default to FALSE:
@@ -296,6 +301,7 @@ protected:
   std::vector<double> fXptrack;
   std::vector<double> fYptrack;
   std::vector<double> fChi2Track; //chi2/ndf
+  std::vector<double> fChi2TrackHitQuality; //chi2/ndf of hit properties on track (ADC asymmetry, correlation coefficient, time X/Y or U/V time difference, etc).
 
   int fBestTrackIndex; //Index of "golden track" within the TClonesArray defined by THaSpectrometer or other "best track" selection method (if not a spectrometer tracker)
   
@@ -381,7 +387,10 @@ protected:
   //New deconvoluted hit time 
   std::vector<double> fHitUTimeDeconv; //cluster-mean time, deconvoluted, U strips
   std::vector<double> fHitVTimeDeconv; //cluster-mean time, deconvoluted, V strips
-  //
+  // New fit time:
+  std::vector<double> fHitUTimeFit; //
+  std::vector<double> fHitVTimeFit;
+ 
   std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
   std::vector<double> fHitUTimeMaxStripFit; //fitted strip t0
@@ -394,6 +403,9 @@ protected:
   std::vector<double> fHitDeltaTDeconv;
   std::vector<double> fHitTavgDeconv;
   //
+  std::vector<double> fHitDeltaTFit;
+  std::vector<double> fHitTavgFit; 
+  
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
   std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster

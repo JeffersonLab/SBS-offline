@@ -53,7 +53,7 @@ class SBSSimFile : public THaRunBase {
   void          SetVerbose(int v){fVerbose = v;};
 
  protected:
-  virtual Int_t ReadDatabase() {return 0;}
+  //virtual Int_t ReadDatabase();
 
   TString fROOTFileName;  //  Name of input file
   TFile* fROOTFile;       //! Input ROOT file

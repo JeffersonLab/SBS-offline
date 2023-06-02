@@ -1420,6 +1420,9 @@ int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
   chan = h_chan%128;
   int n = (h_chan-chan)/128;
 
+  // std::cout << "(detname, mod, h_chan, chan, n )= (" << detname << ", " << mod << ", "
+  // 	    << h_chan << ", " << chan << ", " << n << ")" << std::endl;
+  
   assert(mod<fInvGEMDetMap.at(detname).size());
   assert(n<(fInvGEMDetMap.at(detname)[mod]).size());
 

@@ -20,7 +20,6 @@ using namespace std;
 //This should not be hard-coded, I think, but read in from the database (or perhaps not, if it never changes? For now we keep it hard-coded)
 // const int APVMAP[128] = {1, 33, 65, 97, 9, 41, 73, 105, 17, 49, 81, 113, 25, 57, 89, 121, 3, 35, 67, 99, 11, 43, 75, 107, 19, 51, 83, 115, 27, 59, 91, 123, 5, 37, 69, 101, 13, 45, 77, 109, 21, 53, 85, 117, 29, 61, 93, 125, 7, 39, 71, 103, 15, 47, 79, 111, 23, 55, 87, 119, 31, 63, 95, 127, 0, 32, 64, 96, 8, 40, 72, 104, 16, 48, 80, 112, 24, 56, 88, 120, 2, 34, 66, 98, 10, 42, 74, 106, 18, 50, 82, 114, 26, 58, 90, 122, 4, 36, 68, 100, 12, 44, 76, 108, 20, 52, 84, 116, 28, 60, 92, 124, 6, 38, 70, 102, 14, 46, 78, 110, 22, 54, 86, 118, 30, 62, 94, 126};
 
-
 SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 			    THaDetectorBase* parent ):
   THaSubDetector(name,description,parent)
@@ -82,9 +81,24 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fThresholdStripSum = 250.0;
   fThresholdClusterSum = 500.0;
 
+  fThresholdSampleDeconv = 50.0;
+  fThresholdDeconvADCMaxCombo = 100.0;
+  fThresholdClusterSumDeconv = 200.0;
+  
   fADCasymCut = 1.1;
   fTimeCutUVdiff = 30.0;
-  fCorrCoeffCut = 0.5;
+  fCorrCoeffCut = -1.1;
+  fCorrCoeffCutDeconv = -1.1;
+
+  fADCasymSigma = 0.06;
+  fADCratioSigma = 0.1;
+  fTimeCutUVsigma = 3.0; //ns
+
+  fTimeCutUVdiffDeconv = 40.0; //ns
+  fTimeCutUVsigmaDeconv = 7.0;
+
+  fTimeCutUVdiffFit = 30.0;
+  fTimeCutUVsigmaFit = 3.0;
 
   fFiltering_flag1D = 0; //"soft" cuts
   fFiltering_flag2D = 0; //"soft" cuts
@@ -142,14 +156,37 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   //fUseStripTimingCuts = false;
 
   fStripTau = 56.0; //ns, default value. Eventually load this from DB. This is not actually used as of yet.
-  fUseStripTimingCuts = false;
+  fUseStripTimingCuts = 0;
   fUseTSchi2cut = false;
-  fStripMaxTcut_central = 87.0; //ns
-  fStripMaxTcut_width = 25.0; //ns
-  fStripAddTcut_width = 25.0; //ns
-  fStripAddCorrCoeffCut = 0.5;
+
+  for( int axis=0; axis<2; axis++ ){
+  
+    fStripMaxTcut_central[axis] = 87.0; //ns
+    fStripMaxTcut_width[axis] = 4.5; //sigmas
+    fStripMaxTcut_sigma[axis] = 7.0; //ns, for purpose of "hit quality chi2" calculation
+    
+    fStripMaxTcut_central_deconv[axis] = 50.0; //ns
+    fStripMaxTcut_width_deconv[axis] = 4.5; //number of sigmas
+    fStripMaxTcut_sigma_deconv[axis] = 15.0; //ns 
+
+    fStripMaxTcut_central_fit[axis] = 20.0; //ns
+    fStripMaxTcut_width_fit[axis] = 4.5; //sigmas
+    fStripMaxTcut_sigma_fit[axis] = 10.0; //ns
+
+    fHitTimeMean[axis] = 87.0;
+    fHitTimeSigma[axis] = 7.0;
+    fHitTimeMeanDeconv[axis] = 50.0;
+    fHitTimeSigmaDeconv[axis] = 15.0;
+    fHitTimeMeanFit[axis] = 20.0;
+    fHitTimeSigmaFit[axis] = 10.0;
+  }
+    
+  fStripAddTcut_width = 50.0; //this one we keep in ns
+  fStripAddCorrCoeffCut = 0.25;
   fStripTSchi2Cut = 10.0; //not yet clear what is a good value for this.
 
+  
+  
   fGoodStrip_TSfrac_mean.resize( fN_MPD_TIME_SAMP );
   fGoodStrip_TSfrac_sigma.resize( fN_MPD_TIME_SAMP );
 
@@ -249,7 +286,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   int eventinfoplots_flag = fMakeEventInfoPlots ? 1 : 0;
 
-  int usestriptimingcuts = fUseStripTimingCuts ? 1 : 0;
+  int usestriptimingcuts = fUseStripTimingCuts;
   int useTSchi2cut = fUseTSchi2cut ? 1 : 0;
   int suppressfirstlast = fSuppressFirstLast;
   int usecommonmoderollingaverage = fMeasureCommonMode ? 1 : 0;
@@ -258,6 +295,16 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   
   std::vector<double> TSfrac_mean_temp;
   std::vector<double> TSfrac_sigma_temp;
+
+  //For parsing "strip" timing cuts:
+  std::vector<double> t0_temp, tsigma_temp, tcut_temp;
+  std::vector<double> t0_deconv_temp, tsigma_deconv_temp, tcut_deconv_temp;
+  std::vector<double> t0_fit_temp, tsigma_fit_temp, tcut_fit_temp;
+
+  //For parsing "hit" timing cuts:
+  std::vector<double> t0hit_temp, tsigmahit_temp;
+  std::vector<double> t0hit_deconv_temp, tsigmahit_deconv_temp;
+  std::vector<double> t0hit_fit_temp, tsigmahit_fit_temp;
   
   const DBRequest request[] = {
     { "chanmap",        &fChanMapData,        kIntV, 0, 0, 0}, // mandatory: decode map info
@@ -281,6 +328,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "threshold_sample",  &fThresholdSample, kDouble, 0, 1, 1}, //(optional): threshold on max. ADC sample to keep strip (baseline-subtracted)
     { "threshold_stripsum", &fThresholdStripSum, kDouble, 0, 1, 1}, //(optional): threshold on sum of ADC samples on a strip (baseline-subtracted)
     { "threshold_clustersum", &fThresholdClusterSum, kDouble, 0, 1, 1}, //(optional): threshold on sum of all ADCs over all strips in a cluster (baseline-subtracted)
+    { "threshold_sample_deconv", &fThresholdSampleDeconv, kDouble, 0, 1, 1 },
+    { "threshold_maxcombo_deconv", &fThresholdDeconvADCMaxCombo, kDouble, 0, 1, 1 },
+    { "threshold_clustersum_deconv", &fThresholdClusterSumDeconv, kDouble, 0, 1, 1 },
     { "ADCasym_cut", &fADCasymCut, kDouble, 0, 1, 1}, //(optional): filter 2D hits by ADC asymmetry, |Asym| < cut
     { "deltat_cut", &fTimeCutUVdiff, kDouble, 0, 1, 1}, //(optional): filter 2D hits by U/V time difference
     { "corrcoeff_cut", &fCorrCoeffCut, kDouble, 0, 1, 1},
@@ -317,10 +367,17 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "chan_event_count", &fChan_MPD_EventCount, kUInt, 0, 1, 1},
     { "pedsub_online", &fPedSubFlag, kInt, 0, 1, 1},
     { "max2Dhits", &fMAX2DHITS, kUInt, 0, 1, 1}, //optional, search up tree
-    { "usestriptimingcut", &usestriptimingcuts, kInt, 0, 1, 1 },
+    { "usestriptimingcut", &fUseStripTimingCuts, kInt, 0, 1, 1 },
     { "useTSchi2cut", &useTSchi2cut, kInt, 0, 1, 1 },
-    { "maxstrip_t0", &fStripMaxTcut_central, kDouble, 0, 1, 1 },
-    { "maxstrip_tcut", &fStripMaxTcut_width, kDouble, 0, 1, 1 },
+    { "maxstrip_t0", &t0_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_t0_deconv", &t0_deconv_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_t0_fit", &t0_fit_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_tcut", &tcut_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_tcut_deconv", &tcut_deconv_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_tcut_fit", &tcut_fit_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_tsigma", &tsigma_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_tsigma_deconv", &tsigma_deconv_temp, kDoubleV, 0, 1, 1 },
+    { "maxstrip_tsigma_fit", &tsigma_fit_temp, kDoubleV, 0, 1, 1 },
     { "addstrip_tcut", &fStripAddTcut_width, kDouble, 0, 1, 1 },
     { "addstrip_ccor_cut", &fStripAddCorrCoeffCut, kDouble, 0, 1, 1 },
     { "goodstrip_TSfrac_mean", &TSfrac_mean_temp, kDoubleV, 0, 1, 1 },
@@ -340,6 +397,20 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "clustering_flag", &fClusteringFlag, kInt, 0, 1, 1 },
     { "deconvolution_flag", &fDeconvolutionFlag, kInt, 0, 1, 1 },
     { "maxtrigtime_correction", &fMaxTrigTimeCorrection, kDouble, 0, 1, 1 },
+    { "ADCasym_sigma", &fADCasymSigma, kDouble, 0, 1, 1 },
+    { "deltat_sigma", &fTimeCutUVsigma, kDouble, 0, 1, 1 },
+    { "deltat_cut_deconv", &fTimeCutUVdiffDeconv, kDouble, 0, 1, 1 },
+    { "deltat_sigma_deconv", &fTimeCutUVsigmaDeconv, kDouble, 0, 1, 1 },
+    { "deltat_cut_fit", &fTimeCutUVdiffFit, kDouble, 0, 1, 1 },
+    { "deltat_sigma_fit", &fTimeCutUVsigmaFit, kDouble, 0, 1, 1 },
+    { "corrcoeff_cut_deconv", &fCorrCoeffCutDeconv, kDouble, 0, 1, 1 },
+    { "ADCratio_sigma", &fADCratioSigma, kDouble, 0, 1, 1 },
+    { "HitTimeMean", &t0hit_temp, kDoubleV, 0, 1, 1 },
+    { "HitTimeSigma", &tsigmahit_temp, kDoubleV, 0, 1, 1 },
+    { "HitTimeMeanDeconv", &t0hit_deconv_temp, kDoubleV, 0, 1, 1 },
+    { "HitTimeSigmaDeconv", &tsigmahit_deconv_temp, kDoubleV, 0, 1, 1 },
+    { "HitTimeMeanFit", &t0hit_fit_temp, kDoubleV, 0, 1, 1 },
+    { "HitTimeSigmaFit", &tsigmahit_fit_temp, kDoubleV, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -357,7 +428,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
 
   fMakeEventInfoPlots = eventinfoplots_flag != 0;
 
-  fUseStripTimingCuts = usestriptimingcuts != 0;
+  //fUseStripTimingCuts = usestriptimingcuts != 0;
   fUseTSchi2cut = useTSchi2cut != 0;
 
   fSuppressFirstLast = suppressfirstlast; 
@@ -715,6 +786,217 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     fZeroSuppress = false;
     fOnlineZeroSuppression = false;
     //fPedSubFlag = 0;
+  }
+
+  //Add parsing of timing cut arguments now:
+
+  //All timing cut arguments have default values so we can parse them individually:
+  if( t0_temp.size() > 0 ){
+    if( t0_temp.size() == 1 ){
+      fStripMaxTcut_central[0] = fStripMaxTcut_central[1] = t0_temp[0];
+    } else if( t0_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_central[axis] = t0_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut center (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  if( tcut_temp.size() > 0 ){
+    if( tcut_temp.size() == 1 ){
+      fStripMaxTcut_width[0] = fStripMaxTcut_width[1] = tcut_temp[0];
+    } else if( tcut_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_width[axis] = tcut_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut width (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  if( tsigma_temp.size() > 0 ){
+    if( tsigma_temp.size() == 1 ){
+      fStripMaxTcut_sigma[0] = fStripMaxTcut_sigma[1] = tsigma_temp[0];
+    } else if( tsigma_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_sigma[axis] = tsigma_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut sigma (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+  
+
+  //Deconvoluted strip time cuts:
+  //All timing cut arguments have default values so we can parse them individually:
+  if( t0_deconv_temp.size() > 0 ){
+    if( t0_deconv_temp.size() == 1 ){
+      fStripMaxTcut_central_deconv[0] = fStripMaxTcut_central_deconv[1] = t0_deconv_temp[0];
+    } else if( t0_deconv_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_central_deconv[axis] = t0_deconv_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut center deconv (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  if( tcut_deconv_temp.size() > 0 ){
+    if( tcut_deconv_temp.size() == 1 ){
+      fStripMaxTcut_width_deconv[0] = fStripMaxTcut_width_deconv[1] = tcut_deconv_temp[0];
+    } else if( tcut_deconv_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_width_deconv[axis] = tcut_deconv_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut width (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  if( tsigma_deconv_temp.size() > 0 ){
+    if( tsigma_deconv_temp.size() == 1 ){
+      fStripMaxTcut_sigma_deconv[0] = fStripMaxTcut_sigma_deconv[1] = tsigma_deconv_temp[0];
+    } else if( tsigma_deconv_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_sigma_deconv[axis] = tsigma_deconv_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut center (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+  
+  //Fit strip time cuts:
+  //All timing cut arguments have default values so we can parse them individually:
+  if( t0_fit_temp.size() > 0 ){
+    if( t0_fit_temp.size() == 1 ){
+      fStripMaxTcut_central_fit[0] = fStripMaxTcut_central_fit[1] = t0_fit_temp[0];
+    } else if( t0_fit_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_central_fit[axis] = t0_fit_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut fit center (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  if( tcut_fit_temp.size() > 0 ){
+    if( tcut_fit_temp.size() == 1 ){
+      fStripMaxTcut_width_fit[0] = fStripMaxTcut_width_fit[1] = tcut_fit_temp[0];
+    } else if( tcut_fit_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_width_fit[axis] = tcut_fit_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut width (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  if( tsigma_fit_temp.size() > 0 ){
+    if( tsigma_fit_temp.size() == 1 ){
+      fStripMaxTcut_sigma_fit[0] = fStripMaxTcut_sigma_fit[1] = tsigma_fit_temp[0];
+    } else if( tsigma_fit_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fStripMaxTcut_sigma_fit[axis] = tsigma_fit_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for max strip tcut center (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  //Parsing hit time mean and sigma: standard
+  
+  if( t0hit_temp.size() != 0 ){
+    if( t0hit_temp.size() == 1 ){
+      fHitTimeMean[1] = fHitTimeMean[0] = t0hit_temp[0];
+    } else if( t0hit_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fHitTimeMean[axis] = t0hit_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for hit time mean (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+
+  if( tsigmahit_temp.size() != 0 ){
+    if( tsigmahit_temp.size() == 1 ){
+      fHitTimeSigma[1] = fHitTimeSigma[0] = tsigmahit_temp[0];
+    } else if( tsigmahit_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fHitTimeSigma[axis] = tsigmahit_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for hit time sigma (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  //Parsing hit time mean and sigma: deconvoluted:
+  
+  if( t0hit_deconv_temp.size() != 0 ){
+    if( t0hit_deconv_temp.size() == 1 ){
+      fHitTimeMeanDeconv[1] = fHitTimeMeanDeconv[0] = t0hit_deconv_temp[0];
+    } else if( t0hit_deconv_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fHitTimeMeanDeconv[axis] = t0hit_deconv_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for hit time mean (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+
+  if( tsigmahit_deconv_temp.size() != 0 ){
+    if( tsigmahit_deconv_temp.size() == 1 ){
+      fHitTimeSigmaDeconv[1] = fHitTimeSigmaDeconv[0] = tsigmahit_deconv_temp[0];
+    } else if( tsigmahit_deconv_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fHitTimeSigmaDeconv[axis] = tsigmahit_deconv_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for hit time sigma (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  //cluster time mean and sigma parsing: fit times
+
+  if( t0hit_fit_temp.size() != 0 ){
+    if( t0hit_fit_temp.size() == 1 ){
+      fHitTimeMeanFit[1] = fHitTimeMeanFit[0] = t0hit_fit_temp[0];
+    } else if( t0hit_fit_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fHitTimeMeanFit[axis] = t0hit_fit_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for hit time mean (must be 1 or 2). Fix database");
+      return kInitError;
+    }
+  }
+
+  if( tsigmahit_fit_temp.size() != 0 ){
+    if( tsigmahit_fit_temp.size() == 1 ){
+      fHitTimeSigmaFit[1] = fHitTimeSigmaFit[0] = tsigmahit_fit_temp[0];
+    } else if( tsigmahit_fit_temp.size() == 2 ){
+      for( int axis=0; axis<2; axis++ ){
+	fHitTimeSigmaFit[axis] = tsigmahit_fit_temp[axis];
+      }
+    } else {
+      Error(Here("ReadDatabase"), "Incorrect number of values for hit time sigma (must be 1 or 2). Fix database");
+      return kInitError;
+    }
   }
   
   // for( UInt_t i = 0; i < rawped.size(); i++ ){
@@ -2470,6 +2752,8 @@ void SBSGEMModule::find_clusters_1D_experimental( SBSGEM::GEMaxis_t axis, Double
   UInt_t Nstrips = ( axis == SBSGEM::kUaxis ) ? fNstripsU : fNstripsV;
   Double_t pitch = ( axis == SBSGEM::kUaxis ) ? fUStripPitch : fVStripPitch;
   Double_t offset = (axis == SBSGEM::kUaxis) ? fUStripOffset : fVStripOffset;
+
+  
   
   std::set<UShort_t> striplist;  //sorted list of ALL fired strips for 1D clustering
   std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently
@@ -2856,7 +3140,7 @@ void SBSGEMModule::find_clusters_1D_experimental( SBSGEM::GEMaxis_t axis, Double
 
       //Now implement tests to add the current cluster to the array:
       if( fullcluster.stripADCsum[fullcluster.istripmax-fullcluster.istriplo] >= fThresholdStripSum && fullcluster.nstrips >= 2 && fullcluster.clusterADCsum >= fThresholdClusterSum ){
-	if( (fabs( fullcluster.t_mean - fStripMaxTcut_central ) <= fStripMaxTcut_width) || !fUseStripTimingCuts ){
+	if( (fabs( fullcluster.t_mean - fStripMaxTcut_central[axis] ) <= fStripMaxTcut_width[axis]) || !fUseStripTimingCuts ){
 
 	  nclust_tot++;
 	  
@@ -2886,7 +3170,7 @@ void SBSGEMModule::find_clusters_1D_experimental( SBSGEM::GEMaxis_t axis, Double
     //Timing window size = cut width:
     
     //The following is in ns, we want to convert to milliseconds, so need to DIVIDE by 1e6:
-    double window = 2.*fStripMaxTcut_width; //later we can use a fancier definition:
+    double window = 2.*fStripMaxTcut_width[axis]; //later we can use a fancier definition:
     if( !fUseStripTimingCuts ) window = fN_MPD_TIME_SAMP * fSamplePeriod; //If we aren't using strip timing cuts we take the entire six-sample window as the time interval for "occupancy"
     //The following is in m^2, need to multiply by 1e4
     double area = GetXSize() * GetYSize();
@@ -2920,10 +3204,10 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     return;
   }
 
-  UShort_t maxsep;
-  UShort_t maxsepcoord; 
-  UInt_t Nstrips;
-  Double_t pitch;
+  UShort_t maxsep = ( axis == SBSGEM::kUaxis ) ? fMaxNeighborsU_totalcharge : fMaxNeighborsV_totalcharge;
+  UShort_t maxsepcoord = ( axis == SBSGEM::kUaxis ) ? fMaxNeighborsU_hitpos : fMaxNeighborsV_hitpos; 
+  UInt_t Nstrips = ( axis == SBSGEM::kUaxis ) ? fNstripsU : fNstripsV;
+  Double_t pitch = ( axis == SBSGEM::kUaxis ) ? fUStripPitch : fVStripPitch;
   Double_t offset = (axis == SBSGEM::kUaxis) ? fUStripOffset : fVStripOffset;
   
   //hopefully this compiles and works correctly:
@@ -2942,28 +3226,14 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   
   clusters.clear();
   
-  if( axis == SBSGEM::kUaxis ){
-    maxsep = fMaxNeighborsU_totalcharge;
-    maxsepcoord = fMaxNeighborsU_hitpos; 
-    Nstrips = fNstripsU;
-    pitch = fUStripPitch;
-    // fNclustU = 0;
-    // fUclusters.clear();
-  } else { //V axis, no need to compare axis to kVaxis:
-    maxsep = fMaxNeighborsV_totalcharge;
-    maxsepcoord = fMaxNeighborsV_hitpos; 
-    Nstrips = fNstripsV;
-    pitch = fVStripPitch;
-    // fNclustV = 0;
-    // fVclusters.clear();
-  }
-  
   std::set<UShort_t> striplist;  //sorted list of strips for 1D clustering
   std::map<UShort_t, UInt_t> hitindex; //key = strip ID, mapped value = index in decoded hit array, needed to access the other information efficiently:
   std::map<UShort_t, Double_t> pedrms_strip;
   std::map<UShort_t, Double_t> ADC_strip; // These are the (configuration-dependent) quantities we use for clustering. They depend on the values of fClusteringFlag and fSuppressFirstLast and fDeconvolution_flag
   std::map<UShort_t, Double_t> ADC_maxsamp; //
-  std::map<UShort_t, Double_t> Tmean_strip; //strip mean time with first and/or last samples removed (if applicable) 
+  std::map<UShort_t, Double_t> Tmean_strip; //strip mean time with first and/or last samples removed (if applicable)
+  std::map<UShort_t, Double_t> Tmean_strip_deconv; //strip deconvoluted mean time
+  std::map<UShort_t, Double_t> Tfit_strip; //strip "fit" time
   std::map<UShort_t, Double_t> Tsigma_strip; //strip rms time with first and/or last samples removed (if applicable)
   
   std::set<UShort_t> striplist_neg;  //same as above but for negative strips
@@ -3004,14 +3274,17 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 	ADC_strip[fStrip[ihit]] = fADCsums[ihit];
 	ADC_maxsamp[fStrip[ihit]] = fADCmax[ihit];
 	Tmean_strip[fStrip[ihit]] = fTmean[ihit];
+	Tmean_strip_deconv[fStrip[ihit]] = fTmeanDeconv[ihit];
+	Tfit_strip[fStrip[ihit]] = fStripTfit[ihit];
 	Tsigma_strip[fStrip[ihit]] = fTsigma[ihit];
 
 	//fClusteringFlag =
 	// 1. Use deconvoluted max. combo
 	// 2. Use sum of the three time samples closest to maxstrip_t0
 
-	if( fClusteringFlag == 1 ){ //Use deconvoluted max combo for clustering:
- 	  ADC_strip[fStrip[ihit]] = fADCmaxDeconvCombo[ihit];
+	if( fClusteringFlag == 1 ){ //Use deconvoluted max combo and max sample for clustering:
+ 	  ADC_strip[fStrip[ihit]] = fADCmaxDeconvCombo[ihit]; //deconvoluted max. two-sample combination
+	  ADC_maxsamp[fStrip[ihit]] = fADCmaxDeconv[ihit];
 	}
       }
     }
@@ -3055,23 +3328,48 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       sumright = ADC_strip[strip+1];
     }
 
-    //apply additional thresholds on max. sample and strip sum for local maxima:
-    //If a strip is not a local max, the threshold is just 5sigma above the noise 
-    //from decoding
-    if( sumstrip >= sumleft && sumstrip >= sumright && 
-	fADCsums[hitindex[strip]] >= fThresholdStripSum &&
-	ADC_maxsamp[strip] >= fThresholdSample ){
+    double thresh_samp = fThresholdSample; 
+    double thresh_strip = fThresholdStripSum;
+    if( fClusteringFlag == 1 ){
+      thresh_strip = fThresholdDeconvADCMaxCombo;
+      thresh_samp = fThresholdSampleDeconv;
+    }
+    
+    bool goodADC = sumstrip >= thresh_strip && ADC_maxsamp[strip] >= thresh_samp;
+    if( goodADC && sumstrip >= sumleft && sumstrip >= sumright ){
 	//	fADCmax[hitindex[strip]] >= fThresholdSample ){ //new local max:
       bool goodtime = true;
-      if( fUseStripTimingCuts && fabs( Tmean_strip[strip] - fStripMaxTcut_central ) > fStripMaxTcut_width ) goodtime = false;
 
-      if( !goodtime && fClusteringFlag == 1 ){
-	// if a strip fails the basic timing cut but has good deconvoluted ADC value, keep it
-	// anyway:
-	if( fADCmaxDeconvCombo[hitindex[strip]] >= fThresholdSample ){
-	  goodtime = true;
-	}
+      double tstrip = Tmean_strip[strip];
+      double t0 = fStripMaxTcut_central[axis];
+      double tcut = fStripMaxTcut_width[axis];
+      double tsigma = fStripMaxTcut_sigma[axis];
+
+      //double t0 = 0.0; //now the mean value has been subtracted off.
+      
+      if( fUseStripTimingCuts == 2 && fClusteringFlag != 1 ){ //alternate timing cut based on strip "fitted" time
+	tstrip = Tfit_strip[strip];
+	t0 = fStripMaxTcut_central_fit[axis];
+	tcut = fStripMaxTcut_width_fit[axis];
+	tsigma = fStripMaxTcut_sigma_fit[axis]; 
       }
+      
+      if( fClusteringFlag == 1 ){
+	tstrip = Tmean_strip_deconv[strip];
+	t0 = fStripMaxTcut_central_deconv[axis];
+	tcut = fStripMaxTcut_width_deconv[axis];
+	tsigma = fStripMaxTcut_sigma_deconv[axis]; 
+      }
+      
+      if( fUseStripTimingCuts != 0 && fabs( tstrip - t0 ) > tcut * tsigma ) goodtime = false;
+
+      // if( !goodtime && fClusteringFlag == 1 ){
+      // 	// if a strip fails the basic timing cut but has good deconvoluted ADC value, keep it
+      // 	// anyway:
+      // 	if( fADCmaxDeconvCombo[hitindex[strip]] >= fThresholdSample ){
+      // 	  goodtime = true;
+      // 	}
+      // }
 
       if( goodtime ){
 	islocalmax[strip] = true;
@@ -3200,36 +3498,29 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       found_neighbor_low = striplist.find( striplo - 1 ) != striplist.end() && stripmax - striplo < maxsep;
 
       double Tdiff = fTmean[hitindex[striplo-1]] - fTmean[hitindex[stripmax]];
+      
+      
+      if( fUseStripTimingCuts == 2 && fClusteringFlag == 0 ){ //Use "fitted" strip time instead:
+	Tdiff = fStripTfit[hitindex[striplo-1]] - fStripTfit[hitindex[stripmax]];
+      }
+      if( fClusteringFlag == 1 ){
+	Tdiff = fTmeanDeconv[hitindex[striplo-1]] - fTmeanDeconv[hitindex[stripmax]];
+      }
 
       double Ccoeff = CorrCoeff( NsampCorrCoeff, fADCsamples[hitindex[striplo-1]], fADCsamples[hitindex[stripmax]], FirstSampleCorrCoeff );
-      double Tdiff_deconv = fTmeanDeconv[hitindex[striplo-1]] - fTmeanDeconv[hitindex[stripmax]];
+      //double Tdiff_deconv = 
       
       //correlation coefficient of the deconvoluted samples:
       double Ccoeff_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[hitindex[striplo-1]], fADCsamples_deconv[hitindex[stripmax]] );
-      if( fClusteringFlag == 0 ){ //"standard" clustering based on six-sample sums:
-	if( found_neighbor_low && fUseStripTimingCuts ){
-	  //check time difference and correlation coefficient of the candidate strip
-	  //with the max strip:
-	
-	  if( fabs(Tdiff) > fStripAddTcut_width || Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_low = false;
 
-	}
-      } else { // clustering based on deconvoluted ADC max two-sample combo: check correlation coefficient of deconvoluted samples and require neighbor s
-	if( found_neighbor_low && fUseStripTimingCuts ){
-	  if( fabs(Tdiff_deconv) > fStripAddTcut_width || Ccoeff_deconv < fStripAddCorrCoeffCut ) found_neighbor_low = false;
-	}
-      }
+      if( fUseStripTimingCuts != 0 && fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_low = false;
+      //Apply ONE cut on corr. coeff.; either regular or deconvoluted samples:
+      //if( fClusteringFlag == 1 && std::abs( fMaxSampDeconvCombo[hitindex[striplo-1]]-fMaxSampDeconvCombo[hitindex[stripmax]] ) > 1 ) found_neighbor_low = false;
       
-      // if( fDeconvolutionFlag != 0 ){
-      // 	Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[hitindex[striplo-1]], fADCsamples_deconv[hitindex[stripmax]] );
-      // }
+      double Ccoeff_test = fClusteringFlag == 1 ? Ccoeff_deconv : Ccoeff;
 
-      //if the greater of the two correlation coefficients (shaped samples vs. deconvoluted samples) is too low, don't add this strip:
-     
-	
-
-      //If either the strip time difference with the max. strip or the Correlation coefficient with the max strip
-      //fails the cuts, stop growing the cluster in this direction
+      if( Ccoeff_test < fStripAddCorrCoeffCut ) found_neighbor_low = false;
+      
       
       if( found_neighbor_low ) striplo--;
     }
@@ -3245,28 +3536,30 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     //	   stripmax - striplo < maxsep ){
     while( found_neighbor_high ){
       
-      found_neighbor_high = striplist.find( striphi + 1 ) != striplist.end() && stripmax - striplo < maxsep;
+      found_neighbor_high = striplist.find( striphi + 1 ) != striplist.end() && striphi - stripmax < maxsep;
 
       double Tdiff = fTmean[hitindex[striphi+1]] - fTmean[hitindex[stripmax]];
 
+      if( fUseStripTimingCuts == 2 && fClusteringFlag == 0 ){ //Use "fitted" strip time instead:
+	Tdiff = fStripTfit[hitindex[striphi+1]] - fStripTfit[hitindex[stripmax]];
+      }
+      if( fClusteringFlag == 1 ){
+	Tdiff = fTmeanDeconv[hitindex[striphi+1]] - fTmeanDeconv[hitindex[stripmax]];
+      }
+      
       double Ccoeff = CorrCoeff( NsampCorrCoeff, fADCsamples[hitindex[striphi+1]], fADCsamples[hitindex[stripmax]], FirstSampleCorrCoeff );
-      double Tdiff_deconv = fTmeanDeconv[hitindex[striphi+1]] - fTmeanDeconv[hitindex[stripmax]];
+      //double Tdiff_deconv = fTmeanDeconv[hitindex[striphi+1]] - fTmeanDeconv[hitindex[stripmax]];
       
       //correlation coefficient of the deconvoluted samples:
       double Ccoeff_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[hitindex[striphi+1]], fADCsamples_deconv[hitindex[stripmax]] );
-      if( fClusteringFlag == 0 ){ //"standard" clustering based on six-sample sums:
-	if( found_neighbor_high && fUseStripTimingCuts ){
-	  //check time difference and correlation coefficient of the candidate strip
-	  //with the max strip:
-	
-	  if( fabs(Tdiff) > fStripAddTcut_width || Ccoeff < fStripAddCorrCoeffCut ) found_neighbor_high = false;
 
-	}
-      } else { // clustering based on deconvoluted ADC max two-sample combo: check correlation coefficient of deconvoluted samples and require neighbor s
-	if( found_neighbor_high && fUseStripTimingCuts ){
-	  if( fabs(Tdiff_deconv) > fStripAddTcut_width || Ccoeff_deconv < fStripAddCorrCoeffCut ) found_neighbor_high = false;
-	}
-      }
+      if( fUseStripTimingCuts != 0 && fabs(Tdiff) > fStripAddTcut_width ) found_neighbor_high = false;
+      //if( fClusteringFlag == 1 && std::abs( fMaxSampDeconvCombo[hitindex[striphi+1]]-fMaxSampDeconvCombo[hitindex[stripmax]] ) > 1 ) found_neighbor_high = false;
+      
+      
+      double Ccoeff_test = fClusteringFlag == 1 ? Ccoeff_deconv : Ccoeff;
+
+      if( Ccoeff_test < fStripAddCorrCoeffCut ) found_neighbor_high = false;
       
       // if( fDeconvolutionFlag != 0 ){
       // 	Ccoeff = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[hitindex[striplo-1]], fADCsamples_deconv[hitindex[stripmax]] );
@@ -3339,7 +3632,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       //double tstrip = fTmean[hitindex[istrip]];
       double tstrip = Tmean_strip[istrip];
 
-      double tstrip_deconv = fTmeanDeconv[hitindex[istrip]];
+      //    double tstrip_deconv = fTmeanDeconv[hitindex[istrip]];
+      double tstrip_deconv = Tmean_strip_deconv[istrip];
       double ADCstrip_deconv = fADCsumsDeconv[hitindex[istrip]]*splitfraction[istrip];
       
       for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){
@@ -3412,6 +3706,10 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     clusttemp.t_sigma = sqrt( sumt2 / sumwx - pow(clusttemp.t_mean,2) );
 
     clusttemp.t_mean_deconv = sumtdeconv/sumwx;
+
+    FitClusterTime( clusttemp );
+
+    //clusttemp.t_mean_fit -= fStripMaxTcut_central_fit[axis];
     
     //initialize "keep" flag for all 1D clusters to true:
     clusttemp.keep = true;
@@ -3466,7 +3764,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     //Timing window size = cut width:
     
     //The following is in ns, we want to convert to milliseconds, so need to DIVIDE by 1e6:
-    double window = fStripMaxTcut_width; //later we can use a fancier definition:
+    double window = fStripMaxTcut_width[axis]; //later we can use a fancier definition:
     if( !fUseStripTimingCuts ) window = fN_MPD_TIME_SAMP * fSamplePeriod/2.0; //If we aren't using strip timing cuts we take the entire six-sample window as the time interval for "occupancy"
     //The following is in m^2, need to multiply by 1e4
     double area = GetXSize() * GetYSize();
@@ -3882,8 +4180,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 
 	  hittemp.EhitDeconv = 0.5*(fUclusters[iu].clusterADCsumDeconvMaxCombo+fVclusters[iv].clusterADCsumDeconvMaxCombo);
 	  
-	  hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean;
-	  hittemp.tdiffDeconv = fUclusters[iu].t_mean_deconv - fVclusters[iv].t_mean_deconv;
+	  hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean - (fHitTimeMean[0]-fHitTimeMean[1]);
+	  hittemp.tdiffDeconv = fUclusters[iu].t_mean_deconv - fVclusters[iv].t_mean_deconv - (fHitTimeMeanDeconv[0]-fHitTimeMeanDeconv[1]);
 	  hittemp.thitDeconv = 0.5*(fUclusters[iu].t_mean_deconv + fVclusters[iv].t_mean_deconv);
 	  
 	  //Calculate correlation coefficients:
@@ -3905,20 +4203,23 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  // hittemp.ADCasymDeconv = (fUclusters[iu].clusterADCsumDeconvMaxCombo - fVclusters[iv].clusterADCsumDeconvMaxCombo)/
 	  //   (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
 	  // hittemp.EhitDeconv = 0.5 * (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
+
+	  hittemp.thitFit = 0.5*( fUclusters[iu].t_mean_fit + fVclusters[iv].t_mean_fit );
+	  hittemp.tdiffFit = fUclusters[iu].t_mean_fit - fVclusters[iv].t_mean_fit - (fHitTimeMeanFit[0]-fHitTimeMeanFit[1]);
 	  
 	  //A "high-quality" hit is one that passes all the filtering criteria (might add more later):
-	  hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
-	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
-	    fUclusters[iu].clusterADCsum >= fThresholdClusterSum && 
-	    fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
-	    hittemp.corrcoeff_clust >= fCorrCoeffCut &&
-	    hittemp.corrcoeff_strip >= fCorrCoeffCut && 
-	    fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
-	    fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
-	    hittemp.corrcoeff_clust_deconv >= fCorrCoeffCut &&
-	    hittemp.corrcoeff_strip_deconv >= fCorrCoeffCut ;
+	  // hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
+	  //   fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
+	  //   fUclusters[iu].clusterADCsum >= fThresholdClusterSum && 
+	  //   fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
+	  //   hittemp.corrcoeff_clust >= fCorrCoeffCut &&
+	  //   hittemp.corrcoeff_strip >= fCorrCoeffCut && 
+	  //   fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
+	  //   fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
+	  //   hittemp.corrcoeff_clust_deconv >= fCorrCoeffCut &&
+	  //   hittemp.corrcoeff_strip_deconv >= fCorrCoeffCut ;
 
-	  hittemp.highquality = true;
+	  hittemp.highquality = true; //did we mean for this to be here? 
 	  
 	  //cutting on deconvoluted ADC quantities could be dangerous before further study...
 
@@ -3930,8 +4231,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	    add_hit = false;
 	    if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
 		hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
-		hittemp.corrcoeff_clust_deconv >= fCorrCoeffCut &&
-		hittemp.corrcoeff_strip_deconv >= fCorrCoeffCut ){
+		hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
+		hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv ){
 	      add_hit = true;
 	    }
 	  }
@@ -4702,15 +5003,20 @@ void SBSGEMModule::filter_1Dhits(SBSGEM::GEMaxis_t axis){
   
   std::vector<sbsgemcluster_t> &clusters =  (axis == SBSGEM::kUaxis) ? fUclusters : fVclusters;
 
+  double threshold = fThresholdClusterSum;
+  if( fClusteringFlag == 1 ) threshold = fThresholdClusterSumDeconv;
+  
   bool passed[nclust];
   
   for( int ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
     for( int icl=0; icl<nclust; icl++ ){
 
+      double clustersum = clusters[icl].clusterADCsum;
+      if( fClusteringFlag == 1 ) clustersum = clusters[icl].clusterADCsumDeconvMaxCombo;
       //On the first pass, determine which clusters passed the criterion and count the number of good clusters:
       if( ipass == 0 ){
-	passed[icl] = clusters[icl].keep && clusters[icl].clusterADCsum >= fThresholdClusterSum;
+	passed[icl] = clusters[icl].keep && clustersum >= threshold;
 	if( passed[icl] ) ngood++;
       }
 
@@ -4748,6 +5054,18 @@ void SBSGEMModule::filter_2Dhits(){
   //Here we will initially filter only based on time U/V time difference, ADC asymmetry, and perhaps correlation coefficient:
 
   if( fFiltering_flag2D < 0 ) return;
+
+  double tcut = fTimeCutUVdiff;
+  double ccor_cut = fCorrCoeffCut;
+  double asym_cut = fADCasymCut;
+  if( fClusteringFlag == 1 ){
+    tcut = fTimeCutUVdiffDeconv;
+    ccor_cut = fCorrCoeffCutDeconv;
+    // asym_cut = fADCasymCut
+  }
+  if( fUseStripTimingCuts == 2 && fClusteringFlag != 1 ){
+    tcut = fTimeCutUVdiffFit;
+  }
   
   //First U/V time difference:
   bool passed[fN2Dhits];
@@ -4755,8 +5073,12 @@ void SBSGEMModule::filter_2Dhits(){
   for( UInt_t ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
     for( UInt_t ihit=0; ihit<fN2Dhits; ihit++ ){
+      double dt = fHits[ihit].tdiff;
+      if( fClusteringFlag == 1 ) dt = fHits[ihit].tdiffDeconv;
+      if( fUseStripTimingCuts == 2 && fClusteringFlag != 1 ) dt = fHits[ihit].tdiffFit;
+      
       if( ipass == 0 ){
-	passed[ihit] = fHits[ihit].keep && fabs( fHits[ihit].tdiff ) <= fTimeCutUVdiff;
+	passed[ihit] = fHits[ihit].keep && fabs( dt ) <= tcut;
 	if( passed[ihit] ) ngood++;
       }
 
@@ -4771,8 +5093,11 @@ void SBSGEMModule::filter_2Dhits(){
   for( UInt_t ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
     for( UInt_t ihit=0; ihit<fN2Dhits; ihit++ ){
+      double ccor = fHits[ihit].corrcoeff_clust;
+      if( fClusteringFlag == 1 ) ccor = fHits[ihit].corrcoeff_clust_deconv;
+      
       if( ipass == 0 ){
-	passed[ihit] = fHits[ihit].keep &&  fHits[ihit].corrcoeff_clust >= fCorrCoeffCut;
+	passed[ihit] = fHits[ihit].keep && ccor >= ccor_cut;
 	if( passed[ihit] ) ngood++;
       }
 
@@ -4787,8 +5112,10 @@ void SBSGEMModule::filter_2Dhits(){
   for( UInt_t ipass=0; ipass<2; ipass++ ){
     if( ipass == 0 ) ngood = 0;
     for( UInt_t ihit=0; ihit<fN2Dhits; ihit++ ){
+      double asym = fHits[ihit].ADCasym;
+      if( fClusteringFlag == 1 ) asym = fHits[ihit].ADCasymDeconv;
       if( ipass == 0 ){
-	passed[ihit] = fHits[ihit].keep && fabs( fHits[ihit].ADCasym ) <= fADCasymCut;
+	passed[ihit] = fHits[ihit].keep && fabs( asym ) <= asym_cut;
 	if( passed[ihit] ) ngood++;
       }
 
@@ -5109,7 +5436,7 @@ void SBSGEMModule::fill_ADCfrac_vs_time_sample_goodstrip( Int_t hitindex, bool i
 double SBSGEMModule::StripTSchi2( int hitindex ){
   if( hitindex < 0 || hitindex > fNstrips_hit ) return -1.;
   double chi2 = 0.0;
-  double t0 = fStripMaxTcut_central - fStripTau;
+  double t0 = fStripMaxTcut_central[fAxis[hitindex]] - fStripTau;
 
   double sigma = (fAxis[hitindex] == SBSGEM::kUaxis) ? fPedRMSU[fStrip[hitindex]] : fPedRMSV[fStrip[hitindex]] * fRMS_ConversionFactor; 
 
@@ -5128,16 +5455,23 @@ double SBSGEMModule::StripTSchi2( int hitindex ){
 double SBSGEMModule::FitStripTime( int striphitindex, double RMS ){
   if( striphitindex < 0 || striphitindex > fNstrips_hit ) return -1000.0;
 
+  std::vector<Double_t> &ADC = fADCsamples[striphitindex];
+
+  return CalcFitTime( ADC, RMS );
+  
+}
+
+//common code for calculating strip and cluster fit times:
+double SBSGEMModule::CalcFitTime( const std::vector<Double_t> &ADC, double RMS ){
+
   double ndeconv[fN_MPD_TIME_SAMP-1];
   double dndeconv[fN_MPD_TIME_SAMP-1];
   double weight[fN_MPD_TIME_SAMP-1];
   double Tdeconv[fN_MPD_TIME_SAMP-1]; //estimate of signal start time based on ndeconv.
   double dTdeconv[fN_MPD_TIME_SAMP-1];
   
-  std::vector<Double_t> &ADC = fADCsamples[striphitindex];
-
   //Grab pedestal RMS to estimate weights in strip mean time calculation:
-
+  
   //Double_t pedrms = ( fAxis[striphitindex] == SBSGEM::kUaxis ) ? fPedRMSU[fStrip[striphitindex]] : fPedRMSV[fStrip[striphitindex]];
 
   Double_t xdeconv = fSamplePeriod/fStripTau;
@@ -5147,6 +5481,7 @@ double SBSGEMModule::FitStripTime( int striphitindex, double RMS ){
   // dn = -1.0 / (r * exdeconv - 1)^2 * exdeconv * dr = -exdeconv * n^2 * dr
   // dr = r * sqrt( (dADCi/ADCi,2) + pow(dADC_{i+1}/ADC_{i+1},2))
 
+  //dADC = sigma 
   double sigma = RMS;
 
   double Tsum = 0.0, Tsum2=0.0;
@@ -5156,7 +5491,7 @@ double SBSGEMModule::FitStripTime( int striphitindex, double RMS ){
     ndeconv[isamp] = ADC[isamp]/(ADC[isamp+1]*exdeconv - ADC[isamp]); //estimated number of samples before current sample that the signal started
 
     double r = ADC[isamp+1]/ADC[isamp];
-    double dr2 = r*r * sigma * ( pow( ADC[isamp], -2 ) + pow( ADC[isamp+1], -2 ) );
+    double dr2 = r*r * sigma * sigma * ( pow( ADC[isamp], -2 ) + pow( ADC[isamp+1], -2 ) );
     dndeconv[isamp] = exdeconv * pow(ndeconv[isamp],2) * sqrt(dr2);
 
     Tdeconv[isamp] = ( isamp + 0.5 - ndeconv[isamp] ) * fSamplePeriod;
@@ -5167,24 +5502,17 @@ double SBSGEMModule::FitStripTime( int striphitindex, double RMS ){
     //weight = 1.0;
     
     //if( ndeconv[isamp] >= 0.0 ){
-    if( true ){
-      Tsum += Tdeconv[isamp] * weight;
-      Tsum2 += pow(Tdeconv[isamp],2) * weight;
-      sumw2 += weight;
-    }
+    // if( true ){
+    Tsum += Tdeconv[isamp] * weight;
+    Tsum2 += pow(Tdeconv[isamp],2) * weight;
+    sumw2 += weight;
+      //}
   }
 
-  if( true ){
-    //if( true ){
-    return Tsum / sumw2 - fTrigTime;
-  } else { 
-    if( fMaxSamp[striphitindex] == 0 ){
-      return Tdeconv[0] - fTrigTime;
-    } else {
-      return Tdeconv[fMaxSamp[striphitindex]-1] - fTrigTime;
-    }
-  }
-  
+  //if( true ){
+  //if( true ){
+  return Tsum / sumw2 - fTrigTime;
+  //} 
 }
 
 void SBSGEMModule::InitAPVMAP(){
@@ -5555,7 +5883,7 @@ double SBSGEMModule::GetCommonModeCorrection( UInt_t isamp, const mpdmap_t &apvi
 	int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
 	double ADC = fPedSubADC_APV[iraw];
 
-	if( !fullreadout ) ADC += fCM_online[isamp];
+	if( !fullreadout ) ADC += fCM_online[isamp]; //need to add back in online common-mode to recover raw ADC... 
 
 	//increment counts for any bin containing this hit:
 	for( int ibin=0; ibin<nbins; ibin++ ){
@@ -5678,4 +6006,20 @@ void SBSGEMModule::CalcDeconvolutedSamples( const std::vector<Double_t> &ADC, st
 
 void SBSGEMModule::SetTriggerTime( Double_t ttrig ){
   fTrigTime = fabs( ttrig ) < fMaxTrigTimeCorrection ? ttrig : 0.0;
+}
+
+//This is duplicative with FitStripTime in terms of code, but 
+
+void SBSGEMModule::FitClusterTime( sbsgemcluster_t &clust ){
+  if( clust.ADCsamples.size() != fN_MPD_TIME_SAMP ) {
+    clust.t_mean_fit = -1000.0;
+    return;
+  }
+  
+  std::vector<Double_t> &ADC = clust.ADCsamples;
+
+  //RMS of the cluster-summed samples is ~20.0 * sqrt(nstrip);
+  
+  clust.t_mean_fit = CalcFitTime( ADC, 20.0*sqrt(double(clust.nstrips)) );
+
 }
