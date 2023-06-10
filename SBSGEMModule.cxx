@@ -82,8 +82,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fThresholdClusterSum = 500.0;
 
   fThresholdSampleDeconv = 50.0;
-  fThresholdDeconvADCMaxCombo = 100.0;
-  fThresholdClusterSumDeconv = 200.0;
+  fThresholdDeconvADCMaxCombo = 75.0;
+  fThresholdClusterSumDeconv = 150.0;
   
   fADCasymCut = 1.1;
   fTimeCutUVdiff = 30.0;
@@ -4207,19 +4207,62 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  hittemp.thitFit = 0.5*( fUclusters[iu].t_mean_fit + fVclusters[iv].t_mean_fit );
 	  hittemp.tdiffFit = fUclusters[iu].t_mean_fit - fVclusters[iv].t_mean_fit - (fHitTimeMeanFit[0]-fHitTimeMeanFit[1]);
 	  
-	  //A "high-quality" hit is one that passes all the filtering criteria (might add more later):
+	  //A "high-quality" hit is one that passes filtering criteria for either "standard" or deconvoluted information:
+	  
+	  double asym = hittemp.ADCasym;
+	  double ccor = hittemp.corrcoeff_clust;
+	  double ADCsum = hittemp.Ehit;
+	  double deltat = hittemp.tdiff;
+	  double thit = hittemp.thit;
+	  double ADC_thresh = fThresholdClusterSum;
+	  double ccor_cut = fCorrCoeffCut;
+	  //Do we want to hard-code the number of sigmas in the "high-quality" designation?
+	  // --> Yes: if we want to make it wider or narrower, we can adjust the sigma
+	  // in the DB
+	  double dtcut = 3.5 * fTimeCutUVsigma;
+	  double t0 = 0.5*(fHitTimeMean[0]+fHitTimeMean[1]);
+	  double tcut = 3.5*0.5*(fHitTimeSigma[0]+fHitTimeSigma[1]);
+	  if( fClusteringFlag == 1 ){
+	    asym = hittemp.ADCasymDeconv;
+	    ccor = hittemp.corrcoeff_clust_deconv;
+	    ADCsum = hittemp.EhitDeconv;
+	    deltat = hittemp.tdiffDeconv;
+	    thit = hittemp.thitDeconv;
+	    ADC_thresh = fThresholdClusterSumDeconv;
+	    ccor_cut = fCorrCoeffCutDeconv;
+	    dtcut = 3.5*fTimeCutUVsigmaDeconv;
+	    t0 = 0.5*(fHitTimeMeanDeconv[0]+fHitTimeMeanDeconv[1]);
+	    tcut = 3.5*0.5*(fHitTimeSigmaDeconv[0]+fHitTimeSigmaDeconv[1]);
+	  }
+
+	  if( fClusteringFlag == 0 && fUseStripTimingCuts == 2 ){
+	    thit = hittemp.thitFit;
+	    t0 = 0.5*(fHitTimeMeanFit[0]+fHitTimeMeanFit[1]);
+	    dtcut = 3.5*fTimeCutUVsigmaFit;
+	    tcut = 3.5*0.5*(fHitTimeSigmaFit[0]+fHitTimeSigmaFit[1]);
+	  }
+
+	  hittemp.highquality = fabs(asym) <= 3.5*fADCasymSigma &&
+	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 &&
+	    ADCsum >= ADC_thresh && ccor >= ccor_cut &&
+	    fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
+
+	  //hittemp.highquality = true;
+
+	  hittemp.thitcorr = thit - t0;
+	  
 	  // hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
 	  //   fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
 	  //   fUclusters[iu].clusterADCsum >= fThresholdClusterSum && 
 	  //   fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
 	  //   hittemp.corrcoeff_clust >= fCorrCoeffCut &&
 	  //   hittemp.corrcoeff_strip >= fCorrCoeffCut && 
-	  //   fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
+	  //   fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
 	  //   fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
-	  //   hittemp.corrcoeff_clust_deconv >= fCorrCoeffCut &&
-	  //   hittemp.corrcoeff_strip_deconv >= fCorrCoeffCut ;
+	  //   hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
+	  //   hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv;
 
-	  hittemp.highquality = true; //did we mean for this to be here? 
+       
 	  
 	  //cutting on deconvoluted ADC quantities could be dangerous before further study...
 
@@ -4228,14 +4271,16 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  if( fUclusters[iu].nstrips == 1 || fVclusters[iv].nstrips == 1 ){
 	    //If EITHER of these clusters is only single-strip, it must pass more stringent requirements to use as a 2D hit candidate:
 	    //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
-	    add_hit = false;
-	    if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff &&
-		hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
-		hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
-		hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv ){
-	      add_hit = true;
-	    }
+	    add_hit = fabs(asym) <= 3.5*fADCasymSigma && ccor >= ccor_cut && fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
+	    // if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
+	    // 	hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
+	    // 	hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
+	    // 	hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv ){
+	    //   add_hit = true;
+	    // }
 	  }
+
+	  //add_hit = true;
 	  
 	  //Okay, that should be everything. Now add it to the 2D hit array:
 	  //fHits.push_back( hittemp );

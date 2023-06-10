@@ -177,6 +177,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trigtime_calib", &fRefTime_CAL, kDouble, 0, 1, 1},
     { "use_enhanced_chi2", &fUseEnhancedChi2, kInt, 0, 1, 1},
     { "trackchi2cut_hitquality", &fTrackChi2CutHitQuality, kDouble, 0, 1, 1},
+    { "minhighqualityhitsontrack", &fMinHighQualityHitsOnTrack, kInt, 0, 1, 1},
     {0}
   };
 
@@ -584,6 +585,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "track.chi2ndf", "Track Chi2/ndf", "fChi2Track" },
     { "track.chi2ndf_hitquality", "Track Chi2/ndf for hit ADC and time correlations", "fChi2TrackHitQuality" },
     { "track.besttrack", "Index of 'best' track", "fBestTrackIndex" },
+    { "track.ngoodhits", "Number of high quality hits on track", "fNgoodhitsOnTrack" },
+    { "track.t0", "Track t0 time (weighted average of hit times relative to expected, ns)", "fT0track" },
     { "hit.ngoodhits", "Total number of hits on all found tracks", "fNgoodhits" },
     { "hit.trackindex", "Index of track containing this hit", "fHitTrackIndex" },
     { "hit.module", "Module index of this hit", "fHitModule" },
@@ -703,6 +706,7 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.TSchi2_Vmax", "Max V strip TS chi2", "fHitTSchi2MaxVstrip" },
     { "hit.TSprob_Umax", "Max U strip TS prob", "fHitTSprobMaxUstrip" },
     { "hit.TSprob_Vmax", "Max V strip TS prob", "fHitTSprobMaxVstrip" },
+    { "hit.Tavg_corr", "Corrected hit time (ns)", "fHitTavgCorrected" },
     { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
     { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
     { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },

@@ -125,7 +125,10 @@ protected:
   //CalcLineOfBestFit only calculates the track parameters, does not calculate chi2 or residuals:
   void CalcLineOfBestFit( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
 
-  Double_t CalcTrackChi2HitQuality( const std::map<int,int> &hitcombo );
+  Double_t CalcTrackChi2HitQuality( const std::map<int,int> &hitcombo, Double_t &t0track );
+  Double_t CalcTrackT0( const std::map<int,int> &hitcombo );
+
+  Int_t CountHighQualityHits( const std::map<int,int> &hitcombo );
   
   // routine to fit the best track to a set of hits, without the overhead of chi2 calculation, useful for "exclusive residuals" calculation:
   //void FitTrackNoChisquaredCalc( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
@@ -164,6 +167,7 @@ protected:
   int fTrackingAlgorithmFlag; //Choose track algorithm
 
   int fMinHitsOnTrack; //default = 3; cannot be less than 3, cannot be more than total number of layers
+  int fMinHighQualityHitsOnTrack; //default = 2, minimum number of "good" hits on the track 
   
   long fMaxHitCombinations; //default = 10000; this is for "outer" layers
   long fMaxHitCombinations_InnerLayers; //default = 10000?
@@ -294,15 +298,19 @@ protected:
   std::vector<std::vector<double> > fresidv_hits; //inclusive residuals: track - hit along direction measured by v strips
   std::vector<std::vector<double> > feresidu_hits; //exclusive residuals: track - hit along direction measured by u strips
   std::vector<std::vector<double> > feresidv_hits; //exclusive residuals: track - hit along direction measured by v strips
+
+  std::vector<int> fNgoodhitsOnTrack; //Number of "high quality" hits on track
   
   //Fitted track parameters: coordinates at Z = 0 and slopes
   std::vector<double> fXtrack;
   std::vector<double> fYtrack;
   std::vector<double> fXptrack;
   std::vector<double> fYptrack;
+  std::vector<double> fT0track;
   std::vector<double> fChi2Track; //chi2/ndf
   std::vector<double> fChi2TrackHitQuality; //chi2/ndf of hit properties on track (ADC asymmetry, correlation coefficient, time X/Y or U/V time difference, etc).
-
+  
+  
   int fBestTrackIndex; //Index of "golden track" within the TClonesArray defined by THaSpectrometer or other "best track" selection method (if not a spectrometer tracker)
   
   // We will need to define some global variables that are either in the form of basic data or vectors of basic data,
@@ -405,6 +413,8 @@ protected:
   //
   std::vector<double> fHitDeltaTFit;
   std::vector<double> fHitTavgFit; 
+
+  std::vector<double> fHitTavgCorrected;
   
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
   std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips

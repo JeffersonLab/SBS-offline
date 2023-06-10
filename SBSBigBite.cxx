@@ -1364,7 +1364,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   ybeam = (BPMBY-BPMAY)/fBPM_L*(fBPMA_tg + vz_fit) + BPMAY;
   xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
   
-  track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
+  track->SetTarget(xtar+ybeam, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
   track->SetPvect(TVector3(px, py, pz));
   track->SetVertex(TVector3(xbeam, ybeam, vz_fit));
@@ -1389,7 +1389,9 @@ void SBSBigBite::CalcFpCoords( THaTrack *track ){
     double yfp_fit = 0.0;
     double xpfp_fit = 0.0;
     double ypfp_fit = 0.0;
-        
+
+    //xtar = 0.0;
+    
     int ipar=0;
     //forward optics expansion is (xfp, yfp, xpfp, ypfp) = sum_ijklm C_(xyxpyp)^ijklm * xptar^i yptar^j ytar^k (1/p)^l (xtar)^m:
     for( int i=0; i<=fForwardOpticsOrder; i++ ){
