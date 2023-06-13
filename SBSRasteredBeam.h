@@ -40,6 +40,7 @@ class SBSRasteredBeam : public THaBeam {
   double fBPMA_tg;
   double fRasterx_cen, fRastery_cen;
   double fRasterx_scale, fRastery_scale;
+  Int_t fRaster_flag;
   TVector3 fbeam_position;
 
   void UpdateRollingAverage(TVector3 BPM, std::deque<TVector3> &BPM_container, Int_t &Nevents);
