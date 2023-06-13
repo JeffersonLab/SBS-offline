@@ -56,6 +56,7 @@ protected:
   void InitOpticsAxes(double); //version with only bend angle argument
   void InitGEMAxes(double, double, const TVector3 & );
   void InitGEMAxes(double, double); //version with only angle arguments:
+
   
   // My current understanding is that fPointingOffset designates the point 
   // towards the beamline that the "mouth" of the spectrometer is pointing to...
@@ -165,9 +166,6 @@ protected:
   Double_t fSigmaX_hodo; //default = bar vertical size / sqrt(12)
   Double_t fSigmaY_hodo; //default = hit resolution from left/right time difference
   
-  Double_t fBPM_L; // Distance between BPMA and BPMB
-  Double_t fBPMA_tg; // Distance between BPMA and the target 0 vertex
-
   //for output only... Vectors instead?
   std::vector<double> fFrontConstraintX;
   std::vector<double> fFrontConstraintY;
@@ -211,7 +209,7 @@ protected:
   
     
   double fECaloFudgeFactor;// poor man's solution to apply the calorimeter constraint 
-    
+  
   enum {
     kMultiTracks  = BIT(13), // Tracks are to be sorted by chi2
     kSortTracks   = BIT(14), // Tracks are to be sorted by chi2
@@ -219,7 +217,7 @@ protected:
   };
     
   ClassDef(SBSBigBite,0) // BigBite spectrometer
-};
+    };
 
 
 #endif//ROOT_TreeSearch_SBSBigBite

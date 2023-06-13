@@ -51,8 +51,6 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
   fYtar_01000 = 0.0;
   fYtar_00010 = 0.0;
   fECaloFudgeFactor = 1.0;
-  fBPM_L = 5.15;
-  fBPMA_tg = 7.53;
 
   //Default ideal optics angle (central bend angle) to 10 deg:
 
@@ -115,6 +113,7 @@ SBSBigBite::SBSBigBite( const char* name, const char* description ) :
 
   fUseForwardOptics = false;
   fForwardOpticsOrder = -1;
+
 }
 
 //_____________________________________________________________________________
@@ -249,8 +248,6 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "ysigma_hodo", &fSigmaY_hodo, kDouble, 0, 1, 1 },
     { "forwardoptics_order", &fForwardOpticsOrder, kInt, 0, 1, 1 },
     { "forwardoptics_parameters", &foptics_param, kDoubleV, 0, 1, 1 },
-    { "BPM_separation", &fBPM_L, kDouble, 0, 1, 0 },
-    { "BPMA_dist_to_targ", &fBPMA_tg, kDouble, 0, 1, 0 },
     {0}
   };
     
@@ -472,6 +469,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     }
   }
   
+ 
   fIsInit = true;
   return kOK;
 }
@@ -977,7 +975,7 @@ Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
   for( Int_t t = 0; t < n_trk; t++ ) {
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
     CalcOpticsCoords(theTrack);
-
+    
     if(fOpticsOrder>=0){
       CalcTargetCoords(theTrack);
       if(fForwardOpticsOrder>=0){ //also calculate forward from target as consistency check:
@@ -1009,7 +1007,6 @@ Int_t SBSBigBite::FindVertices( TClonesArray& tracks )
     // criterion is mathematically less well defined and not usually used
     // in track reconstruction. Hence, chi2 sorting is preferable, albeit
     // obviously slower.
-    
     fGoldenTrack = static_cast<THaTrack*>( fTracks->At(0) );
     fTrkIfo      = *fGoldenTrack;
     fTrk         = fGoldenTrack;
@@ -1148,7 +1145,6 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   yptar_fit = 0.0;
   ytar_fit = 0.0;
   pthetabend_fit = 0.0;
-
   
   int ipar = 0;
   for(int i=0; i<=fOpticsOrder; i++){
@@ -1230,38 +1226,18 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   TIter aiter(gHaApps);
   THaApparatus* app = 0;
   
-  double BPMAX = 0.0;
-  double BPMAY = 0.0;
-  double BPMBX = 0.0;
-  double BPMBY = 0.0;
-
   while( (app=(THaApparatus*)aiter()) ){
     if(app->InheritsFrom("SBSRasteredBeam")){
       if(app->GetName() != std::string("Lrb")) continue;
-	 
-      TIter next(app->GetDetectors());
       
-      while( TObject* obj = next() ) {
-	auto* theDetector = dynamic_cast<THaDetector*>( obj );
-	if(theDetector->GetName() == std::string("BPMA")){
-	  SBSBPM* BPM = reinterpret_cast<SBSBPM*>(theDetector);
-	  BPMAX = BPM->GetPosition().X();
-	  BPMAY = BPM->GetPosition().Y();
-	}
-	if(theDetector->GetName() == std::string("BPMB")){
-	  SBSBPM* BPM = reinterpret_cast<SBSBPM*>(theDetector);
-	  BPMBX = BPM->GetPosition().X();
-	  BPMBY = BPM->GetPosition().Y();
-	}
-      }
+      SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
+      ybeam = RasterBeam->GetBeamPosition().Y(); 
+      xbeam = RasterBeam->GetBeamPosition().X();
     }
     //cout << app->GetName() << endl;
   }
   //  f_xtg_exp.push_back(xtar);
-
-  //units for beam position are mm, we need to convert to meters for spectrometer optics
-  xbeam = (BPMBX-BPMAX)/fBPM_L*(fBPMA_tg + vz_fit) + BPMAX;
-  ybeam = (BPMBY-BPMAY)/fBPM_L*(fBPMA_tg + vz_fit) + BPMAY;
+  
   xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
@@ -1278,6 +1254,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
 
 //_____________________________________________________________________________
 void SBSBigBite::CalcFpCoords( THaTrack *track ){
+
   if( track->HasTarget() ){
     double xtar = track->GetTX();
     double ytar = track->GetTY();
@@ -1679,3 +1656,5 @@ void SBSBigBite::InitGEMAxes( double theta, double phi ){
   fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
   fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
 }
+
+
