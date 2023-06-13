@@ -329,7 +329,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fEp = simEvent->Tgmn->ev_ep;
   fNp = simEvent->Tgmn->ev_np;
   fNucl = simEvent->Tgmn->ev_nucl;
-  fFnucl = simEvent->Tgmn->ev_nucl;
+  fFnucl = simEvent->Tgmn->ev_fnucl;
   fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
   fBBtrack_Nhits = *(simEvent->Tgmn->Earm_BBGEM_Track_NumHits);
   fBBtrack_TID = *(simEvent->Tgmn->Earm_BBGEM_Track_TID);
@@ -1420,6 +1420,9 @@ int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
   chan = h_chan%128;
   int n = (h_chan-chan)/128;
 
+  // std::cout << "(detname, mod, h_chan, chan, n )= (" << detname << ", " << mod << ", "
+  // 	    << h_chan << ", " << chan << ", " << n << ")" << std::endl;
+  
   assert(mod<fInvGEMDetMap.at(detname).size());
   assert(n<(fInvGEMDetMap.at(detname)[mod]).size());
 
