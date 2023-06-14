@@ -48,27 +48,35 @@ Int_t SBSRasteredBeam::ReadDatabase( const TDatime& date )
     double Rasterx_bounds[2], Rastery_bounds[2];
 
     // If we are using 2 rasters we take the difference
-    if(fRaster_flag == 2){
+    if(fRaster_flag == 2 && Rasterx_range.size() == 2 && Rastery_range.size() == 2 && Raster2x_range.size() == 2 && Raster2y_range.size() == 2){
       Rasterx_bounds[0] = Rasterx_range[0] - Raster2x_range[0];
       Rasterx_bounds[1] = Rasterx_range[1] - Raster2x_range[1];
       Rastery_bounds[0] = Rastery_range[0] - Raster2y_range[0];
       Rastery_bounds[1] = Rastery_range[1] - Raster2y_range[1];
-    } else { //In every other case we just use upstream raster
+
+      // Calculate the raster center
+      fRasterx_cen = (Rasterx_bounds[1] + Rasterx_bounds[0]) / 2;
+      fRastery_cen = (Rastery_bounds[1] + Rastery_bounds[0]) / 2;
+
+      // Calculate the scale factor. 1000 factor is used to convert mm to m
+      fRasterx_scale = Raster_size*1.0/1000 / (Rasterx_bounds[1] - Rasterx_bounds[0]);
+      fRastery_scale = Raster_size/1000 / (Rastery_bounds[1] - Rastery_bounds[0]);
+    } else if (fRaster_flag == 1 && Rasterx_range.size() == 2 && Rastery_range.size() == 2) { //In every other case we just use upstream raster
       Rasterx_bounds[0] = Rasterx_range[0];
       Rasterx_bounds[1] = Rasterx_range[1];
       Rastery_bounds[0] = Rastery_range[0];
       Rastery_bounds[1] = Rastery_range[1];
-    }
 
-    // Calculate the raster center
-    fRasterx_cen = (Rasterx_bounds[1] + Rasterx_bounds[0]) / 2;
-    fRastery_cen = (Rastery_bounds[1] + Rastery_bounds[0]) / 2;
-  
-    // Calculate the scale factor. 1000 factor is used to convert mm to m
-    fRasterx_scale = Raster_size*1.0/1000 / (Rasterx_bounds[1] - Rasterx_bounds[0]);
-    fRastery_scale = Raster_size/1000 / (Rastery_bounds[1] - Rastery_bounds[0]);
+      // Calculate the raster center
+      fRasterx_cen = (Rasterx_bounds[1] + Rasterx_bounds[0]) / 2;
+      fRastery_cen = (Rastery_bounds[1] + Rastery_bounds[0]) / 2;
+
+      // Calculate the scale factor. 1000 factor is used to convert mm to m
+      fRasterx_scale = Raster_size*1.0/1000 / (Rasterx_bounds[1] - Rasterx_bounds[0]);
+      fRastery_scale = Raster_size/1000 / (Rastery_bounds[1] - Rastery_bounds[0]);
+    }
   }
-  
+
   fNevents_rollingavg = 0;
   fBPM_container_rollingavg.resize(fNevents_rollingmax);
  
