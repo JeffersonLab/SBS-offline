@@ -1759,12 +1759,16 @@ void SBSGEMTrackerBase::find_tracks(){
 			    double chi2hits = 3.0*hitcombo.size() * CalcTrackChi2HitQuality( hitcombo, t0temp );
 			    double ndftot = 5.0*hitcombo.size() - 4.0;
 			    chi2enhanced = (chi2space + chi2hits)/ndftot;
-			    
-			  } 
+			  }
+
+			  bool validcombo = true;
+			  if( fUseEnhancedChi2 == 1 ){
+			    validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= fTrackChi2CutHitQuality;
+			  }
 			  
 			  //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
 			  
-			  if( firstgoodcombo || chi2enhanced < minchi2 ){
+			  if( validcombo && (firstgoodcombo || chi2enhanced < minchi2) ){
 			    
 			    if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
 			      
@@ -1856,8 +1860,13 @@ void SBSGEMTrackerBase::find_tracks(){
 			  double ndftot = 5.0*hitcombo.size()-4.0;
 			  chi2enhanced = (chi2space + chi2hits)/ndftot;
 			}
+
+			bool validcombo = true;
+			if( fUseEnhancedChi2 == 1 ){
+			  validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= fTrackChi2CutHitQuality;
+			}
 			
-			if( firstgoodcombo || chi2enhanced < minchi2 ){
+			if( validcombo && (firstgoodcombo || chi2enhanced < minchi2)  ){
 			  if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
 			    firstgoodcombo = false;
 			    minchi2 = chi2enhanced;
@@ -2749,9 +2758,12 @@ Double_t SBSGEMTrackerBase::CalcTrackChi2HitQuality( const std::map<int,int> &hi
     int uclidx = fModules[module]->fHits[clustidx].iuclust;
     int vclidx = fModules[module]->fHits[clustidx].ivclust;
 
-    double tavg0 = 0.5*(fModules[module]->fHitTimeMean[0]+fModules[module]->fHitTimeMean[1]);
-    double tavg = fModules[module]->fHits[clustidx].thit;
-    double tsigma = 0.5*(fModules[module]->fHitTimeSigma[0]+fModules[module]->fHitTimeSigma[1]);
+    //double tavg0 = 0.5*(fModules[module]->fHitTimeMean[0]+fModules[module]->fHitTimeMean[1]);
+    double tavg0 = 0.0;
+    double tavg = fModules[module]->fHits[clustidx].thitcorr; //Use corrected time!
+    //double tsigma = 0.5*(fModules[module]->fHitTimeSigma[0]+fModules[module]->fHitTimeSigma[1]);
+    double tsigma = fModules[module]->fSigmaHitTimeAverageCorrected;
+    
     double tdiff = fModules[module]->fHits[clustidx].tdiff;
     double dtsigma = fModules[module]->fTimeCutUVsigma;
     
@@ -2766,19 +2778,19 @@ Double_t SBSGEMTrackerBase::CalcTrackChi2HitQuality( const std::map<int,int> &hi
     int tcuts = fModules[module]->fUseStripTimingCuts;
 
     if( cflag == 1 ){
-      tavg0 = 0.5*(fModules[module]->fHitTimeMeanDeconv[0]+fModules[module]->fHitTimeMeanDeconv[1]);
-      tavg = fModules[module]->fHits[clustidx].thitDeconv;
+      // tavg0 = 0.5*(fModules[module]->fHitTimeMeanDeconv[0]+fModules[module]->fHitTimeMeanDeconv[1]);
+      // tavg = fModules[module]->fHits[clustidx].thitDeconv;
       tdiff = fModules[module]->fHits[clustidx].tdiffDeconv;
-      tsigma = 0.5*(fModules[module]->fHitTimeSigmaDeconv[0]+fModules[module]->fHitTimeSigmaDeconv[1]);
+      //tsigma = 0.5*(fModules[module]->fHitTimeSigmaDeconv[0]+fModules[module]->fHitTimeSigmaDeconv[1]);
       dtsigma = fModules[module]->fTimeCutUVsigmaDeconv;
       ADCratio = fModules[module]->fVclusters[vclidx].clusterADCsumDeconvMaxCombo/fModules[module]->fUclusters[uclidx].clusterADCsumDeconvMaxCombo;
       ADCasym = fModules[module]->fHits[clustidx].ADCasymDeconv;
     }
 
     if( cflag != 1 && tcuts == 2 ){
-      tavg0 = 0.5*(fModules[module]->fHitTimeMeanFit[0]+fModules[module]->fHitTimeMeanFit[1]);
-      tavg = fModules[module]->fHits[clustidx].thitFit;
-      tsigma = 0.5*(fModules[module]->fHitTimeSigmaFit[0]+fModules[module]->fHitTimeSigmaFit[1]);
+      // tavg0 = 0.5*(fModules[module]->fHitTimeMeanFit[0]+fModules[module]->fHitTimeMeanFit[1]);
+      // tavg = fModules[module]->fHits[clustidx].thitFit;
+      //tsigma = 0.5*(fModules[module]->fHitTimeSigmaFit[0]+fModules[module]->fHitTimeSigmaFit[1]);
       tdiff = fModules[module]->fHits[clustidx].tdiffFit;
       dtsigma = fModules[module]->fTimeCutUVsigmaFit;
     }

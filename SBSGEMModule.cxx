@@ -180,6 +180,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
     fHitTimeMeanFit[axis] = 20.0;
     fHitTimeSigmaFit[axis] = 10.0;
   }
+
+  fSigmaHitTimeAverageCorrected = 5.0; //ns
     
   fStripAddTcut_width = 50.0; //this one we keep in ns
   fStripAddCorrCoeffCut = 0.25;
@@ -411,6 +413,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "HitTimeSigmaDeconv", &tsigmahit_deconv_temp, kDoubleV, 0, 1, 1 },
     { "HitTimeMeanFit", &t0hit_fit_temp, kDoubleV, 0, 1, 1 },
     { "HitTimeSigmaFit", &tsigmahit_fit_temp, kDoubleV, 0, 1, 1 },
+    { "sigma_tcorr", &fSigmaHitTimeAverageCorrected, kDouble, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree

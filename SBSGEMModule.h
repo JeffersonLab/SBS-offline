@@ -561,6 +561,8 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fHitTimeMean[2], fHitTimeSigma[2];
   Double_t fHitTimeMeanDeconv[2], fHitTimeSigmaDeconv[2];
   Double_t fHitTimeMeanFit[2], fHitTimeSigmaFit[2];
+
+  Double_t fSigmaHitTimeAverageCorrected;
   
   Double_t fCorrCoeffCut;    //Filtering of 2D clusters based on ADC correlation
   Double_t fCorrCoeffCutDeconv; //Filtering of 2D clusters based on 
