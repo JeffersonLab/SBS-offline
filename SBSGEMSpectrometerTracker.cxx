@@ -178,6 +178,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "use_enhanced_chi2", &fUseEnhancedChi2, kInt, 0, 1, 1},
     { "trackchi2cut_hitquality", &fTrackChi2CutHitQuality, kDouble, 0, 1, 1},
     { "minhighqualityhitsontrack", &fMinHighQualityHitsOnTrack, kInt, 0, 1, 1},
+    { "sigmatrackt0", &fSigmaTrackT0, kDouble, 0, 1, 1 },
     {0}
   };
 

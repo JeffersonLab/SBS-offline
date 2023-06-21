@@ -568,6 +568,8 @@ protected:
   Double_t fRefTime_Offset;
   Double_t fRefTime_CAL;
 
+  Double_t fSigmaTrackT0; // sigma of track mean time. Default = 5 ns
+
   //Double_t fRefTime_offset;
   
 };

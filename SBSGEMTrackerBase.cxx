@@ -108,6 +108,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fdypfpcut = 0.01;
 
   fUseTrigTime = false; 
+
+  fSigmaTrackT0 = 5.0;
   
 }
 
@@ -2799,8 +2801,11 @@ Double_t SBSGEMTrackerBase::CalcTrackChi2HitQuality( const std::map<int,int> &hi
     
   }
 
-  //Later: Add mean cluster/hit times as database parameters and include these in the chi2 calculation.
+  //The way t0track is calculated centers the "track time" at zero for tracks with "good" timing
 
+  chi2 += pow( t0track / fSigmaTrackT0, 2 );
+
+  
   //each hit contributes three dof:
   double ndf = 3.0 * hitcombo.size();
   return chi2/ndf;
