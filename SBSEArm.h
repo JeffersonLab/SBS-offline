@@ -1,5 +1,5 @@
-#ifndef ROOT_TreeSearch_SBSEArm
-#define ROOT_TreeSearch_SBSEArm
+#ifndef SBSEarm_h
+#define SBSEarm_h
 
 #include "THaSpectrometer.h"
 

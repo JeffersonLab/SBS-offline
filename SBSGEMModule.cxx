@@ -4225,6 +4225,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  double dtcut = 3.5 * fTimeCutUVsigma;
 	  double t0 = 0.5*(fHitTimeMean[0]+fHitTimeMean[1]);
 	  double tcut = 3.5*0.5*(fHitTimeSigma[0]+fHitTimeSigma[1]);
+	  
+	  
 	  if( fClusteringFlag == 1 ){
 	    asym = hittemp.ADCasymDeconv;
 	    ccor = hittemp.corrcoeff_clust_deconv;
@@ -4245,7 +4247,9 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	    tcut = 3.5*0.5*(fHitTimeSigmaFit[0]+fHitTimeSigmaFit[1]);
 	  }
 
-	  hittemp.highquality = fabs(asym) <= 3.5*fADCasymSigma &&
+	  double asymcut = std::max( 4.5*fADCasymSigma, fADCasymCut );
+	  
+	  hittemp.highquality = fabs(asym) <= asymcut &&
 	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 &&
 	    ADCsum >= ADC_thresh && ccor >= ccor_cut &&
 	    fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
@@ -4274,7 +4278,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  if( fUclusters[iu].nstrips == 1 || fVclusters[iv].nstrips == 1 ){
 	    //If EITHER of these clusters is only single-strip, it must pass more stringent requirements to use as a 2D hit candidate:
 	    //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
-	    add_hit = fabs(asym) <= 3.5*fADCasymSigma && ccor >= ccor_cut && fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
+	    add_hit = fabs(asym) <= asymcut && ccor >= ccor_cut && fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
 	    // if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
 	    // 	hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
 	    // 	hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
