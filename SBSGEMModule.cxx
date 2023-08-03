@@ -4221,8 +4221,9 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  double ccor_cut = fCorrCoeffCut;
 	  //Do we want to hard-code the number of sigmas in the "high-quality" designation?
 	  // --> Yes: if we want to make it wider or narrower, we can adjust the sigma
-	  // in the DB
-	  double dtcut = 3.5 * fTimeCutUVsigma;
+	  // or the cut value in the database. 
+	  // Go with the larger of 3.5sigma or cut from DB
+	  double dtcut = std::max( 3.5 * fTimeCutUVsigma, fTimeCutUVdiff );
 	  double t0 = 0.5*(fHitTimeMean[0]+fHitTimeMean[1]);
 	  double tcut = 3.5*0.5*(fHitTimeSigma[0]+fHitTimeSigma[1]);
 	  
@@ -4235,7 +4236,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	    thit = hittemp.thitDeconv;
 	    ADC_thresh = fThresholdClusterSumDeconv;
 	    ccor_cut = fCorrCoeffCutDeconv;
-	    dtcut = 3.5*fTimeCutUVsigmaDeconv;
+	    dtcut = std::max( 3.5*fTimeCutUVsigmaDeconv, fTimeCutUVdiffDeconv );
 	    t0 = 0.5*(fHitTimeMeanDeconv[0]+fHitTimeMeanDeconv[1]);
 	    tcut = 3.5*0.5*(fHitTimeSigmaDeconv[0]+fHitTimeSigmaDeconv[1]);
 	  }
@@ -4243,7 +4244,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  if( fClusteringFlag == 0 && fUseStripTimingCuts == 2 ){
 	    thit = hittemp.thitFit;
 	    t0 = 0.5*(fHitTimeMeanFit[0]+fHitTimeMeanFit[1]);
-	    dtcut = 3.5*fTimeCutUVsigmaFit;
+	    dtcut = std::max( 3.5*fTimeCutUVsigmaFit, fTimeCutUVdiffFit );
 	    tcut = 3.5*0.5*(fHitTimeSigmaFit[0]+fHitTimeSigmaFit[1]);
 	  }
 
