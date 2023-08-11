@@ -101,7 +101,12 @@ protected:
   Double_t fA_pth1; // default value (from simulation) is 0.28615 * 0.97
   Double_t fB_pth1; // default value (from simulation) is 0.1976
   Double_t fC_pth1; // default value (from simulation) is 0.4764
-  
+  //Extra coefficents to remove the beam dependance
+  Double_t fA_vy;
+  Double_t fB_vy;
+
+  bool fIsMC;
+
   int fOpticsOrder;
   std::vector<double> fb_xptar;
   std::vector<double> fb_yptar;
