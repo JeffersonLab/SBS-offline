@@ -708,6 +708,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.TSprob_Umax", "Max U strip TS prob", "fHitTSprobMaxUstrip" },
     { "hit.TSprob_Vmax", "Max V strip TS prob", "fHitTSprobMaxVstrip" },
     { "hit.Tavg_corr", "Corrected hit time (ns)", "fHitTavgCorrected" },
+    { "hit.Ugain","Applied gain factor U", "fHitUgain" },
+    { "hit.Vgain","Applied gain factor V", "fHitVgain" },
     { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
     { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
     { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },

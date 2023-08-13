@@ -199,8 +199,9 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitVADCmaxsample_deconv.clear();
   fHitUADCmaxclustsample.clear();
   fHitVADCmaxclustsample.clear();
-  
 
+  fHitUgain.clear();
+  fHitVgain.clear();
   
   fHitADCasym.clear();
   fHitADCavg.clear();
@@ -2062,7 +2063,9 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() {
       //fHitADCavg.push_back( 0.5*( fHitUADC.back() + fHitVADC.back() ) );
       fHitADCavg.push_back( hitinfo->Ehit ); //This should be equivalent to the line above
       fHitADCavg_deconv.push_back( hitinfo->EhitDeconv );
-      
+
+      fHitUgain.push_back( fModules[module]->fUgain[uclustinfo->istripmax/128] );
+      fHitVgain.push_back( fModules[module]->fVgain[vclustinfo->istripmax/128] );
       
       fHitUADCclust_deconv.push_back( uclustinfo->clusterADCsumDeconv );
       fHitVADCclust_deconv.push_back( vclustinfo->clusterADCsumDeconv );
