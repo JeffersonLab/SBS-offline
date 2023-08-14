@@ -374,8 +374,7 @@ class SBSGEMModule : public THaSubDetector {
 
   //variables defining rectangular track search region constraint (NOTE: these will change event-to-event, they are NOT constant!)
   Double_t fxcmin, fxcmax;
-  Double_t fycmin,
-    fycmax;
+  Double_t fycmin, fycmax;
 
   //Arrays to temporarily hold raw data from ONE APV card:
   std::vector<UInt_t> fStripAPV;
@@ -561,6 +560,8 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fHitTimeMean[2], fHitTimeSigma[2];
   Double_t fHitTimeMeanDeconv[2], fHitTimeSigmaDeconv[2];
   Double_t fHitTimeMeanFit[2], fHitTimeSigmaFit[2];
+
+  Double_t fSigmaHitTimeAverageCorrected;
   
   Double_t fCorrCoeffCut;    //Filtering of 2D clusters based on ADC correlation
   Double_t fCorrCoeffCutDeconv; //Filtering of 2D clusters based on 

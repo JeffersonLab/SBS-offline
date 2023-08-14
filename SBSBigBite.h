@@ -237,9 +237,9 @@ protected:
     kSortTracks   = BIT(14), // Tracks are to be sorted by chi2
     kAutoStdDets  = BIT(15)  // Auto-create standard detectors if no "vdc"
   };
-    
+  
   ClassDef(SBSBigBite,0) // BigBite spectrometer
-    };
+};
 
 
 #endif//ROOT_TreeSearch_SBSBigBite

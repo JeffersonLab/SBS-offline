@@ -180,6 +180,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
     fHitTimeMeanFit[axis] = 20.0;
     fHitTimeSigmaFit[axis] = 10.0;
   }
+
+  fSigmaHitTimeAverageCorrected = 5.0; //ns
     
   fStripAddTcut_width = 50.0; //this one we keep in ns
   fStripAddCorrCoeffCut = 0.25;
@@ -411,6 +413,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "HitTimeSigmaDeconv", &tsigmahit_deconv_temp, kDoubleV, 0, 1, 1 },
     { "HitTimeMeanFit", &t0hit_fit_temp, kDoubleV, 0, 1, 1 },
     { "HitTimeSigmaFit", &tsigmahit_fit_temp, kDoubleV, 0, 1, 1 },
+    { "sigma_tcorr", &fSigmaHitTimeAverageCorrected, kDouble, 0, 1, 1 },
     {0}
   };
   status = LoadDB( file, date, request, fPrefix, 1 ); //The "1" after fPrefix means search up the tree
@@ -4218,10 +4221,13 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  double ccor_cut = fCorrCoeffCut;
 	  //Do we want to hard-code the number of sigmas in the "high-quality" designation?
 	  // --> Yes: if we want to make it wider or narrower, we can adjust the sigma
-	  // in the DB
-	  double dtcut = 3.5 * fTimeCutUVsigma;
+	  // or the cut value in the database. 
+	  // Go with the larger of 3.5sigma or cut from DB
+	  double dtcut = std::max( 3.5 * fTimeCutUVsigma, fTimeCutUVdiff );
 	  double t0 = 0.5*(fHitTimeMean[0]+fHitTimeMean[1]);
 	  double tcut = 3.5*0.5*(fHitTimeSigma[0]+fHitTimeSigma[1]);
+	  
+	  
 	  if( fClusteringFlag == 1 ){
 	    asym = hittemp.ADCasymDeconv;
 	    ccor = hittemp.corrcoeff_clust_deconv;
@@ -4230,7 +4236,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	    thit = hittemp.thitDeconv;
 	    ADC_thresh = fThresholdClusterSumDeconv;
 	    ccor_cut = fCorrCoeffCutDeconv;
-	    dtcut = 3.5*fTimeCutUVsigmaDeconv;
+	    dtcut = std::max( 3.5*fTimeCutUVsigmaDeconv, fTimeCutUVdiffDeconv );
 	    t0 = 0.5*(fHitTimeMeanDeconv[0]+fHitTimeMeanDeconv[1]);
 	    tcut = 3.5*0.5*(fHitTimeSigmaDeconv[0]+fHitTimeSigmaDeconv[1]);
 	  }
@@ -4238,11 +4244,13 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  if( fClusteringFlag == 0 && fUseStripTimingCuts == 2 ){
 	    thit = hittemp.thitFit;
 	    t0 = 0.5*(fHitTimeMeanFit[0]+fHitTimeMeanFit[1]);
-	    dtcut = 3.5*fTimeCutUVsigmaFit;
+	    dtcut = std::max( 3.5*fTimeCutUVsigmaFit, fTimeCutUVdiffFit );
 	    tcut = 3.5*0.5*(fHitTimeSigmaFit[0]+fHitTimeSigmaFit[1]);
 	  }
 
-	  hittemp.highquality = fabs(asym) <= 3.5*fADCasymSigma &&
+	  double asymcut = std::max( 4.5*fADCasymSigma, fADCasymCut );
+	  
+	  hittemp.highquality = fabs(asym) <= asymcut &&
 	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 &&
 	    ADCsum >= ADC_thresh && ccor >= ccor_cut &&
 	    fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
@@ -4271,7 +4279,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	  if( fUclusters[iu].nstrips == 1 || fVclusters[iv].nstrips == 1 ){
 	    //If EITHER of these clusters is only single-strip, it must pass more stringent requirements to use as a 2D hit candidate:
 	    //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
-	    add_hit = fabs(asym) <= 3.5*fADCasymSigma && ccor >= ccor_cut && fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
+	    add_hit = fabs(asym) <= asymcut && ccor >= ccor_cut && fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
 	    // if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
 	    // 	hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
 	    // 	hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&

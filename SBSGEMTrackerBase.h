@@ -389,6 +389,9 @@ protected:
   //new variables for deconvoluted ADC values:
   std::vector<double> fHitADCasym_deconv; //U/V asymmetry of cluster-summed deconvoluted ADC "max combo"
   std::vector<double> fHitADCavg_deconv; //U/V average of cluster-summed deconvoluted ADC "max combo"
+  //Add applied gain factors for convenience later:
+  std::vector<double> fHitUgain;  //gain factor applied to max U strip in cluster
+  std::vector<double> fHitVgain;  //gain factor applied to max V strip in cluster
   //
   std::vector<double> fHitUTime; // cluster-mean time, U strips
   std::vector<double> fHitVTime; // cluster-mean time, V strips
@@ -567,6 +570,8 @@ protected:
   UInt_t fChan_RefTime; 
   Double_t fRefTime_Offset;
   Double_t fRefTime_CAL;
+
+  Double_t fSigmaTrackT0; // sigma of track mean time. Default = 5 ns
 
   //Double_t fRefTime_offset;
   
