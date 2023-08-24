@@ -85,7 +85,12 @@ THaSpectrometer( name, description )
   fA_pth1 = 0.28615 * 0.97;
   fB_pth1 = 0.1976;
   fC_pth1 = 0.4764;
-    
+
+  fA_vy = 0;
+  fB_vy = 0;
+
+  fIsMC = false;
+
   //Default to block size/sqrt(12) for shower and preshower:
   fSigmaX_shower = 0.085/sqrt(12.0); //2.45 cm
   fSigmaY_shower = 0.085/sqrt(12.0);
@@ -214,6 +219,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   double gemthetadeg = fGEMtheta * TMath::RadToDeg();
   double gemphideg   = fGEMphi * TMath::RadToDeg();
   double opticsthetadeg = fOpticsAngle * TMath::RadToDeg();
+
+  int mc_flag = fIsMC ? 1 : 0;
     
   const DBRequest request[] = {
     { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
@@ -244,6 +251,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "A_pth1", &fA_pth1, kDouble, 0, 1, 1 },
     { "B_pth1", &fB_pth1, kDouble, 0, 1, 1 },
     { "C_pth1", &fC_pth1, kDouble, 0, 1, 1 },
+    { "A_pvy", &fA_vy, kDouble, 0, 1, 1 },
+    { "B_pvy", &fB_vy, kDouble, 0, 1, 1 },
     { "xsigma_shower", &fSigmaX_shower, kDouble, 0, 1, 1 },
     { "ysigma_shower", &fSigmaY_shower, kDouble, 0, 1, 1 },
     { "xsigma_preshower", &fSigmaX_preshower, kDouble, 0, 1, 1 },
@@ -255,6 +264,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "downbendoptics_order", &fOpticsOrderDownbend, kInt, 0, 1, 1 },
     { "downbendoptics_parameters", &doptics_param, kDoubleV, 0, 1, 1 },
     { "downbending_mode", &downbend, kInt, 0, 1, 1 },
+    { "is_mc",        &mc_flag,    kInt, 0, 1, 1 },
     {0}
   };
     
@@ -545,6 +555,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
       }
     }
   }
+
+  fIsMC = (mc_flag != 0);
 
   fIsInit = true;
   return kOK;
@@ -1219,48 +1231,75 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //}
   //cout << x_fp << " " << y_fp << " " << xp_fp << " " << yp_fp << endl;
     
+  //Beam position from BPMs and Rasters
+  double ybeam=0.0,xbeam=0.0;
+
+  //retrieve beam position from BPMs and Rasters
+  TIter aiter(gHaApps);
+  THaApparatus* app = 0;
+  
+  while( (app=(THaApparatus*)aiter()) ){
+    if(app->InheritsFrom("SBSRasteredBeam")){
+      //We want the Lrb variables
+      if(app->GetName() != std::string("Lrb")) continue;
+      
+      SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
+      ybeam = RasterBeam->GetBeamPosition().Y(); 
+      xbeam = RasterBeam->GetBeamPosition().X();
+    }
+    //cout << app->GetName() << endl;
+  }
+
+
   double /*vx, vy, vz, */px, py, pz;
   double p_fit, xptar_fit, yptar_fit, ytar_fit, xtar;
-  xtar = 0.0;
   double thetabend_fit;
   double pthetabend_fit;
   double vz_fit;
     
-  xptar_fit = 0.0;
-  yptar_fit = 0.0;
-  ytar_fit = 0.0;
-  pthetabend_fit = 0.0;
+  xtar = -ybeam;
+  
+ 
+  //Three iterations needed to converge xtar reconstruction
+  for(int iter = 0; iter < 2; iter++){
+    int ipar = 0;
+    xptar_fit = 0.0;
+    yptar_fit = 0.0;
+    ytar_fit = 0.0;
+    pthetabend_fit = 0.0;
+    for(int i=0; i<=fOpticsOrder; i++){
+      for(int j=0; j<=fOpticsOrder-i; j++){
+	for(int k=0; k<=fOpticsOrder-i-j; k++){
+	  for(int l=0; l<=fOpticsOrder-i-j-k; l++){
+	    for(int m=0; m<=fOpticsOrder-i-j-k-l; m++){
+	      double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
+	      
+	      if( !fDownBendingMode ){
+		xptar_fit += fb_xptar[ipar]*term;
+		yptar_fit += fb_yptar[ipar]*term;
+		ytar_fit += fb_ytar[ipar]*term;
+		pthetabend_fit += fb_pinv[ipar]*term;
+	      } else {
+		xptar_fit += fb_xptar_downbend[ipar]*term;
+		yptar_fit += fb_yptar_downbend[ipar]*term;
+		ytar_fit += fb_ytar_downbend[ipar]*term;
+		pthetabend_fit += fb_pinv_downbend[ipar]*term;
+	      }
 
-
-  int ipar = 0;
-  for(int i=0; i<=fOpticsOrder; i++){
-    for(int j=0; j<=fOpticsOrder-i; j++){
-      for(int k=0; k<=fOpticsOrder-i-j; k++){
-	for(int l=0; l<=fOpticsOrder-i-j-k; l++){
-	  for(int m=0; m<=fOpticsOrder-i-j-k-l; m++){
-	    double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
-
-	    if( !fDownBendingMode ){
-	      xptar_fit += fb_xptar[ipar]*term;
-	      yptar_fit += fb_yptar[ipar]*term;
-	      ytar_fit += fb_ytar[ipar]*term;
-	      pthetabend_fit += fb_pinv[ipar]*term;
-	    } else {
-	      xptar_fit += fb_xptar_downbend[ipar]*term;
-	      yptar_fit += fb_yptar_downbend[ipar]*term;
-	      ytar_fit += fb_ytar_downbend[ipar]*term;
-	      pthetabend_fit += fb_pinv_downbend[ipar]*term;
+	      //pinv_fit += b_pinv(ipar)*term;
+	      // cout << ipar << " " << term << " "
+	      //      << b_xptar(ipar) << " " << b_yptar(ipar) << " "
+	      //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
+	      ipar++;
 	    }
-
-	    //pinv_fit += b_pinv(ipar)*term;
-	    // cout << ipar << " " << term << " "
-	    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " "
-	    //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
-	    ipar++;
 	  }
 	}
       }
-    }
+    } // End loop over matrix
+  
+    vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
+    xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;    
+    
   }
     
   //Let's simplify the bend angle reconstruction to avoid double-counting, even though
@@ -1290,52 +1329,29 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //   phat_fp_fit.Z() * spec_zaxis_fp;
     
   //thetabend_fit = acos( phat_fp_fit_global.Dot( phat_tgt_fit_global ) );
-    
+  
   if( fPrecon_flag != 1 ){
     p_fit = pthetabend_fit/thetabend_fit;
   } else {
     double delta = pthetabend_fit;
     double p_firstorder = fA_pth1 * ( 1.0 + (fB_pth1 + fC_pth1*fMagDist)*xptar_fit ) / thetabend_fit;
-    p_fit = p_firstorder * (1.0 + delta);
+ 
+    p_fit = p_firstorder * (1.0 + delta) - (fA_vy + fB_vy * ybeam);
   }
-    
-  vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
-    
+
   pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1.) );
   px = xptar_fit * pz;
-  py = yptar_fit * pz;
-    
+  py = yptar_fit * pz; 
+ 
   TVector3 pvect_BB = TVector3(px, py, pz);
     
   px = +pvect_BB.Z()*sin(th_bb)+pvect_BB.Y()*cos(th_bb);
   py = -pvect_BB.X();
   pz = pvect_BB.Z()*cos(th_bb)-pvect_BB.Y()*sin(th_bb);
     
-  //We should move this to before the optics calculations in case we want to actually correct the optics for the beam position:
-  double ybeam=0.0,xbeam=0.0;
-
-  
-  //retrieve beam position from BPMs
-    
-  TIter aiter(gHaApps);
-  THaApparatus* app = 0;
-  
-  while( (app=(THaApparatus*)aiter()) ){
-    if(app->InheritsFrom("SBSRasteredBeam")){
-
-      if(app->GetName() != std::string("Lrb")) continue;
-      
-      SBSRasteredBeam* RasterBeam = reinterpret_cast<SBSRasteredBeam*>(app);
-      ybeam = RasterBeam->GetBeamPosition().Y(); 
-      xbeam = RasterBeam->GetBeamPosition().X();
-    }
-    //cout << app->GetName() << endl;
-  }
   //  f_xtg_exp.push_back(xtar);
   
-  xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
-  
-  track->SetTarget(xtar+ybeam, ytar_fit, xptar_fit, yptar_fit);
+  track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
   track->SetPvect(TVector3(px, py, pz));
   track->SetVertex(TVector3(xbeam, ybeam, vz_fit));
