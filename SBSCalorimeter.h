@@ -29,6 +29,7 @@ struct SBSBlockSet {
   Int_t col;
   Int_t id;
   Double_t TDCTime;
+  Double_t TDCTimeTW;
   Double_t ADCTime;
   Bool_t InCluster;
 };
@@ -36,6 +37,7 @@ struct SBSBlockSet {
 struct SBSCalBlocks {
   std::vector<Double_t> e;   //< []
   std::vector<Double_t> TDCTime;   //< [] 
+  std::vector<Double_t> TDCTimeTW;   //< [] 
   std::vector<Double_t> ADCTime;   //< [] 
   std::vector<Int_t> row; //< []
   std::vector<Int_t> col; //< []
@@ -50,6 +52,7 @@ struct SBSCalBlocks {
     row.clear();
     col.clear();
     TDCTime.clear();
+    TDCTimeTW.clear();
     ADCTime.clear();
   }
 };
@@ -58,7 +61,9 @@ struct SBSCalorimeterOutput {
   std::vector<Double_t> e;   //< []
   std::vector<Double_t> again;   //< []
   std::vector<Double_t> atime;   //< []
+  std::vector<Double_t> atime_tw;   //< []
   std::vector<Double_t> tdctime;   //< []
+  std::vector<Double_t> tdctime_tw;   //< []
   //std::vector<Double_t> e_c;   //< []
   std::vector<Double_t> x;   //< []
   std::vector<Double_t> y;   //< []
@@ -87,7 +92,9 @@ public:
   Double_t GetE();             //< Main cluster energy
   Double_t GetAgain();         //< Pedestal subtracted ADC integral (pC)
   Double_t GetAtime();         //< Main cluster ADC time of max block
+  //Double_t GetAtimeTW();         //< Main cluster ADC time of max block, timewalk corrected
   Double_t GetTDCtime();         //< Main cluster ADC time of max block
+  Double_t GetTDCtimeTW();         //< Main cluster ADC time of max block, timewalk corrected
   /* Double_t GetECorrected();    //< Main cluster corrected energy */
   Double_t GetX();             //< Main cluster energy average x
   Double_t GetY();             //< Main cluster energy average y
@@ -198,6 +205,10 @@ inline Double_t SBSCalorimeter::GetAtime() {
 
 inline Double_t SBSCalorimeter::GetTDCtime() {
   return GetVVal(fMainclus.tdctime);
+}
+
+inline Double_t SBSCalorimeter::GetTDCtimeTW() {
+  return GetVVal(fMainclus.tdctime_tw);
 }
 
 /* inline Double_t SBSCalorimeter::GetECorrected() { */
