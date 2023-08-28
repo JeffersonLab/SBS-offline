@@ -38,7 +38,7 @@ ClassImp(SBSCalorimeter);
 SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
 				THaApparatus* apparatus ) :
   SBSGenericDetector(name,description,apparatus),
-  fMaxNclus(10), fConst(1.0), fSlope(0.0), fAccCharge(0.0), fDataOutputLevel(1000)
+  fMaxNclus(20), fConst(1.0), fSlope(0.0), fAccCharge(0.0), fDataOutputLevel(1000)
 {
   // Constructor.
   fTmax = 1000.0; // 1000 ns maximum arrival time difference with seed to be in cluster
@@ -49,7 +49,8 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
   fYmax_dis = .30; // Maximum Y (m) distance from cluster center to be included in cluster
   fRmax_dis = .30; // Maximum Radius (m) from cluster center to be included in cluster
   fBestClusterIndex = -1;
-  fClusters.reserve(10);
+  fClusters.reserve(20);
+  ftdctw.reserve(2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -88,13 +89,12 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   // Some temporary variables which we'll use to read in the database
   //Double_t angle = 0.0;
   std::vector<Int_t> cluster_dim; // Default is 3x3 if none specified
-  std::vector<Double_t> tdc_tw_pars;
 
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
     { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
     { "tmax",         &fTmax,   kDouble, 0, false }, ///< maximum time difference for block
-    { "tdc.tw",       &tdc_tw_pars,   kDoubleV, 0, false }, ///< tdc dt = P0/(E^P1) timewalk fit parameters
+    { "tdc.tw",       &ftdctw,   kDoubleV, 0, true }, ///< tdc dt = P0/(E^P1) timewalk fit parameters
     { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, false }, ///< minimum cluster seed energy
     { "emin_clTotal", &fEmin_clusTotal, kDouble, 0, false }, ///< minimum total cluster energy
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
@@ -111,7 +111,11 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     return err;
   }
 
-  std::cout << "Calorimeter Name: " << GetName() << ", tdc tw pars: " << tdc_tw_pars[0] << ", " << tdc_tw_pars[1] << std::endl;
+  // tdc timewalk correction: ensure that if no parameters passed in db data isn't effected
+  if(ftdctw.empty()){
+    ftdctw.push_back(0.);
+    ftdctw.push_back(0.);
+  }
 
   // Compute the max possible cluster size (which at most should be
   // cluster_dim x cluster_dim)
@@ -240,8 +244,6 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
   if(err)
     return err;
 
-
-
   if(fDataOutputLevel>0) {
     // Store all blocks in main cluster
     RVarDef vars_raw[] = {
@@ -326,9 +328,12 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	fGoodBlocks.y.push_back(blk->GetY());
 	//
 	//
+	Double_t blkE = 0.;
+	//
 	if(fModeADC != SBSModeADC::kWaveform) {
 	  const SBSData::PulseADCData &ahit = blk->ADC()->GetGoodHit();
 	  blk->SetE(ahit.integral.val);
+	  blkE = ahit.integral.val;
 	  //blk->SetAintp(ahit.integral.val / blk->ADC()->GetGain());
 	  blk->SetAgain(blk->ADC()->GetGain() / blk->ADC()->GetTrigCal());
 	  blk->SetAtime(ahit.time.val);
@@ -337,6 +342,7 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	} else {
 	  SBSData::Waveform *wave = blk->Waveform();
 	  blk->SetE(wave->GetIntegral().val);
+	  blkE = wave->GetIntegral().val;
 	  //blk->SetAintp(wave->GetIntegral().val / wave->GetGain());
 	  blk->SetAgain(wave->GetGain() / wave->GetTrigCal());
 	  blk->SetAtime(wave->GetTime().val);
@@ -347,10 +353,12 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	  const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
 	  fGoodBlocks.TDCTime.push_back(hit.le.val);
 	  
-	  //test adding an element to the output
-	  Double_t tdc_tw = hit.le.val - 5.;
+	  //test adding an element to the output ===1===
+	  Double_t tdc_tw = hit.le.val;
+	  if( blkE>0 )
+	    tdc_tw = hit.le.val - ftdctw[0]/pow( blkE, ftdctw[1] );
+
 	  fGoodBlocks.TDCTimeTW.push_back(tdc_tw);
-	  std::cout << "GoodBlocks TDC time: " << hit.le.val << ", modified: " << tdc_tw << std::endl;
 
 	  blk->SetTDCtime(hit.le.val);
 	} else {
@@ -385,7 +393,7 @@ Int_t SBSCalorimeter::FindClusters()
 
   Int_t NSize = fBlockSet.size();
 
-  std::cout << "Number of blocks: " << NSize << std::endl;
+  //std::cout << "Number of blocks: " << NSize << std::endl;
 
   fBestClusterIndex = -1;
 
@@ -447,16 +455,23 @@ Int_t SBSCalorimeter::FindClusters()
   //Fill main cluster variables here; this may get overridden by derived classes:
   if(!fClusters.empty()) {
     SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
+
+    SBSElement *pblk= clus->GetElement(0);
+    Double_t pblkE= pblk->GetE();
+
     fMainclus.e.push_back(clus->GetE());
     //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
     fMainclus.again.push_back(clus->GetAgain());
     fMainclus.atime.push_back(clus->GetAtime());
     fMainclus.tdctime.push_back(clus->GetTDCtime());
 
-    //test adding an element to the output
-    Double_t tdc_tw = clus->GetTDCtime() - 5.;
+    //test adding an element to the output ===2===
+    Double_t tdc_tw = clus->GetTDCtime();
+
+    if( pblkE!=0 )
+      tdc_tw = clus->GetTDCtime() - ftdctw[0]/pow( pblkE, ftdctw[1] );
+
     fMainclus.tdctime_tw.push_back(tdc_tw);
-    std::cout << "Mainclus TDC time: " << clus->GetTDCtime() << ", modified: " << tdc_tw << std::endl;
 
     fMainclus.x.push_back(clus->GetX());
     fMainclus.y.push_back(clus->GetY());
@@ -481,7 +496,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     return err;
   // Get information on the cluster with highest energy (useful even if
   // fMaxNclus is zero, i.e., storing no vector of clusters)
-  
+
   if( !(fClusters.empty()) && fBestClusterIndex >= 0 && fBestClusterIndex < (Int_t)fClusters.size() ) {
     //if( !(fClusters.empty()) ) {
     SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
@@ -495,10 +510,12 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
         fMainclusblk.atime.push_back(blk->GetAtime());        
         fMainclusblk.tdctime.push_back(blk->GetTDCtime());   
 
-	//test adding an element to the output
-	Double_t tdc_tw = blk->GetTDCtime() - 5.;
+	//test adding an element to the output ===3===
+	Double_t tdc_tw;
+	if( blk->GetE()>0 )
+	  tdc_tw = blk->GetTDCtime() - ftdctw[0]/pow( blk->GetE(), ftdctw[1] );
+
 	fMainclusblk.tdctime_tw.push_back(tdc_tw);
-	std::cout << "Mainclusblk TDC time: " << blk->GetTDCtime() << ", modified: " << tdc_tw << std::endl;
      
         fMainclusblk.x.push_back(blk->GetX());
         fMainclusblk.y.push_back(blk->GetY());
@@ -518,6 +535,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     fOutclus.again.reserve(nres);
     fOutclus.atime.reserve(nres);
     fOutclus.tdctime.reserve(nres);
+    fOutclus.tdctime_tw.reserve(nres);
     fOutclus.x.reserve(nres);
     fOutclus.y.reserve(nres);
     fOutclus.n.reserve(nres);
@@ -530,16 +548,20 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     int nclus = 0;
     for( const auto* cluster: fClusters ) {
       if(nclus < fMaxNclus) { // Keep adding them until we reach fMaxNclus
+
         fOutclus.e.push_back(cluster->GetE());
         //fOutclus.e_c.push_back(cluster->GetE()*(fConst + fSlope*fAccCharge));
         fOutclus.again.push_back(cluster->GetAgain());
         fOutclus.atime.push_back(cluster->GetAtime());
         fOutclus.tdctime.push_back(cluster->GetTDCtime());
 
-	//test adding an element to the output
-	Double_t tdc_tw = cluster->GetTDCtime() - 5.;
+	//test adding an element to the output ===4===
+	Double_t tdc_tw = cluster->GetTDCtime();
+	if( cluster->GetEblk()>0 )
+	  tdc_tw = cluster->GetTDCtime() - ftdctw[0]/pow( cluster->GetEblk(), ftdctw[1] );
+
 	fOutclus.tdctime_tw.push_back(tdc_tw);
-	std::cout << "Outclus TDC time: " << cluster->GetTDCtime() << ", modified: " << tdc_tw << std::endl;
+	//std::cout << GetName() << " block energy: " << cluster->GetEblk() << " outclus TDC time: " << cluster->GetTDCtime() << ", modified: " << tdc_tw << std::endl;
 
         fOutclus.x.push_back(cluster->GetX());
         fOutclus.y.push_back(cluster->GetY());
