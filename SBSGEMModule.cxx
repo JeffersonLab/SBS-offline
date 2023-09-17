@@ -136,7 +136,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   
   //default to 
   //fMAX2DHITS = 250000;
-  fMAX2DHITS = 100000;
+  fMAX2DHITS = 10000;
 
   fRMS_ConversionFactor = sqrt(fN_MPD_TIME_SAMP); //=2.45
 
