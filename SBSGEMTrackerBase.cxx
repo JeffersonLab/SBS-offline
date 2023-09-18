@@ -29,7 +29,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fMaxHitCombinations = 10000;
   fMaxHitCombinations_InnerLayers = 100000;
-  fMaxHitCombinations_Total = 10000000000.0;
+  fMaxHitCombinations_Total = 1.e16;
   fTryFastTrack = true;
 
   //moved zero suppression/common-mode parameters to module class
