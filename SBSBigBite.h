@@ -29,6 +29,9 @@ public:
 
   Bool_t GetMultiTracks() const;
   Bool_t SetMultiTracks( Bool_t set = false );
+
+  Bool_t GetUseBeamPosInOptics() const { return fUseBeamPosInOptics; }
+  void SetUseBeamPosInOptics( bool val=true ){ fUseBeamPosInOptics = val; }
     
   //virtual Int_t   Begin( THaRunBase* r=0 );
   //virtual Int_t   End( THaRunBase* r=0 );
@@ -107,6 +110,8 @@ protected:
 
   bool fIsMC;
 
+  bool fUseBeamPosInOptics; //default false;
+  
   int fOpticsOrder;
   std::vector<double> fb_xptar;
   std::vector<double> fb_yptar;

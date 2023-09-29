@@ -43,7 +43,9 @@ protected:
   Double_t fMaxSep2; //square of fMaxSep
 
   Int_t fNmirror; //Number of GRINCH mirrors (define track match cuts separately for each mirror)
-  
+
+
+  Double_t fTrackMatchPslope; //slope of xtrack - xGRINCH vs 1/p, default 0.1715
   //make mirror-dependent track match cuts:
   std::vector<Double_t> fTrackMatchXslope;
   std::vector<Double_t> fTrackMatchX0;
