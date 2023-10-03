@@ -25,6 +25,7 @@ public:
     Double_t GetAgain() const {return fAgain;}
     Double_t GetAtime() const {return fAtime;}
     Double_t GetTDCtime() const {return fTDCtime;}
+    Double_t GetTDCtimeTW() const {return fTDCtimeTW;}
     Double_t GetEblk() const {return fEblk;}
     Int_t   GetMult() const {return fMult;}
     Int_t   GetRow()  const {return fRow; }
@@ -41,6 +42,7 @@ public:
     void SetAgain(Double_t var) {fAgain=var;}
     void SetAtime(Double_t var) {fAtime=var;}
     void SetTDCtime(Double_t var) {fTDCtime=var;}
+    void SetTDCtimeTW(Double_t var) {fTDCtimeTW=var;}
     void SetEblk(Double_t var) {fEblk=var;}
     void SetMult(Int_t var) {fMult=var;}
     void SetRow(Int_t var) { fRow=var; }
@@ -64,6 +66,7 @@ private:
     Double_t fAgain;   // ADC gain coefficient (GeV/pC)
     Double_t fAtime;       // ADC time  of block with highest E
     Double_t fTDCtime;       // TDC time  of block with highest E
+    Double_t fTDCtimeTW;       // TDC time timewalk corrected of block with highest E
     Double_t fEblk;    // Energy of block with highest E
     Int_t   fRow;     // Row of block with highest E
     Int_t   fCol;     // Row of block with highest E

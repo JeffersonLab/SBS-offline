@@ -28,6 +28,7 @@ struct SBSBlockSet {
   Int_t row;
   Int_t col;
   Int_t id;
+  Int_t cid;
   Double_t TDCTime;
   Double_t TDCTimeTW;
   Double_t ADCTime;
@@ -43,12 +44,14 @@ struct SBSCalBlocks {
   std::vector<Int_t> col; //< []
   std::vector<Double_t> x; //< []
   std::vector<Double_t> y; //< []
-  std::vector<Int_t>   id;      // []
+  std::vector<Int_t> id;      // []
+  std::vector<Int_t> cid;      // []
   void clear() {
     e.clear();
     x.clear();
     y.clear();
     id.clear();
+    cid.clear();
     row.clear();
     col.clear();
     TDCTime.clear();
@@ -69,10 +72,11 @@ struct SBSCalorimeterOutput {
   std::vector<Double_t> y;   //< []
   std::vector<Double_t> row; //< []
   std::vector<Double_t> col; //< []
-  std::vector<Int_t>   n;   // Number of elements
+  std::vector<Int_t> n;   // Number of elements
   std::vector<Double_t> blk_e;   // block energy of max energy block
   //std::vector<Double_t> blk_e_c; // block corrected energy of max energy block
-  std::vector<Int_t>   id;      // block id of max energy block
+  std::vector<Int_t> id;      // block id of max energy block
+  std::vector<Int_t> cid;      // cluster id of max energy block
 };
    
 typedef std::vector<SBSBlockSet> SBSBlockSetList;
@@ -102,6 +106,7 @@ public:
   /* Double_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster */
   Int_t GetNblk();            //< Number of blocks in main cluster
   Int_t GetBlkID();           //< ID/block number of max energy block in cluster
+  Int_t GetClusID();           //< ID/cluster number of max energy block in cluster
   Int_t GetRow();             //< Main cluster row of max block
   Int_t GetCol();             //< Main cluster col of max block
 
@@ -246,6 +251,10 @@ inline Int_t SBSCalorimeter::GetNblk() {
 
 inline Int_t SBSCalorimeter::GetBlkID() {
   return GetVVal(fMainclus.id);
+}
+
+inline Int_t SBSCalorimeter::GetClusID() {
+  return GetVVal(fMainclus.cid);
 }
 
 inline Int_t SBSCalorimeter::GetNCols(Int_t r) {

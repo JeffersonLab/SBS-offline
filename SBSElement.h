@@ -29,11 +29,13 @@ public:
   Double_t GetAgain()     const { return fAgain; }
   Double_t GetAtime()     const { return fAtime; }
   Double_t GetTDCtime()     const { return fTDCtime; }
+  Double_t GetTDCtimeTW()     const { return fTDCtimeTW; }
   Int_t   GetRow()   const { return fRow; }
   Int_t   GetCol()   const { return fCol; }
   Int_t   GetLayer() const { return fLayer; }
   Int_t   GetStat()  const { return fStat; }
   Int_t   GetID()    const { return fID; }
+  Int_t   GetCID()   const { return fCID; }
   virtual SBSData::ADC* ADC()         { return fADC; }
   virtual SBSData::TDC* TDC()         { return fTDC; }
   virtual SBSData::Waveform* Waveform() { return fWaveform; }
@@ -46,11 +48,13 @@ public:
   void SetAgain(Double_t var)    { fAgain = var; }
   void SetAtime(Double_t var)    { fAtime = var; }
   void SetTDCtime(Double_t var)    { fTDCtime = var; }
+  void SetTDCtimeTW(Double_t var)    { fTDCtimeTW = var; }
   void SetRow(Int_t var)    { fRow = var; }
   void SetCol(Int_t var)    { fCol = var; }
   void SetLayer(Int_t var)  { fLayer = var; }
   void SetStat(Int_t var)   { fStat = var; }
   void SetID(Int_t var)     { fID = var; }
+  void SetCID(Int_t var)    { fCID = var; }
   void SetADC(Double_t ped, Double_t gain);
   void SetTDC(Double_t offset, Double_t cal, Double_t GoodTimeCut);
   void SetWaveform(Double_t ped, Double_t gain,Double_t ChanToMv,Double_t adc_timecut);
@@ -71,12 +75,14 @@ protected:
   Double_t fAgain;   ///< ADC gain coefficient (GeV/pC)
   Double_t fAtime;       ///< ADC time of event in this block
   Double_t fTDCtime;       ///< TDC time of event in this block
+  Double_t fTDCtimeTW;       ///< TDC time with timewalk correction of event in this block
 
   Int_t   fRow;     ///< Row of the block
   Int_t   fCol;     ///< Column of the block
   Int_t   fLayer;   ///< Layer of the block
   Int_t   fStat;    ///< Status: 0: not seen, 1: seen, 2: local max
   Int_t   fID;      ///< a logical number to this element
+  Int_t   fCID;     ///< a cluster logical number to this element
 
   SBSData::ADC *fADC; //< All ADC hits
   SBSData::TDC *fTDC; //< All TDC hits
