@@ -46,29 +46,37 @@ Int_t SBSRasteredBeam::ReadDatabase( const TDatime& date )
     fclose(file);
 
     double Rasterx_bounds[2], Rastery_bounds[2];
-
+    
     // If we are using 2 rasters we take the difference
-    if(fRaster_flag == 2){
-      Rasterx_bounds[0] = Rasterx_range[0] - Raster2x_range[0];
-      Rasterx_bounds[1] = Rasterx_range[1] - Raster2x_range[1];
-      Rastery_bounds[0] = Rastery_range[0] - Raster2y_range[0];
-      Rastery_bounds[1] = Rastery_range[1] - Raster2y_range[1];
-    } else { //In every other case we just use upstream raster
+    if(fRaster_flag == 2 && Rasterx_range.size() == 2 && Rastery_range.size() == 2 && Raster2x_range.size() == 2 && Raster2y_range.size() == 2){
+      Rasterx_bounds[0] = Rasterx_range[0] - Raster2x_range[1];
+      Rasterx_bounds[1] = Rasterx_range[1] - Raster2x_range[0];
+      Rastery_bounds[0] = Rastery_range[0] - Raster2y_range[1];
+      Rastery_bounds[1] = Rastery_range[1] - Raster2y_range[0];
+      
+      // Calculate the raster center
+      fRasterx_cen = (Rasterx_bounds[1] + Rasterx_bounds[0]) / 2;
+      fRastery_cen = (Rastery_bounds[1] + Rastery_bounds[0]) / 2;
+
+      // Calculate the scale factor. 1000 factor is used to convert mm to m
+      fRasterx_scale = Raster_size*1.0/1000 / (Rasterx_bounds[1] - Rasterx_bounds[0]);
+      fRastery_scale = Raster_size*1.0/1000 / (Rastery_bounds[1] - Rastery_bounds[0]);
+    } else if (fRaster_flag == 1 && Rasterx_range.size() == 2 && Rastery_range.size() == 2) { //In every other case we just use upstream raster
       Rasterx_bounds[0] = Rasterx_range[0];
       Rasterx_bounds[1] = Rasterx_range[1];
       Rastery_bounds[0] = Rastery_range[0];
       Rastery_bounds[1] = Rastery_range[1];
-    }
 
-    // Calculate the raster center
-    fRasterx_cen = (Rasterx_bounds[1] + Rasterx_bounds[0]) / 2;
-    fRastery_cen = (Rastery_bounds[1] + Rastery_bounds[0]) / 2;
-  
-    // Calculate the scale factor. 1000 factor is used to convert mm to m
-    fRasterx_scale = Raster_size*1.0/1000 / (Rasterx_bounds[1] - Rasterx_bounds[0]);
-    fRastery_scale = Raster_size/1000 / (Rastery_bounds[1] - Rastery_bounds[0]);
+      // Calculate the raster center
+      fRasterx_cen = (Rasterx_bounds[1] + Rasterx_bounds[0]) / 2;
+      fRastery_cen = (Rastery_bounds[1] + Rastery_bounds[0]) / 2;
+
+      // Calculate the scale factor. 1000 factor is used to convert mm to m
+      fRasterx_scale = Raster_size*1.0/1000 / (Rasterx_bounds[1] - Rasterx_bounds[0]);
+      fRastery_scale = Raster_size*1.0/1000 / (Rastery_bounds[1] - Rastery_bounds[0]);
+    }
   }
-  
+
   fNevents_rollingavg = 0;
   fBPM_container_rollingavg.resize(fNevents_rollingmax);
  
@@ -158,6 +166,7 @@ Int_t SBSRasteredBeam::CoarseReconstruct()
   // Flag = 0: Unrastered beam so the position is just teh BPM projection average
   ////////////////////////////////////////////////////////////////////////////////
   if(fRaster_flag == 2){
+    //cout<<fRasterx_scale<<" "<<fRastery_scale<<endl;
     xbeam = GetPositionAvg().X() + (Raster.X() - Raster2.X() - fRasterx_cen)*fRasterx_scale;
     ybeam = GetPositionAvg().Y() + (Raster.Y() - Raster2.Y() - fRastery_cen)*fRastery_scale;
   } else if (fRaster_flag == 1) {

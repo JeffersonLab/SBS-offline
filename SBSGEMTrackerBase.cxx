@@ -25,11 +25,11 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fTrackingAlgorithmFlag = 2;
 
   fMinHitsOnTrack = 3;
-  fMinHighQualityHitsOnTrack = 2;
+  fMinHighQualityHitsOnTrack = 0;
 
   fMaxHitCombinations = 10000;
   fMaxHitCombinations_InnerLayers = 100000;
-  fMaxHitCombinations_Total = 10000000000.0;
+  fMaxHitCombinations_Total = 1.e16;
   fTryFastTrack = true;
 
   //moved zero suppression/common-mode parameters to module class
@@ -1744,7 +1744,8 @@ void SBSGEMTrackerBase::find_tracks(){
 
 			int minhits = fMinHighQualityHitsOnTrack;
 			if( hitcombo.size() == 3 ){
-			  minhits = std::max( 2, std::min( 3, fMinHighQualityHitsOnTrack ) );
+			  //minhits = std::max( 2, std::min( 3, fMinHighQualityHitsOnTrack ) );
+			  minhits = 3;
 			}
 			
 			if( nhighQhits >= minhits ){

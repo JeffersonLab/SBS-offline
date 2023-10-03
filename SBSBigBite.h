@@ -29,6 +29,9 @@ public:
 
   Bool_t GetMultiTracks() const;
   Bool_t SetMultiTracks( Bool_t set = false );
+
+  Bool_t GetUseBeamPosInOptics() const { return fUseBeamPosInOptics; }
+  void SetUseBeamPosInOptics( bool val=true ){ fUseBeamPosInOptics = val; }
     
   //virtual Int_t   Begin( THaRunBase* r=0 );
   //virtual Int_t   End( THaRunBase* r=0 );
@@ -101,6 +104,13 @@ protected:
   Double_t fA_pth1; // default value (from simulation) is 0.28615 * 0.97
   Double_t fB_pth1; // default value (from simulation) is 0.1976
   Double_t fC_pth1; // default value (from simulation) is 0.4764
+  //Extra coefficents to remove the beam dependance
+  Double_t fA_vy;
+  Double_t fB_vy;
+
+  bool fIsMC;
+
+  bool fUseBeamPosInOptics; //default false;
   
   int fOpticsOrder;
   std::vector<double> fb_xptar;

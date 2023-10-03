@@ -54,6 +54,8 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
 
   fNmirror = 4; 
 
+  fTrackMatchPslope = 0.1715;
+  
   fTrackMatchXslope.resize(fNmirror);
   fTrackMatchX0.resize(fNmirror);
   fTrackMatchXsigma.resize(fNmirror);
@@ -63,15 +65,23 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
   fTrackMatchXmin.resize(fNmirror);
   fTrackMatchXmax.resize(fNmirror);
 
-  Double_t mirrx0[] = { -0.1580, -0.0193, -0.0047, 0.1968};
-  Double_t mirrxslope[] = {0.71, 0.71, 0.71, 0.71};
-  Double_t mirrxmin[] = {-0.8, -0.55, -0.1, 0.45};
-  Double_t mirrxmax[] = {-0.45, 0.1, 0.6, 0.85};
-  Double_t mirrxsigma[] = {0.016, 0.014, 0.015, 0.016};
+ 
+  
+  Double_t mirrx0[] = { -0.2, -0.0765, -0.0827, 0.1127};
+  Double_t mirrxslope[] = {0.74, 0.7353, 0.7515, 0.7456};
+  Double_t mirrxmin[] = {-0.8, -0.65, -0.1, 0.45};
+  Double_t mirrxmax[] = {-0.5, 0.1, 0.55, 0.8};
+  Double_t mirrxsigma[] = {0.015, 0.009, 0.01, 0.01};
+  
+  // Double_t mirrx0[] = { -0.1580, -0.0193, -0.0047, 0.1968};
+  // Double_t mirrxslope[] = {0.71, 0.71, 0.71, 0.71};
+  // Double_t mirrxmin[] = {-0.8, -0.55, -0.1, 0.45};
+  // Double_t mirrxmax[] = {-0.45, 0.1, 0.6, 0.85};
+  // Double_t mirrxsigma[] = {0.016, 0.014, 0.015, 0.016};
 
-  Double_t mirryslope[] = {1.57, 2.02, 2.36, 1.36};
-  Double_t mirry0[] = {0.04, -0.038, -0.031, -0.0878};
-  Double_t mirrysigma[] = {0.08, 0.026, 0.036, 0.023}; 
+  Double_t mirryslope[] = {0.42, 0.48, 0.173, 0.56};
+  Double_t mirry0[] = {-0.017, 0.018, 0.014, 0.046};
+  Double_t mirrysigma[] = {0.022, 0.015, 0.022, 0.023}; 
 			       
 
   for( int imirr=0; imirr<fNmirror; imirr++ ){
@@ -149,6 +159,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   const DBRequest request[] = { 
     { "maxsep", &fMaxSep, kDouble, 0, 1, 1 },
     { "nmirror", &fNmirror, kInt, 0, 1, 1 },
+    { "trackmatch_pslope", &fTrackMatchPslope, kDouble, 0, 1, 1 },
     { "trackmatch_xslope", &fTrackMatchXslope, kDoubleV, 0, 1, 1 },
     { "trackmatch_x0", &fTrackMatchX0, kDoubleV, 0, 1, 1 },
     { "trackmatch_xsigma", &fTrackMatchXsigma, kDoubleV, 0, 1, 1 },
@@ -522,6 +533,7 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       
       double xtrack = theTrack->GetX(zGRINCH);
       double ytrack = theTrack->GetY(zGRINCH);
+      double ptrack = theTrack->GetP();
       
       double minxdiff = 0.0; 
       double mindiff2 = 0.0;
@@ -534,9 +546,10 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       double yGRINCH = clusttemp->GetYcenter();
 
       for( int imirr=0; imirr<fNmirror; imirr++ ){
-	if( xtrack >= fTrackMatchXmin[imirr] && xtrack < fTrackMatchXmax[imirr] ){
-	  double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]);
-	  double ydiff = fabs(ytrack - fTrackMatchYslope[imirr] * yGRINCH - fTrackMatchY0[imirr]);
+	if( xtrack - fTrackMatchPslope/ptrack >= fTrackMatchXmin[imirr] && xtrack - fTrackMatchPslope/ptrack < fTrackMatchXmax[imirr] ){
+	  double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]-fTrackMatchPslope/ptrack);
+	  //double ydiff = fabs(ytrack - fTrackMatchYslope[imirr] * yGRINCH - fTrackMatchY0[imirr]);
+	  double ydiff = fabs( yGRINCH - fTrackMatchYslope[imirr] * ytrack - fTrackMatchY0[imirr] );
 	  
 	  double diff2 = pow( xdiff/fTrackMatchXsigma[imirr], 2 ) + pow( ydiff/fTrackMatchYsigma[imirr], 2 );
     
