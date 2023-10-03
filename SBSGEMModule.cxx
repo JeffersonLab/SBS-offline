@@ -60,7 +60,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fTrigTime = 0.0;
 
   fMaxTrigTimeCorrection = 25.0;
-  
+  fTrigTimeSlope = 1.0; //slope of GEM time versus trig time correlation
+
   //Set default values for decode map parameters:
   fN_APV25_CHAN = 128;
   fN_MPD_TIME_SAMP = 6;
@@ -136,7 +137,7 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   
   //default to 
   //fMAX2DHITS = 250000;
-  fMAX2DHITS = 100000;
+  fMAX2DHITS = 10000;
 
   fRMS_ConversionFactor = sqrt(fN_MPD_TIME_SAMP); //=2.45
 
@@ -399,6 +400,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "clustering_flag", &fClusteringFlag, kInt, 0, 1, 1 },
     { "deconvolution_flag", &fDeconvolutionFlag, kInt, 0, 1, 1 },
     { "maxtrigtime_correction", &fMaxTrigTimeCorrection, kDouble, 0, 1, 1 },
+    { "trigtime_slope", &fTrigTimeSlope, kDouble, 0, 1, 1 },
     { "ADCasym_sigma", &fADCasymSigma, kDouble, 0, 1, 1 },
     { "deltat_sigma", &fTimeCutUVsigma, kDouble, 0, 1, 1 },
     { "deltat_cut_deconv", &fTimeCutUVdiffDeconv, kDouble, 0, 1, 1 },
@@ -2090,7 +2092,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	  
 	  //for crude strip timing, just take simple time bins at the center of each sample (we'll worry about trigger time words later):
-	  double Tsamp = fSamplePeriod * ( adc_samp + 0.5 ) - fTrigTime;
+	  double Tsamp = fSamplePeriod * ( adc_samp + 0.5 );
 	  
 	  Tsum += Tsamp * ADCvalue;
 	  T2sum += pow(Tsamp,2) * ADCvalue;
@@ -2295,7 +2297,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      maxdeconv = DeconvADCtemp[isamp];
 	    }
 
-	    Tsum_deconv += ( fSamplePeriod * (isamp + 0.5) - fTrigTime ) * DeconvADCtemp[isamp];
+	    Tsum_deconv += ( fSamplePeriod * (isamp + 0.5) ) * DeconvADCtemp[isamp];
 	    
 	    //fADCsamples1D.push_back( ADCtemp[isamp] );
 	    //fRawADCsamples1D.push_back( rawADCtemp[isamp] );
@@ -2354,7 +2356,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    }
 	  }
 	  
-	  fTmeanDeconv[fNstrips_hit] = Tsum_deconv/ADCsum_deconv;
+	  fTmeanDeconv[fNstrips_hit] = Tsum_deconv/ADCsum_deconv - fTrigTimeSlope*fTrigTime;
 
 	  // if( imaxcombo == 0 ){
 	  //   fTmeanDeconv[fNstrips_hit] = 0.5*fSamplePeriod - fTrigTime;
@@ -2371,7 +2373,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  // }
 	  
 	  //	  fTmean.push_back( Tsum/ADCsum_temp );
-	  fTmean[fNstrips_hit] = Tmean_temp;
+	  fTmean[fNstrips_hit] = Tmean_temp - fTrigTimeSlope*fTrigTime;
 	  //  fTsigma.push_back( sqrt( T2sum/ADCsum_temp - pow( fTmean.back(), 2 ) ) );
 	  fTsigma[fNstrips_hit] = Tsigma_temp;
 	  //fTcorr.push_back( fTmean.back() ); //don't apply any corrections for now
@@ -5564,7 +5566,7 @@ double SBSGEMModule::CalcFitTime( const std::vector<Double_t> &ADC, double RMS )
 
   //if( true ){
   //if( true ){
-  return Tsum / sumw2 - fTrigTime;
+  return Tsum / sumw2 - fTrigTimeSlope * fTrigTime;
   //} 
 }
 

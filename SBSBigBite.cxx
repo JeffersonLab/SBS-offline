@@ -86,8 +86,10 @@ THaSpectrometer( name, description )
   fB_pth1 = 0.1976;
   fC_pth1 = 0.4764;
 
-  fA_vy = 0;
-  fB_vy = 0;
+  fA_vy = 0.;
+  fB_vy = 0.;
+
+  fUseBeamPosInOptics = false;
 
   fIsMC = false;
 
@@ -221,6 +223,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   double opticsthetadeg = fOpticsAngle * TMath::RadToDeg();
 
   int mc_flag = fIsMC ? 1 : 0;
+  int use_beampos = fUseBeamPosInOptics ? 1 : 0;
     
   const DBRequest request[] = {
     { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
@@ -264,6 +267,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "downbendoptics_order", &fOpticsOrderDownbend, kInt, 0, 1, 1 },
     { "downbendoptics_parameters", &doptics_param, kDoubleV, 0, 1, 1 },
     { "downbending_mode", &downbend, kInt, 0, 1, 1 },
+    { "use_beampos", &use_beampos, kInt, 0, 1, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 },
     {0}
   };
@@ -273,7 +277,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   if( status != 0 ){
     return status;
   }
-    
+
+  fUseBeamPosInOptics = ( use_beampos != 0 ) ? true : false;
+  
   fOpticsAngle = opticsthetadeg * TMath::DegToRad();
   if( optics_origin.size() == 3 ){ //database overrides default values:
     fOpticsOrigin.SetXYZ( optics_origin[0],
@@ -1256,9 +1262,12 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   double thetabend_fit;
   double pthetabend_fit;
   double vz_fit;
-    
-  xtar = -ybeam;
+
+  //The fUseBeamPosInOptics flag protects against unintentionally using uncalibrated beam position in optics calculations;
+  // or mixing beam position corrections with optics calibrated without them in an inconsistent way
   
+  xtar = fUseBeamPosInOptics ? -ybeam : 0.0;
+  //  if( fUseBeamPosInOptics ) xtar = -ybeam;
  
   //Three iterations needed to converge xtar reconstruction
   for(int iter = 0; iter < 2; iter++){
@@ -1298,8 +1307,9 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     } // End loop over matrix
   
     vz_fit = -ytar_fit / (sin(th_bb) + cos(th_bb)*yptar_fit);
-    xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;    
     
+    xtar = -cos(GetThetaGeo()) * vz_fit * xptar_fit;    
+    if( fUseBeamPosInOptics ) xtar += -ybeam;
   }
     
   //Let's simplify the bend angle reconstruction to avoid double-counting, even though
@@ -1335,8 +1345,12 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   } else {
     double delta = pthetabend_fit;
     double p_firstorder = fA_pth1 * ( 1.0 + (fB_pth1 + fC_pth1*fMagDist)*xptar_fit ) / thetabend_fit;
- 
-    p_fit = p_firstorder * (1.0 + delta) - (fA_vy + fB_vy * ybeam);
+
+    //If A_vy and B_vy parameters were defined AND the use of beam position corrections in optics is enabled,
+    //then correct the momentum:
+    p_fit = p_firstorder * (1.0 + delta);
+    if( fUseBeamPosInOptics ) p_fit += -(fA_vy + fB_vy * ybeam);
+    //p_fit = p_firstorder * (1.0 + delta) - (fA_vy + fB_vy * ybeam);
   }
 
   pz = p_fit*sqrt( 1.0/(xptar_fit*xptar_fit+yptar_fit*yptar_fit+1.) );
