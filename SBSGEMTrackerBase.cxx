@@ -1380,7 +1380,116 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	  //range-based for-loop syntax that I'm still learning... hopefully nothing after this needs to be changed
 	  for( auto ibin : binswithfreehits_layer[minlayer] ){
-	    for( auto jbin : binswithfreehits_layer[maxlayer] ){
+	    //HERE in the outer loop is where we can improve the speed. Calculate the 
+	    //straight-line projection from the bin center at the front layer to the 
+	    //back constraint point, and then project to the back layer and consider 
+	    //only a reduced set of bins in maxlayer:
+	    int ibinx = ibin % fGridNbinsX_layer[minlayer];
+	    int ibiny = ibin / fGridNbinsX_layer[minlayer];
+
+	    //center coordinates of the bin in minlayer: 
+	    double xi = fGridXmin_layer[minlayer] + (ibinx + 0.5) * fGridBinWidthX;
+	    double yi = fGridYmin_layer[minlayer] + (ibiny + 0.5) * fGridBinWidthY;
+	    double ziavg = fZavgLayer[minlayer];
+	    double zjavg = fZavgLayer[maxlayer];
+
+	    //Calculate the straight line defined by back constraint point and 
+	    // center of bin in this layer:
+	    
+	    std::set<int> goodbins_maxlayer; 
+	    //   std::set<int> binstocheck_maxlayer;
+
+	    //std::cout << "Use constraint = " << fUseConstraint << std::endl;
+
+	    //This is experimental, to increase speed:
+	    if( fUseConstraint ){
+	      double xbcp = fConstraintPoint_Back.X();
+	      double ybcp = fConstraintPoint_Back.Y();
+	      double zbcp = fConstraintPoint_Back.Z();
+	      double xptemp = (xbcp - xi )/(zbcp - ziavg);
+	      double yptemp = (ybcp - yi )/(zbcp - ziavg);
+	      
+	      //project the straight line defined by front bin center and back constraint point to max layer and calculate the allowed area at max layer:
+	      double sigxi = fGridBinWidthX;
+	      double sigyi = fGridBinWidthY;
+	      double sigxbcp = fConstraintWidth_Back.X();
+	      double sigybcp = fConstraintWidth_Back.Y();
+	      
+	      //Calculate error matrices:
+	      double sumw_x = pow(sigxi,-2)+pow(sigxbcp,-2);
+	      double sumz_x = ziavg*pow(sigxi,-2) + zbcp*pow(sigxbcp,-2);
+	      double sumz2_x = pow(ziavg/sigxi,2) + pow(zbcp/sigxbcp,2);
+	      double det_x = sumz2_x*sumw_x - sumz_x*sumz_x;
+
+	      double sumw_y = pow(sigyi,-2)+pow(sigybcp,-2);
+	      double sumz_y = ziavg*pow(sigyi,-2)+zbcp*pow(sigybcp,-2);
+	      double sumz2_y = pow(ziavg/sigyi,2)+pow(zbcp/sigybcp,2);
+	      double det_y = sumz2_y*sumw_y - sumz_y*sumz_y;
+
+	      double emat_x[2][2];
+	      double emat_y[2][2];
+	      emat_x[0][0] = sumz2_x/det_x;
+	      emat_x[0][1] = -sumz_x/det_x;
+	      emat_x[1][0] = emat_x[0][1];
+	      emat_x[1][1] = sumw_x/det_x;
+
+	      emat_y[0][0] = sumz2_y/det_y;
+	      emat_y[0][1] = -sumz_y/det_y;
+	      emat_y[1][0] = emat_y[0][1];
+	      emat_y[1][1] = sumw_y/det_y;
+
+	      //double x0temp = xi - xptemp * ziavg;
+	      //double y0temp = yi - yptemp * ziavg; 
+	      
+	      double xprojmax = xi + xptemp * (zjavg - ziavg); //= x0temp + xptemp * zj
+	      double yprojmax = yi + yptemp * (zjavg - ziavg); //= y0temp + yptemp * zj
+	      
+	      //calculate tolerance of x and y projections: 
+	      //Here we basically want to use the error matrix of the linear "fit" and the matrix of partial derivatives: 
+	      // partial xproj / partial x0 = 1
+	      // partial xproj / partial x' = zj
+	      double dxprojmax = sqrt( emat_x[0][0] + pow(zjavg,2)*emat_x[1][1] + 2.0*zjavg*emat_x[0][1] );
+	      double dyprojmax = sqrt( emat_y[0][0] + pow(zjavg,2)*emat_y[1][1] + 2.0*zjavg*emat_y[0][1] );
+	      
+	      //	      std::cout << "(dxproj,dyproj)=(" << dxprojmax << ", " << dyprojmax << ")" << std::endl; 
+
+	      int binxproj = int( (xprojmax - fGridXmin_layer[maxlayer])/fGridBinWidthX );
+	      int binyproj = int( (yprojmax - fGridYmin_layer[maxlayer])/fGridBinWidthY );
+
+	      int binxlo = binxproj, binxhi = binxproj;
+	      int binylo = binyproj, binyhi = binyproj;
+	      
+	      double xcenterproj = fGridXmin_layer[maxlayer] + (binxproj+0.5)*fGridBinWidthX;
+	      double ycenterproj = fGridYmin_layer[maxlayer] + (binyproj+0.5)*fGridBinWidthY;
+
+	      int nbinsx_tolerance = int( (std::max(fGridBinWidthX,dxprojmax))/fGridBinWidthX );
+	      binxlo = std::max(0,binxproj - std::max(0,nbinsx_tolerance));
+	      binxhi = std::min(fGridNbinsX_layer[maxlayer]-1,binxproj+std::max(0,nbinsx_tolerance));
+
+	      int nbinsy_tolerance = int( (std::max(fGridBinWidthY,dyprojmax))/fGridBinWidthY);
+	      binylo = std::max(0,binyproj - std::max(0,nbinsy_tolerance));
+	      binyhi = std::min(fGridNbinsY_layer[maxlayer]-1,binyproj+std::max(0,nbinsy_tolerance));
+	      
+	      //	      std::cout << "(binxlo, binxhi, binylo, binyhi)=(" << binxlo << ", " << binxhi << ", " << binylo << ", " << binyhi << ")" << std::endl;
+
+	      for( int binxtemp=binxlo; binxtemp<=binxhi; binxtemp++){
+		for( int binytemp=binylo; binytemp<=binyhi; binytemp++){
+		  int bintemp = binxtemp + fGridNbinsX_layer[maxlayer]*binytemp;
+		  if( binswithfreehits_layer[maxlayer].find(bintemp) != binswithfreehits_layer[maxlayer].end() ) goodbins_maxlayer.insert(bintemp);
+		}
+	      }
+
+	    }
+	    //Declare a reference to either "goodbins_maxlayer" which is at most a subset of binswithfreehits_maxlayer, or 
+	    //binswithfreehits_maxlayer, depending on value of fUseConstraint
+	    std::set<int> &binstocheck_maxlayer = fUseConstraint ? goodbins_maxlayer : binswithfreehits_layer[maxlayer];
+
+	    //	    std::cout << "Minlayer = " << minlayer << ", bin = " << ibin << ", maxlayer = " << maxlayer << ", nbins to check = " 
+	    //	      << binstocheck_maxlayer.size() << ", " << ", total bins with free hits = " << binswithfreehits_layer[maxlayer].size() << std::endl;
+
+	    //std::set<int> &binstocheck_maxlayer = binswithfreehits_layer[maxlayer];
+	    //	    for( auto jbin : binswithfreehits_layer[maxlayer] ){
+	    for( auto jbin : binstocheck_maxlayer ){
 	  //Start by computing bin center coordinates and widths, project to intermediate layers and 
 
 	      //Note "bin" = binx + nbinsx * biny;
@@ -1389,21 +1498,15 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	      //TO-DO: populate a list of "valid" bin combinations once at the beginning of analysis. 
 	      //Or maybe this is not worth the effort
-	      int ibinx = ibin % fGridNbinsX_layer[minlayer];
-	      int ibiny = ibin / fGridNbinsX_layer[minlayer];
+	      
 
 	      int jbinx = jbin % fGridNbinsX_layer[maxlayer];
 	      int jbiny = jbin / fGridNbinsX_layer[maxlayer];
 	      
-	      //center coordinates of the bin in minlayer and maxlayer: 
-	      double xi = fGridXmin_layer[minlayer] + (ibinx + 0.5) * fGridBinWidthX;
+	      
 	      double xj = fGridXmin_layer[maxlayer] + (jbinx + 0.5) * fGridBinWidthX;
-
-	      double yi = fGridYmin_layer[minlayer] + (ibiny + 0.5) * fGridBinWidthY;
 	      double yj = fGridYmin_layer[maxlayer] + (jbiny + 0.5) * fGridBinWidthY; 
 
-	      double ziavg = fZavgLayer[minlayer];
-	      double zjavg = fZavgLayer[maxlayer];
 	      
 	      double xpavg = (xj - xi)/(zjavg-ziavg);
 	      double ypavg = (yj - yi)/(zjavg-ziavg);
