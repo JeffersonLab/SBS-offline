@@ -56,6 +56,18 @@ Int_t SBSCherenkov_Hit::Compare( const TObject* theOtherHit ) const
     return 0;
 }
 
+void SBSCherenkov_Hit::Clear( Option_t *opt ){ 
+  fPMTNum = -1;
+  fRow = -1;
+  fCol = -1;
+  fClustIndex = -1;
+  fTrackIndex = -1;
+  fX = kBig;
+  fY = kBig;
+  fTime = kBig;
+  fAmp = kBig;
+}
+
 /*
 //_____________________________________________________________________________
 void SBSCherenkov_Hit::Show(FILE * fout1, FILE* fout2) 

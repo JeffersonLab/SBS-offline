@@ -90,7 +90,7 @@ void SBSCherenkovDetector::Clear( Option_t* opt )
   if( fDoBench ) fBench->Begin("Clear");
   SBSGenericDetector::Clear(opt);
   if(fDebug)cout << "Clear hits() " << endl; 
-  fHits->Clear();
+  fHits->Clear("C");
   //fResolvedHits->Clear();
   DeleteClusters();
   
