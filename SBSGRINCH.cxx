@@ -55,23 +55,28 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
   fNmirror = 4; 
 
   fTrackMatchPslope = 0.1715;
+
+  fOrderTrackMatchY = 3; //default values.
   
   fTrackMatchXslope.resize(fNmirror);
   fTrackMatchX0.resize(fNmirror);
   fTrackMatchXsigma.resize(fNmirror);
-  fTrackMatchYslope.resize(fNmirror);
-  fTrackMatchY0.resize(fNmirror);
-  fTrackMatchYsigma.resize(fNmirror);
   fTrackMatchXmin.resize(fNmirror);
   fTrackMatchXmax.resize(fNmirror);
 
- 
-  
-  Double_t mirrx0[] = { -0.2, -0.0765, -0.0827, 0.1127};
-  Double_t mirrxslope[] = {0.74, 0.7353, 0.7515, 0.7456};
-  Double_t mirrxmin[] = {-0.8, -0.65, -0.1, 0.45};
-  Double_t mirrxmax[] = {-0.5, 0.1, 0.55, 0.8};
-  Double_t mirrxsigma[] = {0.015, 0.009, 0.01, 0.01};
+  fTrackMatchYslope.resize(fNmirror*fOrderTrackMatchY);
+  fTrackMatchY0.resize(fNmirror);
+  fTrackMatchYsigma.resize(fNmirror);
+
+   
+  //  Double_t mirrx0[] = { 0.1789, 0.0052, 0.0052, -0.2576 };
+
+  //These parameters come from Maria's analysis:
+  Double_t mirrx0[] = {0.17, 0.005, 0.0095, -0.27}; //intercept of dx versus theta
+  Double_t mirrxslope[] = {1.361, 1.424, 1.3387, 1.466}; //slope of dx versus theta
+  Double_t mirrxmin[] = {-0.8, -0.55, -0.05, 0.45}; //mirror boundary cuts, min
+  Double_t mirrxmax[] = {-0.45, 0.05, 0.58, 0.85}; //mirror boundary cuts, max
+  Double_t mirrxsigma[] = {0.013, 0.012, 0.013, 0.011}; //sigma of corrected dx distribution
   
   // Double_t mirrx0[] = { -0.1580, -0.0193, -0.0047, 0.1968};
   // Double_t mirrxslope[] = {0.71, 0.71, 0.71, 0.71};
@@ -79,20 +84,31 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
   // Double_t mirrxmax[] = {-0.45, 0.1, 0.6, 0.85};
   // Double_t mirrxsigma[] = {0.016, 0.014, 0.015, 0.016};
 
-  Double_t mirryslope[] = {0.42, 0.48, 0.173, 0.56};
-  Double_t mirry0[] = {-0.017, 0.018, 0.014, 0.046};
-  Double_t mirrysigma[] = {0.022, 0.015, 0.022, 0.023}; 
-			       
+  // Double_t mirryslope[] = {0.42, 0.48, 0.173, 0.56};
+  // Double_t mirry0[] = {-0.017, 0.018, 0.014, 0.046};
+  // Double_t mirrysigma[] = {0.022, 0.015, 0.022, 0.023}; 
+  //Let's implement Maria's 3rd-order polynomial in track phi for dy:
+  //Need four parameters per mirror: 
+  Double_t mirrypar[] = {  -0.002, -1.5, 10.0, -150.0,
+			   0.041, -1.4, -5., -185.0,
+			   0.051, -1.9, 0.0, -120.0,
+			   0.081, -1.8, -25.0, 10.0 };
+  Double_t mirrysigma[] = { 0.023, 0.020, 0.025, 0.020 };
+  
 
   for( int imirr=0; imirr<fNmirror; imirr++ ){
     fTrackMatchXslope[imirr] = mirrxslope[imirr];
     fTrackMatchX0[imirr] = mirrx0[imirr];
     fTrackMatchXsigma[imirr] = mirrxsigma[imirr];
-    fTrackMatchYslope[imirr] = mirryslope[imirr];
-    fTrackMatchY0[imirr] = mirry0[imirr];
-    fTrackMatchYsigma[imirr] = mirrysigma[imirr];
     fTrackMatchXmin[imirr] = mirrxmin[imirr];
     fTrackMatchXmax[imirr] = mirrxmax[imirr];
+
+    //New y params; implement Maria's third-order polynomial fit versus track phi:
+    fTrackMatchY0[imirr] = mirrypar[4*imirr];
+    fTrackMatchYsigma[imirr] = mirrysigma[imirr];
+    for( int ipar=1; ipar<=3; ipar++ ){
+      fTrackMatchYslope[3*imirr + ipar-1] = mirrypar[4*imirr+ipar];
+    }
   }
 
   fTrackMatchNsigmaCut = 4.5;
@@ -159,6 +175,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   const DBRequest request[] = { 
     { "maxsep", &fMaxSep, kDouble, 0, 1, 1 },
     { "nmirror", &fNmirror, kInt, 0, 1, 1 },
+    { "trackmatch_yorder", &fOrderTrackMatchY, kInt, 0, 1, 1 },
     { "trackmatch_pslope", &fTrackMatchPslope, kDouble, 0, 1, 1 },
     { "trackmatch_xslope", &fTrackMatchXslope, kDoubleV, 0, 1, 1 },
     { "trackmatch_x0", &fTrackMatchX0, kDoubleV, 0, 1, 1 },
@@ -180,7 +197,7 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   bool sizecheck = ( fTrackMatchXslope.size() == fNmirror && 
 		     fTrackMatchX0.size() == fNmirror && 
 		     fTrackMatchXsigma.size() == fNmirror && 
-		     fTrackMatchYslope.size() == fNmirror && 
+		     fTrackMatchYslope.size() == fNmirror*fOrderTrackMatchY && 
 		     fTrackMatchY0.size() == fNmirror && 
 		     fTrackMatchYsigma.size() == fNmirror && 
 		     fTrackMatchXmin.size() == fNmirror && 
@@ -221,12 +238,15 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
     { "nclus",        " number of GRINCH PMT clusters",  "GetNumClusters()"                                  },
     { "allclus.size",    " GRINCH cluster size",            "fClusters.SBSCherenkov_Cluster.GetNHits()"            },
     { "allclus.trackindex", "Index of matched track",      "fClusters.SBSCherenkov_Cluster.GetTrackIndex()" },
+    { "allclus.mirrorindex", "Mirror index of matched track", "fClusters.SBSCherenkov_Cluster.GetMirrorIndex()" },
     { "allclus.x_mean",  " GRINCH cluster X center",        "fClusters.SBSCherenkov_Cluster.GetXcenter()"          },
     { "allclus.y_mean",  " GRINCH cluster Y center",        "fClusters.SBSCherenkov_Cluster.GetYcenter()"          },
     { "allclus.t_mean", " GRINCH cluster mean time",       "fClusters.SBSCherenkov_Cluster.GetMeanTime()"         },
     { "allclus.t_rms", "RMS of GRINCH cluster hit times", "fClusters.SBSCherenkov_Cluster.GetTimeRMS()" },
     { "allclus.tot_mean", " GRINCH cluster mean time over threshold", "fClusters.SBSCherenkov_Cluster.GetMeanAmp()" },
     { "allclus.adc",     " GRINCH cluster total charge",    "fClusters.SBSCherenkov_Cluster.GetCharge()"           },
+    { "allclus.dx", " GRINCH cluster corrected dx wrt track projection", "fClusters.SBSCherenkov_Cluster.GetDX()" },
+    { "allclus.dy", " GRINCH cluster corrected dy wrt track projection", "fClusters.SBSCherenkov_Cluster.GetDY()" },
     { "bestcluster", "Index of best cluster", "fBestClusterIndex" },
     { 0 }
   };
@@ -235,12 +255,15 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
   RVarDef var3[] = {
     { "clus.size",    " GRINCH best cluster size",            "fBestCluster.GetNHits()"            },
     { "clus.trackindex", "Index of best cluster matched track",      "fBestCluster.GetTrackIndex()" },
+    { "clus.mirrorindex", "Mirror index of best cluster", "fBestCluster.GetMirrorIndex()" },
     { "clus.x_mean",  " GRINCH best cluster X center",        "fBestCluster.GetXcenter()"          },
     { "clus.y_mean",  " GRINCH best cluster Y center",        "fBestCluster.GetYcenter()"          },
     { "clus.t_mean", " GRINCH best cluster mean time",       "fBestCluster.GetMeanTime()"         },
     { "clus.t_rms", "RMS of GRINCH best cluster hit times", "fBestCluster.GetTimeRMS()" },
     { "clus.tot_mean", " GRINCH best cluster mean time over threshold", "fBestCluster.GetMeanAmp()" },
     { "clus.adc",     " GRINCH best cluster total charge",    "fBestCluster.GetCharge()"           },
+    { "clus.dx", " GRINCH cluster corrected dx wrt track projection", "fBestCluster.GetDX()" },
+    { "clus.dy", " GRINCH cluster corrected dy wrt track projection", "fBestCluster.GetDY()" },
     { 0 }
   };
 
@@ -519,6 +542,11 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
   for( int iclust=0; iclust<nclust; iclust++ ){
     //Int_t nmatch=0; 
     Int_t itrmin=-1;
+    Int_t bestmirror=-1;
+
+    Double_t dxbest = kBig;
+    Double_t dybest = kBig;
+    
     SBSCherenkov_Cluster *clusttemp = GetCluster( iclust );
 
     for( int itrack=0; itrack<ntracks; itrack++ ){
@@ -533,6 +561,8 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       
       double xtrack = theTrack->GetX(zGRINCH);
       double ytrack = theTrack->GetY(zGRINCH);
+      double thetatrack = theTrack->GetTheta();
+      double phitrack = theTrack->GetPhi();
       double ptrack = theTrack->GetP();
       
       double minxdiff = 0.0; 
@@ -546,10 +576,19 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       double yGRINCH = clusttemp->GetYcenter();
 
       for( int imirr=0; imirr<fNmirror; imirr++ ){
-	if( xtrack - fTrackMatchPslope/ptrack >= fTrackMatchXmin[imirr] && xtrack - fTrackMatchPslope/ptrack < fTrackMatchXmax[imirr] ){
-	  double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]-fTrackMatchPslope/ptrack);
+	if( xtrack >= fTrackMatchXmin[imirr] && xtrack < fTrackMatchXmax[imirr] ){
+	  //double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]-fTrackMatchPslope/ptrack);
+	  //Implement new x-matching criterion parametrized based on track theta:
+	  double xdiff = xGRINCH - xtrack - ( fTrackMatchX0[imirr] + fTrackMatchXslope[imirr]*thetatrack );
 	  //double ydiff = fabs(ytrack - fTrackMatchYslope[imirr] * yGRINCH - fTrackMatchY0[imirr]);
-	  double ydiff = fabs( yGRINCH - fTrackMatchYslope[imirr] * ytrack - fTrackMatchY0[imirr] );
+
+	  //The lines below implement Maria's 3rd-order polynomial in track phi for the y correlation:
+	  double ypredict = fTrackMatchY0[imirr];
+	  for( int ipar=1; ipar<fOrderTrackMatchY; ipar++ ){
+	    ypredict += fTrackMatchYslope[3*imirr + ipar-1] * pow( phitrack, ipar );
+	  }
+	  
+	  double ydiff = yGRINCH - ytrack - ypredict; 
 	  
 	  double diff2 = pow( xdiff/fTrackMatchXsigma[imirr], 2 ) + pow( ydiff/fTrackMatchYsigma[imirr], 2 );
     
@@ -558,8 +597,12 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
 	    //if( iclmin < 0 || xdiff < minxdiff ){
 	    if( itrmin < 0 || diff2 < mindiff2 ){
 	      itrmin = itrack;
+	      bestmirror = imirr+1; //keep Maria's numbering convention of 1 to 4
 	      //  minxdiff = xdiff;
 	      mindiff2 = diff2;
+
+	      dxbest = xdiff;
+	      dybest = ydiff;
 	    }
 	  }
 	}
@@ -574,6 +617,11 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
 
       clusttemp->SetTrackIndex( itrmin ); 
       clusttemp->SetTrack( theTrack );
+      clusttemp->SetMirrorIndex( bestmirror );
+
+      clusttemp->SetDX( dxbest );
+      clusttemp->SetDY( dybest );
+      
       //We also need to loop on all the hits and set the track index for those hits:
       TIter next(clusttemp->GetHitList());
       SBSCherenkov_Hit *hittemp;
