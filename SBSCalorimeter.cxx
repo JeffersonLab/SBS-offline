@@ -469,6 +469,8 @@ Int_t SBSCalorimeter::FindClusters()
 	}	
       }
       
+      //std::cout << GetName() << " " << cluster->GetE() << " " << fEmin_clusTotal << std::endl;
+
       // Adding total cluster energy threshold
       if ( (cluster->GetE())<fEmin_clusTotal ) fClusters.pop_back();
 
@@ -580,6 +582,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
       if(nclus < fMaxNclus) { // Keep adding them until we reach fMaxNclus
 
         fOutclus.e.push_back(cluster->GetE());
+
         //fOutclus.e_c.push_back(cluster->GetE()*(fConst + fSlope*fAccCharge));
         fOutclus.again.push_back(cluster->GetAgain());
         fOutclus.atime.push_back(cluster->GetAtime());
