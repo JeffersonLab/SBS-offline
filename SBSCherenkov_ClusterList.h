@@ -29,6 +29,8 @@ class SBSCherenkov_Hit : public TObject {
 		    Double_t x, Double_t y, Double_t t, Double_t a );
   virtual ~SBSCherenkov_Hit() {}
   
+  virtual void    Clear( Option_t* opt);
+
   //void       Show(FILE * fout1);
   //void       Show(FILE * fout1, FILE * fout2);
   
