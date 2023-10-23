@@ -419,24 +419,48 @@ Int_t SBSCalorimeter::FindClusters()
       while (AddingBlocksToCluster) {
 	Bool_t Close=kFALSE; //Check if block within user-def radius and time to add to cluster
 	fBlockSetIterator it2 = fBlockSet.begin();
-	SBSElement *blk_p= fElements[(*fBlockSet.begin()).id-fChanMapStart];
-        Double_t pTime=blk_p->GetAtime();
 
 	while (!Close && (it2 < fBlockSet.end())) {
+	  //next block in blockset variables
 	  SBSElement *blk= fElements[(*it2).id-fChanMapStart]; 
+	  Int_t blk_ID = blk->GetID();
+	  Double_t blkx = blk->GetX();
+	  Double_t blky = blk->GetY();
+
+	  //current cluster primary variables
 	  Int_t Index = fClusters.size()-1;
-	  Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
-	  Double_t tDiff = blk->GetAtime()-pTime;
+	  Double_t Clus_px = fClusters[Index]->GetX();
+	  Double_t Clus_py = fClusters[Index]->GetY(); 
+	  Int_t Clus_pblkid = fClusters[Index]->GetElemID();
+	  Double_t Clus_ptime = fClusters[Index]->GetAtime();
+
+	  Double_t Rad = sqrt( pow((Clus_px-blkx),2) + pow((Clus_py-blky),2) );
+	  Double_t tDiff = blk->GetAtime()-Clus_ptime;
+
+	  //set up vector to add cluster id to goodblocks
+	  std::vector<Int_t> goodblock_ids = {Clus_pblkid};
+
+	  //Check each additional block in blockset to see if it can be added to current cluster or pass to next
 	  Close =( Rad<fRmax_dis && fabs(tDiff)<fTmax );
 	  if (Close) {
+
 	    fClusters[Index]->AddElement(blk);
-	    //loop over goodblock elements to find id for this added block, then add cluster id to corresponding goodblocks element
-	    for( Int_t j=0; j<NGBSize; ++j )
-	      if( blk->GetID()==fGoodBlocks.id[j] )
-		fGoodBlocks.cid[j]=Index;
-	  } else {	       
+	    goodblock_ids.push_back(blk_ID);
+	  } else {	
+       
 	    ++it2;
 	  }
+
+	  //Add all relevant cluster ids to goodblocks. With simple assignments and similar order iterations,
+	  //using nested loops for clarity and negligible impact to processing time
+	  for( Int_t i=0; i<NGBSize; ++i ){
+	    for( size_t j=0; j<goodblock_ids.size(); ++j ){
+	      if( goodblock_ids[j]==fGoodBlocks.id[i] && fGoodBlocks.cid[i]==-1){
+		fGoodBlocks.cid[i]=Index;
+	      }
+	    }
+	  }
+
 	}
 	if (it2 == fBlockSet.end()) AddingBlocksToCluster = kFALSE;
 	if (Close)   {
