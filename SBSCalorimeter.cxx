@@ -91,10 +91,10 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
 
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
-    { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
-    { "tmax",         &fTmax,   kDouble, 0, false }, ///< maximum time difference for block
-    { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, false }, ///< minimum cluster seed energy
-    { "emin_clTotal", &fEmin_clusTotal, kDouble, 0, false }, ///< minimum total cluster energy
+    { "emin",         &fEmin,   kDouble, 0, true }, ///< minimum energy threshold
+    { "tmax",         &fTmax,   kDouble, 0, true }, ///< maximum time difference for block
+    { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, true }, ///< minimum cluster seed energy
+    { "emin_clTotal", &fEmin_clusTotal, kDouble, 0, true }, ///< minimum total cluster energy
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
