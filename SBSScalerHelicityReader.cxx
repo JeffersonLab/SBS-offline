@@ -217,6 +217,8 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
    // Obtain the present data from the event for QWEAK helicity mode.
    const UInt_t *lbuff;
    static UInt_t evt_in_pattern;
+   static Int_t evtnum_offset=0;
+   static Int_t patnum_offset=0;
 
    static const char* here = "SBSScalerHelicityReader::ReadData";
 
@@ -422,42 +424,44 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
       if (fHelErrorCond!=sbs_HelErrorCond) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fHelErrorCond: "
 		  << fHelErrorCond << " " << sbs_HelErrorCond << std::endl;
-	fHelErrorCond |= 0x01000000;
+	fHelErrorCond |= 0x01010000;
       }
-      if (fNumEvents!=sbs_NumEvents) {
+      if (fNumEvents!=(sbs_NumEvents-evtnum_offset)) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fNumEvents: "
 		  << fNumEvents << " " << sbs_NumEvents << std::endl;
-	fHelErrorCond |= 0x01000000;
+	evtnum_offset = sbs_NumEvents - fNumEvents;
+	fHelErrorCond |= 0x01020000;
       }
-      if (fNumPatterns!=sbs_NumPatterns) {
+      if (fNumPatterns!=(sbs_NumPatterns-patnum_offset)) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fNumPatterns: "
 		  << fNumPatterns << " " << sbs_NumPatterns << std::endl;
-	fHelErrorCond |= 0x01000000;
+	patnum_offset = sbs_NumPatterns - fNumPatterns;
+	fHelErrorCond |= 0x01040000;
       }
       if (fPatternPhase!=sbs_PatternPhase) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fPatternPhase: "
 		  << fPatternPhase << " " << sbs_PatternPhase << std::endl;
-	fHelErrorCond |= 0x01000000;
+	fHelErrorCond |= 0x01080000;
       }
       if (fSeedValue!=sbs_SeedValue) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fSeedValue: "
 		  << fSeedValue << " " << sbs_SeedValue << std::endl;
-	fHelErrorCond |= 0x01000000;
+	fHelErrorCond |= 0x01100000;
       }
       if (fPatternHel!=sbs_PatternHel) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fPatternHel: "
 		  << fPatternHel << " " << sbs_PatternHel << std::endl;
-	fHelErrorCond |= 0x01000000;
+	fHelErrorCond |= 0x01200000;
       }
       if (fEventPolarity!=sbs_EventPolarity) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fEventPolarity: "
 		  << fEventPolarity << " " << sbs_EventPolarity << std::endl;
-	fHelErrorCond |= 0x01000000;
+	fHelErrorCond |= 0x01400000;
       }
       if (fReportedQrtHel!=sbs_ReportedQrtHel) {
 	if(fVerbosity>0) std::cerr << here << " LHRS/SBS Mismatch for fReportedQrtHel: "
 		  << fReportedQrtHel << " " << sbs_ReportedQrtHel << std::endl;
-	fHelErrorCond |= 0x01000000;
+	fHelErrorCond |= 0x01800000;
       }
    }
 
@@ -469,7 +473,7 @@ Int_t SBSScalerHelicityReader::ReadData( const THaEvData& evdata )
 	       << tsettle<<":"<<tsettle_sbs << std::endl;
      fHelErrorCond |= 0x10000000;
    }
-   if (fHelErrorCond!=16 && tsettle==0 &&  hel!= fPatternHel^fEventPolarity){
+   if (fHelErrorCond!=16 && tsettle==0 &&  hel!=(fPatternHel^fEventPolarity)){
      if(fVerbosity>0) std::cerr << here << " Mismatch between FADC helicity bit and value expected from predictor: "
 	       << hel << " " << "fPatternHel==" << fPatternHel
 	       << " fEventPolarity=="<<fEventPolarity << " "
