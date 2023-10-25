@@ -27,16 +27,20 @@ SBSCherenkov_Hit::SBSCherenkov_Hit():
   fX(kBig), fY(kBig), fTime(kBig), fAmp(kBig)
   //fFlag(0), fVeto(0) 
 {
+  fClustIndex = -1;
+  fTrackIndex = -1;
 } 
 
 //_____________________________________________________________________________
 SBSCherenkov_Hit::SBSCherenkov_Hit( Int_t pmtnum, Int_t i, Int_t j, 
-				    Float_t x, Float_t y, Float_t t, Float_t a ):
+				    Double_t x, Double_t y, Double_t t, Double_t a ):
   fPMTNum(pmtnum), fRow(i), fCol(j), 
   //fTDC(TDC), fToT(ToT), fADC(ADC), 
   fX(x), fY(y), fTime(t), fAmp(a)
   //fFlag(0), fVeto(0), tdcr_set(false), tdcf_set(false) 
 {
+  fClustIndex = -1;
+  fTrackIndex = -1;
 }
 
 //_____________________________________________________________________________
@@ -50,6 +54,18 @@ Int_t SBSCherenkov_Hit::Compare( const TObject* theOtherHit ) const
     return +1;
   else
     return 0;
+}
+
+void SBSCherenkov_Hit::Clear( Option_t *opt ){ 
+  fPMTNum = -1;
+  fRow = -1;
+  fCol = -1;
+  fClustIndex = -1;
+  fTrackIndex = -1;
+  fX = kBig;
+  fY = kBig;
+  fTime = kBig;
+  fAmp = kBig;
 }
 
 /*
@@ -96,6 +112,12 @@ SBSCherenkov_Cluster::SBSCherenkov_Cluster() : // f(0)
   fTimeRMS(0), fAmpRMS(0),
   fTrackMatch(false), fTrack(0)
 {
+  fTrackIndex = -1;
+  fMirrorIndex = -1;
+
+  fTrackMatch_dx = kBig;
+  fTrackMatch_dy = kBig; 
+  
   fHitList = new TList(); 
 }
 
@@ -105,7 +127,8 @@ SBSCherenkov_Cluster::SBSCherenkov_Cluster( const SBSCherenkov_Cluster& rhs ) : 
   fXcenter_w(rhs.fXcenter_w), fYcenter_w(rhs.fYcenter_w), fCharge(rhs.fCharge), 
   fMeanTime(rhs.fMeanTime), fMeanAmp(rhs.fMeanAmp),
   fTimeRMS(rhs.fTimeRMS), fAmpRMS(rhs.fAmpRMS),
-  fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack)
+  fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack), fTrackIndex(rhs.fTrackIndex),
+  fMirrorIndex(rhs.fMirrorIndex), fTrackMatch_dx(rhs.fTrackMatch_dx), fTrackMatch_dy(rhs.fTrackMatch_dy)
 {
   fHitList = new TList();
   if( rhs.fHitList && (rhs.fHitList->GetSize() > 0 )) {
@@ -131,6 +154,12 @@ SBSCherenkov_Cluster& SBSCherenkov_Cluster::operator=( const SBSCherenkov_Cluste
     fAmpRMS = rhs.fAmpRMS;
     fTrackMatch = rhs.fTrackMatch;
     fTrack = rhs.fTrack;
+
+    fTrackIndex = rhs.fTrackIndex;
+    fMirrorIndex = rhs.fMirrorIndex;
+
+    fTrackMatch_dx = rhs.fTrackMatch_dx;
+    fTrackMatch_dy = rhs.fTrackMatch_dy;
     
     if( !fHitList )
       fHitList = new TList;
@@ -208,6 +237,10 @@ void SBSCherenkov_Cluster::Clear( Option_t* opt ) // f = 0;
     fAmpRMS = 0;
     fTrackMatch = false;
     fTrack = 0;
+    fTrackIndex=-1;
+    fMirrorIndex = -1;
+    fTrackMatch_dx = kBig;
+    fTrackMatch_dy = kBig;
   } else {
     // Fast clear for clearing TClonesArrays of clusters
     // Needs to be deleted since a TList allocates memory
@@ -273,11 +306,11 @@ void SBSCherenkov_Cluster::Remove( SBSCherenkov_Hit* theHit )
 }
 
 //_____________________________________________________________________________
-Bool_t SBSCherenkov_Cluster::IsNeighbor(const SBSCherenkov_Hit* theHit, Float_t par)
+Bool_t SBSCherenkov_Cluster::IsNeighbor(const SBSCherenkov_Hit* theHit, Double_t par)
 {
   //cout << "SBSCherenkov_Cluster::IsNeighbor: " << endl;
   //cout << fHitList << endl;
-  Float_t dx,dy,dist2;
+  Double_t dx,dy,dist2;
   if( !fHitList )//{
     return 0;
   //}else{cout << " size ? " << fHitList->GetLast()+1 << endl;}

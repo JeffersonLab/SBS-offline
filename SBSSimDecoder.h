@@ -42,6 +42,8 @@ class SBSSimDecoder : public Podd::SimDecoder {
   virtual Int_t DefineVariables( THaAnalysisObject::EMode mode =
 				 THaAnalysisObject::kDefine );
   
+  virtual Int_t Init();
+
   // Workaround for fubar THaEvData
 #if ANALYZER_VERSION_CODE >= 67072  // ANALYZER_VERSION(1,6,0)
   static Int_t GetMAXSLOT() { return Decoder::MAXSLOT; }
@@ -103,6 +105,9 @@ protected:
 			    int& crateperslot, int& slotpercrate, 
 			    int& firstcrate, int& firstslot);
   */
+
+  bool fIsInit;
+
   void SetDetectors();
   Int_t AddDetector(std::string detname, TDatime date);
   Int_t ReadDetectorDB(std::string detname, TDatime date);
@@ -160,6 +165,7 @@ protected:
   Double_t fEPx_simc;
   Double_t fEPy_simc;
   Double_t fEPz_simc;
+  Int_t    fFnucl_simc;
   Double_t fNp_simc;
   Double_t fNtheta_simc;
   Double_t fNphi_simc;

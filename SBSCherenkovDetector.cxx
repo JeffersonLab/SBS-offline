@@ -48,6 +48,15 @@ SBSCherenkovDetector::SBSCherenkovDetector( const char* name, const char* descri
   fHits             = new TClonesArray("SBSCherenkov_Hit",500);
   fClusters         = new TClonesArray("SBSCherenkov_Cluster",50);
 
+  //fEmptyCluster = new SBSCherenkov_Cluster(); //dummy instance of cluster to initialize best cluster pointer for events with no found clusters
+  //  fBestCluster = nullptr;
+  //fEmptyCluster->SetXcenter(kBig);
+  //fEmptyCluster->SetYcenter(kBig);
+
+  //The above lines are not necessary as we have other handles to identify events with no clusters found
+
+  //fBestCluster = fEmptyCluster;
+
   //set default timing cuts wide open, these values are somewhat arbitrary:
   fHit_tmin = -1000.0;
   fHit_tmax = 4000.0; 
@@ -66,6 +75,7 @@ SBSCherenkovDetector::~SBSCherenkovDetector()
   delete fHits;
   // delete fResolvedHits;
   delete fClusters;
+
   // delete fResolvedClusters;
   // delete [] fMIPs;
   // delete [] fXseg;
@@ -80,9 +90,14 @@ void SBSCherenkovDetector::Clear( Option_t* opt )
   if( fDoBench ) fBench->Begin("Clear");
   SBSGenericDetector::Clear(opt);
   if(fDebug)cout << "Clear hits() " << endl; 
-  fHits->Clear();
+  fHits->Clear("C");
   //fResolvedHits->Clear();
   DeleteClusters();
+  
+  fNtrackMatch = 0;
+
+  fBestCluster.Clear("F");
+
   if( fDoBench ) fBench->Stop("Clear");
 }
 
@@ -176,8 +191,11 @@ Int_t SBSCherenkovDetector::DefineVariables( EMode mode )
     { "hit.col",    " PMT hit column",     "fHits.SBSCherenkov_Hit.GetCol()"    },
     { "hit.xhit",   " PMT hit X",          "fHits.SBSCherenkov_Hit.GetX()"      },
     { "hit.yhit",   " PMT hit y",          "fHits.SBSCherenkov_Hit.GetY()"      },
-    { "hit.amp",    " PMT hit ampliutude", "fHits.SBSCherenkov_Hit.GetAmp()"    },
+    { "hit.amp",    " PMT hit amplitude", "fHits.SBSCherenkov_Hit.GetAmp()"    },
     { "hit.time",   " PMT hit time",       "fHits.SBSCherenkov_Hit.GetTime()"   },
+    { "hit.clustindex", " Index of cluster to which this hit belongs", "fHits.SBSCherenkov_Hit.GetClustIndex()" },
+    { "hit.trackindex", " Index of track to which this hit belongs", "fHits.SBSCherenkov_Hit.GetTrackIndex()" },
+    { "ntrackmatch", "Number of track-matched clusters", "fNtrackMatch" },
     { 0 }
   };
   DefineVarsFromList( var1, mode, "" );// (re)define path here...
@@ -232,6 +250,8 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
   
   Int_t nHit = 0;
   SBSCherenkov_Hit* the_hit = nullptr;
+
+  fNtrackMatch = 0;
   
   for(int k = 0; k<fNGoodTDChits; k++){
     //tmin = -fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();

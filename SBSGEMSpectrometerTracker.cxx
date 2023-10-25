@@ -119,6 +119,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int useslopeconstraint = fUseSlopeConstraint ? 1 : 0;
   int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
+  int usetrigtime = fUseTrigTime ? 1 : 0;
   
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
@@ -168,6 +169,16 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "dyfpcut", &fdyfpcut, kDouble, 0, 1, 1 },
     { "dxpfpcut", &fdxpfpcut, kDouble, 0, 1, 1 },
     { "dypfpcut", &fdypfpcut, kDouble, 0, 1, 1 },
+    { "usetrigtime", &usetrigtime, kInt, 0, 1, 1 },
+    { "trigtime_crate", &fCrate_RefTime, kUInt, 0, 1, 1 },
+    { "trigtime_slot", &fSlot_RefTime, kUInt, 0, 1, 1 },
+    { "trigtime_chan", &fChan_RefTime, kUInt, 0, 1, 1 },
+    { "trigtime_t0", &fRefTime_Offset, kDouble, 0, 1, 1},
+    { "trigtime_calib", &fRefTime_CAL, kDouble, 0, 1, 1},
+    { "use_enhanced_chi2", &fUseEnhancedChi2, kInt, 0, 1, 1},
+    { "trackchi2cut_hitquality", &fTrackChi2CutHitQuality, kDouble, 0, 1, 1},
+    { "minhighqualityhitsontrack", &fMinHighQualityHitsOnTrack, kInt, 0, 1, 1},
+    { "sigmatrackt0", &fSigmaTrackT0, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -210,6 +221,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     //fZeroSuppress = false;
     fMakeEfficiencyPlots = false; //If in pedestal mode, we don't want efficiency plots
   }
+
+  fUseTrigTime = (usetrigtime != 0);
   
   //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
   std::vector<std::string> modules = vsplit(modconfig);
@@ -318,6 +331,8 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
 
   SBSGEMTrackerBase::Clear();
 
+  //fTrigTime = 0.0;
+  
   for( auto& module: fModules ) {
     module->Clear(opt);
   }
@@ -327,11 +342,52 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
   //return 0;
   //std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  "...";
 
+  //attempt to decode trigger time. No error-checking is done here on the channel info so you'd better provide this correctly in
+  //the DB:
+
+  fTrigTime = 0.0;
+
+  //  bool TriggerTimeIsDecoded = false;
+  
+  if( fUseTrigTime ){
+    int ntrigtdchits = evdata.GetNumHits( fCrate_RefTime, fSlot_RefTime, fChan_RefTime );
+
+    int besthit=-1;
+
+    double mintdiff = 1000.0;
+    double besttime = 0.0;
+    
+    //    std::cout << "[SBSGEMSpectrometerTracker::Decode]: ntrigtdchits = " << ntrigtdchits << std::endl;
+    
+    for( int ihit=0; ihit<ntrigtdchits; ihit++ ){
+      UInt_t rawtdc = evdata.GetData( fCrate_RefTime, fSlot_RefTime, fChan_RefTime, ihit );
+      UInt_t edge = evdata.GetRawData( fCrate_RefTime, fSlot_RefTime, fChan_RefTime, ihit );
+
+      double rawtime = rawtdc * fRefTime_CAL;
+      
+      if( edge == 0 ){ //make sure this is a leading-edge TDC
+	if(besthit < 0 || fabs( rawtime - fRefTime_Offset ) < mintdiff ){
+	  mintdiff = fabs( rawtime - fRefTime_Offset );
+	  besthit = ihit;
+	  besttime = rawtime - fRefTime_Offset;
+	}
+      }
+    }
+
+    if( besthit >= 0 ){
+      fTrigTime = besttime;
+      //  TriggerTimeIsDecoded = true;
+      //std::cout << "Decoded trigger time, ttrig, offset = " << besttime << ", " << fRefTime_Offset << std::endl; 
+    }
+  }
+  
   //Triggers decoding of each module:
 
   //Int_t stripcounter = 0;
   for( auto& module: fModules ) {
 
+    module->SetTriggerTime( fTrigTime );
+    
     module->Decode(evdata);
 
     //std::cout << "Decoding module " << (*it)->GetName() << ", nstrips fired = " << (*it)->fNstrips_hit << std::endl;
@@ -520,6 +576,7 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
   fIsSetup = ( mode == kDefine );
   
   RVarDef vars[] = {
+    { "trigtime", "trigger time (ns)", "fTrigTime" },
     { "track.ntrack", "number of tracks found", "fNtracks_found" },
     { "track.nhits", "number of hits on track", "fNhitsOnTrack" },
     { "track.x", "Track X (TRANSPORT)", "fXtrack" }, //might be redundant with spectrometer variables, but probably needed for "non-tracking" version
@@ -527,7 +584,10 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "track.xp", "Track dx/dz (TRANSPORT)", "fXptrack" },
     { "track.yp", "Track dy/dz (TRANSPORT)", "fYptrack" },
     { "track.chi2ndf", "Track Chi2/ndf", "fChi2Track" },
+    { "track.chi2ndf_hitquality", "Track Chi2/ndf for hit ADC and time correlations", "fChi2TrackHitQuality" },
     { "track.besttrack", "Index of 'best' track", "fBestTrackIndex" },
+    { "track.ngoodhits", "Number of high quality hits on track", "fNgoodhitsOnTrack" },
+    { "track.t0", "Track t0 time (weighted average of hit times relative to expected, ns)", "fT0track" },
     { "hit.ngoodhits", "Total number of hits on all found tracks", "fNgoodhits" },
     { "hit.trackindex", "Index of track containing this hit", "fHitTrackIndex" },
     { "hit.module", "Module index of this hit", "fHitModule" },
@@ -583,6 +643,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.Vtime", "cluster timing based on V strips", "fHitVTime" },
     { "hit.UtimeDeconv", "U strip deconvoluted cluster time", "fHitUTimeDeconv" },
     { "hit.VtimeDeconv", "V strip deconvoluted cluster time", "fHitVTimeDeconv" },
+    { "hit.UtimeFit", "cluster timing based on U strips", "fHitUTimeFit" },
+    { "hit.VtimeFit", "cluster timing based on V strips", "fHitVTimeFit" },
     { "hit.UtimeMaxStrip", "cluster timing based on U strips", "fHitUTimeMaxStrip" },
     { "hit.VtimeMaxStrip", "cluster timing based on V strips", "fHitVTimeMaxStrip" },
     { "hit.UtimeMaxStripDeconv", "cluster timing based on U strips", "fHitUTimeMaxStripDeconv" },
@@ -593,6 +655,8 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.Tavg", "hit T average", "fHitTavg" },
     { "hit.deltat_deconv", "deconvoluted cluster U time - Vtime", "fHitDeltaTDeconv" },
     { "hit.Tavg_deconv", "deconvoluted average U,V cluster time", "fHitTavgDeconv" },
+    { "hit.deltat_fit", "cluster U - V fit time", "fHitDeltaTFit" },
+    { "hit.Tavg_fit", "cluster (U+V)/2 fit time", "fHitTavgFit" },
     { "hit.isampmaxUclust", "peak time sample in cluster-summed U ADC samples", "fHitIsampMaxUclust" },
     { "hit.isampmaxVclust", "peak time sample in cluster-summed V ADC samples", "fHitIsampMaxVclust" },
     { "hit.isampmaxUclustDeconv", "peak time sample max. deconv. U cluster sum", "fHitIsampMaxUclustDeconv" },
@@ -638,7 +702,14 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
     { "hit.DeconvADC2_Vmax", "Max V strip deconv ADC2", "fHitDeconvADC2_MaxVstrip" },
     { "hit.DeconvADC3_Vmax", "Max V strip deconv ADC3", "fHitDeconvADC3_MaxVstrip" },
     { "hit.DeconvADC4_Vmax", "Max V strip deconv ADC4", "fHitDeconvADC4_MaxVstrip" },
-    { "hit.DeconvADC5_Vmax", "Max V strip deconv ADC5", "fHitDeconvADC5_MaxVstrip" },    
+    { "hit.DeconvADC5_Vmax", "Max V strip deconv ADC5", "fHitDeconvADC5_MaxVstrip" },
+    { "hit.TSchi2_Umax", "Max U strip TS chi2", "fHitTSchi2MaxUstrip" },
+    { "hit.TSchi2_Vmax", "Max V strip TS chi2", "fHitTSchi2MaxVstrip" },
+    { "hit.TSprob_Umax", "Max U strip TS prob", "fHitTSprobMaxUstrip" },
+    { "hit.TSprob_Vmax", "Max V strip TS prob", "fHitTSprobMaxVstrip" },
+    { "hit.Tavg_corr", "Corrected hit time (ns)", "fHitTavgCorrected" },
+    { "hit.Ugain","Applied gain factor U", "fHitUgain" },
+    { "hit.Vgain","Applied gain factor V", "fHitVgain" },
     { "nlayershit", "number of layers with any strip fired", "fNlayers_hit" },
     { "nlayershitu", "number of layers with any U strip fired", "fNlayers_hitU" },
     { "nlayershitv", "number of layers with any V strip fired", "fNlayers_hitV" },

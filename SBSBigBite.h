@@ -29,6 +29,9 @@ public:
 
   Bool_t GetMultiTracks() const;
   Bool_t SetMultiTracks( Bool_t set = false );
+
+  Bool_t GetUseBeamPosInOptics() const { return fUseBeamPosInOptics; }
+  void SetUseBeamPosInOptics( bool val=true ){ fUseBeamPosInOptics = val; }
     
   //virtual Int_t   Begin( THaRunBase* r=0 );
   //virtual Int_t   End( THaRunBase* r=0 );
@@ -56,6 +59,7 @@ protected:
   void InitOpticsAxes(double); //version with only bend angle argument
   void InitGEMAxes(double, double, const TVector3 & );
   void InitGEMAxes(double, double); //version with only angle arguments:
+
   
   // My current understanding is that fPointingOffset designates the point 
   // towards the beamline that the "mouth" of the spectrometer is pointing to...
@@ -87,6 +91,8 @@ protected:
   //TRotation fOpt2DetRot;// transformation from optics (ideal) to detector (actual)
   //TRotation fDet2OptRot;// transformation from detector (actual) to optics (ideal)
 
+  bool fDownBendingMode; //Default = false:
+  
   UInt_t fPrecon_flag; //Indicate which momentum reconstruction formalism we are using:
   // 0 (default) = expansion of p*thetabend vs fp x, y, x' y'
   // 1 = expansion as p*thetabend = pth(firstorder) * ( 1 + delta ), where
@@ -98,6 +104,13 @@ protected:
   Double_t fA_pth1; // default value (from simulation) is 0.28615 * 0.97
   Double_t fB_pth1; // default value (from simulation) is 0.1976
   Double_t fC_pth1; // default value (from simulation) is 0.4764
+  //Extra coefficents to remove the beam dependance
+  Double_t fA_vy;
+  Double_t fB_vy;
+
+  bool fIsMC;
+
+  bool fUseBeamPosInOptics; //default false;
   
   int fOpticsOrder;
   std::vector<double> fb_xptar;
@@ -111,6 +124,21 @@ protected:
   std::vector<int> f_ol;
   std::vector<int> f_om;
 
+  //Only relevant if downbending optics are defined via the DB:
+  int fOpticsOrderDownbend;
+  std::vector<double> fb_xptar_downbend;
+  std::vector<double> fb_yptar_downbend;
+  std::vector<double> fb_ytar_downbend;
+  std::vector<double> fb_pinv_downbend;
+  //AJRP: changed the exponents to integers here for speed:
+  std::vector<int> f_oi_downbend;
+  std::vector<int> f_oj_downbend;
+  std::vector<int> f_ok_downbend;
+  std::vector<int> f_ol_downbend;
+  std::vector<int> f_om_downbend;
+
+  
+  
   bool fUseForwardOptics; //default to false: turning this on will enable forward optics-based track search constraints
   
   int fForwardOpticsOrder;
@@ -208,13 +236,13 @@ protected:
   
     
   double fECaloFudgeFactor;// poor man's solution to apply the calorimeter constraint 
-    
+  
   enum {
     kMultiTracks  = BIT(13), // Tracks are to be sorted by chi2
     kSortTracks   = BIT(14), // Tracks are to be sorted by chi2
     kAutoStdDets  = BIT(15)  // Auto-create standard detectors if no "vdc"
   };
-    
+  
   ClassDef(SBSBigBite,0) // BigBite spectrometer
 };
 

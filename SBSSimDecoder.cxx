@@ -31,6 +31,7 @@
 #include "SBSBBTotalShower.h"
 #include "THaCrateMap.h"
 #include "Textvars.h"
+//#include "THaAnalysisObject.h"
 
 //#include <SBSSimFadc250Module.h>// we need not to need this
 #include "TList.h"
@@ -64,9 +65,9 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   fDetectors.clear();
   //fTree = 0;
   // Load detectors: rely on gHaApps (please tell me it works!!!)
-  cout << " Calling SBSSimDecoder! "<< endl;
-  cout << " Make sure you have already declared your apparatuses and detectors, and added these to gHaApps" << endl;
-  SetDetectors();
+  //cout << " Calling SBSSimDecoder! "<< endl;
+  //cout << " Make sure you have already declared your apparatuses and detectors, and added these to gHaApps" << endl;
+  //SetDetectors();
   
   // h1_sizeHCal = new TH1D("h1_sizeHCal", "", 500, 0, 5000);
   // h1_sizeGEMs = new TH1D("h1_sizeGEMs", "", 500, 0, 5000);
@@ -78,7 +79,7 @@ SBSSimDecoder::SBSSimDecoder()// : fCheckedForEnabledDetectors(false), fTreeIsSe
   fDecoderMPD = dynamic_cast<SBSSimSADCEncoder*>
     (SBSSimDataDecoder::GetEncoderByName("mpd"));
   
-  
+  fIsInit = false;
   
 }
 
@@ -89,6 +90,21 @@ SBSSimDecoder::~SBSSimDecoder() {
   //DefineVariables( THaAnalysisObject::kDelete );
   // h1_sizeHCal->Delete();
   // h1_sizeGEMs->Delete();
+}
+
+Int_t SBSSimDecoder::Init(){ 
+
+  Int_t status = THaEvData::Init();
+
+  fDetectors.clear();
+
+  //status += DefineVariables();
+  SetDetectors();
+
+  fIsInit = true;
+
+  return status;
+
 }
 
 //-----------------------------------------------------------------------------
@@ -122,7 +138,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"simc_px_e",     "MC e mom. x componant from SIMC gen.",   "fEPx_simc"},
     {"simc_py_e",     "MC e mom. y componant from SIMC gen.",   "fEPy_simc"},
     {"simc_pz_e",     "MC e mom. z componant from SIMC gen.",   "fEPz_simc"},
-    {"simc_p_n",      "MC e momentum from SIMC gen.",   "fEp_simc"},
+    {"simc_fnucl",    "MC final-state nucleon type from SIMC gen.",   "fFnucl_simc"},
+    {"simc_p_n",      "MC nucleon mom. from SIMC gen.",   "fNp_simc"},
     {"simc_theta_n",  "MC nucleon polar angle from SIMC gen.",   "fEtheta_simc"},
     {"simc_phi_n",    "MC nucleon azimuthal angle from SIMC gen.",   "fNphi_simc"},
     {"simc_px_n",     "MC nucleon mom. x componant from SIMC gen.",   "fNPx_simc"},
@@ -243,6 +260,8 @@ int SBSSimDecoder::LoadEvent(const Int_t* evbuffer )
   // Wrapper around DoLoadEvent so we can conveniently stop the benchmark
   // counter in case of errors
 
+  if( !fIsInit ) Init();
+
   int ret = DoLoadEvent( evbuffer );
 
   if( fDoBench ) fBench->Stop("physics_decode");
@@ -303,6 +322,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fEPx_simc = simEvent->Tgmn->simc_px_e;
   fEPy_simc = simEvent->Tgmn->simc_py_e;
   fEPz_simc = simEvent->Tgmn->simc_pz_e;
+  fFnucl_simc = simEvent->Tgmn->simc_fnucl;
   fNp_simc = simEvent->Tgmn->simc_p_n;
   fNtheta_simc = simEvent->Tgmn->simc_theta_n;
   fNphi_simc = simEvent->Tgmn->simc_phi_n;
@@ -327,7 +347,7 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fEp = simEvent->Tgmn->ev_ep;
   fNp = simEvent->Tgmn->ev_np;
   fNucl = simEvent->Tgmn->ev_nucl;
-  fFnucl = simEvent->Tgmn->ev_nucl;
+  fFnucl = simEvent->Tgmn->ev_fnucl;
   fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
   fBBtrack_Nhits = *(simEvent->Tgmn->Earm_BBGEM_Track_NumHits);
   fBBtrack_TID = *(simEvent->Tgmn->Earm_BBGEM_Track_TID);
@@ -1081,6 +1101,16 @@ void SBSSimDecoder::SetTree(TTree *t)
 
 void SBSSimDecoder::SetDetectors()
 {
+  //std::cout << "[SBSSimDecoder::SetDetectors()]: rundate = ";
+
+  //TDatime rundate = gHaRun->GetDate(); //will this work? answer appears to be NO
+  
+  //If the following works, we should be gold:
+  TDatime rundate;
+  rundate.Set( GetRunTime() ); //GetRunTime() gives the run time as a UNIX time
+
+  rundate.Print();
+
   TIter aiter(gHaApps);
   THaApparatus* app = 0;
   while( (app=(THaApparatus*)aiter()) ){
@@ -1092,13 +1122,21 @@ void SBSSimDecoder::SetDetectors()
 	   << " into SBSSimDecoder" << endl;
       if(strcmp(app->GetDetector(det->GetName())->GetClassName(),"SBSBBTotalShower")==0){
 	SBSBBTotalShower* TS = (SBSBBTotalShower*)app->GetDetector(det->GetName());
+	// AddDetector(Form("%s.%s",app->GetName(), TS->GetShower()->GetName()), 
+	// 	    (app->GetDetector(det->GetName()))->GetInitDate());
+	// AddDetector(Form("%s.%s",app->GetName(), TS->GetPreShower()->GetName()), 
+	// 	    (app->GetDetector(det->GetName()))->GetInitDate());
+
 	AddDetector(Form("%s.%s",app->GetName(), TS->GetShower()->GetName()), 
-		    (app->GetDetector(det->GetName()))->GetInitDate());
+		    rundate);
 	AddDetector(Form("%s.%s",app->GetName(), TS->GetPreShower()->GetName()), 
-		    (app->GetDetector(det->GetName()))->GetInitDate());
+		    rundate);
        }else{
+	// AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
+	// 	    (app->GetDetector(det->GetName()))->GetInitDate());
+
 	AddDetector(Form("%s.%s",app->GetName(), det->GetName()), 
-		    (app->GetDetector(det->GetName()))->GetInitDate());
+		    rundate);
       }
     }
   }
@@ -1122,8 +1160,18 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   const string prefix = detname+".";
   // First, open the common db file and parse info there, later, the
   // digitization specific db can be used to override any values
-  FILE* file  = Podd::OpenDBFile(fileName.c_str(), date);
+  //FILE* file  = Podd::OpenDBFile(fileName.c_str(), date);
   
+  std::cout << "Calling ReadDetectorDB for detector " << detname << ", Date = ";
+  date.Print();
+
+  // FILE *file = Podd::OpenDBFile( detname.c_str(), date, "SBSSimDecoder::ReadDetectorDB()", 
+  // 				 "r", 2 );
+
+  FILE *file = Podd::OpenDBFile( detname.c_str(), date );
+  
+  if( !file ) return THaAnalysisObject::kFileError;
+
   std::vector<int> detmap,chanmap;//, detmap_adc;
   uint nchan, nlogchan = 0, chanmapstart = 0;
   
@@ -1151,7 +1199,7 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
   Int_t err;
   int nparam_mod = 5;
   if(isgem){//gem detectors
-    nparam_mod = 4;
+    nparam_mod = 9;
   }
   int crate,slot,ch_lo,ch_hi, ch_ref, ch_count = 0, ch_map = 0;
   
@@ -1198,10 +1246,15 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
 	};
 	err+= THaAnalysisObject::LoadDB(file, date, request_gem, pref_mod.c_str());
 
-	fInvGEMDetMap[detname].resize(fInvGEMDetMap[detname].size()+2);
+	fInvGEMDetMap[detname].resize(fInvGEMDetMap[detname].size()+2); //increments the size of this container by two. But it never gets initialized prior to now! We have to trust that the size is zero to start with. Is this safe? Probably not... 
+	
+	//This resizes the fInvGEMDetMap[detname][2*module+axis] to the total size of the decode map
 	for(int m = 0; m<2; m++)(fInvGEMDetMap[detname])[mod*2+m].resize(chanmap.size()/nparam_mod);
 	
-	int nparam_mod = 9;
+	// std::cout << "(detname, mod, nparam_mod)=(" << detname << ", " << mod << ", " << nparam_mod 
+	// 	  << ")" << std::endl;
+
+	//	int nparam_mod = 9;
 	int ax_prev = 0;
 	int n_ax = 0, n_ax_x = 0, n_ax_y = 0;
 	for(size_t k = 0; k < chanmap.size(); k+=nparam_mod) {
@@ -1418,6 +1471,9 @@ int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
   chan = h_chan%128;
   int n = (h_chan-chan)/128;
 
+  // std::cout << "(detname, mod, h_chan, chan, n )= (" << detname << ", " << mod << ", "
+  // 	    << h_chan << ", " << chan << ", " << n << ")" << std::endl;
+  
   assert(mod<fInvGEMDetMap.at(detname).size());
   assert(n<(fInvGEMDetMap.at(detname)[mod]).size());
 

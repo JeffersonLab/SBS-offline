@@ -125,6 +125,11 @@ protected:
   //CalcLineOfBestFit only calculates the track parameters, does not calculate chi2 or residuals:
   void CalcLineOfBestFit( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
 
+  Double_t CalcTrackChi2HitQuality( const std::map<int,int> &hitcombo, Double_t &t0track );
+  Double_t CalcTrackT0( const std::map<int,int> &hitcombo );
+
+  Int_t CountHighQualityHits( const std::map<int,int> &hitcombo );
+  
   // routine to fit the best track to a set of hits, without the overhead of chi2 calculation, useful for "exclusive residuals" calculation:
   //void FitTrackNoChisquaredCalc( const std::map<int,int> &hitcombo, double &xtrack, double &ytrack, double &xptrack, double &yptrack );
   
@@ -162,6 +167,7 @@ protected:
   int fTrackingAlgorithmFlag; //Choose track algorithm
 
   int fMinHitsOnTrack; //default = 3; cannot be less than 3, cannot be more than total number of layers
+  int fMinHighQualityHitsOnTrack; //default = 2, minimum number of "good" hits on the track 
   
   long fMaxHitCombinations; //default = 10000; this is for "outer" layers
   long fMaxHitCombinations_InnerLayers; //default = 10000?
@@ -194,8 +200,11 @@ protected:
   //These variables are arguably redundant with the ones above, but as defined, these include a bit of extra "slop" to account for resolution, misalignments, z staggering of
   // modules within a layer, etc.
   std::map<int, double> fGridXmin_layer, fGridYmin_layer, fGridXmax_layer, fGridYmax_layer;
-  
+
+
+  Int_t fUseEnhancedChi2; //flag to control how we use the "enhanced chi2" in the track-finding (if at all)
   double fTrackChi2Cut; //chi2/NDF cut for track validity
+  double fTrackChi2CutHitQuality; //chi2/NDF cut for hit quality.
 
   bool fUseConstraint;
   bool fUseOpticsConstraint; //default to FALSE:
@@ -289,14 +298,19 @@ protected:
   std::vector<std::vector<double> > fresidv_hits; //inclusive residuals: track - hit along direction measured by v strips
   std::vector<std::vector<double> > feresidu_hits; //exclusive residuals: track - hit along direction measured by u strips
   std::vector<std::vector<double> > feresidv_hits; //exclusive residuals: track - hit along direction measured by v strips
+
+  std::vector<int> fNgoodhitsOnTrack; //Number of "high quality" hits on track
   
   //Fitted track parameters: coordinates at Z = 0 and slopes
   std::vector<double> fXtrack;
   std::vector<double> fYtrack;
   std::vector<double> fXptrack;
   std::vector<double> fYptrack;
+  std::vector<double> fT0track;
   std::vector<double> fChi2Track; //chi2/ndf
-
+  std::vector<double> fChi2TrackHitQuality; //chi2/ndf of hit properties on track (ADC asymmetry, correlation coefficient, time X/Y or U/V time difference, etc).
+  
+  
   int fBestTrackIndex; //Index of "golden track" within the TClonesArray defined by THaSpectrometer or other "best track" selection method (if not a spectrometer tracker)
   
   // We will need to define some global variables that are either in the form of basic data or vectors of basic data,
@@ -375,13 +389,19 @@ protected:
   //new variables for deconvoluted ADC values:
   std::vector<double> fHitADCasym_deconv; //U/V asymmetry of cluster-summed deconvoluted ADC "max combo"
   std::vector<double> fHitADCavg_deconv; //U/V average of cluster-summed deconvoluted ADC "max combo"
+  //Add applied gain factors for convenience later:
+  std::vector<double> fHitUgain;  //gain factor applied to max U strip in cluster
+  std::vector<double> fHitVgain;  //gain factor applied to max V strip in cluster
   //
   std::vector<double> fHitUTime; // cluster-mean time, U strips
   std::vector<double> fHitVTime; // cluster-mean time, V strips
   //New deconvoluted hit time 
   std::vector<double> fHitUTimeDeconv; //cluster-mean time, deconvoluted, U strips
   std::vector<double> fHitVTimeDeconv; //cluster-mean time, deconvoluted, V strips
-  //
+  // New fit time:
+  std::vector<double> fHitUTimeFit; //
+  std::vector<double> fHitVTimeFit;
+ 
   std::vector<double> fHitUTimeMaxStrip; // strip-mean time, U strips
   std::vector<double> fHitVTimeMaxStrip; // strip-mean time, V strips
   std::vector<double> fHitUTimeMaxStripFit; //fitted strip t0
@@ -394,6 +414,11 @@ protected:
   std::vector<double> fHitDeltaTDeconv;
   std::vector<double> fHitTavgDeconv;
   //
+  std::vector<double> fHitDeltaTFit;
+  std::vector<double> fHitTavgFit; 
+
+  std::vector<double> fHitTavgCorrected;
+  
   std::vector<double> fHitIsampMaxUclust; //Time-sample peak in cluster-summed ADC samples, U strips
   std::vector<double> fHitIsampMaxVclust; //Time-sample peak in cluster-summed ADC samples, V strips
   std::vector<double> fHitIsampMaxUstrip; //Same but for max strip in cluster
@@ -440,6 +465,11 @@ protected:
   std::vector<double> fHitDeconvADC3_MaxVstrip; //time sample 3 of max V strip
   std::vector<double> fHitDeconvADC4_MaxVstrip; //time sample 4 of max V strip
   std::vector<double> fHitDeconvADC5_MaxVstrip; //time sample 5 of max V strip
+  
+  std::vector<double> fHitTSchi2MaxUstrip;
+  std::vector<double> fHitTSchi2MaxVstrip;
+  std::vector<double> fHitTSprobMaxUstrip;
+  std::vector<double> fHitTSprobMaxVstrip;
   
   
   //And I THINK that's all we need to get started!
@@ -529,6 +559,21 @@ protected:
 
   std::string fpedfilename;
   std::string fcmfilename;
+
+  //Trigger time TDDC channel information to correct GEM hit times for trigger time (if applicable):
+  Double_t fTrigTime; //trigger time 
+
+  Bool_t fUseTrigTime; //attempt to decode trigger time and use to correct GEM strip time
+  //Trigger/reference time information: 
+  UInt_t fCrate_RefTime; 
+  UInt_t fSlot_RefTime; 
+  UInt_t fChan_RefTime; 
+  Double_t fRefTime_Offset;
+  Double_t fRefTime_CAL;
+
+  Double_t fSigmaTrackT0; // sigma of track mean time. Default = 5 ns
+
+  //Double_t fRefTime_offset;
   
 };
 
