@@ -112,6 +112,7 @@ public:
 
   void SetDataOutputLevel(int var) { fDataOutputLevel = var; }
 
+  Double_t GetTmax() const { return fTmax; }
 
 protected:
 

@@ -316,6 +316,9 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
   for (UInt_t nc=0;nc<ShowerClusters.size();nc++) {
     Double_t xsh = ShowerClusters[nc]->GetX();
     Double_t ysh = ShowerClusters[nc]->GetY();
+    Double_t esh = ShowerClusters[nc]->GetE();
+    Double_t tsh = ShowerClusters[nc]->GetAtime();
+    
     Bool_t AddToPreShowerCluster = kFALSE;
 
     fSHclusPSclusIDmap[nc] = -1;
@@ -325,7 +328,9 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 	SBSElement* psblk = fPreShower->GetElement(PreShowerBlockSet[nps].id);
 	Double_t xps =  PreShowerBlockSet[nps].x;
 	Double_t yps =  PreShowerBlockSet[nps].y;
-	Bool_t MatchCriterion = abs(xsh-xps) < fMaxDx && abs(ysh-yps) < fMaxDy;
+	Double_t tps =  PreShowerBlockSet[nps].ADCTime;
+	
+	Bool_t MatchCriterion = fabs(xsh-xps) <= fMaxDx && fabs(ysh-yps) <= fMaxDy && fabs( tsh-tps ) <= fPreShower->GetTmax();
 	if (MatchCriterion) {
 	  PreShowerBlockSet[nps].InCluster = kTRUE;
 	  if (!AddToPreShowerCluster) {

@@ -461,13 +461,12 @@ Int_t SBSCalorimeter::FindClusters()
 	  Emax = cluster->GetE();
 	  fBestClusterIndex = fClusters.size()-1;
 	}
-      } else delete cluster;
+      } else delete cluster; //prevent memory leak
     } else break; //end check that primary block is above cluster seed threshold. If the primary block is below cluster seed threshold, exit the loop; there are no more clusters to find; AND we would get stuck in infinite loop without this break statement;
     
-  } //End loop on while( NSize != 0 )
+  } //End loop on while( NSize != 0 ). Each iteration of this loop finds one cluster, as long as there are more clusters to find.
 
-  //NOW clustering is done; we need to loop on fGoodBlocks;
-  // Here the range-based for loop is probably most convenient:
+  //NOW clustering is finished; we need to loop on fGoodBlocks and assign the cluster IDs;
   for( int iblk=0; iblk<fGoodBlocks.id.size(); iblk++ ){
     auto foundblock = clusterids_by_blockid.find( fGoodBlocks.id[iblk] );
 
@@ -476,7 +475,8 @@ Int_t SBSCalorimeter::FindClusters()
     }
   }
   //We want the "best" cluster to be the one with the largest total energy (in general)
-  
+
+  //For now, keeping the old clustering code here, but commented out. 
   // while ( NSize != 0 )  {
   //   std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
     
