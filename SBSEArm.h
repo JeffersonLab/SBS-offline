@@ -54,13 +54,22 @@ protected:
   std::vector<double> fBackConstraintY;
   std::vector<double> fBackConstraintZ;
 
+  Double_t fHCALtheta_n; //xHCAL/HCALdist
+  Double_t fHCALphi_n; //yHCAL/HCALdist
+
+  Double_t fHCALdir_x;
+  Double_t fHCALdir_y;
+  Double_t fHCALdir_z;
+
   TVector3 fGEMorigin;  //Absolute position of GEM origin relative to target center, in TARGET transport coordinates
   Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
   Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
 
-
   Double_t fMagDist; //mandatory parameter from run database
+  Double_t fHCALdist; //add to run database (this only changes when kinematics change). But should it be optional or mandatory? 
   
+  Double_t fBdL; //define BdL (assumed units = T*m)
+
   TVector3 fGEMxaxis_global;
   TVector3 fGEMyaxis_global;
   TVector3 fGEMzaxis_global;

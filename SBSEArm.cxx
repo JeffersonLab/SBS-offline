@@ -40,6 +40,8 @@ THaSpectrometer( name, description )
   fGEMorigin.SetXYZ(0,0,0);
 
   fMagDist = 2.25; //This is a required parameter from ReadRunDatabase
+  fHCALdist = 17.0; //default 17 m (GEN setting). But mandatory in readrundb
+  fBdL = 1.58; // T*m (optional: calculate avg. proton deflection for pcentral)
   
   fOpticsAngle = 0.0;
   fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.025 ); //In g4sbs, the front tracker first plane starts (by default) at 2.025 m downstream of the SBS magnet front face
@@ -102,6 +104,7 @@ Int_t SBSEArm::ReadRunDatabase( const TDatime &date ){
   //Require magdist:
   const DBRequest req[] = {
     { "magdist", &fMagDist, kDouble, 0, 0, 1 },
+    { "hcaldist", &fHCALdist, kDouble, 0, 0, 1 },
     { nullptr }
   };
   err = LoadDB( file, date, req );
@@ -160,6 +163,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "optics_order",    &fOpticsOrder, kInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "preconflag", &fPrecon_flag, kUInt, 0, 1, 1 },
+    { "BdL", &fBdL, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -261,10 +265,21 @@ Int_t SBSEArm::DefineVariables( EMode mode ){
     { "z_fcp", "front track constraint z", "fFrontConstraintZ" },
     { "x_bcp", "back track constraint x", "fBackConstraintX" },
     { "y_bcp", "back track constraint y", "fBackConstraintY" },
-    { "z_bcp", "back track constraing z", "fBackConstraintZ" },
+    { "z_bcp", "back track constraint z", "fBackConstraintZ" },
     { nullptr }
   };
   DefineVarsFromList( constraintvars, mode );
+
+  RVarDef hcalanglevars[] = {
+    { "HCALth_n", "xHCAL/HCALdist", "fHCALtheta_n" },
+    { "HCALph_n", "yHCAL/HCALdist", "fHCALphi_n" },
+    { "HCALdir_x", "x component of HCAL unit vector", "fHCALdir_x" },
+    { "HCALdir_y", "y component of HCAL unit vector", "fHCALdir_y" },
+    { "HCALdir_z", "z component of HCAL unit vector", "fHCALdir_z" },
+    { nullptr }
+  };
+  DefineVarsFromList( hcalanglevars, mode );
+    
   
   return 0;
 }
@@ -579,6 +594,13 @@ Int_t SBSEArm::CoarseTrack()
 Int_t SBSEArm::CoarseReconstruct()
 {
 
+  fHCALtheta_n = kBig;
+  fHCALphi_n = kBig;
+
+  fHCALdir_x = kBig;
+  fHCALdir_y = kBig;
+  fHCALdir_z = kBig;
+
   THaSpectrometer::CoarseReconstruct(); 
 
   Double_t x_fcp = 0, y_fcp = 0, z_fcp = 0;
@@ -611,6 +633,17 @@ Int_t SBSEArm::CoarseReconstruct()
       y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
       z_bcp = HCal->GetOrigin().Z();
           
+      fHCALtheta_n = HCalClusters[i_max]->GetX()/fHCALdist;
+      fHCALphi_n = HCalClusters[i_max]->GetY()/fHCALdist;
+
+      TVector3 HCALdir_global; 
+
+      TransportToLab( 1.0, fHCALtheta_n, fHCALphi_n, HCALdir_global );
+
+      fHCALdir_x = HCALdir_global.X();
+      fHCALdir_y = HCALdir_global.Y();
+      fHCALdir_z = HCALdir_global.Z();
+
       //x_fcp = fGEMorigin.X();
       //y_fcp = fGEMorigin.Y();
       //z_fcp = fGEMorigin.Z();
