@@ -2914,7 +2914,7 @@ Double_t SBSGEMTrackerBase::CalcTrackChi2HitQuality( const std::map<int,int> &hi
 
   
   //each hit contributes three dof:
-  double ndf = 3.0 * hitcombo.size();
+  double ndf = 3.0 * hitcombo.size() + 1;
   return chi2/ndf;
   
 }
