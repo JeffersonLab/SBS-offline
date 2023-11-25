@@ -10,6 +10,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name : JSON to variables
+        uses: antifree/json-to-variables@v1.1.1
+        with:
+          filename: 'release.json'
+    
+      - name: show output
+        run : echo "${{ env.analyzer }}"
       -
         name: Docker meta
         id: meta
@@ -45,3 +53,4 @@ jobs:
             DOCKER_TAG=${{ steps.meta.outputs.tags }}
             APP_VERSION=${{ github.ref_name}}
             REPO_NAME=${{ github.event.repository.name }}
+            ANALYZER_VERSION=${{ env.analyzer }}

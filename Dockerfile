@@ -4,7 +4,7 @@ FROM almalinux:9.2
 ARG APP_VERSION
 ARG REPO_NAME
 ARG ANALYZER_REPO_NAME=analyzer
-ARG ANALYZER_VERSION=Release-177
+ARG ANALYZER_VERSION
 
 SHELL ["/bin/bash", "-c"]
 ADD http://pki.jlab.org/JLabCA.crt /etc/pki/ca-trust/source/anchors/JLabCA.crt
