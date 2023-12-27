@@ -1847,8 +1847,8 @@ void SBSGEMTrackerBase::find_tracks(){
 
 			int minhits = fMinHighQualityHitsOnTrack;
 			if( hitcombo.size() == 3 ){
-			  //minhits = std::max( 2, std::min( 3, fMinHighQualityHitsOnTrack ) );
-			  minhits = 3;
+			  minhits = std::max( 2, std::min( 3, fMinHighQualityHitsOnTrack ) ); //to use a 3-hit track, we will require at least two "good" hits on the track.
+			  //minhits = 3;
 			}
 			
 			if( nhighQhits >= minhits ){
@@ -1863,8 +1863,8 @@ void SBSGEMTrackerBase::find_tracks(){
 			
 			  if( fUseEnhancedChi2 >= 2 ){ //Use sum of hit chi2 and spatial chi2 as criterion for best hit candidate selection
 			    double chi2space = chi2ndftemp * (2.0*hitcombo.size() - 4.0);
-			    double chi2hits = 3.0*hitcombo.size() * CalcTrackChi2HitQuality( hitcombo, t0temp );
-			    double ndftot = 5.0*hitcombo.size() - 4.0;
+			    double chi2hits = (3.0*hitcombo.size() + 1.0 ) * CalcTrackChi2HitQuality( hitcombo, t0temp );
+			    double ndftot = 5.0*hitcombo.size() + 1.0 - 4.0;
 			    chi2enhanced = (chi2space + chi2hits)/ndftot;
 			  }
 
@@ -1963,8 +1963,8 @@ void SBSGEMTrackerBase::find_tracks(){
 			
 			if( fUseEnhancedChi2 >= 2 ){
 			  double chi2space = chi2ndftemp * (2.0*hitcombo.size()-4.0);
-			  double chi2hits = 3.0*hitcombo.size() * CalcTrackChi2HitQuality( hitcombo, t0temp );
-			  double ndftot = 5.0*hitcombo.size()-4.0;
+			  double chi2hits = (3.0*hitcombo.size() + 1.0 )* CalcTrackChi2HitQuality( hitcombo, t0temp );
+			  double ndftot = 5.0*hitcombo.size() + 1.0 -4.0;
 			  chi2enhanced = (chi2space + chi2hits)/ndftot;
 			}
 
