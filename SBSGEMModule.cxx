@@ -3262,8 +3262,9 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   // }
   
   for( int ihit=0; ihit<fNstrips_hit; ihit++ ){
-    if( fAxis[ihit] == axis && fKeepStrip[ihit] ){
-      
+    //if( fAxis[ihit] == axis && fKeepStrip[ihit] ){
+    if( fAxis[ihit] == axis ){ //Try only enforcing fKeepStrip on the cluster maximum:
+    
       bool newstrip = (striplist.insert( fStrip[ihit] ) ).second;
 
       if( newstrip ){ //should always be true:
@@ -3376,7 +3377,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
       // 	}
       // }
 
-      if( goodtime ){
+      if( goodtime && fKeepStrip[hitindex[strip]] ){
 	islocalmax[strip] = true;
 	localmaxima.insert( strip );
       }

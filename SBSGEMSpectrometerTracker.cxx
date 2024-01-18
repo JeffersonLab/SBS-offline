@@ -120,6 +120,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   int usetrigtime = fUseTrigTime ? 1 : 0;
+
+  //  std::vector<int> mingoodhits; 
+  //std::vector<double> chi2cut_space;
+  //std::vector<double> chi2cut_hits;
   
   DBRequest request[] = {
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
@@ -135,7 +139,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "gridbinwidthy", &fGridBinWidthY, kDouble, 0, 1},
     { "gridedgetolerancex", &fGridEdgeToleranceX, kDouble, 0, 1},
     { "gridedgetolerancey", &fGridEdgeToleranceY, kDouble, 0, 1},
-    { "trackchi2cut", &fTrackChi2Cut, kDouble, 0, 1},
+    { "trackchi2cut", &fTrackChi2Cut, kDoubleV, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
     { "constraintwidth_theta", &fConstraintWidth_theta, kDouble, 0, 1},
     { "constraintwidth_phi", &fConstraintWidth_phi, kDouble, 0, 1},
@@ -176,9 +180,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "trigtime_t0", &fRefTime_Offset, kDouble, 0, 1, 1},
     { "trigtime_calib", &fRefTime_CAL, kDouble, 0, 1, 1},
     { "use_enhanced_chi2", &fUseEnhancedChi2, kInt, 0, 1, 1},
-    { "trackchi2cut_hitquality", &fTrackChi2CutHitQuality, kDouble, 0, 1, 1},
-    { "minhighqualityhitsontrack", &fMinHighQualityHitsOnTrack, kInt, 0, 1, 1},
+    { "trackchi2cut_hitquality", &fTrackChi2CutHitQuality, kDoubleV, 0, 1, 1},
+    { "minhighqualityhitsontrack", &fMinHighQualityHitsOnTrack, kIntV, 0, 1, 1},
     { "sigmatrackt0", &fSigmaTrackT0, kDouble, 0, 1, 1 },
+    { "cuttrackt0", &fCutTrackT0, kDouble, 0, 1, 1 },
     {0}
   };
 
