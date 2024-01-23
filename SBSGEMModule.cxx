@@ -5255,9 +5255,9 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     
     if(stepsize == 0) cout<<"SBSGEMModule::GetCommonMode() ERROR Histogramming has zeros"<<endl;
     //Construct std::vectors and explicitly zero-initialize them:
-    std::vector<int> bincounts(nbins,0);
-    std::vector<double> binADCsum(nbins,0.0);
-    std::vector<double> binADCsum2(nbins,0.0);
+    std::vector<int> bincounts(nbins+1,0);
+    std::vector<double> binADCsum(nbins+1,0.0);
+    std::vector<double> binADCsum2(nbins+1,0.0);
     
     int ibinmax=-1;
     int maxcounts=0;
@@ -5283,7 +5283,7 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
 	binlow--;
       }
 
-      while( binhigh < nbins && fabs( ADC - (scan_min + binhigh*stepsize) ) <= binwidth ){
+      while( binhigh <= nbins && fabs( ADC - (scan_min + binhigh*stepsize) ) <= binwidth ){
 	bincounts[binhigh]++;
 	binADCsum[binhigh] += ADC;
 	binADCsum2[binhigh] += pow(ADC,2);
