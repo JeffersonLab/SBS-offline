@@ -44,6 +44,15 @@ SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
     break;
   }
   
+  if(Tgmn==0){
+    std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree can't be found! Stopping the program! " << std::endl;
+    exit(-1);
+  }
+  if(Tgmn->GetEntry(0)==0){
+    std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree is empty! Stopping the program! " << std::endl;
+    exit(-1);
+  }
+  
   //Weight = 1;
   Clear();
 }
@@ -103,7 +112,6 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
     ret = Tgmn->GetEntry(entry);
     break;
   }
-  
   //cout << Earm_BBPSTF1.nhits << " " << Earm_BBSHTF1.nhits << " " << Earm_BBHodoScint.nhits <<  " " << Earm_GRINCH.nhits << " " << Earm_BBGEM.nhits << " " << Harm_HCalScint.nhits << endl;
   return ret;
 }

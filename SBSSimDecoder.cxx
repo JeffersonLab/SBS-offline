@@ -261,11 +261,14 @@ int SBSSimDecoder::LoadEvent(const Int_t* evbuffer )
   // counter in case of errors
 
   if( !fIsInit ) Init();
-
-  int ret = DoLoadEvent( evbuffer );
-
+  
+  int ret = -1;
+  if(sizeof(evbuffer)!=0){
+    ret = DoLoadEvent( evbuffer );
+  }
+  
   if( fDoBench ) fBench->Stop("physics_decode");
-
+  
   return ret;
 }
 
@@ -292,10 +295,10 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   Bool_t fNeedInit = fgNeedInit;
 #endif
   assert( fMap || fNeedInit );
-
+  
   // Local copy of evbuffer pointer, used in GetMCHitInfo
   buffer = evbuffer;
-
+  
   // if(!fTreeIsSet){
   //   std::cerr << "SBSSimDecoder Tree not initialized correctly - exiting" << std::endl;
   //   return HED_FATAL;
@@ -307,6 +310,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   if(fDebug>2)std::cout << "Processing " << here << std::endl;
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
+  // add a check here!!!
+  
   //simc variables
   fSigma_simc = simEvent->Tgmn->simc_sigma;
   fWeight_simc = simEvent->Tgmn->simc_Weight;
