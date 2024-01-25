@@ -42,11 +42,13 @@ struct SBSCalBlocks {
   std::vector<Double_t> x; //< []
   std::vector<Double_t> y; //< []
   std::vector<Int_t>   id;      // []
+  std::vector<Int_t>   cid;
   void clear() {
     e.clear();
     x.clear();
     y.clear();
     id.clear();
+    cid.clear();
     row.clear();
     col.clear();
     TDCTime.clear();
@@ -110,6 +112,7 @@ public:
 
   void SetDataOutputLevel(int var) { fDataOutputLevel = var; }
 
+  Double_t GetTmax() const { return fTmax; }
 
 protected:
 

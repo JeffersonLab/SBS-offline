@@ -25,11 +25,14 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fTrackingAlgorithmFlag = 2;
 
   fMinHitsOnTrack = 3;
-  fMinHighQualityHitsOnTrack = 2;
+  //fMinHighQualityHitsOnTrack = 0;
+  fMinHighQualityHitsOnTrack.clear();
+  fMinHighQualityHitsOnTrack.resize(1,0); //default to no "high quality" hits required
+
 
   fMaxHitCombinations = 10000;
   fMaxHitCombinations_InnerLayers = 100000;
-  fMaxHitCombinations_Total = 10000000000.0;
+  fMaxHitCombinations_Total = 1.e16;
   fTryFastTrack = true;
 
   //moved zero suppression/common-mode parameters to module class
@@ -44,9 +47,14 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fGridEdgeToleranceY = 0.003; //3 mm default
 
   fUseEnhancedChi2 = 0; //Default to zero. If 1, use the same of spatial chi2 and "hit quality" chi2 as criterion for best track selection
-  fTrackChi2Cut = 100.0; //Max. chi2/ndf for a combination of hits to form a track
-  fTrackChi2CutHitQuality = 100.0; //Max. chi2/ndf for track "hit quality" (ADC and time correlation of U/V hits).
+  //fTrackChi2Cut = 100.0; //Max. chi2/ndf for a combination of hits to form a track
+  //fTrackChi2CutHitQuality = 100.0; //Max. chi2/ndf for track "hit quality" (ADC and time correlation of U/V hits).
   
+  fTrackChi2Cut.clear();
+  fTrackChi2Cut.resize(1,100.0);
+  fTrackChi2CutHitQuality.clear();
+  fTrackChi2CutHitQuality.resize(1,100.0);
+
   fSigma_hitpos = 0.0001; //100 um
   
   // set defaults for constraint points and constraint widths:
@@ -110,6 +118,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fUseTrigTime = false; 
 
   fSigmaTrackT0 = 5.0;
+  fCutTrackT0 = 1000.0; //default to some large value
   
 }
 
@@ -403,6 +412,39 @@ void SBSGEMTrackerBase::CompleteInitialization(){
 
   //make sure the user has defined something sensible:
   fMinHitsOnTrack = std::max(3,std::min(fNlayers,fMinHitsOnTrack) );
+
+  // Now initialize the min high quality hits and track chi2 cuts if 
+  // the initialization from the database is not sensible:
+  if(  fMinHighQualityHitsOnTrack.size() != fNlayers-fMinHitsOnTrack+1 ){
+    if( fMinHighQualityHitsOnTrack.size() >= 1 ){
+      int minhitstemp = std::max(0,std::min(fNlayers, fMinHighQualityHitsOnTrack[0]));
+      fMinHighQualityHitsOnTrack.clear();
+      fMinHighQualityHitsOnTrack.resize( fNlayers-fMinHitsOnTrack+1, minhitstemp );
+    } else { //empty, set default:
+      fMinHighQualityHitsOnTrack.resize( fNlayers-fMinHitsOnTrack+1, 0 );
+    }
+  }
+
+  if( fTrackChi2Cut.size() != fNlayers-fMinHitsOnTrack+1 ){
+    if( fTrackChi2Cut.size() >= 1 ){
+      double cuttemp = fTrackChi2Cut[0];
+      fTrackChi2Cut.clear(); //re-initialize all entries with cuttemp:
+      fTrackChi2Cut.resize( fNlayers-fMinHitsOnTrack+1, cuttemp );
+    } else { //empty, set default:
+      fTrackChi2Cut.resize( fNlayers-fMinHitsOnTrack+1, 100.0 );
+    }
+  }
+  
+  if( fTrackChi2CutHitQuality.size() != fNlayers-fMinHitsOnTrack+1 ){
+    if( fTrackChi2CutHitQuality.size() >= 1 ){
+      double cuttemp = fTrackChi2CutHitQuality[0];
+      fTrackChi2CutHitQuality.clear(); //re-initialize all entries with cuttemp:
+      fTrackChi2CutHitQuality.resize( fNlayers-fMinHitsOnTrack+1, cuttemp );
+    } else { //empty, set default:
+      fTrackChi2CutHitQuality.resize( fNlayers-fMinHitsOnTrack+1, 100.0 );
+    }
+  }
+
   
   InitLayerCombos();
   InitGridBins();
@@ -1292,7 +1334,12 @@ void SBSGEMTrackerBase::find_tracks(){
       // std::cout << "[SBSGEMTrackerBase::find_tracks]: initialized 'free hit list', nhitsrequired = " << nhitsrequired 
       // 		<< ", number of layers with unused hits, ntracks = " 
       // 		<< layerswithfreehits.size() << ", " << fNtracks_found << ", free hit combinations = " << Ncombos_free << std::endl;
-      
+
+      double chi2cut_space_temp = fTrackChi2Cut[nhitsrequired-fMinHitsOnTrack];
+      double chi2cut_hits_temp = fTrackChi2CutHitQuality[nhitsrequired-fMinHitsOnTrack];
+
+      int mingoodhits = std::max(0,std::min(nhitsrequired,fMinHighQualityHitsOnTrack[nhitsrequired-fMinHitsOnTrack]));
+
       if( (int)layerswithfreehits.size() >= nhitsrequired ){ //check that the number of layers with free hits is at least equal to the current minimum hit requirement:
 	//The basic algorithm should do the following:
 
@@ -1380,7 +1427,116 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	  //range-based for-loop syntax that I'm still learning... hopefully nothing after this needs to be changed
 	  for( auto ibin : binswithfreehits_layer[minlayer] ){
-	    for( auto jbin : binswithfreehits_layer[maxlayer] ){
+	    //HERE in the outer loop is where we can improve the speed. Calculate the 
+	    //straight-line projection from the bin center at the front layer to the 
+	    //back constraint point, and then project to the back layer and consider 
+	    //only a reduced set of bins in maxlayer:
+	    int ibinx = ibin % fGridNbinsX_layer[minlayer];
+	    int ibiny = ibin / fGridNbinsX_layer[minlayer];
+
+	    //center coordinates of the bin in minlayer: 
+	    double xi = fGridXmin_layer[minlayer] + (ibinx + 0.5) * fGridBinWidthX;
+	    double yi = fGridYmin_layer[minlayer] + (ibiny + 0.5) * fGridBinWidthY;
+	    double ziavg = fZavgLayer[minlayer];
+	    double zjavg = fZavgLayer[maxlayer];
+
+	    //Calculate the straight line defined by back constraint point and 
+	    // center of bin in this layer:
+	    
+	    std::set<int> goodbins_maxlayer; 
+	    //   std::set<int> binstocheck_maxlayer;
+
+	    //std::cout << "Use constraint = " << fUseConstraint << std::endl;
+
+	    //This is experimental, to increase speed:
+	    if( fUseConstraint ){
+	      double xbcp = fConstraintPoint_Back.X();
+	      double ybcp = fConstraintPoint_Back.Y();
+	      double zbcp = fConstraintPoint_Back.Z();
+	      double xptemp = (xbcp - xi )/(zbcp - ziavg);
+	      double yptemp = (ybcp - yi )/(zbcp - ziavg);
+	      
+	      //project the straight line defined by front bin center and back constraint point to max layer and calculate the allowed area at max layer:
+	      double sigxi = fGridBinWidthX;
+	      double sigyi = fGridBinWidthY;
+	      double sigxbcp = fConstraintWidth_Back.X();
+	      double sigybcp = fConstraintWidth_Back.Y();
+	      
+	      //Calculate error matrices:
+	      double sumw_x = pow(sigxi,-2)+pow(sigxbcp,-2);
+	      double sumz_x = ziavg*pow(sigxi,-2) + zbcp*pow(sigxbcp,-2);
+	      double sumz2_x = pow(ziavg/sigxi,2) + pow(zbcp/sigxbcp,2);
+	      double det_x = sumz2_x*sumw_x - sumz_x*sumz_x;
+
+	      double sumw_y = pow(sigyi,-2)+pow(sigybcp,-2);
+	      double sumz_y = ziavg*pow(sigyi,-2)+zbcp*pow(sigybcp,-2);
+	      double sumz2_y = pow(ziavg/sigyi,2)+pow(zbcp/sigybcp,2);
+	      double det_y = sumz2_y*sumw_y - sumz_y*sumz_y;
+
+	      double emat_x[2][2];
+	      double emat_y[2][2];
+	      emat_x[0][0] = sumz2_x/det_x;
+	      emat_x[0][1] = -sumz_x/det_x;
+	      emat_x[1][0] = emat_x[0][1];
+	      emat_x[1][1] = sumw_x/det_x;
+
+	      emat_y[0][0] = sumz2_y/det_y;
+	      emat_y[0][1] = -sumz_y/det_y;
+	      emat_y[1][0] = emat_y[0][1];
+	      emat_y[1][1] = sumw_y/det_y;
+
+	      //double x0temp = xi - xptemp * ziavg;
+	      //double y0temp = yi - yptemp * ziavg; 
+	      
+	      double xprojmax = xi + xptemp * (zjavg - ziavg); //= x0temp + xptemp * zj
+	      double yprojmax = yi + yptemp * (zjavg - ziavg); //= y0temp + yptemp * zj
+	      
+	      //calculate tolerance of x and y projections: 
+	      //Here we basically want to use the error matrix of the linear "fit" and the matrix of partial derivatives: 
+	      // partial xproj / partial x0 = 1
+	      // partial xproj / partial x' = zj
+	      double dxprojmax = sqrt( emat_x[0][0] + pow(zjavg,2)*emat_x[1][1] + 2.0*zjavg*emat_x[0][1] );
+	      double dyprojmax = sqrt( emat_y[0][0] + pow(zjavg,2)*emat_y[1][1] + 2.0*zjavg*emat_y[0][1] );
+	      
+	      //	      std::cout << "(dxproj,dyproj)=(" << dxprojmax << ", " << dyprojmax << ")" << std::endl; 
+
+	      int binxproj = int( (xprojmax - fGridXmin_layer[maxlayer])/fGridBinWidthX );
+	      int binyproj = int( (yprojmax - fGridYmin_layer[maxlayer])/fGridBinWidthY );
+
+	      int binxlo = binxproj, binxhi = binxproj;
+	      int binylo = binyproj, binyhi = binyproj;
+	      
+	      double xcenterproj = fGridXmin_layer[maxlayer] + (binxproj+0.5)*fGridBinWidthX;
+	      double ycenterproj = fGridYmin_layer[maxlayer] + (binyproj+0.5)*fGridBinWidthY;
+
+	      int nbinsx_tolerance = int( (std::max(fGridBinWidthX,dxprojmax))/fGridBinWidthX );
+	      binxlo = std::max(0,binxproj - std::max(0,nbinsx_tolerance));
+	      binxhi = std::min(fGridNbinsX_layer[maxlayer]-1,binxproj+std::max(0,nbinsx_tolerance));
+
+	      int nbinsy_tolerance = int( (std::max(fGridBinWidthY,dyprojmax))/fGridBinWidthY);
+	      binylo = std::max(0,binyproj - std::max(0,nbinsy_tolerance));
+	      binyhi = std::min(fGridNbinsY_layer[maxlayer]-1,binyproj+std::max(0,nbinsy_tolerance));
+	      
+	      //	      std::cout << "(binxlo, binxhi, binylo, binyhi)=(" << binxlo << ", " << binxhi << ", " << binylo << ", " << binyhi << ")" << std::endl;
+
+	      for( int binxtemp=binxlo; binxtemp<=binxhi; binxtemp++){
+		for( int binytemp=binylo; binytemp<=binyhi; binytemp++){
+		  int bintemp = binxtemp + fGridNbinsX_layer[maxlayer]*binytemp;
+		  if( binswithfreehits_layer[maxlayer].find(bintemp) != binswithfreehits_layer[maxlayer].end() ) goodbins_maxlayer.insert(bintemp);
+		}
+	      }
+
+	    }
+	    //Declare a reference to either "goodbins_maxlayer" which is at most a subset of binswithfreehits_maxlayer, or 
+	    //binswithfreehits_maxlayer, depending on value of fUseConstraint
+	    std::set<int> &binstocheck_maxlayer = fUseConstraint ? goodbins_maxlayer : binswithfreehits_layer[maxlayer];
+
+	    //	    std::cout << "Minlayer = " << minlayer << ", bin = " << ibin << ", maxlayer = " << maxlayer << ", nbins to check = " 
+	    //	      << binstocheck_maxlayer.size() << ", " << ", total bins with free hits = " << binswithfreehits_layer[maxlayer].size() << std::endl;
+
+	    //std::set<int> &binstocheck_maxlayer = binswithfreehits_layer[maxlayer];
+	    //	    for( auto jbin : binswithfreehits_layer[maxlayer] ){
+	    for( auto jbin : binstocheck_maxlayer ){
 	  //Start by computing bin center coordinates and widths, project to intermediate layers and 
 
 	      //Note "bin" = binx + nbinsx * biny;
@@ -1389,21 +1545,15 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	      //TO-DO: populate a list of "valid" bin combinations once at the beginning of analysis. 
 	      //Or maybe this is not worth the effort
-	      int ibinx = ibin % fGridNbinsX_layer[minlayer];
-	      int ibiny = ibin / fGridNbinsX_layer[minlayer];
+	      
 
 	      int jbinx = jbin % fGridNbinsX_layer[maxlayer];
 	      int jbiny = jbin / fGridNbinsX_layer[maxlayer];
 	      
-	      //center coordinates of the bin in minlayer and maxlayer: 
-	      double xi = fGridXmin_layer[minlayer] + (ibinx + 0.5) * fGridBinWidthX;
+	      
 	      double xj = fGridXmin_layer[maxlayer] + (jbinx + 0.5) * fGridBinWidthX;
-
-	      double yi = fGridYmin_layer[minlayer] + (ibiny + 0.5) * fGridBinWidthY;
 	      double yj = fGridYmin_layer[maxlayer] + (jbiny + 0.5) * fGridBinWidthY; 
 
-	      double ziavg = fZavgLayer[minlayer];
-	      double zjavg = fZavgLayer[maxlayer];
 	      
 	      double xpavg = (xj - xi)/(zjavg-ziavg);
 	      double ypavg = (yj - yi)/(zjavg-ziavg);
@@ -1742,9 +1892,10 @@ void SBSGEMTrackerBase::find_tracks(){
 			//This declaration might shadow another one up above
 			//(actually it DOESN'T: the ones above are for the "best" hit combo, these are temporary dummy variables. Proceed)
 
-			int minhits = fMinHighQualityHitsOnTrack;
+			int minhits = mingoodhits;
 			if( hitcombo.size() == 3 ){
-			  minhits = std::max( 2, std::min( 3, fMinHighQualityHitsOnTrack ) );
+			  minhits = std::max( 2, std::min( 3, mingoodhits ) ); //to use a 3-hit track, we will require at least two "good" hits on the track.
+			  //minhits = 3;
 			}
 			
 			if( nhighQhits >= minhits ){
@@ -1759,16 +1910,18 @@ void SBSGEMTrackerBase::find_tracks(){
 			
 			  if( fUseEnhancedChi2 >= 2 ){ //Use sum of hit chi2 and spatial chi2 as criterion for best hit candidate selection
 			    double chi2space = chi2ndftemp * (2.0*hitcombo.size() - 4.0);
-			    double chi2hits = 3.0*hitcombo.size() * CalcTrackChi2HitQuality( hitcombo, t0temp );
-			    double ndftot = 5.0*hitcombo.size() - 4.0;
+			    double chi2hits = (3.0*hitcombo.size() + 1.0 ) * CalcTrackChi2HitQuality( hitcombo, t0temp );
+			    double ndftot = 5.0*hitcombo.size() + 1.0 - 4.0;
 			    chi2enhanced = (chi2space + chi2hits)/ndftot;
 			  }
 
 			  bool validcombo = true;
 			  if( fUseEnhancedChi2 == 1 ){
-			    validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= fTrackChi2CutHitQuality;
+			    validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= chi2cut_hits_temp;
 			  }
 			  
+			  validcombo = validcombo && fabs( t0temp ) <= fCutTrackT0;
+
 			  //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
 			  
 			  if( validcombo && (firstgoodcombo || chi2enhanced < minchi2) ){
@@ -1843,9 +1996,9 @@ void SBSGEMTrackerBase::find_tracks(){
 
 		      int nhighQhits = CountHighQualityHits( hitcombo );
 		      
-		      int minhits = fMinHighQualityHitsOnTrack;
+		      int minhits = mingoodhits;
 		      if( hitcombo.size() == 3 ){
-			minhits = std::max( 2, std::min( 3, fMinHighQualityHitsOnTrack ) );
+			minhits = std::max( 2, std::min( 3, mingoodhits ) );
 		      }
 		      
 		      if( nhighQhits >= minhits ){
@@ -1859,16 +2012,18 @@ void SBSGEMTrackerBase::find_tracks(){
 			
 			if( fUseEnhancedChi2 >= 2 ){
 			  double chi2space = chi2ndftemp * (2.0*hitcombo.size()-4.0);
-			  double chi2hits = 3.0*hitcombo.size() * CalcTrackChi2HitQuality( hitcombo, t0temp );
-			  double ndftot = 5.0*hitcombo.size()-4.0;
+			  double chi2hits = (3.0*hitcombo.size() + 1.0 )* CalcTrackChi2HitQuality( hitcombo, t0temp );
+			  double ndftot = 5.0*hitcombo.size() + 1.0 -4.0;
 			  chi2enhanced = (chi2space + chi2hits)/ndftot;
 			}
 
 			bool validcombo = true;
 			if( fUseEnhancedChi2 == 1 ){
-			  validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= fTrackChi2CutHitQuality;
+			  validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= chi2cut_hits_temp;
 			}
 			
+			validcombo = validcombo && fabs( t0temp ) <= fCutTrackT0;
+
 			if( validcombo && (firstgoodcombo || chi2enhanced < minchi2)  ){
 			  if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
 			    firstgoodcombo = false;
@@ -1918,9 +2073,13 @@ void SBSGEMTrackerBase::find_tracks(){
 	  // fractional std. dev chi2 = sqrt(2*ndf)/ndf = sqrt(2/ndf)
 	  // so for 3, 4, 5-hit tracks, ndf = 2, 4, 6, std. dev. = 2, 
 	  
-	  Bool_t cut = chi2space_bestcombo <= fTrackChi2Cut;
-	  if( fUseEnhancedChi2 == 1 ) cut = cut && chi2hits_bestcombo <= fTrackChi2CutHitQuality;
-	  if( fUseEnhancedChi2 >= 2 ) cut = minchi2 <= fTrackChi2Cut;
+	  
+
+	  Bool_t cut = chi2space_bestcombo <= chi2cut_space_temp;
+	  
+
+	  if( fUseEnhancedChi2 == 1 ) cut = cut && chi2hits_bestcombo <= chi2cut_hits_temp;
+	  if( fUseEnhancedChi2 >= 2 ) cut = minchi2 <= chi2cut_space_temp;
 
 	  if( cut ){
 	    TVector3 TrackPosTemp( besttrack[0], besttrack[1], 0.0 );
@@ -1953,9 +2112,9 @@ void SBSGEMTrackerBase::find_tracks(){
 	  
 	    Int_t nHighQualityHits = CountHighQualityHits( besthitcombo );
 
-	    int minhits = fMinHighQualityHitsOnTrack;
+	    int minhits = mingoodhits;
 	    if( besthitcombo.size() == 3 ){
-	      minhits = std::max( 2, std::min(3, fMinHighQualityHitsOnTrack) );
+	      minhits = std::max( 2, std::min(3, mingoodhits) );
 	    }
 	    //if( besthitcombo.size() == 3 ){
 	    foundtrack = foundtrack && nHighQualityHits >= minhits;
@@ -2810,7 +2969,7 @@ Double_t SBSGEMTrackerBase::CalcTrackChi2HitQuality( const std::map<int,int> &hi
 
   
   //each hit contributes three dof:
-  double ndf = 3.0 * hitcombo.size();
+  double ndf = 3.0 * hitcombo.size() + 1;
   return chi2/ndf;
   
 }

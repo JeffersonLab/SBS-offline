@@ -353,7 +353,8 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fTrigTime; //trigger time; to be decoded once by parent class
 
   Double_t fMaxTrigTimeCorrection; //Maximum (absolute) correction to be applied to strip times based on trigger time (Default = 25 ns)
-  
+  Double_t fTrigTimeSlope; //Slope of GEM time versus trig time correlation (default = 1)
+
   //move these to trackerbase:
   //Double_t fSigma_hitpos;   //sigma parameter controlling resolution entering track chi^2 calculation
   //Double_t fSigma_hitshape; //Sigma parameter controlling hit shape for cluster-splitting algorithm.

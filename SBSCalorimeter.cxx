@@ -91,10 +91,10 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
 
   // Read mapping/geometry/configuration parameters
   DBRequest config_request[] = {
-    { "emin",         &fEmin,   kDouble, 0, false }, ///< minimum energy threshold
-    { "tmax",         &fTmax,   kDouble, 0, false }, ///< maximum time difference for block
-    { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, false }, ///< minimum cluster seed energy
-    { "emin_clTotal", &fEmin_clusTotal, kDouble, 0, false }, ///< minimum total cluster energy
+    { "emin",         &fEmin,   kDouble, 0, true }, ///< minimum energy threshold
+    { "tmax",         &fTmax,   kDouble, 0, true }, ///< maximum time difference for block
+    { "emin_clSeed", &fEmin_clusSeed, kDouble, 0, true }, ///< minimum cluster seed energy
+    { "emin_clTotal", &fEmin_clusTotal, kDouble, 0, true }, ///< minimum total cluster energy
     { "cluster_dim",   &cluster_dim,   kIntV, 0, true }, ///< cluster dimensions (2D)
     { "nmax_cluster",   &fMaxNclus,   kInt, 0, true }, ///< maximum number of clusters to store
     { "const", &fConst, kDouble, 0, true }, ///< const from gain correction 
@@ -228,6 +228,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     { "goodblock.x", "x pos (m) of good blocks", "fGoodBlocks.x"},
     { "goodblock.y", "y pos (m) of good blocks", "fGoodBlocks.y"},
     { "goodblock.id", "Element ID of good blocks", "fGoodBlocks.id"},
+    { "goodblock.cid", "Cluster index of good blocks", "fGoodBlocks.cid"},
     {0}
   };
   err = DefineVarsFromList( vars_gb, mode );
@@ -314,6 +315,7 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	fGoodBlocks.row.push_back(blk->GetRow());
 	fGoodBlocks.col.push_back(blk->GetCol());
 	fGoodBlocks.id.push_back(blk->GetID());
+	fGoodBlocks.cid.push_back(-1); //initialize good block cluster id to -1
 	fGoodBlocks.x.push_back(blk->GetX());
 	fGoodBlocks.y.push_back(blk->GetY());
 	//
@@ -371,58 +373,163 @@ Int_t SBSCalorimeter::FindClusters()
   fBestClusterIndex = -1;
 
   double Emax = 0.0;
-  //We want the "best" cluster to be the one with the largest total energy (in general)
+
+  std::map<int,int> clusterids_by_blockid; //key = block id; mapped value = cluster ID.
   
-  while ( NSize != 0 )  {
+  //Test new experimental clustering algorithm here; island algorithm: AJRP
+  while( NSize != 0 ){
     std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
-    
-    fBlockSetIterator it = fBlockSet.begin();
-    
-    if ( (*it).e > fEmin_clusSeed ){
-      Bool_t AddingBlocksToCluster = kTRUE;
-      SBSElement *blk= fElements[(*it).id-fChanMapStart] ; 
-      SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(fBlockSet.size(),blk);
-      fClusters.push_back(cluster);
-      fBlockSet.erase(it);
-      NSize--;
 
-      while (AddingBlocksToCluster) {
-	Bool_t Close=kFALSE; //Check if block within user-def radius and time to add to cluster
-	fBlockSetIterator it2 = fBlockSet.begin();
-	SBSElement *blk_p= fElements[(*fBlockSet.begin()).id-fChanMapStart];
-        Double_t pTime=blk_p->GetAtime();
+    fBlockSetIterator it = fBlockSet.begin(); //This starts out as the highest-energy remaining block 
+    
+    if ( (*it).e > fEmin_clusSeed ){ //don't bother if the highest-energy remaining block is too low in energy
 
-	while (!Close && (it2 < fBlockSet.end())) {
-	  SBSElement *blk= fElements[(*it2).id-fChanMapStart]  ; 
-	  Int_t Index = fClusters.size()-1;
-	  Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) );
-	  Double_t tDiff = blk->GetAtime()-pTime;
-	  Close =( Rad<fRmax_dis && fabs(tDiff)<fTmax );
-	  if (Close) {
-	      fClusters[Index]->AddElement(blk);
-	  } else {	       
+      SBSElement *blk= fElements[(*it).id-fChanMapStart] ; //here blk is the pointer to the highest energy block remaining in fBlockSet, the cluster seed
+      SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(fBlockSet.size(),blk); //seed a new cluster with blk but don't add it to the cluster array yet"
+
+      fBlockSet.erase(it); //"erase" the cluster seed from fBlockSet. 
+      NSize--; //decrement the total number of remaining unused blocks in fBlockSet
+      
+      Int_t iblk=0;
+
+      // This loop implements the "island" algorithm: loop on
+      // all existing blocks in the cluster, and keep adding neighbors
+      // of each block in the cluster until we either hit the max
+      // cluster size or we run out of cluster blocks to test:
+      while( iblk<cluster->GetMult() && cluster->GetMult() < cluster->GetNMaxElements() ){
+	SBSElement *blk_i = cluster->GetElement( iblk ); //grab pointer to the ith block in the cluster:
+	//Now loop on all the remaining unused blocks.
+	Double_t xblk = blk_i->GetX();
+	Double_t yblk = blk_i->GetY();
+	Double_t tblk = blk_i->GetAtime();
+	Double_t eblk = blk_i->GetE();
+
+	//now loop on all the unused blocks and check if they are within Rmax of the current block. It is safer, albeit slightly less efficient, to loop on fBlockSet once and then erase any blocks that were added to the cluster in a second loop. For the erasing, it is simpler to refer to the block id than to the index in fBlockSet.
+	std::set<int> blockidstoerase;
+	
+	for( int j=0; j<fBlockSet.size(); j++ ){
+	  SBSElement *blk_j = fElements[fBlockSet[j].id-fChanMapStart];
+	  Double_t xblk_j = blk_j->GetX();
+	  Double_t yblk_j = blk_j->GetY();
+	  Double_t eblk_j = blk_j->GetE();
+	  Double_t tblk_j = blk_j->GetAtime();
+
+	  Double_t Rad2 = pow( xblk-xblk_j, 2 ) + pow( yblk-yblk_j, 2 );
+	  //Even if we later update cluster::AddElement to set cluster time to energy-weighted mean time, this will still compare the current block to the seed: 
+	  Double_t tdiff = tblk_j - cluster->GetElement( 0 )->GetAtime();
+
+	  if( Rad2 < pow(fRmax_dis,2) && fabs( tdiff ) < fTmax &&
+	      cluster->GetMult() < cluster->GetNMaxElements() ){
+	    cluster->AddElement( blk_j );
+	    blockidstoerase.insert( fBlockSet[j].id ); //list of blocks to remove from the set
+	  }
+	}
+
+	//now loop on fBlockSet again using an iterator and erase any elements that were added to the cluster.
+	auto it2 = fBlockSet.begin();
+	while( it2 != fBlockSet.end() ){
+	  if( blockidstoerase.find( (*it2).id ) != blockidstoerase.end() ){ //this block was added to the cluster; erase from fBlockSet
+	    //auto itnext = fBlockSet.erase( it2 ); //return value is an iterator to the next element
+	    //it2 = itnext; //Perhaps it is safe to assign the result of fBlockSet.erase( it2 ) to it2 itself, making this division on two lines unnecessary?
+	    it2 = fBlockSet.erase( it2 );
+	    NSize--;
+	  } else {
 	    ++it2;
 	  }
 	}
-	if (it2 == fBlockSet.end()) AddingBlocksToCluster = kFALSE;
-	if (Close)   {
-	  fBlockSet.erase(it2);
-	  NSize--;
-	}	
-      }
-      
-      // Adding total cluster energy threshold
-      if ( (cluster->GetE())<fEmin_clusTotal ) fClusters.pop_back();
 
-      //After we are done adding blocks to the cluster, we check if this is the cluster
-      //with the largest total energy:
-      
-      if( fClusters.size() == 1 || cluster->GetE() > Emax ){
-	Emax = cluster->GetE();
-	fBestClusterIndex = fClusters.size()-1;
-      }
-    } else break;
+	//We don't really need to sort fBlockSet again until we start
+	//the next cluster.
+	
+	iblk++; 
+      } //end loop over blocks in current cluster. On each iteration of this loop, all blocks in fblockset that are added to the cluster are erased from fBlockSet, ensuring that any given block can only be added to a cluster exactly once and can only be used in exactly one cluster!
+
+      //NOW we add the cluster to the array, IF the total energy is above
+      // threshold:
+      if( cluster->GetE() >= fEmin_clusTotal ){
+	fClusters.push_back( cluster );
+
+	clusterids_by_blockid.clear();
+	
+	for( iblk=0; iblk<cluster->GetMult(); iblk++ ){
+
+	  int blkid_i = cluster->GetElement(iblk)->GetID();
+	  clusterids_by_blockid[blkid_i] = fClusters.size()-1;
+	}
+	
+	if( fClusters.size() == 1 || cluster->GetE() > Emax ){
+	  Emax = cluster->GetE();
+	  fBestClusterIndex = fClusters.size()-1;
+	}
+      } else delete cluster; //prevent memory leak
+    } else break; //end check that primary block is above cluster seed threshold. If the primary block is below cluster seed threshold, exit the loop; there are no more clusters to find; AND we would get stuck in infinite loop without this break statement;
+    
+  } //End loop on while( NSize != 0 ). Each iteration of this loop finds one cluster, as long as there are more clusters to find.
+
+  //NOW clustering is finished; we need to loop on fGoodBlocks and assign the cluster IDs;
+  for( int iblk=0; iblk<fGoodBlocks.id.size(); iblk++ ){
+    auto foundblock = clusterids_by_blockid.find( fGoodBlocks.id[iblk] );
+
+    if( foundblock != clusterids_by_blockid.end() ){
+      fGoodBlocks.cid[iblk] = foundblock->second;
+    }
   }
+  //We want the "best" cluster to be the one with the largest total energy (in general)
+
+  //For now, keeping the old clustering code here, but commented out. 
+  // while ( NSize != 0 )  {
+  //   std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) { return c1.e > c2.e;});
+    
+  //   fBlockSetIterator it = fBlockSet.begin(); //This starts out as the highest-energy remaining block 
+    
+  //   if ( (*it).e > fEmin_clusSeed ){ //don't bother if the highest-energy remaining block is too low in energy
+  //     Bool_t AddingBlocksToCluster = kTRUE;
+  //     SBSElement *blk= fElements[(*it).id-fChanMapStart] ; //here blk is the pointer to the highest energy block remaining in fBlockSet, the cluster seed
+  //     SBSCalorimeterCluster* cluster = new SBSCalorimeterCluster(fBlockSet.size(),blk); //seed a new cluster with blk
+  //     fClusters.push_back(cluster); //add it to the array.
+  //     fBlockSet.erase(it); //"erase" the cluster seed from fBlockSet. 
+  //     NSize--; //decrement the total number of remaining unused blocks in fBlockSet
+
+  //     while (AddingBlocksToCluster) {
+  // 	Bool_t Close=kFALSE; //Check if block within user-def radius and time to add to cluster
+  // 	fBlockSetIterator it2 = fBlockSet.begin(); //it2 is an iterator to highest-energy remaining block in fBlockSet after removing the primary block (cluster seed)
+  // 	SBSElement *blk_p= fElements[(*fBlockSet.begin()).id-fChanMapStart]; //blk_p is a pointer to the element of the highest-energy remaining block, as referenced by it2. THIS COULD BE ANYWHERE IN THE CALORIMETER!
+  //       Double_t pTime=blk_p->GetAtime(); //pTime is the ADC time of blk_p 
+
+  // 	while (!Close && (it2 < fBlockSet.end())) { 
+  // 	  SBSElement *blk= fElements[(*it2).id-fChanMapStart]  ;  //this is shadowing the declaration above. Unintended consquences? On first iteration this is the same as blk_p. on subsequent iterations it points somewhere else:
+  // 	  Int_t Index = fClusters.size()-1;
+  // 	  Double_t Rad = sqrt( pow((fClusters[Index]->GetX()-blk->GetX()),2) + pow((fClusters[Index]->GetY()-blk->GetY()),2) ); //check distance of block from cluster energy-weighted average position
+  // 	  Double_t tDiff = blk->GetAtime()-pTime; //HUGE MISTAKE! we are comparing blk time with pTime, which could be some random block from elsewhere!
+  // 	  //Close =( Rad<fRmax_dis && fabs(tDiff)<fTmax );
+  // 	  Close = ( Rad<fRmax_dis );
+  // 	  if (Close) {
+  // 	    fClusters[Index]->AddElement(blk); //we found the highest-energy remaining block close enough to the cluster mean position; add it to the cluster and exit the loop without incrementing it2 or erasing it2 from fBlockSet
+  // 	  } else {	       
+  // 	    ++it2; //increment it2 (keep looking)
+  // 	  }
+  // 	}
+  // 	//When we get to this point, we have either found one block that is "Close" to it2 or we have reached the end of fBlockSet. 
+  // 	if (it2 == fBlockSet.end()) AddingBlocksToCluster = kFALSE; //no more blocks close enough to add to the cluster. exit
+  // 	if (Close)   { //we found a block to add to the cluster and it is referenced by it2. 
+  // 	  fBlockSet.erase(it2); //erase it2 from fBlockSet; it was already added to the cluster
+  // 	  NSize--; //decrement NSize
+  // 	}	
+  //     } //At this point we have added all blocks to the cluster that are sufficiently close to the cluster mean position, which is a moving target as we add new blocks. Need to implement island algorithm.
+      
+  //     // Adding total cluster energy threshold
+  //     if ( (cluster->GetE())<fEmin_clusTotal ) fClusters.pop_back(); //erase the found cluster from fClusters. we still have the pointer. 
+  //     //could the line above interact with the lines below in a problematic way? Almost certainly yes.
+      
+  //     //After we are done adding blocks to the cluster, we check if this is the cluster
+  //     //with the largest total energy:
+      
+  //     if( fClusters.size() == 1 || cluster->GetE() > Emax ){
+  // 	Emax = cluster->GetE();
+  // 	fBestClusterIndex = fClusters.size()-1;
+  //     }
+  //   } else break;
+  // }
   //
 
   //Fill main cluster variables here; this may get overridden by derived classes:

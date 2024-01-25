@@ -29,6 +29,8 @@ class SBSCherenkov_Hit : public TObject {
 		    Double_t x, Double_t y, Double_t t, Double_t a );
   virtual ~SBSCherenkov_Hit() {}
   
+  virtual void    Clear( Option_t* opt);
+
   //void       Show(FILE * fout1);
   //void       Show(FILE * fout1, FILE * fout2);
   
@@ -77,6 +79,7 @@ private:
   
   Int_t     fClustIndex; //index of cluster to which this hit belongs
   Int_t     fTrackIndex; //index of track to which this hit is associated
+  
   //Int_t     fTDC;  // Hit rise time TDC
   //Int_t     fToT;  // Hit time over threshold
   //Int_t     fADC;    // Hit ADC (if available)
@@ -129,7 +132,11 @@ class SBSCherenkov_Cluster : public TObject {
   Double_t GetAmpRMS() const  { return fAmpRMS; }
 
   Int_t GetTrackIndex() const { return fTrackIndex; }
+  Int_t GetMirrorIndex() const { return fMirrorIndex; }
 
+  Double_t GetDX() const { return fTrackMatch_dx; }
+  Double_t GetDY() const { return fTrackMatch_dy; }
+  
   THaTrack* GetTrack() const            { return fTrack; }
 
   void    SetXcenter(Double_t xcenter)    { fXcenter = xcenter; }
@@ -145,6 +152,10 @@ class SBSCherenkov_Cluster : public TObject {
   
   void    SetTrack( THaTrack* track ) { fTrack = track; }
   void    SetTrackIndex( Int_t itr ){ fTrackIndex = itr; }
+  void    SetMirrorIndex( Int_t imirr ){ fMirrorIndex = imirr; }
+
+  void    SetDX( Double_t dx ){ fTrackMatch_dx = dx; }
+  void    SetDY( Double_t dy ){ fTrackMatch_dy = dy; }
 
   void    MergeCluster( const SBSCherenkov_Cluster& rhs );
   
@@ -166,7 +177,11 @@ class SBSCherenkov_Cluster : public TObject {
   THaTrack*  fTrack;     // Track best associated with this cluster
   
   Int_t      fTrackIndex; //ROOT-tree friendly variable to store track index with which this cluster is associated
+  Int_t      fMirrorIndex; //Store mirror index for track-matched clusters
 
+  Double_t   fTrackMatch_dx; //x GRINCH - x predicted from track;
+  Double_t   fTrackMatch_dy; //y GRINCH - y predicted from track;
+  
   ClassDef(SBSCherenkov_Cluster,0)  //A cluster of hits in the GRINCH
 };
 

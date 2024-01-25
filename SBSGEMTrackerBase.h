@@ -167,7 +167,7 @@ protected:
   int fTrackingAlgorithmFlag; //Choose track algorithm
 
   int fMinHitsOnTrack; //default = 3; cannot be less than 3, cannot be more than total number of layers
-  int fMinHighQualityHitsOnTrack; //default = 2, minimum number of "good" hits on the track 
+  std::vector<int> fMinHighQualityHitsOnTrack; //default = 2, minimum number of "good" hits on the track 
   
   long fMaxHitCombinations; //default = 10000; this is for "outer" layers
   long fMaxHitCombinations_InnerLayers; //default = 10000?
@@ -203,8 +203,8 @@ protected:
 
 
   Int_t fUseEnhancedChi2; //flag to control how we use the "enhanced chi2" in the track-finding (if at all)
-  double fTrackChi2Cut; //chi2/NDF cut for track validity
-  double fTrackChi2CutHitQuality; //chi2/NDF cut for hit quality.
+  std::vector<double> fTrackChi2Cut; //Chi2 cut versus number of hit layers
+  std::vector<double> fTrackChi2CutHitQuality; //chi2/NDF cut for hit quality versus number of hit layers
 
   bool fUseConstraint;
   bool fUseOpticsConstraint; //default to FALSE:
@@ -572,6 +572,7 @@ protected:
   Double_t fRefTime_CAL;
 
   Double_t fSigmaTrackT0; // sigma of track mean time. Default = 5 ns
+  Double_t fCutTrackT0; // (optional) Hard cutoff in track t0
 
   //Double_t fRefTime_offset;
   

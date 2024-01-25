@@ -43,7 +43,11 @@ protected:
   Double_t fMaxSep2; //square of fMaxSep
 
   Int_t fNmirror; //Number of GRINCH mirrors (define track match cuts separately for each mirror)
+
+  Int_t fOrderTrackMatchY; // Default to 3. For now we implement GRINCH dy = pol3( track phi ); later we may get fancier:
   
+  //P slope is obsolete, but for now I keep it. AJRP 10/23/23
+  Double_t fTrackMatchPslope; //slope of xtrack - xGRINCH vs 1/p, default 0.1715
   //make mirror-dependent track match cuts:
   std::vector<Double_t> fTrackMatchXslope;
   std::vector<Double_t> fTrackMatchX0;
@@ -53,6 +57,9 @@ protected:
   std::vector<Double_t> fTrackMatchYsigma;
   std::vector<Double_t> fTrackMatchXmin; //minimum track x projection to consider for this mirror
   std::vector<Double_t> fTrackMatchXmax; //maximum track x projection to consider for this mirror
+
+  
+  
   Double_t fTrackMatchNsigmaCut; //use common cut width for each mirror
 
   virtual Int_t   FindClusters();
