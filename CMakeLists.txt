@@ -69,7 +69,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSBPM.cxx SBSRaster.cxx SBSRasteredBeam.cxx 
   LHRSScalerEvtHandler.cxx SBSScalerEvtHandler.cxx
   SBSScalerHelicity.cxx SBSScalerHelicityReader.cxx
-  gmn_tree_digitized.cxx VETROC.cxx
+  gmn_tree_digitized.cxx genrp_tree_digitized.cxx VETROC.cxx
   )
 #gmn_tree_digitized.C
 #g4sbs_data.cxx g4sbs_tree.cxx

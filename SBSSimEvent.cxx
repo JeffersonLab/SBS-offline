@@ -29,7 +29,7 @@ SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
   switch( fExperiment ){
   case kGEnRP://"genrp":
     //do nothing for now; eventually we will allocate the genrp_tree and store the pointer in the data member of this class:
-    //Tgenrp = new genrp_tree_digitized(tree);
+    Tgenrp = new genrp_tree_digitized(tree);
     break;
   case kGEp://"gep":
     //Tgep = new gep_tree_digitized(tree);
@@ -44,14 +44,23 @@ SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
     break;
   }
   
-  if(Tgmn==0){
-    std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree can't be found! Stopping the program! " << std::endl;
-    exit(-1);
-  }
-  if(Tgmn->GetEntry(0)==0){
-    std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree is empty! Stopping the program! " << std::endl;
-    exit(-1);
-  }
+  // if(Tgmn==0){
+  //   std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree can't be found! Stopping the program! " << std::endl;
+  //   exit(-1);
+  // }
+  // if(Tgmn->GetEntry(0)==0){
+  //   std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree is empty! Stopping the program! " << std::endl;
+  //   exit(-1);
+  // }
+  
+  // if(Tgmn==0){
+  //   std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree can't be found! Stopping the program! " << std::endl;
+  //   exit(-1);
+  // }
+  // if(Tgmn->GetEntry(0)==0){
+  //   std::cout << " SBSSimEvent::SBSSimEvent(): Digitized tree is empty! Stopping the program! " << std::endl;
+  //   exit(-1);
+  // }
   
   //Weight = 1;
   Clear();
@@ -98,7 +107,7 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
   switch( fExperiment ){
   case kGEnRP://"genrp":
     //do nothing for now; eventually we will invoke the "GetEntry" methods of the various classes:
-    //ret = Tgenrp->GetEntry(entry);
+    ret = Tgenrp->GetEntry(entry);
     break;
   case kGEp://"gep":
     //ret = Tgep->GetEntry(entry);

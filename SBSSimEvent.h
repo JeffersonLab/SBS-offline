@@ -5,6 +5,7 @@
 //#include "g4sbs_tree.h"
 
 #include "gmn_tree_digitized.h"
+#include "genrp_tree_digitized.h"
 
 enum Exp_t    { kGEp, kGEnRP, kGMN, kSIDIS};
 
@@ -46,7 +47,7 @@ class SBSSimEvent {
   //recompile, and voila: compatibility guaranteed:
   gmn_tree_digitized *Tgmn;
   //gep_tree_digitized *Tgep;
-  //genrp_tree_digitized *Tgenrp;
+  genrp_tree_digitized *Tgenrp;
   //sidis_tree_digitized *Tsidis;
   //  gen_tree_digitized *Tgen; //This actually seems like it wouldn't require anything different from gmn.
 
