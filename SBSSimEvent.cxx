@@ -29,6 +29,7 @@ SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
   switch( fExperiment ){
   case kGEnRP://"genrp":
     //do nothing for now; eventually we will allocate the genrp_tree and store the pointer in the data member of this class:
+    Tgmn = new gmn_tree_digitized(tree);
     Tgenrp = new genrp_tree_digitized(tree);
     break;
   case kGEp://"gep":
