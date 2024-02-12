@@ -376,6 +376,11 @@ public :
    std::vector<int>     *Harm_ActAn_dighit_adc;
    std::vector<int>     *Harm_ActAn_dighit_tdc_l;
    std::vector<int>     *Harm_ActAn_dighit_tdc_t;
+   Int_t           Harm_CDET_dighit_nchan;
+   std::vector<int>     *Harm_CDET_dighit_chan;
+   std::vector<int>     *Harm_CDET_dighit_adc;
+   std::vector<int>     *Harm_CDET_dighit_tdc_l;
+   std::vector<int>     *Harm_CDET_dighit_tdc_t;
    Int_t           Harm_PRPolScintFarSide_dighit_nchan;
    std::vector<int>     *Harm_PRPolScintFarSide_dighit_chan;
    std::vector<int>     *Harm_PRPolScintFarSide_dighit_adc;
@@ -751,6 +756,11 @@ public :
    TBranch        *b_Harm_ActAn_dighit_adc;   //!
    TBranch        *b_Harm_ActAn_dighit_tdc_l;   //!
    TBranch        *b_Harm_ActAn_dighit_tdc_t;   //!
+   TBranch        *b_Harm_CDET_dighit_nchan;   //!
+   TBranch        *b_Harm_CDET_dighit_chan;   //!
+   TBranch        *b_Harm_CDET_dighit_adc;   //!
+   TBranch        *b_Harm_CDET_dighit_tdc_l;   //!
+   TBranch        *b_Harm_CDET_dighit_tdc_t;   //!
    TBranch        *b_Harm_PRPolScintFarSide_dighit_nchan;   //!
    TBranch        *b_Harm_PRPolScintFarSide_dighit_chan;   //!
    TBranch        *b_Harm_PRPolScintFarSide_dighit_adc;   //!
@@ -1167,6 +1177,10 @@ void genrp_tree_digitized::Init(TTree *tree)
    Harm_ActAn_dighit_adc = 0;
    Harm_ActAn_dighit_tdc_l = 0;
    Harm_ActAn_dighit_tdc_t = 0;
+   Harm_CDET_dighit_chan = 0;
+   Harm_CDET_dighit_adc = 0;
+   Harm_CDET_dighit_tdc_l = 0;
+   Harm_CDET_dighit_tdc_t = 0;
    Harm_PRPolScintFarSide_dighit_chan = 0;
    Harm_PRPolScintFarSide_dighit_adc = 0;
    Harm_PRPolScintFarSide_dighit_tdc_l = 0;
@@ -1542,6 +1556,11 @@ void genrp_tree_digitized::Init(TTree *tree)
    fChain->SetBranchAddress("Harm.ActAn.dighit.adc", &Harm_ActAn_dighit_adc, &b_Harm_ActAn_dighit_adc);
    fChain->SetBranchAddress("Harm.ActAn.dighit.tdc_l", &Harm_ActAn_dighit_tdc_l, &b_Harm_ActAn_dighit_tdc_l);
    fChain->SetBranchAddress("Harm.ActAn.dighit.tdc_t", &Harm_ActAn_dighit_tdc_t, &b_Harm_ActAn_dighit_tdc_t);
+   fChain->SetBranchAddress("Harm.CDET.dighit.nchan", &Harm_CDET_dighit_nchan, &b_Harm_CDET_dighit_nchan);
+   fChain->SetBranchAddress("Harm.CDET.dighit.chan", &Harm_CDET_dighit_chan, &b_Harm_CDET_dighit_chan);
+   fChain->SetBranchAddress("Harm.CDET.dighit.adc", &Harm_CDET_dighit_adc, &b_Harm_CDET_dighit_adc);
+   fChain->SetBranchAddress("Harm.CDET.dighit.tdc_l", &Harm_CDET_dighit_tdc_l, &b_Harm_CDET_dighit_tdc_l);
+   fChain->SetBranchAddress("Harm.CDET.dighit.tdc_t", &Harm_CDET_dighit_tdc_t, &b_Harm_CDET_dighit_tdc_t);
    fChain->SetBranchAddress("Harm.PRPolScintFarSide.dighit.nchan", &Harm_PRPolScintFarSide_dighit_nchan, &b_Harm_PRPolScintFarSide_dighit_nchan);
    fChain->SetBranchAddress("Harm.PRPolScintFarSide.dighit.chan", &Harm_PRPolScintFarSide_dighit_chan, &b_Harm_PRPolScintFarSide_dighit_chan);
    fChain->SetBranchAddress("Harm.PRPolScintFarSide.dighit.adc", &Harm_PRPolScintFarSide_dighit_adc, &b_Harm_PRPolScintFarSide_dighit_adc);
