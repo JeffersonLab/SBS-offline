@@ -1085,12 +1085,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     for(int j = 0; j<simev->Tgenrp->Harm_PRPolScintFarSide_dighit_nchan; j++){
       ntdc = 0;
       lchan = simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->at(j);
+      //do we want that???
       col = lchan%2;
       row = (lchan-col)/2;
-      lchan = col*90+row;
+      lchan = col*24+row;
       ChanToROC(detname, lchan, crate, slot, chan);
-      //cout << detname << " " << simev->Tgenrp->Earm_BBHodo_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << " " << chan << endl;
-      //cout << j << " " << simev->Tgenrp->Earm_BBHodo_dighit_chan->at(j) << " " << simev->Tgenrp->Earm_BBHodo_dighit_adc->at(j) << " " << simev->Tgenrp->Earm_BBHodo_dighit_tdc_l->at(j) << " " << simev->Tgenrp->Earm_BBHodo_dighit_tdc_t->at(j) << endl;
+      //cout << detname << " " << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)].get();
       }
@@ -1764,10 +1764,11 @@ void SBSSimDecoder::ChanToROC(const std::string& detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
+  if(h_chan>=fInvDetMap.at(detname).size())std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
   assert(h_chan<fInvDetMap.at(detname).size());
   
   if(fDebug>3){
-    std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
+  
     std::cout << &(fInvDetMap.at(detname)).at(h_chan) << std::endl;
   }
   crate = ((fInvDetMap.at(detname)).at(h_chan)).crate;

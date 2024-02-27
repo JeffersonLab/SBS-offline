@@ -42,6 +42,7 @@ SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
     //case //"gen":
   default:
     Tgmn = new gmn_tree_digitized(tree);
+    //Tgenrp = new genrp_tree_digitized(tree);
     break;
   }
   
@@ -108,6 +109,7 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
   switch( fExperiment ){
   case kGEnRP://"genrp":
     //do nothing for now; eventually we will invoke the "GetEntry" methods of the various classes:
+    ret = Tgmn->GetEntry(entry);
     ret = Tgenrp->GetEntry(entry);
     break;
   case kGEp://"gep":
@@ -118,8 +120,11 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
     break;
   case kGMN://"gmn":
     //case "gen":
+    ret = Tgmn->GetEntry(entry);
+    break;
   default:
     ret = Tgmn->GetEntry(entry);
+    //ret = Tgenrp->GetEntry(entry);
     break;
   }
   //cout << Earm_BBPSTF1.nhits << " " << Earm_BBSHTF1.nhits << " " << Earm_BBHodoScint.nhits <<  " " << Earm_GRINCH.nhits << " " << Earm_BBGEM.nhits << " " << Harm_HCalScint.nhits << endl;
