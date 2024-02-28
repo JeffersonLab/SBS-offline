@@ -39,7 +39,9 @@ SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
     //Tsidis = new sidis_tree_digitized(tree);
     break;
   case kGMN://"gmn":
+    Tgmn = new gmn_tree_digitized(tree);
     //case //"gen":
+    break;
   default:
     Tgmn = new gmn_tree_digitized(tree);
     //Tgenrp = new genrp_tree_digitized(tree);

@@ -1017,11 +1017,12 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
       }
 	*/
-	row = lchan%4;
-	col = (lchan-row)/4;
-	lchan = row*4+col;
+	//row = lchan%4;
+	//col = (lchan-row)/4;
+	//lchan = row*4+col;
 	//ADC
 	ChanToROC(detname, lchan, crate, slot, chan);
+	//if(crate!=9)cout << detname << " " << simev->Tgenrp->Harm_ActAn_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << endl;
 	
 	if( crate >= 0 || slot >=  0 ) {
 	  sldat = crateslot[idx(crate,slot)].get();
@@ -1086,11 +1087,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       ntdc = 0;
       lchan = simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->at(j);
       //do we want that???
-      col = lchan%2;
-      row = (lchan-col)/2;
-      lchan = col*24+row;
+      //col = lchan%2;
+      //row = (lchan-col)/2;
+      //lchan = col*24+row;
       ChanToROC(detname, lchan, crate, slot, chan);
-      //cout << detname << " " << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << endl;
+      //if(crate!=9)cout << detname << " " << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)].get();
       }
@@ -1706,6 +1707,8 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
        if(detname.find("hodo")!=std::string::npos)chan_offset = 0;
        if(detname.find("grinch")!=std::string::npos)chan_offset = 0;
        if(detname.find("ps")!=std::string::npos)chan_offset = 0;
+       if(detname.find("active_ana")!=std::string::npos)chan_offset = 0;
+       if(detname.find("prpolscint_farside")!=std::string::npos)chan_offset = 0;
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	 if(ch_count>(int)nlogchan){
 	   std::cout << " <2> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
