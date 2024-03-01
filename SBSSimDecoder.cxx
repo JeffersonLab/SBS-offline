@@ -771,7 +771,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
     }
   }
-  if(strcmp(detname.c_str(), "bb.grinch")==0){
+  if(strcmp(detname.c_str(), "bb.grinch_tdc")==0){
     int ntdc = 0;
     //if(simev->Tgmn->b_Earm_GRINCH_dighit_nchan==0)
     //cout << "*** Warning: your GRINCH variables are probably missing in the tree you are analyzing. " << endl << " consider using another file or removing the grinch for your analysis " << endl;
