@@ -261,11 +261,14 @@ int SBSSimDecoder::LoadEvent(const Int_t* evbuffer )
   // counter in case of errors
 
   if( !fIsInit ) Init();
-
-  int ret = DoLoadEvent( evbuffer );
-
+  
+  int ret = -1;
+  if(sizeof(evbuffer)!=0){
+    ret = DoLoadEvent( evbuffer );
+  }
+  
   if( fDoBench ) fBench->Stop("physics_decode");
-
+  
   return ret;
 }
 
@@ -292,10 +295,10 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   Bool_t fNeedInit = fgNeedInit;
 #endif
   assert( fMap || fNeedInit );
-
+  
   // Local copy of evbuffer pointer, used in GetMCHitInfo
   buffer = evbuffer;
-
+  
   // if(!fTreeIsSet){
   //   std::cerr << "SBSSimDecoder Tree not initialized correctly - exiting" << std::endl;
   //   return HED_FATAL;
@@ -307,6 +310,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   if(fDebug>2)std::cout << "Processing " << here << std::endl;
   
   const SBSSimEvent* simEvent = reinterpret_cast<const SBSSimEvent*>(buffer);
+  // add a check here!!!
+  
   //simc variables
   fSigma_simc = simEvent->Tgmn->simc_sigma;
   fWeight_simc = simEvent->Tgmn->simc_Weight;
@@ -766,7 +771,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
     }
   }
-  if(strcmp(detname.c_str(), "bb.grinch")==0){
+  if(strcmp(detname.c_str(), "bb.grinch_tdc")==0){
     int ntdc = 0;
     //if(simev->Tgmn->b_Earm_GRINCH_dighit_nchan==0)
     //cout << "*** Warning: your GRINCH variables are probably missing in the tree you are analyzing. " << endl << " consider using another file or removing the grinch for your analysis " << endl;
@@ -869,6 +874,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
     }
   }
+  
   
   if(strcmp(detname.c_str(), "sbs.hcal")==0){
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Harm_HCalScint_hit_nhits << " " << simev->Tgmn->Harm_HCal_dighit_nchan << endl;
@@ -982,6 +988,312 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
 
   }
+
+  //add here the GEN-RP scintillators
+  if(strcmp(detname.c_str(), "sbs.active_ana")==0){
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgenrp->Earm_BBSHTF1_hit_nhits << " " << simev->Tgenrp->Earm_BBSH_dighit_nchan << endl;
+    samps.clear();
+    assert(simev->Tgenrp->b_Harm_ActAn_dighit_nchan);
+    for(int j = 0; j<simev->Tgenrp->Harm_ActAn_dighit_nchan; j++){
+      loadevt = false;
+      //if(simev->Tgenrp->Harm_ActAn_dighit_samp->at(j)==0)cout << "SBSSimDecoder, BBSH " << simev->Tgenrp->Harm_ActAn_dighit_chan->at(j);// << endl;
+      lchan = simev->Tgenrp->Harm_ActAn_dighit_chan->at(j);
+      if(simev->Tgenrp->Harm_ActAn_dighit_samp->at(j)>=0){
+	samps.push_back(simev->Tgenrp->Harm_ActAn_dighit_adc->at(j));
+      }
+      
+      if(j==simev->Tgenrp->Harm_ActAn_dighit_nchan-1){
+	loadevt = true;
+      }else if(simev->Tgenrp->Harm_ActAn_dighit_chan->at(j+1)!=lchan){
+	loadevt = true;
+      }
+     
+      if(loadevt){
+	/*
+      for(int k = 0; k<simev->Tgenrp->Earm_BBSHTF1_hit_nhits;k++){
+	if(simev->Tgenrp->Harm_ActAnScint_hit_cell->at(k)==simev->Tgenrp->Harm_ActAn_dighit_chan->at(j)){
+	  cout << " " << simev->Tgenrp->Harm_ActAnScint_hit_cell->at(k) << " " << simev->Tgenrp->Harm_ActAnScint_hit_row->at(k) << " " << simev->Tgenrp->Harm_ActAnScint_hit_col->at(k) << " " << simev->Tgenrp->Harm_ActAnScint_hit_xcell->at(k) << " " << simev->Tgenrp->Harm_ActAnScint_hit_ycell->at(k);// << endl;
+	  break;
+	}
+      }
+	*/
+	//row = lchan%4;
+	//col = (lchan-row)/4;
+	//lchan = row*4+col;
+	//ADC
+	ChanToROC(detname, lchan, crate, slot, chan);
+	//if(crate!=9)cout << detname << " " << simev->Tgenrp->Harm_ActAn_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << endl;
+	
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	//      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	if(!samps.empty()){
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	  for(unsigned int samp : samps){
+	    myev->push_back(samp);
+	    //cout << " " << samps[k];
+	  }
+	}
+	//cout << endl;
+	
+	samps.clear();
+      }
+      
+      /*
+      //cout << j << " " << simev->Tgenrp->Harm_ActAn_dighit_chan->at(j) << " " << simev->Tgenrp->Harm_ActAn_dighit_adc->at(j) << endl;
+      lchan = simev->Tgenrp->Harm_ActAn_dighit_chan->at(j);
+      ChanToROC(detname, lchan, crate, slot, chan);
+      
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)].get();
+      }
+      std::vector<UInt_t> *myev = &(map[sldat]);
+      
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(6, chan, 1));
+   
+      myev->push_back(simev->Tgenrp->Harm_ActAn_dighit_adc->at(j));
+      
+      if(fDebug>2){
+	std::cout << " j = " << j << " my ev = {";
+	for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	std::cout << " } " << std::endl;
+      }
+      */
+    }
+  }
+  if(strcmp(detname.c_str(), "sbs.prpolscint_farside")==0){
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgenrp->Earm_BBHodoScint_hit_nhits << " " << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_nchan << endl;
+    // cout << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->size() << " " 
+    // 	 << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_adc->size() << " " 
+    // 	 << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_l->size() << " " 
+    // 	 << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_t->size() << endl; 
+    /*
+    ChanToROC(detname, 180, crate, slot, chan);
+    cout << crate << " " << slot << " " << chan << endl;
+    if( crate >= 0 || slot >=  0 ) {
+      sldat = crateslot[idx(crate,slot)].get();
+    }
+    std::vector<UInt_t> *myev = &(map[sldat]);
+    myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
+    myev->push_back(0);
+    */
+    int ntdc = 0;
+    assert(simev->Tgenrp->b_Harm_PRPolScintFarSide_dighit_nchan);
+    for(int j = 0; j<simev->Tgenrp->Harm_PRPolScintFarSide_dighit_nchan; j++){
+      ntdc = 0;
+      lchan = simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->at(j);
+      //do we want that???
+      //col = lchan%2;
+      //row = (lchan-col)/2;
+      //lchan = col*24+row;
+      ChanToROC(detname, lchan, crate, slot, chan);
+      //if(crate!=9)cout << detname << " " << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << endl;
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)].get();
+      }
+      if(simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_l->at(j)>-1000000)ntdc++;
+      if(simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_t->at(j)>-1000000)ntdc++;
+      
+      if(ntdc){
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, ntdc));
+	
+	if(simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_l->at(j)>-1000000)myev->push_back(simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_l->at(j));
+	if(simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_t->at(j)>-1000000){
+	  uint tdc =  simev->Tgenrp->Harm_PRPolScintFarSide_dighit_tdc_t->at(j)|(1<<31);
+	  //cout << tdc << endl;
+	  myev->push_back( tdc );
+	}
+      /*
+      ChanToROC(detname, lchan, crate, slot, chan);//+91 ??? that might be the trick
+      if( crate >= 0 || slot >=  0 ) {
+	sldat = crateslot[idx(crate,slot)].get();
+      }
+      myev = &(map[sldat]);
+      
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(8, chan, 1));
+      myev->push_back(simev->Tgenrp->Harm_PRPolScintFarSide_dighit_adc->at(j));
+      */
+	if(fDebug>2){
+	  std::cout << " j = " << j << " my ev = {";
+	  for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	  std::cout << " } " << std::endl;
+	}
+      }
+    }
+  }
+  
+  if(strcmp(detname.c_str(), "sbs.cepolfront_gem")==0){
+    //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
+    samps.clear();  
+    strips.clear();  
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgenrp->Harm_CEPolFront_dighit_nstrips << endl;
+    assert(simev->Tgenrp->b_Harm_CEPolFront_dighit_nstrips);
+    for(int j = 0; j<simev->Tgenrp->Harm_CEPolFront_dighit_nstrips; j++){
+      loadevt = false;
+      mod = simev->Tgenrp->Harm_CEPolFront_dighit_module->at(j);
+      lchan = simev->Tgenrp->Harm_CEPolFront_dighit_strip->at(j);
+      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      
+      if(simev->Tgenrp->Harm_CEPolFront_dighit_samp->at(j)>=0){
+	strips.push_back(chan);
+	samps.push_back(simev->Tgenrp->Harm_CEPolFront_dighit_adc->at(j));
+      }
+      
+      if(fDebug>3)
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgenrp->Harm_CEPolFront_dighit_samp->at(j)  << " adc " << simev->Tgenrp->Harm_CEPolFront_dighit_adc->at(j) << endl;
+      //if(mod>=26 && simev->Tgenrp->Harm_CEPolFront_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
+      
+      if(j==simev->Tgenrp->Harm_CEPolFront_dighit_nstrips-1){
+	loadevt = true;
+      }else if(mod!=simev->Tgenrp->Harm_CEPolFront_dighit_module->at(j+1) ||
+	       //fabs(lchan-simev->Tgenrp->Harm_CEPolFront_dighit_strip->at(j+1))>=128
+	       floor(simev->Tgenrp->Harm_CEPolFront_dighit_strip->at(j+1)/128)!=floor(lchan/128)
+	       ){
+	loadevt = true;
+      }
+	
+      if(loadevt){
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	if(!samps.empty()){
+	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  //I think I'm onto something here, but I also need to transmit strip num 
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
+	  for(int k = 0; k<(int)samps.size(); k++){
+	    // cout << " " << samps[k];
+	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	  }
+	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
+	  //cout << endl;
+	}
+	//cout << endl;
+	
+	samps.clear();
+	strips.clear();
+      }
+    }
+  }
+
+  if(strcmp(detname.c_str(), "sbs.cepolrear_gem")==0){
+    //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
+    samps.clear();  
+    strips.clear();  
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgenrp->Harm_CEPolRear_dighit_nstrips << endl;
+    assert(simev->Tgenrp->b_Harm_CEPolRear_dighit_nstrips);
+    for(int j = 0; j<simev->Tgenrp->Harm_CEPolRear_dighit_nstrips; j++){
+      loadevt = false;
+      mod = simev->Tgenrp->Harm_CEPolRear_dighit_module->at(j);
+      lchan = simev->Tgenrp->Harm_CEPolRear_dighit_strip->at(j);
+      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      
+      if(simev->Tgenrp->Harm_CEPolRear_dighit_samp->at(j)>=0){
+	strips.push_back(chan);
+	samps.push_back(simev->Tgenrp->Harm_CEPolRear_dighit_adc->at(j));
+      }
+      
+      if(fDebug>3)
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgenrp->Harm_CEPolRear_dighit_samp->at(j)  << " adc " << simev->Tgenrp->Harm_CEPolRear_dighit_adc->at(j) << endl;
+      //if(mod>=26 && simev->Tgenrp->Harm_CEPolRear_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
+      
+      if(j==simev->Tgenrp->Harm_CEPolRear_dighit_nstrips-1){
+	loadevt = true;
+      }else if(mod!=simev->Tgenrp->Harm_CEPolRear_dighit_module->at(j+1) ||
+	       //fabs(lchan-simev->Tgenrp->Harm_CEPolRear_dighit_strip->at(j+1))>=128
+	       floor(simev->Tgenrp->Harm_CEPolRear_dighit_strip->at(j+1)/128)!=floor(lchan/128)
+	       ){
+	loadevt = true;
+      }
+	
+      if(loadevt){
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	if(!samps.empty()){
+	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  //I think I'm onto something here, but I also need to transmit strip num 
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
+	  for(int k = 0; k<(int)samps.size(); k++){
+	    // cout << " " << samps[k];
+	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	  }
+	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
+	  //cout << endl;
+	}
+	//cout << endl;
+	
+	samps.clear();
+	strips.clear();
+      }
+    }
+  }
+
+  if(strcmp(detname.c_str(), "sbs.prpolgem_farside")==0){
+    //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
+    samps.clear();  
+    strips.clear();  
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_nstrips << endl;
+    assert(simev->Tgenrp->b_Harm_PRPolGEMFarSide_dighit_nstrips);
+    for(int j = 0; j<simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_nstrips; j++){
+      loadevt = false;
+      mod = simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_module->at(j);
+      lchan = simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_strip->at(j);
+      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      
+      if(simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_samp->at(j)>=0){
+	strips.push_back(chan);
+	samps.push_back(simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_adc->at(j));
+      }
+      
+      if(fDebug>3)
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_samp->at(j)  << " adc " << simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_adc->at(j) << endl;
+      //if(mod>=26 && simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
+      
+      if(j==simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_nstrips-1){
+	loadevt = true;
+      }else if(mod!=simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_module->at(j+1) ||
+	       //fabs(lchan-simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_strip->at(j+1))>=128
+	       floor(simev->Tgenrp->Harm_PRPolGEMFarSide_dighit_strip->at(j+1)/128)!=floor(lchan/128)
+	       ){
+	loadevt = true;
+      }
+	
+      if(loadevt){
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	if(!samps.empty()){
+	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  //I think I'm onto something here, but I also need to transmit strip num 
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
+	  for(int k = 0; k<(int)samps.size(); k++){
+	    // cout << " " << samps[k];
+	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	  }
+	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
+	  //cout << endl;
+	}
+	//cout << endl;
+	
+	samps.clear();
+	strips.clear();
+      }
+    }
+  }
+  
+  
+  
   /*
   while(j < HitData_Det->nhits){
     //Decode header first
@@ -1395,6 +1707,8 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
        if(detname.find("hodo")!=std::string::npos)chan_offset = 0;
        if(detname.find("grinch")!=std::string::npos)chan_offset = 0;
        if(detname.find("ps")!=std::string::npos)chan_offset = 0;
+       if(detname.find("active_ana")!=std::string::npos)chan_offset = 0;
+       if(detname.find("prpolscint_farside")!=std::string::npos)chan_offset = 0;
        for(int i = ch_lo; i<=ch_hi; i++, ch_map++){
 	 if(ch_count>(int)nlogchan){
 	   std::cout << " <2> number of channels defined in detmap ( >= " << ch_count << ") exceeds logical number of channels = " << nlogchan << std::endl;
@@ -1453,10 +1767,11 @@ void SBSSimDecoder::ChanToROC(const std::string& detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
+  if(h_chan>=fInvDetMap.at(detname).size())std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
   assert(h_chan<fInvDetMap.at(detname).size());
   
   if(fDebug>3){
-    std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
+  
     std::cout << &(fInvDetMap.at(detname)).at(h_chan) << std::endl;
   }
   crate = ((fInvDetMap.at(detname)).at(h_chan)).crate;

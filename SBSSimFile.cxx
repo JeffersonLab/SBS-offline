@@ -72,24 +72,7 @@ SBSSimFile::SBSSimFile(const char* filename, const char *experiment, const char*
     }
   }
   */
-  cout << "using experiment configuration: " << experiment << endl;
-  
-  if(strcmp(experiment,"gmn")==0 || strcmp(experiment,"gen")==0){
-    //(experiment=="gmn" || experiment=="gen")//{
-    fExperiment = kGMN;
-  }
-  if(strcmp(experiment,"genrp")==0){
-    //(experiment=="genrp")//{
-    fExperiment = kGEnRP;
-  }
-  if(strcmp(experiment,"gep")==0){
-    //(experiment=="gep")//{
-    fExperiment = kGEp;
-  }
-  if(strcmp(experiment,"sidis")==0){
-    //(experiment=="sidis")//{
-    fExperiment = kSIDIS;
-  }
+  GetExperiment(experiment);
   
   // fValidExperiments.insert("gmn");
   // fValidExperiments.insert("genrp");
@@ -190,10 +173,69 @@ Int_t SBSSimFile::Init()
 }
 
 //-----------------------------------------------------------------------------
+Int_t SBSSimFile::ReadDatabase()
+{
+  
+  static const char* const here = "ReadDatabase";
+  
+  THaRunBase::ReadDatabase();
+  
+  FILE* f = Podd::OpenDBFile("run", fDate, "SBSSimFile::ReadDatabase", "r", 1);
+  if( !f )  return -1;
+  TString expt;
+  DBRequest request[] = {
+    { "experiment",  &expt, kTString },
+    { nullptr }
+  };
+  Int_t err = THaAnalysisObject::LoadDB( f, fDate, request, "");
+  if(fVerbose>0)std::cout << " expt " << expt.Data() << " DBreq status: " << err << std::endl; 
+  
+  fclose(f);
+  if( err ){
+    std::cout << "Warning: can't read experiment flag in MC run database! " << std::endl 
+	      << "Defaulting to GMN - if you're not running GMN simulation, it will likely cause issues." << std::endl 
+	      << "Fix database in this case. " << std::endl;
+    //default!!!
+    fExperiment = kGMN;
+  }else{
+    GetExperiment(expt.Data());
+  }
+  //return err;
+  
+  fDBRead = true;
+  return READ_OK;
+}
+
+//-----------------------------------------------------------------------------
+void SBSSimFile::GetExperiment(const char *experiment)
+{
+  if(fVerbose>1)cout << "using experiment configuration: " << experiment << endl;
+  
+  if(strcmp(experiment,"gmn")==0 || strcmp(experiment,"gen")==0){
+    //(experiment=="gmn" || experiment=="gen")//{
+    fExperiment = kGMN;
+  }
+  if(strcmp(experiment,"genrp")==0){
+    //(experiment=="genrp")//{
+    fExperiment = kGEnRP;
+  }
+  if(strcmp(experiment,"gep")==0){
+    //(experiment=="gep")//{
+    fExperiment = kGEp;
+  }
+  if(strcmp(experiment,"sidis")==0){
+    //(experiment=="sidis")//{
+    fExperiment = kSIDIS;
+  }
+  
+}
+
+//-----------------------------------------------------------------------------
 Int_t SBSSimFile::Open()
 {
+  ReadDatabase();
   // Open ROOT input file
-  if(fVerbose>0)std::cout << "SBSSimFile::Open()" << std::endl;
+  if(fVerbose>0)std::cout << "SBSSimFile::Open(): initialize file with experiment: " << fExperiment << std::endl;
   
   fROOTFile = new TFile(fROOTFileName, "READ", "SBS MC data");
   if( !fROOTFile || fROOTFile->IsZombie() ) {
@@ -252,6 +294,8 @@ Int_t SBSSimFile::Open()
 //-----------------------------------------------------------------------------
 Int_t SBSSimFile::Close()
 {
+  if(fVerbose>0)std::cout << " SBSSimFile::Close(): closing file and destroy previously configured SBSSimEvent " << std::endl;
+  
   delete fTree; fTree = 0;
   if (fROOTFile) {
     fROOTFile->Close();
