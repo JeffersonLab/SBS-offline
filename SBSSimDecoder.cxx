@@ -148,6 +148,8 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"simc_vx",       "MC vertex x co-ordinate from SIMC gen.",   "fVx_simc"},
     {"simc_vy",       "MC vertex y co-ordinate from SIMC gen.",   "fVy_simc"},
     {"simc_vz",       "MC vertex z co-ordinate from SIMC gen.",   "fVz_simc"},
+    {"simc_veE",      "MC scattered e- energy at vertex from SIMC gen.",   "fVeE_simc"},
+    {"simc_vetheta",  "MC scattered e- theta at vertex from SIMC gen.",   "fVetheta_simc"},
     // ** ^^ **
     {"mc_sigma",   "MC cross section",   "fSigma"},
     {"mc_omega",   "MC phase spece generation",   "fOmega"},
@@ -332,6 +334,8 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   fVx_simc = simEvent->Tgmn->simc_vx;
   fVy_simc = simEvent->Tgmn->simc_vy;
   fVz_simc = simEvent->Tgmn->simc_vz;
+  fVeE_simc = simEvent->Tgmn->simc_veE;
+  fVetheta_simc = simEvent->Tgmn->simc_vetheta;
   //g4sbs variables
   fSigma = simEvent->Tgmn->ev_sigma;
   fOmega = simEvent->Tgmn->ev_solang;

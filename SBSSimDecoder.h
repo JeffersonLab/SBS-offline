@@ -175,6 +175,8 @@ protected:
   Double_t fVx_simc;
   Double_t fVy_simc;
   Double_t fVz_simc;
+  Double_t fVeE_simc;
+  Double_t fVetheta_simc;
   // g4sbs variables
   Double_t fSigma;
   Double_t fOmega;

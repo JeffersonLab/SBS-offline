@@ -48,6 +48,8 @@ public :
    Double_t        simc_vx;
    Double_t        simc_vy;
    Double_t        simc_vz;
+   Double_t        simc_veE;
+   Double_t        simc_vetheta;
    Double_t        ev_count;
    Double_t        ev_rate;
    Double_t        ev_solang;
@@ -463,6 +465,8 @@ public :
    TBranch        *b_simc_vx;   //!
    TBranch        *b_simc_vy;   //!
    TBranch        *b_simc_vz;   //!
+   TBranch        *b_simc_veE;   //!
+   TBranch        *b_simc_vetheta;   //!
    TBranch        *b_ev;   //!
    TBranch        *b_Earm_BBGEM_hit_nhits;   //!
    TBranch        *b_Earm_BBGEM_hit_plane;   //!
@@ -1219,6 +1223,8 @@ void gmn_tree_digitized::Init(TTree *tree)
    fChain->SetBranchAddress("simc.vx", &simc_vx, &b_simc_vx);
    fChain->SetBranchAddress("simc.vy", &simc_vy, &b_simc_vy);
    fChain->SetBranchAddress("simc.vz", &simc_vz, &b_simc_vz);
+   fChain->SetBranchAddress("simc.veE", &simc_veE, &b_simc_veE);
+   fChain->SetBranchAddress("simc.vetheta", &simc_vetheta, &b_simc_vetheta);
    fChain->SetBranchAddress("ev", &ev_count, &b_ev);
    fChain->SetBranchAddress("Earm.BBGEM.hit.nhits", &Earm_BBGEM_hit_nhits, &b_Earm_BBGEM_hit_nhits);
    fChain->SetBranchAddress("Earm.BBGEM.hit.plane", &Earm_BBGEM_hit_plane, &b_Earm_BBGEM_hit_plane);
