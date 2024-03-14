@@ -55,6 +55,7 @@
 #pragma link C++ class SBSSimEvent+;
 #pragma link C++ class SBSSimDecoder+;
 #pragma link C++ class gmn_tree_digitized+;
+#pragma link C++ class genrp_tree_digitized+;
 #pragma link C++ class SBSManager+;
 //#pragma link C++ class Decoder::SBSSimMPD+;
 //#pragma link C++ class gmn_dig_tree+;
