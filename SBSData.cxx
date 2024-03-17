@@ -1,6 +1,8 @@
 #include "SBSData.h"
 #include "TMath.h"
 #include <iostream>
+#include "DataType.h"
+
 #define SBS_ADC_MODE_SINGLE 0 //< Simple ADC with only integral
 #define SBS_ADC_MODE_MULTI  1 //< FADC 250 mode 7
 
@@ -96,10 +98,18 @@ namespace SBSData {
     hit->TrigTime = 0;
     if( edge == 0 ) { // Leading edge
       hit->le.raw = val;
-      hit->le.val = (val-fTDC.offset)*fTDC.cal;
-    } else {
+        if(val==kBig){
+            hit->le.val = val; //put kBig for both le.raw and le.val if missing hits
+        }else{
+            hit->le.val = (val-fTDC.offset)*fTDC.cal;
+        }
+    } else if(edge == 1) {
       hit->te.raw = val;
-      hit->te.val = (val-fTDC.offset)*fTDC.cal;
+        if(val==kBig){
+            hit->te.val = val; //put kBig for both te.raw and te.val if missing hits
+        }else{
+            hit->te.val = (val-fTDC.offset)*fTDC.cal;
+        }
     }
     if(fEdgeIdx[0] == fEdgeIdx[1]) { // Both leading and trailing edges now found
       hit->ToT.raw = hit->te.raw - hit->le.raw;
