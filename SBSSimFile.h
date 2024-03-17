@@ -51,9 +51,10 @@ class SBSSimFile : public THaRunBase {
   void          SetFileName( const char* name ) { fROOTFileName = name; }
 
   void          SetVerbose(int v){fVerbose = v;};
-
+  void          GetExperiment(const char* experiment);
+  
  protected:
-  //virtual Int_t ReadDatabase();
+  virtual Int_t ReadDatabase();
 
   TString fROOTFileName;  //  Name of input file
   TFile* fROOTFile;       //! Input ROOT file
@@ -61,7 +62,7 @@ class SBSSimFile : public THaRunBase {
   SBSSimEvent* fEvent;   //! Current event
 
   //std::vector<TString> fDetList;
-
+  
   ULong64_t fNEntries;    //! Number of entries in tree
   ULong64_t fEntry;       //! Current entry number
 
