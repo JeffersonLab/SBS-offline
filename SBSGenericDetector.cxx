@@ -1190,7 +1190,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 	       }else if(rawdata <= reftime){ rawdata+=fF1_RollOver;} 
 	     } 
 	   }
-	  UInt_t TrigTime = 0;
+	   UInt_t TrigTime = 0;
 	   Int_t LeadingEdge=0;
 	  if (d->GetModel() == 6401) {
 	    TrigTime = evdata.GetRawData(d->crate, d->slot, chan, ihit); // for F1 "raw" is trigger time

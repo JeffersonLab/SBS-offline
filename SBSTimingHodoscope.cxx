@@ -273,6 +273,10 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     { "allclus.totmean", "cluster mean ToT",    "fOutClus.tot"},
     { "allclus.tdiff", "cluster max bar tdiff", "fOutClus.tdiff"},
     { "allclus.itrack", "track index", "fOutClus.trackindex"},
+    { "allclus.tleft", "cluster max bar tleft", "fOutClus.tleft"},
+    { "allclus.tright", "cluster max bar tright", "fOutClus.tright"},
+    { "allclus.totleft", "cluster max bar totleft", "fOutClus.totleft"},
+    { "allclus.totright", "cluster max bar totright", "fOutClus.totright"},
     { 0 }
   };
   err = DefineVarsFromList( vars_clus, mode );
@@ -287,6 +291,10 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     { "clus.bar.tdc.timehitpos", "main clus Bar Time Hit pos from L [m]",  "fMainClusBars.y"},
     { "clus.bar.tdc.vpos",       "main clus Bar vertical position [m]",    "fMainClusBars.x"},
     { "clus.bar.tdc.itrack",  "main clus Bar track index", "fMainClusBars.trackindex" },
+    { "clus.bar.tdc.tleft", "main clus Bar tleft, no corrections", "fMainClusBars.tleft" },
+    { "clus.bar.tdc.tright", "main clus Bar tright, no corrections", "fMainClusBars.tright" },
+    { "clus.bar.tdc.totleft", "main clus Bar tot left, no corrections", "fMainClusBars.totleft" },
+    { "clus.bar.tdc.totright", "main clus Bar tot right, no corrections", "fMainClusBars.totright" },
     { 0 }
   };
 
@@ -303,6 +311,10 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     { "clus.tmean",   "cluster mean T",     "fMainClus.t"},
     { "clus.totmean",  "cluster mean ToT",   "fMainClus.tot"},
     { "clus.tdiff", "cluster max bar tdiff", "fMainClus.tdiff"},
+    { "clus.tleft", "cluster max bar tleft", "fMainClus.tleft"},
+    { "clus.tright", "cluster max bar tright", "fMainClus.tright"},
+    { "clus.totleft", "cluster max bar totleft", "fMainClus.totleft"},
+    { "clus.totright", "cluster max bar totright", "fMainClus.totright"},
     { "clus.trackindex", "cluster track index", "fMainClus.trackindex"},
     { 0 }
   };
@@ -406,6 +418,10 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	//get left and right LE times 
 	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
 	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
+
+	Double_t Loffset = elL->TDC()->GetOffset();
+	Double_t Roffset = elR->TDC()->GetOffset();
+	
 	Double_t LEl = hitL.le.val;
 	Double_t LEr = hitR.le.val;
 
@@ -540,6 +556,9 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   //Moved "DoClustering() call to CoarseProcess, so we can use it in track search constraint calculation
   //DoClustering();
 
+  //Here all we are doing is filling the output variables!
+  //For the "cluster" variables we should just set tleft and tright to those of the max bar: 
+  
   //fill output here:
   //if(fDataOutputLevel>1){
   for(int i = 0; i<GetNClusters(); i++){
@@ -550,6 +569,10 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
     fOutClus.t.push_back(GetCluster(i)->GetTmean());
     fOutClus.tot.push_back(GetCluster(i)->GetToTmean());
     fOutClus.tdiff.push_back(GetCluster(i)->GetTdiff());
+    fOutClus.tleft.push_back(GetCluster(i)->GetTleft());
+    fOutClus.tright.push_back(GetCluster(i)->GetTright());
+    fOutClus.totleft.push_back(GetCluster(i)->GetTOTleft());
+    fOutClus.totright.push_back(GetCluster(i)->GetTOTright());
     fOutClus.trackindex.push_back(-1);
   }
     //}
@@ -577,6 +600,10 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
       fMainClus.t.push_back(GetCluster(i)->GetTmean());
       fMainClus.tot.push_back(GetCluster(i)->GetToTmean());
       fMainClus.tdiff.push_back(GetCluster(i)->GetTdiff());
+      fMainClus.tleft.push_back(GetCluster(i)->GetTleft());
+      fMainClus.tright.push_back(GetCluster(i)->GetTright());
+      fMainClus.totleft.push_back(GetCluster(i)->GetTOTleft());
+      fMainClus.totright.push_back(GetCluster(i)->GetTOTright());
       fMainClus.trackindex.push_back( fOutClus.trackindex[i] );
       //AJRP: we should fill these variables regardless;
       // output is contolled by the odef file:
@@ -587,6 +614,10 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
 	fMainClusBars.t.push_back(GetCluster(i)->GetElement(j)->GetMeanTime());
 	fMainClusBars.tot.push_back(GetCluster(i)->GetElement(j)->GetMeanToT());
 	fMainClusBars.tdiff.push_back(GetCluster(i)->GetElement(j)->GetTimeDiff());
+	fMainClusBars.tleft.push_back(GetCluster(i)->GetElement(j)->GetLeftHit().le.val);
+	fMainClusBars.tright.push_back(GetCluster(i)->GetElement(j)->GetRightHit().le.val);
+	fMainClusBars.totleft.push_back(GetCluster(i)->GetElement(j)->GetLeftHit().ToT.val);
+	fMainClusBars.totright.push_back(GetCluster(i)->GetElement(j)->GetRightHit().ToT.val);
 	fMainClusBars.x.push_back(GetCluster(i)->GetElement(j)->GetElementPos());
 	fMainClusBars.y.push_back(GetCluster(i)->GetElement(j)->GetHitPos());
 	fMainClusBars.trackindex.push_back( fOutClus.trackindex[i] );
@@ -926,6 +957,10 @@ void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)
   out.t.clear();
   out.tot.clear();
   out.tdiff.clear();
+  out.tleft.clear();
+  out.tright.clear();
+  out.totleft.clear();
+  out.totright.clear();
   out.trackindex.clear();
 }
 

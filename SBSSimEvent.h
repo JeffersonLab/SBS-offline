@@ -49,6 +49,7 @@ class SBSSimEvent {
   //gep_tree_digitized *Tgep;
   genrp_tree_digitized *Tgenrp;//EPAF: for now, genrp tree is thought as a complement of the GMN tree. 
   // we might keep it this way unless it induces crashes or significant slowdown!
+
   //sidis_tree_digitized *Tsidis;
   //  gen_tree_digitized *Tgen; //This actually seems like it wouldn't require anything different from gmn.
 

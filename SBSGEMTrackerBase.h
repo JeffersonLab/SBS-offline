@@ -28,19 +28,32 @@ class SBSGEMTrackerBase {
 public:
   void Clear(); //clear out all the event-specific data structures
 
+  void SetFrontConstraintPoint( TVector3 fcp );
+  void SetBackConstraintPoint( TVector3 bcp );
+  void SetFrontConstraintWidth( TVector2 fcw );
+  void SetBackConstraintWidth( TVector2 bcw );
+
+  void SetFrontConstraintPoint( double x, double y, double z );
+  void SetBackConstraintPoint( double x, double y, double z );
+  void SetFrontConstraintWidth( double x, double y );
+  void SetBackConstraintWidth( double x, double y );
+
+  void SetConstraintWidth_theta( double dth );
+  void SetConstraintWidth_phi( double dph );
+  
   //These can change event-by-event:
-  inline void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; fConstraintPoint_Front_IsInitialized = true; }
-  inline void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; fConstraintPoint_Back_IsInitialized = true; }
-  inline void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; fConstraintWidth_Front_IsInitialized = true; }
-  inline void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; fConstraintWidth_Back_IsInitialized = true; }
+  // inline void SetFrontConstraintPoint( TVector3 fcp ){ fConstraintPoint_Front = fcp; fConstraintPoint_Front_IsInitialized = true; }
+  // inline void SetBackConstraintPoint( TVector3 bcp ){ fConstraintPoint_Back = bcp; fConstraintPoint_Back_IsInitialized = true; }
+  // inline void SetFrontConstraintWidth( TVector2 fcw ){ fConstraintWidth_Front = fcw; fConstraintWidth_Front_IsInitialized = true; }
+  // inline void SetBackConstraintWidth( TVector2 bcw ){ fConstraintWidth_Back = bcw; fConstraintWidth_Back_IsInitialized = true; }
 
-  inline void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); fConstraintPoint_Front_IsInitialized = true; }
-  inline void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); fConstraintPoint_Back_IsInitialized = true; }
-  inline void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); fConstraintWidth_Front_IsInitialized = true; }
-  inline void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); fConstraintWidth_Back_IsInitialized = true; }
+  // inline void SetFrontConstraintPoint( double x, double y, double z ){ fConstraintPoint_Front.SetXYZ(x, y, z); fConstraintPoint_Front_IsInitialized = true; }
+  // inline void SetBackConstraintPoint( double x, double y, double z ){ fConstraintPoint_Back.SetXYZ(x, y, z); fConstraintPoint_Back_IsInitialized = true; }
+  // inline void SetFrontConstraintWidth( double x, double y ){ fConstraintWidth_Front.Set(x, y); fConstraintWidth_Front_IsInitialized = true; }
+  // inline void SetBackConstraintWidth( double x, double y ){ fConstraintWidth_Back.Set(x, y); fConstraintWidth_Back_IsInitialized = true; }
 
-  inline void SetConstraintWidth_theta( double dth ){ fConstraintWidth_theta = dth; }
-  inline void SetConstraintWidth_phi( double dph ){ fConstraintWidth_phi = dph; }
+  // inline void SetConstraintWidth_theta( double dth ){ fConstraintWidth_theta = dth; }
+  // inline void SetConstraintWidth_phi( double dph ){ fConstraintWidth_phi = dph; }
   
   inline void SetPmin( double pmin ){ fPmin_track = pmin; }
   inline void SetPmax( double pmax ){ fPmax_track = pmax; }
@@ -66,6 +79,14 @@ public:
   
   inline void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
 
+  //Need to add some public "getter" and "setter" methods for the polarimeter-mode analysis:
+  int GetNtracks() const { return fNtracks_found; }
+  void GetTrack(int itrack, double &x, double &y, double &xp, double &yp);
+  double GetXTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXtrack[itrack] : 1.e20; };
+  double GetYTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fYtrack[itrack] : 1.e20; };
+  double GetXpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXtrack[itrack] : 1.e20; };
+  double GetYpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXtrack[itrack] : 1.e20; };
+  
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
   virtual ~SBSGEMTrackerBase(); 
@@ -74,7 +95,8 @@ protected:
   bool ftracking_done;
 
   bool fIsSpectrometerTracker; //default to true:
-  bool fIsPolarimeterTracker; 
+  bool fIsPolarimeterTracker;
+  bool fMultiTrackSearch; //default to false!
   //bool fUseFrontTrackerConstraint; //default to FALSE:
   
   bool fNegSignalStudy;
@@ -209,10 +231,31 @@ protected:
   bool fUseConstraint;
   bool fUseOpticsConstraint; //default to FALSE:
   bool fUseForwardOpticsConstraint;
-  // "Constraint points" to restrict the search region for track-finding:
-  TVector3 fConstraintPoint_Front;
-  TVector3 fConstraintPoint_Back;
+  // "Constraint points" to restrict the search region for track-finding; we are making these vectors
+  // to allow for multiple "regions of interest" to be defined. For now, we keep the "optics" and/or "forward optics" constraints
+  // single-valued although we might decide to change that later
 
+  // "constraint points" are calculated from event-by-event quantities; but constraint widths are set via the database.
+  // So in fact, the constraint widths should probably be single-valued!
+  // But what are the use cases?
+  // 1. Generic spectrometer tracking with BigBite or SBS: we might want to consider clusters other than the highest-energy one
+  ///   in a given calorimeter to seed track-finding! In these cases multiple points but constant width is appropriate
+  // 2. Polarimeter tracking: we might want to consider two or more "front tracks" pointing at two or more high-energy clusters
+  //    in a calorimeter!
+  //    GEN-RP/KLL case:
+  //    1. Charge-exchange: "front track" is a predicted neutron trajectory based on the straight-line projection from the
+  //       vertex reconstructed by BigBite to the midpoint of the analyzer; in this case the width needs to be MUCH bigger,
+  //       in principle, than in the case where the constraint is based on a MEASURED track in the front GEM.
+  //    2. K_LL or ancillary GEP/LH2 analyzing power calib: "front track" is an actual reconstructed track in the front GEMs
+  //       In this case constant width, defined via the database, is appropriate.
+  //    Since the only case demanding anything other than a constant constraint width is the case of ChEx for GEN-RP,
+  //    I feel like we can handle that somehow separately in the PolarimeterTracker class!
+  
+  std::vector<TVector3> fConstraintPoint_Front;
+  std::vector<TVector3> fConstraintPoint_Back;
+
+  //We'll keep these single-valued for the time being, but we might need to add some
+  //alternate parameters for the special case of charge-exchange polarimetry for GEN-RP:
   TVector2 fConstraintWidth_Front;
   TVector2 fConstraintWidth_Back;
 

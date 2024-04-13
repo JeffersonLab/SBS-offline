@@ -97,6 +97,10 @@ protected:
   std::vector<int> f_ol;
   std::vector<int> f_om;
 
+  Bool_t fPolarimeterMode; //Use polarimeter mode
+
+  Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
+  
   //Also include (optional) forward optics model to aid in false track rejection. 
   int fForwardOpticsOrder;
   std::vector<double> fb_xfp;

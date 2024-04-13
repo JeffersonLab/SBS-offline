@@ -22,7 +22,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fIsMC = false;
   fNmodules = 0;
   fNlayers = 0;
-  fTrackingAlgorithmFlag = 2;
+  fTrackingAlgorithmFlag = 2; //Apparently this is irrelevant
 
   fMinHitsOnTrack = 3;
   //fMinHighQualityHitsOnTrack = 0;
@@ -56,14 +56,21 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fTrackChi2CutHitQuality.resize(1,100.0);
 
   fSigma_hitpos = 0.0001; //100 um
-  
+
+  fMultiTrackSearch = false;
+
   // set defaults for constraint points and constraint widths:
-  fConstraintPoint_Front.SetXYZ(0,0,-10.0);
-  fConstraintPoint_Back.SetXYZ(0,0,10.0);
+  fConstraintPoint_Front.clear();
+  fConstraintPoint_Back.clear();
+  fConstraintPoint_Front.push_back( TVector3(0,0,-10.0) );
+  fConstraintPoint_Back.push_back( TVector3(0,0,10.0) );
+  
+  // fConstraintPoint_Front.SetXYZ(0,0,-10.0);
+  // fConstraintPoint_Back.SetXYZ(0,0,10.0);
 
   //wide-open constraints for now (the units are meters here (mm or cm would be more natural but whatever))
-  fConstraintWidth_Front.Set( 1.5, 0.5 );
-  fConstraintWidth_Back.Set( 1.5, 0.5 );
+  fConstraintWidth_Front.Set(1.5, 0.5);
+  fConstraintWidth_Back.Set(1.5, 0.5);
 
   //Default to wide-open track slope cuts:
   fConstraintWidth_theta = 1000.0;
@@ -83,6 +90,7 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fDumpGeometryInfo = false;
   fIsSpectrometerTracker = true; //default to true
   fIsPolarimeterTracker = false;
+  fMultiTrackSearch = false;
   fUseOpticsConstraint = false;
   //fUseFrontTrackerConstraint =false;
 
@@ -130,11 +138,17 @@ SBSGEMTrackerBase::~SBSGEMTrackerBase(){
 void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   //Also, when we construct the tracker, we want to clear out the modules:
   //fModules.clear(); we actually DON'T want to clear out the modules here, this gets called event-by-event
-  fConstraintPoint_Front_IsInitialized = false;
-  fConstraintPoint_Back_IsInitialized = false;
-  fConstraintWidth_Front_IsInitialized = false;
-  fConstraintWidth_Back_IsInitialized = false;
-  fConstraintInitialized = false;
+  //fConstraintPoint_Front_IsInitialized = false;
+  //fConstraintPoint_Back_IsInitialized = false;
+  // fConstraintWidth_Front_IsInitialized = false;
+  // fConstraintWidth_Back_IsInitialized = false;
+  //fConstraintInitialized = false;
+
+  //fConstraintPoint_Front.clear();
+  //fConstraintPoint_Back.clear();
+  // fConstraintWidth_Front.clear();
+  // fConstraintWidth_Back.clear();
+  //Don't clear constraint widths for "theta" and "phi" as these 
   
   fNtracks_found = 0;
   fNhitsOnTrack.clear();
@@ -349,6 +363,10 @@ void SBSGEMTrackerBase::CompleteInitialization(){
       fModules[imod]->SetMakeCommonModePlots( fCommonModePlotsFlag );
     }
 
+    if( fMultiTrackSearch ){
+      fModules[imod]->fStoreAll1Dclusters = true;
+    }
+    
     for(int iAPV = 0; iAPV < fModules[imod]->fNAPVs_U; iAPV++)
       if(fModules[imod]->fCommonModeMeanU[iAPV] > 1.0) cm_already_loaded = true;
       
@@ -997,8 +1015,9 @@ Double_t SBSGEMTrackerBase::InitHitList(){
       
       for( int ihit=0; ihit<n2Dhits_mod; ihit++ ){
 	sbsgemhit_t hittemp = fModules[module]->fHits[ihit];
-	
-	if( hittemp.keep ){
+
+	//Added a check for whether this hit is already on a track, anticipating the need to call this routine more than once.
+	if( hittemp.keep && !(hittemp.ontrack) ){ 
 	  //layers_with_2Dhits.insert( layer );
 	  modindexhit2D[layer][ngoodhits] = module;
 	  clustindexhit2D[layer][ngoodhits] = ihit;
@@ -1195,6 +1214,8 @@ void SBSGEMTrackerBase::hit_reconstruction(){
     fN2Dhit_layer[ilayer] = 0;
   }
   //Loop over all the GEM modules and invoke their cluster-finding methods with search region constraints:
+  // To allow for the possibility of using multiple constraint points, we'll need to make some minor modifications in how find_2Dhits
+  // operates for GEM modules.
   for( int imodule=0; imodule<fNmodules; imodule++ ){
     SBSGEMModule *mod = fModules[imodule];
 
@@ -1204,45 +1225,55 @@ void SBSGEMTrackerBase::hit_reconstruction(){
     fDidHit_Module[imodule] = 0;
     //std::cout << "N strips fired = " << mod->fNstrips_hit << std::endl;
     
-    if( !fUseConstraint ){ //call find_2D hits for the module without any constraint:
-      mod->find_2Dhits();
-    } else {
-      
-      TVector3 constraint_direction = (fConstraintPoint_Back - fConstraintPoint_Front).Unit();
+    // if( !fUseConstraint ){ //call find_2D hits for the module without any constraint:
+    //   mod->find_2Dhits();
+    //} else {
+    if( fUseConstraint ){
 
-      //Calculate intersection point with plane of module:
-      // recall modzaxis dot ( r - modpos ) = 0
-      // r = r0 + s * nhat
-      // modzaxis dot ( r0 + s* nhat - modpos ) = 0
-      // s (modzaxis dot nhat) = modzaxis dot (modpos - r0) --> s = modzaxis dot (modpos - r0)/modzaxis dot nhat
+      // loop on all the constraint points and project to each module,
+      // add to the list of constraint points for each module:
+      // We assume without checking (for the moment) that the front and back constraint point arrays are the same size. 
+      for( int icp=0; icp<fConstraintPoint_Front.size(); icp++ ){
+      
+	TVector3 constraint_direction = (fConstraintPoint_Back[icp] - fConstraintPoint_Front[icp]).Unit();
 
-      //The following is the intersection point of the line defined by the front and rear constraint points with the plane of the module:
-      double sintersect; //dummy variable to hold distance along track to intersection from front constraint point:
-      TVector3 constraint_intersect = TrackIntersect( imodule, fConstraintPoint_Front, constraint_direction, sintersect );
-      
-      //Define the constraint width at each module via linear interpolation between the front and rear constraint widths:
-      //Note: It is assumed that the front and rear constraint points and widths will be defined to be just outside the entire physical z extent
-      //      of all the layers,
-      //      such that every module lies between the front and rear constraint points (along z) by definition, and therefore that
-      //      "interp_frac" below lies between zero and one in virtually all cases
-      //      
-      
-      double interp_frac = sintersect / (fConstraintPoint_Back-fConstraintPoint_Front).Mag();
-      
-      TVector2 constraint_width_module( fConstraintWidth_Front.X() * (1.-interp_frac) + fConstraintWidth_Back.X() * interp_frac,
-					fConstraintWidth_Front.Y() * (1.-interp_frac) + fConstraintWidth_Back.Y() * interp_frac );
+	//Calculate intersection point with plane of module:
+	// recall modzaxis dot ( r - modpos ) = 0
+	// r = r0 + s * nhat
+	// modzaxis dot ( r0 + s* nhat - modpos ) = 0
+	// s (modzaxis dot nhat) = modzaxis dot (modpos - r0) --> s = modzaxis dot (modpos - r0)/modzaxis dot nhat
 
-      //compute constraint in "local" module coordinates:
-      TVector3 constraint_intersect_local = mod->TrackToDetCoord( constraint_intersect );
+	//The following is the intersection point of the line defined by the front and rear constraint points with the plane of the module:
+	double sintersect; //dummy variable to hold distance along track to intersection from front constraint point:
+	TVector3 constraint_intersect = TrackIntersect( imodule, fConstraintPoint_Front[icp], constraint_direction, sintersect );
       
-      TVector2 constraint_center_module( constraint_intersect_local.X(), constraint_intersect_local.Y() );
-
-      //Do 2D hit reconstruction in the search region defined by the constraints at this module.
-      //First check if any part of the search region overlaps the module active area:
+	//Define the constraint width at each module via linear interpolation between the front and rear constraint widths:
+	//Note: It is assumed that the front and rear constraint points and widths will be defined to be just outside the entire physical z extent
+	//      of all the layers,
+	//      such that every module lies between the front and rear constraint points (along z) by definition, and therefore that
+	//      "interp_frac" below lies between zero and one in virtually all cases
+	//      
       
-      mod->find_2Dhits( constraint_center_module, constraint_width_module );
-    }
+	double interp_frac = sintersect / (fConstraintPoint_Back[icp]-fConstraintPoint_Front[icp]).Mag();
+	
+	TVector2 constraint_width_module( fConstraintWidth_Front.X() * (1.-interp_frac) + fConstraintWidth_Back.X() * interp_frac,
+					  fConstraintWidth_Front.Y() * (1.-interp_frac) + fConstraintWidth_Back.Y() * interp_frac );
 
+	//compute constraint in "local" module coordinates:
+	TVector3 constraint_intersect_local = mod->TrackToDetCoord( constraint_intersect );
+	
+	TVector2 constraint_center_module( constraint_intersect_local.X(), constraint_intersect_local.Y() );
+
+	//Do 2D hit reconstruction in the search region defined by the constraints at this module.
+	//First check if any part of the search region overlaps the module active area:
+	mod->add_constraint( constraint_center_module, constraint_width_module );
+      
+	//mod->find_2Dhits( constraint_center_module, constraint_width_module ); //to allow for multiple constraint points, we probably need to modify the SBSGEMModule::find_2Dhits method
+      } //end loop on constraint points;
+    } //end if block on fUseConstraint
+
+    mod->find_2Dhits();
+    
     //now fill the strip, 1D cluster and 2D hit statistics by layer and/or module:
     // "did hit" and "should hit" cannot be computed until after tracking:
     int layerindex = fIndexByLayer[mod->fLayer];
@@ -1274,14 +1305,14 @@ void SBSGEMTrackerBase::hit_reconstruction(){
 // Standard "fast" track-finding algorithm (based on SBSGEM_standalone code by Andrew Puckett):
 void SBSGEMTrackerBase::find_tracks(){ 
   
-  //should this method invoke clear()? Yes: Clear() just clears out all the track arrays. It is assumed that this method will only be called once per event.
-  //Although that is probably not correct; it might be called as many as two times or perhaps once per cluster (to be developed later). Anyway, for now, let's use it, might need to revisit later:
+  //Everything here needs to be modified to account for the possibility of multiple tracking iterations:
+
   Clear();
   //std::cout << "[SBSGEMTrackerBase::find_tracks]: finished clearing track arrays..." << std::endl;
   
   fNtracks_found = 0;
   
-  if( !fclustering_done ){ //This shouldn't be called before hit reconstruction, but if it is, then this routine will call the hit reconstruction:
+  if( !fclustering_done ){ 
     hit_reconstruction();
   }
 
@@ -1370,7 +1401,9 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	//Let's carry around the track fitting residuals so that we don't have to repeat the calculation when adding the fitted track with best chi2 to the track arrays:
 	vector<double> uresidbest, vresidbest;
-	  
+
+	//How should we implement the possibility of multiple constraint points here? Probably right HERE is the best place to add a loop over constraint points? 
+	
 	for( unsigned int icombo=0; icombo<fLayerCombinations[nhitsrequired].size(); icombo++ ){
 
 	  // std::cout << "layer combo index, list of layers = "
@@ -1419,8 +1452,9 @@ void SBSGEMTrackerBase::find_tracks(){
 	  
 	  // std::cout << "minlayer, maxlayer, ncombos_minmax = " << minlayer << ", "
 	  // 	    << maxlayer << ", " << ncombos_minmax << std::endl;
-	  
-	  long nbincombos = binswithfreehits_layer[minlayer].size()*binswithfreehits_layer[maxlayer].size(); 
+
+	  //This line of code not needed
+	  //long nbincombos = binswithfreehits_layer[minlayer].size()*binswithfreehits_layer[maxlayer].size(); 
 
 	  //for( int ibin=0; ibin<(int)binswithfreehits_layer[minlayer].size(); ibin++ ){
 	  //  for( int jbin=0; jbin<(int)binswithfreehits_layer[maxlayer].size(); jbin++ ){
@@ -1450,82 +1484,85 @@ void SBSGEMTrackerBase::find_tracks(){
 
 	    //This is experimental, to increase speed:
 	    if( fUseConstraint ){
-	      double xbcp = fConstraintPoint_Back.X();
-	      double ybcp = fConstraintPoint_Back.Y();
-	      double zbcp = fConstraintPoint_Back.Z();
-	      double xptemp = (xbcp - xi )/(zbcp - ziavg);
-	      double yptemp = (ybcp - yi )/(zbcp - ziavg);
+	      //With the possibility to use multiple pairs of constraint points and widths, this becomes a loop over all the pairs:
+	      for( int icp = 0; icp<fConstraintPoint_Back.size(); icp++ ){
+		//For now we are lazy and do not check that front and back constraint points arrays are the same size:
+		double xbcp = fConstraintPoint_Back[icp].X();
+		double ybcp = fConstraintPoint_Back[icp].Y();
+		double zbcp = fConstraintPoint_Back[icp].Z();
+		double xptemp = (xbcp - xi )/(zbcp - ziavg);
+		double yptemp = (ybcp - yi )/(zbcp - ziavg);
 	      
 	      //project the straight line defined by front bin center and back constraint point to max layer and calculate the allowed area at max layer:
-	      double sigxi = fGridBinWidthX;
-	      double sigyi = fGridBinWidthY;
-	      double sigxbcp = fConstraintWidth_Back.X();
-	      double sigybcp = fConstraintWidth_Back.Y();
+		double sigxi = fGridBinWidthX;
+		double sigyi = fGridBinWidthY;
+		double sigxbcp = fConstraintWidth_Back.X();
+		double sigybcp = fConstraintWidth_Back.Y();
 	      
-	      //Calculate error matrices:
-	      double sumw_x = pow(sigxi,-2)+pow(sigxbcp,-2);
-	      double sumz_x = ziavg*pow(sigxi,-2) + zbcp*pow(sigxbcp,-2);
-	      double sumz2_x = pow(ziavg/sigxi,2) + pow(zbcp/sigxbcp,2);
-	      double det_x = sumz2_x*sumw_x - sumz_x*sumz_x;
+		//Calculate error matrices:
+		double sumw_x = pow(sigxi,-2)+pow(sigxbcp,-2);
+		double sumz_x = ziavg*pow(sigxi,-2) + zbcp*pow(sigxbcp,-2);
+		double sumz2_x = pow(ziavg/sigxi,2) + pow(zbcp/sigxbcp,2);
+		double det_x = sumz2_x*sumw_x - sumz_x*sumz_x;
 
-	      double sumw_y = pow(sigyi,-2)+pow(sigybcp,-2);
-	      double sumz_y = ziavg*pow(sigyi,-2)+zbcp*pow(sigybcp,-2);
-	      double sumz2_y = pow(ziavg/sigyi,2)+pow(zbcp/sigybcp,2);
-	      double det_y = sumz2_y*sumw_y - sumz_y*sumz_y;
+		double sumw_y = pow(sigyi,-2)+pow(sigybcp,-2);
+		double sumz_y = ziavg*pow(sigyi,-2)+zbcp*pow(sigybcp,-2);
+		double sumz2_y = pow(ziavg/sigyi,2)+pow(zbcp/sigybcp,2);
+		double det_y = sumz2_y*sumw_y - sumz_y*sumz_y;
 
-	      double emat_x[2][2];
-	      double emat_y[2][2];
-	      emat_x[0][0] = sumz2_x/det_x;
-	      emat_x[0][1] = -sumz_x/det_x;
-	      emat_x[1][0] = emat_x[0][1];
-	      emat_x[1][1] = sumw_x/det_x;
+		double emat_x[2][2];
+		double emat_y[2][2];
+		emat_x[0][0] = sumz2_x/det_x;
+		emat_x[0][1] = -sumz_x/det_x;
+		emat_x[1][0] = emat_x[0][1];
+		emat_x[1][1] = sumw_x/det_x;
 
-	      emat_y[0][0] = sumz2_y/det_y;
-	      emat_y[0][1] = -sumz_y/det_y;
-	      emat_y[1][0] = emat_y[0][1];
-	      emat_y[1][1] = sumw_y/det_y;
+		emat_y[0][0] = sumz2_y/det_y;
+		emat_y[0][1] = -sumz_y/det_y;
+		emat_y[1][0] = emat_y[0][1];
+		emat_y[1][1] = sumw_y/det_y;
 
-	      //double x0temp = xi - xptemp * ziavg;
-	      //double y0temp = yi - yptemp * ziavg; 
+		//double x0temp = xi - xptemp * ziavg;
+		//double y0temp = yi - yptemp * ziavg; 
 	      
-	      double xprojmax = xi + xptemp * (zjavg - ziavg); //= x0temp + xptemp * zj
-	      double yprojmax = yi + yptemp * (zjavg - ziavg); //= y0temp + yptemp * zj
+		double xprojmax = xi + xptemp * (zjavg - ziavg); //= x0temp + xptemp * zj
+		double yprojmax = yi + yptemp * (zjavg - ziavg); //= y0temp + yptemp * zj
 	      
-	      //calculate tolerance of x and y projections: 
-	      //Here we basically want to use the error matrix of the linear "fit" and the matrix of partial derivatives: 
-	      // partial xproj / partial x0 = 1
-	      // partial xproj / partial x' = zj
-	      double dxprojmax = sqrt( emat_x[0][0] + pow(zjavg,2)*emat_x[1][1] + 2.0*zjavg*emat_x[0][1] );
-	      double dyprojmax = sqrt( emat_y[0][0] + pow(zjavg,2)*emat_y[1][1] + 2.0*zjavg*emat_y[0][1] );
+		//calculate tolerance of x and y projections: 
+		//Here we basically want to use the error matrix of the linear "fit" and the matrix of partial derivatives: 
+		// partial xproj / partial x0 = 1
+		// partial xproj / partial x' = zj
+		double dxprojmax = sqrt( emat_x[0][0] + pow(zjavg,2)*emat_x[1][1] + 2.0*zjavg*emat_x[0][1] );
+		double dyprojmax = sqrt( emat_y[0][0] + pow(zjavg,2)*emat_y[1][1] + 2.0*zjavg*emat_y[0][1] );
 	      
-	      //	      std::cout << "(dxproj,dyproj)=(" << dxprojmax << ", " << dyprojmax << ")" << std::endl; 
+		//	      std::cout << "(dxproj,dyproj)=(" << dxprojmax << ", " << dyprojmax << ")" << std::endl; 
 
-	      int binxproj = int( (xprojmax - fGridXmin_layer[maxlayer])/fGridBinWidthX );
-	      int binyproj = int( (yprojmax - fGridYmin_layer[maxlayer])/fGridBinWidthY );
+		int binxproj = int( (xprojmax - fGridXmin_layer[maxlayer])/fGridBinWidthX );
+		int binyproj = int( (yprojmax - fGridYmin_layer[maxlayer])/fGridBinWidthY );
 
-	      int binxlo = binxproj, binxhi = binxproj;
-	      int binylo = binyproj, binyhi = binyproj;
+		int binxlo = binxproj, binxhi = binxproj;
+		int binylo = binyproj, binyhi = binyproj;
 	      
-	      double xcenterproj = fGridXmin_layer[maxlayer] + (binxproj+0.5)*fGridBinWidthX;
-	      double ycenterproj = fGridYmin_layer[maxlayer] + (binyproj+0.5)*fGridBinWidthY;
+		double xcenterproj = fGridXmin_layer[maxlayer] + (binxproj+0.5)*fGridBinWidthX;
+		double ycenterproj = fGridYmin_layer[maxlayer] + (binyproj+0.5)*fGridBinWidthY;
 
-	      int nbinsx_tolerance = int( (std::max(fGridBinWidthX,dxprojmax))/fGridBinWidthX );
-	      binxlo = std::max(0,binxproj - std::max(0,nbinsx_tolerance));
-	      binxhi = std::min(fGridNbinsX_layer[maxlayer]-1,binxproj+std::max(0,nbinsx_tolerance));
+		int nbinsx_tolerance = int( (std::max(fGridBinWidthX,dxprojmax))/fGridBinWidthX );
+		binxlo = std::max(0,binxproj - std::max(0,nbinsx_tolerance));
+		binxhi = std::min(fGridNbinsX_layer[maxlayer]-1,binxproj+std::max(0,nbinsx_tolerance));
 
-	      int nbinsy_tolerance = int( (std::max(fGridBinWidthY,dyprojmax))/fGridBinWidthY);
-	      binylo = std::max(0,binyproj - std::max(0,nbinsy_tolerance));
-	      binyhi = std::min(fGridNbinsY_layer[maxlayer]-1,binyproj+std::max(0,nbinsy_tolerance));
+		int nbinsy_tolerance = int( (std::max(fGridBinWidthY,dyprojmax))/fGridBinWidthY);
+		binylo = std::max(0,binyproj - std::max(0,nbinsy_tolerance));
+		binyhi = std::min(fGridNbinsY_layer[maxlayer]-1,binyproj+std::max(0,nbinsy_tolerance));
 	      
-	      //	      std::cout << "(binxlo, binxhi, binylo, binyhi)=(" << binxlo << ", " << binxhi << ", " << binylo << ", " << binyhi << ")" << std::endl;
+		//	      std::cout << "(binxlo, binxhi, binylo, binyhi)=(" << binxlo << ", " << binxhi << ", " << binylo << ", " << binyhi << ")" << std::endl;
 
-	      for( int binxtemp=binxlo; binxtemp<=binxhi; binxtemp++){
-		for( int binytemp=binylo; binytemp<=binyhi; binytemp++){
-		  int bintemp = binxtemp + fGridNbinsX_layer[maxlayer]*binytemp;
-		  if( binswithfreehits_layer[maxlayer].find(bintemp) != binswithfreehits_layer[maxlayer].end() ) goodbins_maxlayer.insert(bintemp);
+		for( int binxtemp=binxlo; binxtemp<=binxhi; binxtemp++){
+		  for( int binytemp=binylo; binytemp<=binyhi; binytemp++){
+		    int bintemp = binxtemp + fGridNbinsX_layer[maxlayer]*binytemp;
+		    if( binswithfreehits_layer[maxlayer].find(bintemp) != binswithfreehits_layer[maxlayer].end() ) goodbins_maxlayer.insert(bintemp);
+		  }
 		}
 	      }
-
 	    }
 	    //Declare a reference to either "goodbins_maxlayer" which is at most a subset of binswithfreehits_maxlayer, or 
 	    //binswithfreehits_maxlayer, depending on value of fUseConstraint
@@ -2151,7 +2188,7 @@ void SBSGEMTrackerBase::find_tracks(){
 
 }
 
-void SBSGEMTrackerBase::fill_good_hit_arrays() {
+void SBSGEMTrackerBase::fill_good_hit_arrays() { //this gets called at the end of track-finding. 
   // fill information that will be written to the ROOT tree: this should never be called directly, but check whether tracking is already done
   // anyway, and if NOT, do the tracking:
   if( !ftracking_done ) find_tracks();
@@ -3309,55 +3346,133 @@ void SBSGEMTrackerBase::PrintGeometry( const char *fname ){
 
 bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, double yptr, bool coarsecheck ){ //later we should really pass an error matrix of the four track parameters to this routine
    // to better optimize the cuts:
-  double xproject_bcp = xtr + xptr * fConstraintPoint_Back.Z();
-  double yproject_bcp = ytr + yptr * fConstraintPoint_Back.Z();
 
-  double xproject_fcp = xtr + xptr * fConstraintPoint_Front.Z();
-  double yproject_fcp = ytr + yptr * fConstraintPoint_Front.Z();
-
-  double xpc = ( fConstraintPoint_Back.X() - fConstraintPoint_Front.X() )/( fConstraintPoint_Back.Z() - fConstraintPoint_Front.Z() );
-  double ypc = ( fConstraintPoint_Back.Y() - fConstraintPoint_Front.Y() )/( fConstraintPoint_Back.Z() - fConstraintPoint_Front.Z() );
-  
-  bool constraint_check = false;
-
-  double cutxf = fConstraintWidth_Front.X();
-  double cutyf = fConstraintWidth_Front.Y();
-  double cutxb = fConstraintWidth_Back.X();
-  double cutyb = fConstraintWidth_Back.Y();
-
-  double cutdxdz = fConstraintWidth_theta;
-  double cutdydz = fConstraintWidth_phi;
-
-  if( coarsecheck ){
-    //this is the coarse check based on grid bin centers and widths. 
-    //Even though the typical grid bin size is small compared to the constraint region, we should add at least one
-    //grid bin size to the search region width
-    //Similarly, even though the track slope cuts are typically wide compared to the resolution of the slope
-
-    //This is a crude approach, but should work decently well for starters. 
-    cutxf += fGridBinWidthX;
-    cutxb += fGridBinWidthX;
-    cutyf += fGridBinWidthY;
-    cutyb += fGridBinWidthY;
-
-    cutdxdz += 3.0*fGridBinWidthX/(fConstraintPoint_Back.Z()-fConstraintPoint_Front.Z());
-    cutdydz += 3.0*fGridBinWidthY/(fConstraintPoint_Back.Z()-fConstraintPoint_Front.Z());
-  }
-  
-  if( fabs( xproject_bcp - fConstraintPoint_Back.X() ) <= cutxb &&
-      fabs( yproject_bcp - fConstraintPoint_Back.Y() ) <= cutyb &&
-      fabs( xproject_fcp - fConstraintPoint_Front.X() ) <= cutxf &&
-      fabs( yproject_fcp - fConstraintPoint_Front.Y() ) <= cutyf ){
+  //To allow for the possibility of multiple pairs of constraint points, here we loop on all the pairs of points.
+  // For now we are lazy and assume without checking that the front and back constraint point arrays are the same size:
+  bool passed_any = false;
+  for( int icp=0; icp<fConstraintPoint_Front.size(); icp++ ){
     
-    constraint_check = true;
-  }
+    double xproject_bcp = xtr + xptr * fConstraintPoint_Back[icp].Z();
+    double yproject_bcp = ytr + yptr * fConstraintPoint_Back[icp].Z();
+    
+    double xproject_fcp = xtr + xptr * fConstraintPoint_Front[icp].Z();
+    double yproject_fcp = ytr + yptr * fConstraintPoint_Front[icp].Z();
+    
+    double xpc = ( fConstraintPoint_Back[icp].X() - fConstraintPoint_Front[icp].X() )/( fConstraintPoint_Back[icp].Z() - fConstraintPoint_Front[icp].Z() );
+    double ypc = ( fConstraintPoint_Back[icp].Y() - fConstraintPoint_Front[icp].Y() )/( fConstraintPoint_Back[icp].Z() - fConstraintPoint_Front[icp].Z() );
+    
+    bool constraint_check = false;
+    
+    double cutxf = fConstraintWidth_Front.X();
+    double cutyf = fConstraintWidth_Front.Y();
+    double cutxb = fConstraintWidth_Back.X();
+    double cutyb = fConstraintWidth_Back.Y();
+    
+    double cutdxdz = fConstraintWidth_theta;
+    double cutdydz = fConstraintWidth_phi;
 
-  bool slopecheck = false;
+    if( coarsecheck ){
+      //this is the coarse check based on grid bin centers and widths. 
+      //Even though the typical grid bin size is small compared to the constraint region, we should add at least one
+      //grid bin size to the search region width
+      //Similarly, even though the track slope cuts are typically wide compared to the resolution of the slope
+
+      //This is a crude approach, but should work decently well for starters. 
+      cutxf += fGridBinWidthX;
+      cutxb += fGridBinWidthX;
+      cutyf += fGridBinWidthY;
+      cutyb += fGridBinWidthY;
+
+      cutdxdz += 3.0*fGridBinWidthX/(fConstraintPoint_Back[icp].Z()-fConstraintPoint_Front[icp].Z());
+      cutdydz += 3.0*fGridBinWidthY/(fConstraintPoint_Back[icp].Z()-fConstraintPoint_Front[icp].Z());
+    }
   
-  if( fabs( xptr - xpc ) <= cutdxdz &&
-      fabs( yptr - ypc ) <= cutdydz ){
-    slopecheck = true;
+    if( fabs( xproject_bcp - fConstraintPoint_Back[icp].X() ) <= cutxb &&
+	fabs( yproject_bcp - fConstraintPoint_Back[icp].Y() ) <= cutyb &&
+	fabs( xproject_fcp - fConstraintPoint_Front[icp].X() ) <= cutxf &&
+	fabs( yproject_fcp - fConstraintPoint_Front[icp].Y() ) <= cutyf ){
+    
+      constraint_check = true;
+    }
+
+    bool slopecheck = false;
+  
+    if( fabs( xptr - xpc ) <= cutdxdz &&
+	fabs( yptr - ypc ) <= cutdydz ){
+      slopecheck = true;
+    }
+
+    passed_any = constraint_check && (slopecheck || !fUseSlopeConstraint);
   }
   
-  return constraint_check && (slopecheck || !fUseSlopeConstraint);
+  return passed_any;
+}
+
+void SBSGEMTrackerBase::SetFrontConstraintPoint( TVector3 fcp ){
+  if( fConstraintPoint_Front.empty() || fMultiTrackSearch ){ //then add to the existing array:
+    fConstraintPoint_Front.push_back( fcp );
+  } else { //single constraint point;
+    fConstraintPoint_Front[0] = fcp;
+  }
+  fConstraintPoint_Front_IsInitialized = true;
+}
+
+void SBSGEMTrackerBase::SetBackConstraintPoint( TVector3 bcp ){
+  if( fConstraintPoint_Back.empty() || fMultiTrackSearch ){ //append to the end of the existing array:
+    fConstraintPoint_Back.push_back( bcp );
+  } else { //single constraint point;
+    fConstraintPoint_Back[0] = bcp;
+  }
+  fConstraintPoint_Back_IsInitialized = true;
+}
+
+void SBSGEMTrackerBase::SetFrontConstraintPoint( double x, double y, double z ){
+  SetFrontConstraintPoint( TVector3(x,y,z) );
+}
+
+void SBSGEMTrackerBase::SetBackConstraintPoint( double x, double y, double z ){
+  SetBackConstraintPoint( TVector3(x,y,z) );
+}
+
+void SBSGEMTrackerBase::SetFrontConstraintWidth( TVector2 fcw ){
+  fConstraintWidth_Front = fcw;
+  fConstraintWidth_Front_IsInitialized = true;
+}
+
+void SBSGEMTrackerBase::SetBackConstraintWidth( TVector2 bcw ){
+  fConstraintWidth_Back = bcw;
+  fConstraintWidth_Back_IsInitialized = true;
+}
+
+void SBSGEMTrackerBase::SetFrontConstraintWidth( double x, double y ){
+  SetFrontConstraintWidth( TVector2(x,y) );
+}
+
+void SBSGEMTrackerBase::SetBackConstraintWidth( double x, double y ){
+  SetBackConstraintWidth( TVector2(x,y) );
+}
+
+//Note fConstraintInitialized is NOT conditional on the following values having been set:
+void SBSGEMTrackerBase::SetConstraintWidth_theta( double dth ){
+  fConstraintWidth_theta = dth;
+}
+
+void SBSGEMTrackerBase::SetConstraintWidth_phi( double dph ){
+  fConstraintWidth_phi = dph;
+}
+
+void SBSGEMTrackerBase::GetTrack(int itrack, double &x, double &y, double &xp, double &yp){
+  double big=-1.e20;
+  if( itrack >= 0 && itrack<fNtracks_found; itrack++ ){
+    x = fXtrack[itrack];
+    y = fYtrack[itrack];
+    xp = fXptrack[itrack];
+    yp = fYptrack[itrack]; 
+  } else {
+    x = big;
+    y = big;
+    xp = big;
+    yp = big;
+  }
+  return;
 }

@@ -8,7 +8,7 @@
 #include "THaAnalysisObject.h"
 
 #include "THaSpectrometer.h"
-#include "SBSGEMSpectrometerTracker.h"
+#include "SBSGEMPolarimeterTracker.h"
 #include "SBSGEMModule.h"
 #include "THaTrack.h"
 #include "TClonesArray.h"
@@ -16,8 +16,8 @@
 
 using namespace Podd;
 
-SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const char* desc, THaApparatus* app ):
-  THaTrackingDetector(name,desc,app), SBSGEMTrackerBase() {
+SBSGEMPolarimeterTracker::SBSGEMPolarimeterTracker( const char* name, const char* desc, THaApparatus* app ):
+  THaNonTrackingDetector(name,desc,app), SBSGEMTrackerBase() {
 
   fModules.clear();
   fModulesInitialized = false;
@@ -30,29 +30,34 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
 
   fNegSignalStudy = false;
   
-  fIsSpectrometerTracker = true; //used by tracker base
+  fIsSpectrometerTracker = false; //used by tracker base
+  fIsPolarimeterTracker = true;
+
+  fMultiTrackSearch = false; //Use the "best" track from front tracker, one track search only;
+
   fUseOpticsConstraint = false;
-
+  fUseForwardOpticsConstraint = false;
   fUseSlopeConstraint = false;
-  
-  fTestTrackInitialized = false;
 
-  fTestTracks = new TClonesArray("THaTrack",1);
+  fUseFrontTrackConstraint = false;
+  fFrontTrackInitialized = false;
+
+  fFrontTracks = new TClonesArray("THaTrack",1);
 }
 
-SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
-  fTestTracks->Clear("C");
-  delete fTestTracks;
+SBSGEMPolarimeterTracker::~SBSGEMPolarimeterTracker(){
+  fFrontTracks->Clear("C");
+  delete fFrontTracks;
 }
 
 
-THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date ){
+THaAnalysisObject::EStatus SBSGEMPolarimeterTracker::Init( const TDatime& date ){
   //assert( fCrateMap == 0 );
  
   // Why THaTrackingDetector::Init() here? THaTrackingDetector doesn't implement its own Init() method
   // Is that only because this class inherits THaTrackingDetector directly? Is there any advantage to this
   // over calling THaAnalysisObject::Init directly?
-  THaAnalysisObject::EStatus status = THaTrackingDetector::Init(date);
+  THaAnalysisObject::EStatus status = THaNonTrackingDetector::Init(date);
   //Note: hopefully this triggers the calling of ReadDatabase for the tracker itself!
 
   if( status == kOK ){
@@ -67,11 +72,12 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
     }
 
     CompleteInitialization();
+
+    //I'm not sure we really actually want any of these lines of code for the polarimeter context:
+    if( !fFrontTrackInitialized ){
     
-    if( !fTestTrackInitialized ){
-    
-      new( (*fTestTracks)[0] ) THaTrack();
-      fTestTrackInitialized = true;
+      new( (*fFrontTracks)[0] ) THaTrack();
+      fFrontTrackInitialized = true;
     }
     
   } else {
@@ -82,8 +88,8 @@ THaAnalysisObject::EStatus SBSGEMSpectrometerTracker::Init( const TDatime& date 
   return kOK;
 }
 
-Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
-  std::cout << "[Reading SBSGEMSpectrometerTracker database]" << std::endl;
+Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
+  std::cout << "[Reading SBSGEMPolarimeterTracker database]" << std::endl;
 
   fIsInit = kFALSE;
 
@@ -112,11 +118,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int pedestalmode_flag = fPedestalMode ? pow(-1,fSubtractPedBeforeCommonMode) : 0;
   int doefficiency_flag = fMakeEfficiencyPlots ? 1 : 0;
   //int onlinezerosuppressflag = fOnlineZeroSuppression ? 1 : 0;
-  int useconstraintflag = fUseConstraint ? 1 : 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other
+  int useconstraintflag = fUseConstraint ? 1 : 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other)
+  int usefronttrackconstraintflag = fUseFrontTrackConstraint ? 1 : 0; 
   int mc_flag = fIsMC ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
-  int useopticsconstraint = fUseOpticsConstraint ? 1 : 0;
-  int useslopeconstraint = fUseSlopeConstraint ? 1 : 0;
   int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   int usetrigtime = fUseTrigTime ? 1 : 0;
@@ -143,9 +148,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "gridedgetolerancey", &fGridEdgeToleranceY, kDouble, 0, 1},
     { "trackchi2cut", &fTrackChi2Cut, kDoubleV, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
-    { "constraintwidth_theta", &fConstraintWidth_theta, kDouble, 0, 1},
-    { "constraintwidth_phi", &fConstraintWidth_phi, kDouble, 0, 1},
-    { "useopticsconstraint", &useopticsconstraint, kInt, 0, 1},
+    { "usefronttrackconstraint", &usefronttrackconstraintflag, kInt, 0, 1 },
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
@@ -153,28 +156,6 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
-    { "xptar_min", &fxptarmin_track, kDouble, 0, 1, 1},
-    { "xptar_max", &fxptarmax_track, kDouble, 0, 1, 1},
-    { "yptar_min", &fyptarmin_track, kDouble, 0, 1, 1},
-    { "yptar_max", &fyptarmax_track, kDouble, 0, 1, 1},
-    { "ytar_min", &fytarmin_track, kDouble, 0, 1, 1},
-    { "ytar_max", &fytarmax_track, kDouble, 0, 1, 1},
-    { "pmin", &fPmin_track, kDouble, 0, 1, 1},
-    { "pmax", &fPmax_track, kDouble, 0, 1, 1},
-    { "useslopeconstraint", &useslopeconstraint, kInt, 0, 1, 1 },
-    { "xpfp_min", &fxpfpmin, kDouble, 0, 1, 1 },
-    { "xpfp_max", &fxpfpmax, kDouble, 0, 1, 1 },
-    { "ypfp_min", &fypfpmin, kDouble, 0, 1, 1 },
-    { "ypfp_max", &fypfpmax, kDouble, 0, 1, 1 },
-    { "useforwardopticsconstraint", &useforwardopticsconstraint, kInt, 0, 1, 1 },
-    { "dxfp0", &fdxfp0, kDouble, 0, 1, 1 },
-    { "dyfp0", &fdyfp0, kDouble, 0, 1, 1 },
-    { "dxpfp0", &fdxpfp0, kDouble, 0, 1, 1 },
-    { "dypfp0", &fdypfp0, kDouble, 0, 1, 1 },
-    { "dxfpcut", &fdxfpcut, kDouble, 0, 1, 1 },
-    { "dyfpcut", &fdyfpcut, kDouble, 0, 1, 1 },
-    { "dxpfpcut", &fdxpfpcut, kDouble, 0, 1, 1 },
-    { "dypfpcut", &fdypfpcut, kDouble, 0, 1, 1 },
     { "usetrigtime", &usetrigtime, kInt, 0, 1, 1 },
     { "trigtime_crate", &fCrate_RefTime, kUInt, 0, 1, 1 },
     { "trigtime_slot", &fSlot_RefTime, kUInt, 0, 1, 1 },
@@ -209,20 +190,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   fIsMC = (mc_flag != 0);
   fTryFastTrack = (fasttrack_flag != 0);
-
-  fUseSlopeConstraint = (useslopeconstraint != 0 );
-  
-  //std::cout << "pedestal file name = " << fpedfilename << std::endl;
-  
-  fUseOpticsConstraint = (useopticsconstraint != 0 );
-   
-  fUseForwardOpticsConstraint = (useforwardopticsconstraint != 0 );
-  // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
-  // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
-  // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
   
   //fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
+  fUseFrontTrackConstraint = (usefronttrackconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
 
   if( fPedestalMode ){ //then we will just dump raw data to the tree and/or histograms:
@@ -237,7 +208,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   //vsplit is a Podd function that "tokenizes" a string into a vector<string> by whitespace:
   std::vector<std::string> modules = vsplit(modconfig);
   if( modules.empty()) {
-    Error("", "[SBSGEMSpectrometerTracker::ReadDatabase] No modules defined");
+    Error("", "[SBSGEMPolarimeterTracker::ReadDatabase] No modules defined");
   }
 
   int modcounter = 0;
@@ -318,7 +289,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 }
 
 
-Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ) {
+Int_t SBSGEMPolarimeterTracker::Begin( THaRunBase* run ) {
   for( auto& module: fModules ) {
     module->Begin(run);
   }
@@ -335,9 +306,9 @@ Int_t SBSGEMSpectrometerTracker::Begin( THaRunBase* run ) {
   return 0;
 }
 
-void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
+void SBSGEMPolarimeterTracker::Clear( Option_t *opt ){
   
-  THaTrackingDetector::Clear(opt);
+  THaNonTrackingDetector::Clear(opt);
 
   SBSGEMTrackerBase::Clear();
 
@@ -346,11 +317,17 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
   for( auto& module: fModules ) {
     module->Clear(opt);
   }
+
+  fTrackTheta.clear();
+  fTrackPhi.clear();
+  fTrackSClose.clear();
+  fTrackZClose.clear();
+  
 }
 
-Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
+Int_t SBSGEMPolarimeterTracker::Decode(const THaEvData& evdata ){
   //return 0;
-  //std::cout << "[SBSGEMSpectrometerTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  "...";
+  //std::cout << "[SBSGEMPolarimeterTracker::Decode], decoding all modules, event ID = " << evdata.GetEvNum() <<  "...";
 
   //attempt to decode trigger time. No error-checking is done here on the channel info so you'd better provide this correctly in
   //the DB:
@@ -367,7 +344,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
     double mintdiff = 1000.0;
     double besttime = 0.0;
     
-    //    std::cout << "[SBSGEMSpectrometerTracker::Decode]: ntrigtdchits = " << ntrigtdchits << std::endl;
+    //    std::cout << "[SBSGEMPolarimeterTracker::Decode]: ntrigtdchits = " << ntrigtdchits << std::endl;
     
     for( int ihit=0; ihit<ntrigtdchits; ihit++ ){
       UInt_t rawtdc = evdata.GetData( fCrate_RefTime, fSlot_RefTime, fChan_RefTime, ihit );
@@ -413,7 +390,7 @@ Int_t SBSGEMSpectrometerTracker::Decode(const THaEvData& evdata ){
 }
 
 
-Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
+Int_t SBSGEMPolarimeterTracker::End( THaRunBase* run ){
 
   UInt_t runnum = run->GetNumber(); 
 
@@ -560,7 +537,7 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
   return 0;
 }
 
-void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
+void SBSGEMPolarimeterTracker::Print(const Option_t* opt) const {
   std::cout << "GEM Stand " << fName << " with " << fModules.size() << " planes defined:" << std::endl;
   /*
     for (std::vector<SBSGEMModule *>::iterator it = fModules.begin() ; it != fModules.end(); ++it){
@@ -574,14 +551,14 @@ void SBSGEMSpectrometerTracker::Print(const Option_t* opt) const {
 }
 
 
-void SBSGEMSpectrometerTracker::SetDebug( Int_t level ) {
-  THaTrackingDetector::SetDebug(level);
+void SBSGEMPolarimeterTracker::SetDebug( Int_t level ) {
+  THaNonTrackingDetector::SetDebug(level);
   for( auto& module: fModules ) {
     module->SetDebug(level);
   }
 }
 
-Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
+Int_t SBSGEMPolarimeterTracker::DefineVariables( EMode mode ){
   if( mode == kDefine and fIsSetup ) return kOK;
   fIsSetup = ( mode == kDefine );
   
@@ -747,25 +724,26 @@ Int_t SBSGEMSpectrometerTracker::DefineVariables( EMode mode ){
 }
 
 
-Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
+Int_t SBSGEMPolarimeterTracker::CoarseProcess( TClonesArray& tracks ){
   
   if( !fUseConstraint && !fPedestalMode ){
-    //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack...";
+    //std::cout << "SBSGEMPolarimeterTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
     find_tracks();
 
-    for( int itrack=0; itrack<fNtracks_found; itrack++ ){
-      THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );
+    //The following lines aren't applicable for PolarimeterTracker:
+    // for( int itrack=0; itrack<fNtracks_found; itrack++ ){
+    //   THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );
 
-      int ndf = 2*fNhitsOnTrack[itrack]-4;
-      double chi2 = fChi2Track[itrack]*ndf;
+    //   int ndf = 2*fNhitsOnTrack[itrack]-4;
+    //   double chi2 = fChi2Track[itrack]*ndf;
       
-      Track->SetChi2( chi2, ndf );
+    //   Track->SetChi2( chi2, ndf );
 
-      int index = tracks.GetLast();
-      Track->SetIndex( index );
-    }
+    //   int index = tracks.GetLast();
+    //   Track->SetIndex( index );
+    // }
 
     //std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
@@ -773,11 +751,15 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
   
   return 0;
 }
-Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
+Int_t SBSGEMPolarimeterTracker::FineProcess( TClonesArray& tracks ){
 
+
+  // In the polarimeter context, when FineProcess gets invoked, the TClonesArray &tracks refers to the tracks reconstructed by any
+  // "spectrometer trackers" or "front" trackers upstream of the polarimeter tracker. However, in the GEN-RP context, we
+  // also need to worry about the "non-track" front track constraint. 
   
   if( fUseConstraint && !fPedestalMode ){ //
-    //std::cout << "SBSGEMSpectrometerTracker::FineTrack..."; 
+    //std::cout << "SBSGEMPolarimeterTracker::FineTrack..."; 
     //Calls SBSGEMTrackerBase::find_tracks(), which takes no arguments:
     //std::cout << "calling find_tracks" << std::endl;
 
@@ -786,23 +768,27 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
       fConstraintWidth_Front_IsInitialized && fConstraintWidth_Back_IsInitialized;
 
     if( fConstraintInitialized ){
+
+      //In the polarimeter context, we want to loop on all the tracks in the tracks array that gets passed as argument to to FineProcess as well as any front "pseudotracks" based on a projected incident neutron trajectory 
+
       find_tracks();
 
-      //We don't necessarily know 
+      //The following lines are irrelevant for PolarimeterTracker:
+      // //We don't necessarily know 
     
-      for( int itrack=0; itrack<fNtracks_found; itrack++ ){
-	//AddTrack returns a pointer to the created THaTrack:
-	THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
+      // for( int itrack=0; itrack<fNtracks_found; itrack++ ){
+      // 	//AddTrack returns a pointer to the created THaTrack:
+      // 	THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
 
-	int ndf = 2*fNhitsOnTrack[itrack]-4;
-	double chi2 = fChi2Track[itrack]*ndf;
+      // 	int ndf = 2*fNhitsOnTrack[itrack]-4;
+      // 	double chi2 = fChi2Track[itrack]*ndf;
       
-	Track->SetChi2( chi2, ndf );
+      // 	Track->SetChi2( chi2, ndf );
 
-	int index = tracks.GetLast();
-	Track->SetIndex( index );
+      // 	int index = tracks.GetLast();
+      // 	Track->SetIndex( index );
       
-      }
+      // }
     }
     //std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
@@ -811,68 +797,5 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
   return 0;
 }
 
-bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction, bool coarsecheck ){
-  
-  // std::cout << "[SBSGEMSpectrometerTracker::PassedOpticsConstraint]: Checking target reconstruction" 
-  // 	    << std::endl;
 
-  double xptemp = track_direction.X()/track_direction.Z();
-  double yptemp = track_direction.Y()/track_direction.Z();
-
-  //Project back to z = 0 if appropriate:
-  double xtemp = track_origin.X() - xptemp * track_origin.Z(); 
-  double ytemp = track_origin.Y() - yptemp * track_origin.Z();
-  
-  ( (THaTrack*) (*fTestTracks)[0] )->Set( xtemp, ytemp, xptemp, yptemp );
-
-  THaSpectrometer *spec = static_cast<THaSpectrometer *>( GetApparatus() );
-
-  if( spec ){
-    spec->FindVertices( *fTestTracks );
-  } else {
-    return false;
-  }
-
-  THaTrack *trtemp = ( (THaTrack*) (*fTestTracks)[0] );
-
-  if( trtemp->HasTarget() && trtemp->HasVertex() ){
-    double Ptemp = trtemp->GetP();
-    double xptartemp = trtemp->GetTTheta();
-    double yptartemp = trtemp->GetTPhi();
-    double ytartemp = trtemp->GetTY();
-
-    bool goodtarget =
-      ( fxptarmin_track <= xptartemp && xptartemp <= fxptarmax_track &&
-	fyptarmin_track <= yptartemp && yptartemp <= fyptarmax_track &&
-	fytarmin_track <= ytartemp && ytartemp <= fytarmax_track &&
-	fPmin_track <= Ptemp && Ptemp <= fPmax_track );
-
-    bool goodtgtfp = true;
-
-    if( goodtarget && trtemp->HasDet() && fUseForwardOpticsConstraint ){ //non-standard use of the "detector coordinates", perhaps a bit risky, but when we have our SBSSpectrometer base class, this should be a standard interpretation/usage of these coordinates, and we currently don't use the "Det" coordinates in our SBSBigBite or SBSEArm classes in any other way
-      double xfpforward_temp = trtemp->GetDX();
-      double yfpforward_temp = trtemp->GetDY();
-      double xpfpforward_temp = trtemp->GetDTheta();
-      double ypfpforward_temp = trtemp->GetDPhi();
-
-      if( coarsecheck ){
-	goodtgtfp = fabs( xtemp - xfpforward_temp - fdxfp0 ) <= fdxfpcut_coarse &&
-	  fabs( ytemp - yfpforward_temp - fdyfp0 ) <= fdyfpcut_coarse &&
-	  fabs( xptemp - xpfpforward_temp - fdxpfp0 ) <= fdxpfpcut_coarse &&
-	  fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut_coarse;
-      } else {
-	goodtgtfp = fabs( xtemp - xfpforward_temp - fdxfp0 ) <= fdxfpcut &&
-	  fabs( ytemp - yfpforward_temp - fdyfp0 ) <= fdyfpcut &&
-	  fabs( xptemp - xpfpforward_temp - fdxpfp0 ) <= fdxpfpcut &&
-	  fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut;
-      }
-    }
-    return goodtarget && goodtgtfp;
-  } else {
-    return false;
-  }
-}
-
-
-
-ClassImp(SBSGEMSpectrometerTracker)
+ClassImp(SBSGEMPolarimeterTracker)
