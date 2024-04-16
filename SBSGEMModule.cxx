@@ -2684,9 +2684,9 @@ void SBSGEMModule::find_2Dhits(){
   // This means that if we want to handle MORE than one constraint point, we MUST set fStoreAll1Dclusters to true
   // 
 
-  std::cout << "Calling hit reconstruction for detector " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
-	    << GetParent()->GetName() << "." << GetName()
-	    << ", N fired strips = " << fNstrips_hit << std::endl;
+  // std::cout << "Calling hit reconstruction for detector " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
+  // 	    << GetParent()->GetName() << "." << GetName()
+  // 	    << ", N fired strips = " << fNstrips_hit << std::endl;
   
   //Start with 1D clustering; if the constraint array for this module has EXACTLY one point and the store all clusters flag is
   // NOT set, do the clustering with constraints! Otherwise do it without constraints!
@@ -2736,8 +2736,8 @@ void SBSGEMModule::find_2Dhits(){
     find_clusters_1D(SBSGEM::kVaxis);
   }
 
-  std::cout << "After 1D cluster-finding, (fNclustU,fNclustV)=("
-	    << fNclustU << ", " << fNclustV << ")" << std::endl;
+  // std::cout << "After 1D cluster-finding, (fNclustU,fNclustV)=("
+  // 	    << fNclustU << ", " << fNclustV << ")" << std::endl;
   
   //Now make 2D clusters:
 
@@ -4398,9 +4398,9 @@ void SBSGEMModule::fill_2D_hit_arrays(){
     std::cout << "Warning in [SBSGEMModule::fill_2D_hit_arrays()]: good 2D hit candidates exceeded user maximum of " << fMAX2DHITS << " for module " << GetName() << ", 2D hit list truncated" << std::endl;
   }
 
-  std::cout << "GEM module " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
-	    << GetParent()->GetName() << "." << GetName() << ": (nclustu,nclustv,n2dhits)=("
-	    << fNclustU << ", " << fNclustV << ", " << fN2Dhits << ")" << std::endl;
+  // std::cout << "GEM module " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
+  // 	    << GetParent()->GetName() << "." << GetName() << ": (nclustu,nclustv,n2dhits)=("
+  // 	    << fNclustU << ", " << fNclustV << ", " << fN2Dhits << ")" << std::endl;
   
   //std::cout << "N 2D hit candidates = " << fN2Dhits << std::endl;
   

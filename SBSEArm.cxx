@@ -30,14 +30,44 @@ THaSpectrometer( name, description )
 
   SetPID( false );
 
-  fFrontConstraintWidthX = 1.5;
-  fFrontConstraintWidthY = 1.5;
-  fBackConstraintWidthX = 1.5;
-  fBackConstraintWidthY = 1.5;
-  fFrontConstraintX0 = 0.0;
-  fFrontConstraintY0 = 0.0;
-  fBackConstraintX0 = 0.0;
-  fBackConstraintY0 = 0.0;
+  fFrontConstraintWidthX.clear();
+  fFrontConstraintWidthY.clear();
+  fFrontConstraintX0.clear();
+  fFrontConstraintY0.clear();
+
+  fBackConstraintWidthX.clear();
+  fBackConstraintWidthY.clear();
+  fBackConstraintX0.clear();
+  fBackConstraintY0.clear();
+
+  //Set default values for front and back constraint centers and widths:
+  // the 0,1 indices are for front,back trackers for the polarimeter mode:
+
+  double xwidth_front_default[2] = { 0.75, 1.0 }; //X dimension of front and back GEMs
+  double xwidth_back_default[2] = { 2.0, 2.0 }; //a bit larger than HCAL size
+  double ywidth_front_default[2] = {0.2, 0.3 }; //Y dimension of front and back GEMs
+  double ywidth_back_default[2] = {1.0, 1.0}; //a bit larger than HCAL size
+  for( int icp=0; icp<2; icp++ ){
+    fFrontConstraintX0.push_back( 0.0 );
+    fFrontConstraintY0.push_back( 0.0 );
+    fBackConstraintX0.push_back( 0.0 );
+    fBackConstraintY0.push_back( 0.0 );
+    fFrontConstraintWidthX.push_back( xwidth_front_default[icp] );
+    fFrontConstraintWidthY.push_back( ywidth_front_default[icp] );
+    fBackConstraintWidthX.push_back( xwidth_back_default[icp] );
+    fBackConstraintWidthY.push_back( ywidth_back_default[icp] );
+  }
+
+  
+  
+  // fFrontConstraintWidthX = 1.5;
+  // fFrontConstraintWidthY = 1.5;
+  // fBackConstraintWidthX = 1.5;
+  // fBackConstraintWidthY = 1.5;
+  // fFrontConstraintX0 = 0.0;
+  // fFrontConstraintY0 = 0.0;
+  // fBackConstraintX0 = 0.0;
+  // fBackConstraintY0 = 0.0;
   fGEMorigin.SetXYZ(0,0,0);
 
   fMagDist = 2.25; //This is a required parameter from ReadRunDatabase
@@ -45,7 +75,7 @@ THaSpectrometer( name, description )
   fBdL = 1.58; // T*m (optional: calculate avg. proton deflection for pcentral)
   
   fOpticsAngle = 0.0;
-  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.025 ); //In g4sbs, the front tracker first plane starts (by default) at 2.025 m downstream of the SBS magnet front face
+  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.025 ); //In g4sbs, the front tracker first plane starts (by default) at 2.025 m downstream of the SBS magnet front face by default (actually I'm not sure that's still true).
   InitOpticsAxes( fOpticsAngle );
 
   fGEMtheta = fOpticsAngle;
@@ -151,14 +181,14 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
   int polarimetermode = fPolarimeterMode ? 1 : 0;
   
   const DBRequest request[] = {
-    { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 1, 0},
-    { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDouble, 0, 1, 0},
-    { "backconstraintwidth_x", &fBackConstraintWidthX, kDouble, 0, 1, 0},
-    { "backconstraintwidth_y", &fBackConstraintWidthY, kDouble, 0, 1, 0},
-    { "frontconstraint_x0", &fFrontConstraintX0, kDouble, 0, 1, 0},
-    { "frontconstraint_y0", &fFrontConstraintY0, kDouble, 0, 1, 0},
-    { "backconstraint_x0", &fBackConstraintX0, kDouble, 0, 1, 0},
-    { "backconstraint_y0", &fBackConstraintY0, kDouble, 0, 1, 0},
+    { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDoubleV, 0, 1, 0},
+    { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDoubleV, 0, 1, 0},
+    { "backconstraintwidth_x", &fBackConstraintWidthX, kDoubleV, 0, 1, 0},
+    { "backconstraintwidth_y", &fBackConstraintWidthY, kDoubleV, 0, 1, 0},
+    { "frontconstraint_x0", &fFrontConstraintX0, kDoubleV, 0, 1, 0},
+    { "frontconstraint_y0", &fFrontConstraintY0, kDoubleV, 0, 1, 0},
+    { "backconstraint_x0", &fBackConstraintX0, kDoubleV, 0, 1, 0},
+    { "backconstraint_y0", &fBackConstraintY0, kDoubleV, 0, 1, 0},
     { "gemorigin_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
     { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
     { "gemphi", &gemphideg, kDouble, 0, 1, 1},
@@ -167,7 +197,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "optics_order",    &fOpticsOrder, kInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
     { "preconflag", &fPrecon_flag, kUInt, 0, 1, 1 },
-    { "polarimetermode", &fPolarimeterMode, kInt, 0, 1, 1 },
+    { "polarimetermode", &polarimetermode, kInt, 0, 1, 1 },
     { "z0analyzer", &fAnalyzerZ0, kDouble, 0, 1, 1 },
     { "BdL", &fBdL, kDouble, 0, 1, 1 },
     {0}
@@ -180,6 +210,11 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
   }
 
   fPolarimeterMode = (polarimetermode != 0);
+
+  //Once we parse the database, we need to check whether the constraint centering and width parameters
+  //wered defined sensibly. This method checks, and if any are not sensibly initialized, ALL are
+  //initialized with sensible default values:
+  CheckConstraintOffsetsAndWidths();
   
   fOpticsAngle = opticsthetadeg * TMath::DegToRad();
   if( optics_origin.size() == 3 ){ //database overrides default values:
@@ -642,9 +677,9 @@ Int_t SBSEArm::CoarseReconstruct()
       FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
     }
   }
-    
-  if(HCal->GetNclust() == 0) return 0; //If no HCAL clusters, we don't attempt tracking
 
+  if(HCal->GetNclust() == 0 || HCal == nullptr) return 0; //If no HCAL clusters, we don't attempt tracking
+  
   std::vector<SBSCalorimeterCluster*> HCalClusters = HCal->GetClusters();
   
   int i_max = 0;
@@ -681,6 +716,54 @@ Int_t SBSEArm::CoarseReconstruct()
   y_fcp = 0.0;
   z_fcp = 0.0;
 
+  //Set constraint points for FT and BT, regardless
+  //whether those detectors are actually using the constraints:
+  
+  if( !fPolarimeterMode && FrontTracker != nullptr ){
+    //std::cout << "setting constraints for tracks" << std::endl;
+    FrontTracker->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], z_fcp);
+    FrontTracker->SetBackConstraintPoint(x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], z_bcp);
+    FrontTracker->SetFrontConstraintWidth(fFrontConstraintWidthX[0], 
+					  fFrontConstraintWidthY[0]);
+    FrontTracker->SetBackConstraintWidth(fBackConstraintWidthX[0], 
+					 fBackConstraintWidthY[0]);
+	    
+  } else if( fPolarimeterMode && BackTracker != nullptr ){ //Polarimeter mode: look for NonTrackingDetectors inheriting SBSGEMPolarimeterTracker
+    z_fcp = fAnalyzerZ0; 
+    BackTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[1], y_fcp + fFrontConstraintY0[1], z_fcp);
+    BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1], y_bcp + fBackConstraintY0[1], z_bcp);
+    BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1], 
+					  fFrontConstraintWidthY[1] );
+    BackTracker->SetBackConstraintWidth( fBackConstraintWidthX[1], 
+					 fBackConstraintWidthY[1] );
+
+    //We can envision a scenario in which we get to this point and the
+    //front tracking is already done, for example, if the front tracking is
+    // done without constraints and was already done in SBSEArm::CoarseTrack, but the
+    // back tracking is to be done WITH constraints
+    // In that case, we actually want to set the back tracking constraints based on
+    // the FRONT tracking results:
+    if( FrontTracker != nullptr ){
+      //std::cout << "N front tracks = " << FrontTracker->GetNtracks()  << std::endl;
+      if( FrontTracker->GetNtracks() > 0 ){
+	
+	BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
+				    FrontTracker->GetYTrack( 0 ),
+				    FrontTracker->GetXpTrack( 0 ),
+				    FrontTracker->GetYpTrack( 0 ) );
+        //Additionally set front constraint point for back tracker based on projection to analyzer (in this context z_fcp = fAnalyzerZ0):
+	// If this context is relevant; e.g., front tracking done without constraints
+	// and back tracking done with constraints, then
+	// the front constraint width should have also been sensibly defined via the DB:
+	x_fcp = FrontTracker->GetXTrack(0) + z_fcp * FrontTracker->GetXpTrack(0);
+	y_fcp = FrontTracker->GetYTrack(0) + z_fcp * FrontTracker->GetYpTrack(0);
+
+	BackTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[1], y_fcp + fFrontConstraintY0[1], z_fcp );
+      }
+    }
+    
+  } //End if (!Polarimeter mode     )
+
   fFrontConstraintX.push_back( x_fcp );
   fFrontConstraintY.push_back( y_fcp );
   fFrontConstraintZ.push_back( z_fcp );
@@ -688,25 +771,7 @@ Int_t SBSEArm::CoarseReconstruct()
   fBackConstraintX.push_back( x_bcp );
   fBackConstraintY.push_back( y_bcp );
   fBackConstraintZ.push_back( z_bcp );
-
-  if( !fPolarimeterMode && FrontTracker != nullptr ){
-    //std::cout << "setting constraints for tracks" << std::endl;
-    FrontTracker->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
-    FrontTracker->SetBackConstraintPoint(x_bcp + fBackConstraintX0, y_bcp + fBackConstraintY0, z_bcp);
-    FrontTracker->SetFrontConstraintWidth(fFrontConstraintWidthX, 
-					  fFrontConstraintWidthY);
-    FrontTracker->SetBackConstraintWidth(fBackConstraintWidthX, 
-					 fBackConstraintWidthY);
-	    
-  } else if( fPolarimeterMode && BackTracker != nullptr ){ //Polarimeter mode: look for NonTrackingDetectors inheriting SBSGEMPolarimeterTracker
-    z_fcp = fAnalyzerZ0; 
-    BackTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, z_fcp);
-    BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0, y_bcp + fBackConstraintY0, z_bcp);
-    BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX, 
-					  fFrontConstraintWidthY );
-    BackTracker->SetBackConstraintWidth( fBackConstraintWidthX, 
-					 fBackConstraintWidthY );
-  } //End if (!Polarimeter mode     )
+  
   return 0;
 }
 
@@ -721,7 +786,7 @@ Int_t SBSEArm::Track()
     if( !IsDone(kCoarseRecon) )
       CoarseReconstruct();
 
-    SBSGEMSpectrometerTracker *FrontTracker;
+    SBSGEMSpectrometerTracker *FrontTracker = nullptr;
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
@@ -730,7 +795,7 @@ Int_t SBSEArm::Track()
       }
     }
     
-    SBSGEMPolarimeterTracker *BackTracker; 
+    SBSGEMPolarimeterTracker *BackTracker = nullptr; 
     TIter next(fNonTrackingDetectors);
 
     while( auto* theNonTrackDetector =
@@ -743,6 +808,9 @@ Int_t SBSEArm::Track()
 
       //only call fine process if this non-tracking detector is the back tracker:
       if( theNonTrackDetector->InheritsFrom("SBSGEMPolarimeterTracker")){ 
+	//If the back tracker is set to use the constraints, then this
+	//will initiate tracking.
+	//Otherwise, it does nothing:
 	theNonTrackDetector->FineProcess( *fTracks );
 
 	//grab pointer to Back Tracker for initialization of front tracking:
@@ -763,20 +831,44 @@ Int_t SBSEArm::Track()
       double x_bcp = xback + xpback * fAnalyzerZ0;
       double y_bcp = yback + ypback * fAnalyzerZ0;
       
-      FrontTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0, y_bcp + fBackConstraintY0, fAnalyzerZ0 );
+      FrontTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], fAnalyzerZ0 );
       
       double x_fcp = x_bcp;
       double y_fcp = y_bcp;
       
-      FrontTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0, y_fcp + fFrontConstraintY0, 0.0 );
+      FrontTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], 0.0 );
       
-      FrontTracker->SetBackConstraintWidth( fBackConstraintWidthX, fBackConstraintWidthY );
-      FrontTracker->SetFrontConstraintWidth( fFrontConstraintWidthX, fFrontConstraintWidthY );
+      FrontTracker->SetBackConstraintWidth( fBackConstraintWidthX[0], fBackConstraintWidthY[0] );
+      FrontTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[0], fFrontConstraintWidthY[0] );
 
+      //NOTE: if constraints aren't being used by the front tracker,
+      //then the following line has no effect (as intended!)
       FrontTracker->FineTrack( *fTracks );
-    } 
-  }
+
+      if( FrontTracker->GetNtracks() > 0 ){
+	//If we found a front track, then set the "front track" for the back tracker
+	//for the purpose of scattering angle/closest-approach reconstruction:
+	BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
+				    FrontTracker->GetYTrack( 0 ),
+				    FrontTracker->GetXpTrack( 0 ),
+				    FrontTracker->GetYpTrack( 0 ) );
+	// Technically, we could also call BackTracker->CalcScatteringParameters here,
+	// But given the current structure of the SBSEArm code, it is unnecessary
+	// since BackTracker->FineProcess will get called again in SBSEArm::Reconstruct();
+	
+      }
+    }
+
+    // Don't forget to call FindVertices regardless! This is NOT done automatically
+    // in the polarimeter mode, for which we override the standard
+    // THaSpectrometer::Track();
+    // Reconstruct tracks to target/vertex
+    // This usually also determines the track momentum
     
+    FindVertices( *fTracks );
+  } //end check for "polarimeter mode"
+
+  fStagesDone |= kTracking;
   return 0;
   
 }
@@ -786,10 +878,77 @@ Int_t SBSEArm::Reconstruct()
 {
   // Fine Reconstruction of particles in spectrometer
   //std::cout << "SBSBigBite::Reconstruct()..." << std::endl;
-  
-  THaSpectrometer::Reconstruct();
-  // TODO
 
+  THaSpectrometer::Reconstruct();
+
+  //Note that the call to THaSpectrometer::Reconstruct() above can lead
+  //to a SECOND call to SBSGEMPolarimeter::FineProcess for the back tracker
+
+  // If we are in the polarimeter mode, we know at this stage that
+  // back tracking and front tracking are DONE.
+  // If we're just considering recoil proton polarimetry, then
+  // the last thing we need to do is check whether
+  // a track was found in the front tracker and if so, whether
+  // the scattering angle/closest approach parameters have already been
+  // calculated for the back tracker or not:
+
+  // std::cout << "[SBSEArm::Reconstruct]: Polarimeter mode = " << fPolarimeterMode 
+  // 	    << std::endl;
+
+  // I think all the code in the following if block is actually unnecessary,
+  // because all it does is check if there are both front and back tracks and if
+  // the front track has not already been set for the back tracker, and then
+  // calculates the scattering parameters if all those conditions are met. But
+  // the call to THaSpectrometer::Reconstruct already takes care of this, for the
+  // case where constraints are used. That means if I comment out all of this, the
+  // code will still basically function the same way:
+  
+  // if( fPolarimeterMode ){
+  //   //Once again, we need to grab pointers to
+  //   //front and back trackers:
+  //   SBSGEMSpectrometerTracker *FrontTracker = nullptr;
+  //   TIter next2( fTrackingDetectors );
+  //   while( auto* theTrackDetector =
+  // 	   static_cast<THaTrackingDetector*>( next2() )) {
+  //     if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
+  // 	FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+  //     }
+  //   }
+    
+  //   SBSGEMPolarimeterTracker *BackTracker = nullptr; 
+  //   TIter next(fNonTrackingDetectors);
+
+  //   while( auto* theNonTrackDetector =
+  // 	   static_cast<THaNonTrackingDetector*>( next() )) {
+  //     assert(dynamic_cast<THaNonTrackingDetector*>(theNonTrackDetector));
+  //     if(theNonTrackDetector->InheritsFrom("SBSGEMPolarimeterTracker")){
+  // 	BackTracker = reinterpret_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
+  //     }
+  //   }
+
+  //   if( FrontTracker != nullptr && BackTracker != nullptr ){
+  //     // If both front and back tracker have tracks
+  //     // AND the fFrontTrackIsSet is false, then we need to set
+  //     // the front track and calculate the scattering parameters:
+
+  //     // std::cout << "Checking for front and back tracks, (Nfront, Nback)=("
+  //     // 		<< FrontTracker->GetNtracks() << ", " << BackTracker->GetNtracks()
+  //     // 		<< std::endl;
+  //     if( FrontTracker->GetNtracks() > 0 && BackTracker->GetNtracks() > 0 && !(BackTracker->HasFrontTrack()) ){
+  // 	//Grab "best" (first) track in front tracker:
+  // 	BackTracker->SetFrontTrack( FrontTracker->GetXTrack(0),
+  // 				    FrontTracker->GetYTrack(0),
+  // 				    FrontTracker->GetXpTrack(0),
+  // 				    FrontTracker->GetYpTrack(0) );
+
+  // 	// std::cout << "Tracks found in both front and back trackers, calculating scattering parameters" << std::endl;
+	
+  // 	BackTracker->CalcScatteringParameters();
+	
+  //     }
+  //   }
+  // } //end check for polarimeter mode
+  
   //std::cout << "Done..." << std::endl;
   
   return 0;
@@ -830,6 +989,52 @@ void SBSEArm::InitGEMAxes( double theta, double phi ){
   fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
   fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
   fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
+}
+
+void SBSEArm::CheckConstraintOffsetsAndWidths(){
+  //Initialize these with sensible defaults in case the user hasn't defined something sensible:
+  double xwidth_front_default[2] = {0.75, 1.0};
+  double xwidth_back_default[2] = {2.0, 2.0};
+  double ywidth_front_default[2] = {0.2,0.3};
+  double ywidth_back_default[2] = {1.0, 1.0};
+
+  bool any_incorrect = false;
+  if( !fPolarimeterMode ){
+    any_incorrect = ( fFrontConstraintWidthX.size() < 1 || fFrontConstraintWidthY.size() < 1 ||
+		      fFrontConstraintX0.size() < 1 || fFrontConstraintY0.size() < 1 ||
+		      fBackConstraintWidthX.size() < 1 || fBackConstraintWidthY.size() < 1 ||
+		      fBackConstraintX0.size() < 1 || fBackConstraintY0.size() < 1 );
+
+    if( any_incorrect ){ //initialize constraints with defaults:
+      fFrontConstraintWidthX.push_back( xwidth_front_default[0] );
+      fFrontConstraintWidthY.push_back( ywidth_front_default[0] );
+      fBackConstraintWidthX.push_back( xwidth_back_default[0] );
+      fBackConstraintWidthY.push_back( ywidth_back_default[0] );
+      fFrontConstraintX0.push_back( 0.0 );
+      fFrontConstraintY0.push_back( 0.0 );
+      fBackConstraintX0.push_back( 0.0 );
+      fBackConstraintY0.push_back( 0.0 );
+    }
+  } else { //Polarimeter mode, need constraints for front and back trackers:
+    any_incorrect = ( fFrontConstraintWidthX.size() < 2 || fFrontConstraintWidthY.size() < 2 ||
+		      fFrontConstraintX0.size() < 2 || fFrontConstraintY0.size() < 2 ||
+		      fBackConstraintWidthX.size() < 2 || fBackConstraintWidthY.size() < 2 ||
+		      fBackConstraintX0.size() < 2 || fBackConstraintY0.size() < 2 );
+
+    if( any_incorrect ){ //initialize constraints with defaults:
+      for( int icp=0; icp<2; icp++ ){
+	fFrontConstraintWidthX.push_back( xwidth_front_default[icp] );
+	fFrontConstraintWidthY.push_back( ywidth_front_default[icp] );
+	fBackConstraintWidthX.push_back( xwidth_back_default[icp] );
+	fBackConstraintWidthY.push_back( ywidth_back_default[icp] );
+	fFrontConstraintX0.push_back( 0.0 );
+	fFrontConstraintY0.push_back( 0.0 );
+	fBackConstraintX0.push_back( 0.0 );
+	fBackConstraintY0.push_back( 0.0 );
+      }
+    }
+  }
+  
 }
 
 //_____________________________________________________________________________

@@ -43,22 +43,32 @@ class SBSGEMPolarimeterTracker : public THaNonTrackingDetector, public SBSGEMTra
   //Loop on all found tracks and calculate sclose, zclose, theta, phi:
   void CalcScatteringParameters();
 
-  void SetFrontTrack( TVector3 track_origin, TVector3 track_direction, int index=0 );
+  void SetFrontTrack( TVector3 track_origin, TVector3 track_direction );
+  void SetFrontTrack( double x, double y, double theta, double phi );
 
+  bool HasFrontTrack() const { return fFrontTrackIsSet; }
   
  private:
   // std::vector <SBSGEMModule *> fPlanes; storing the modules moved to SBSGEMTrackerBase
 
   //Not sure if we'll need this "test track" array for the polarimeter context.
-  bool fFrontTrackInitialized; 
-  bool fUseFrontTrackConstraint;
+  //bool fFrontTrackInitialized; 
+  //bool fUseFrontTrackConstraint;
   
   //"Front tracks" array for polarimeter tracking:
-  TClonesArray *fFrontTracks; 
+  //TClonesArray *fFrontTracks; 
   //bool fIsMC; moved to SBSGEMTrackerBase
 
   //Add additional track properties we want to store:
- 
+
+  //For the time being, we will only consider one possible "front track":
+  double fFrontTrackX;
+  double fFrontTrackY;
+  double fFrontTrackXp;
+  double fFrontTrackYp;
+
+  bool fFrontTrackIsSet;
+  
   std::vector<double> fTrackTheta; //Polar scattering angle relative to front track
   std::vector<double> fTrackPhi; //Azimuthal scattering angle relative to front track
   std::vector<double> fTrackSClose; //distance of closest approach relative to front track

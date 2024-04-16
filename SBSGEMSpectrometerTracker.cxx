@@ -753,7 +753,7 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
     //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
-    find_tracks();
+    if( !ftracking_done ) find_tracks();
 
     for( int itrack=0; itrack<fNtracks_found; itrack++ ){
       THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );
@@ -786,7 +786,7 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
       fConstraintWidth_Front_IsInitialized && fConstraintWidth_Back_IsInitialized;
 
     if( fConstraintInitialized ){
-      find_tracks();
+      if( !ftracking_done ) find_tracks();
 
       //We don't necessarily know 
     

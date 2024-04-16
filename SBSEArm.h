@@ -37,14 +37,18 @@ protected:
   void InitGEMAxes(double, double, const TVector3 & );
   void InitGEMAxes(double, double); //version with only angle arguments:
 
-  Double_t fFrontConstraintWidthX;
-  Double_t fFrontConstraintWidthY;
-  Double_t fBackConstraintWidthX;
-  Double_t fBackConstraintWidthY;
-  Double_t fFrontConstraintX0;
-  Double_t fFrontConstraintY0;
-  Double_t fBackConstraintX0; 
-  Double_t fBackConstraintY0;
+  void CheckConstraintOffsetsAndWidths();
+  
+  //We have to make these vectors to accommodate the polarimeter mode; separate offsets and widths for front and back trackers:
+  
+  std::vector<Double_t> fFrontConstraintWidthX;
+  std::vector<Double_t> fFrontConstraintWidthY;
+  std::vector<Double_t> fBackConstraintWidthX;
+  std::vector<Double_t> fBackConstraintWidthY;
+  std::vector<Double_t> fFrontConstraintX0;
+  std::vector<Double_t> fFrontConstraintY0;
+  std::vector<Double_t> fBackConstraintX0; 
+  std::vector<Double_t> fBackConstraintY0;
 
   //for output only... Vectors instead?
   std::vector<double> fFrontConstraintX;

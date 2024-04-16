@@ -39,15 +39,15 @@ SBSGEMPolarimeterTracker::SBSGEMPolarimeterTracker( const char* name, const char
   fUseForwardOpticsConstraint = false;
   fUseSlopeConstraint = false;
 
-  fUseFrontTrackConstraint = false;
-  fFrontTrackInitialized = false;
+  // fUseFrontTrackConstraint = false;
+  // fFrontTrackInitialized = false;
 
-  fFrontTracks = new TClonesArray("THaTrack",1);
+  //fFrontTracks = new TClonesArray("THaTrack",1);
 }
 
 SBSGEMPolarimeterTracker::~SBSGEMPolarimeterTracker(){
-  fFrontTracks->Clear("C");
-  delete fFrontTracks;
+  //fFrontTracks->Clear("C");
+  //delete fFrontTracks;
 }
 
 
@@ -74,11 +74,11 @@ THaAnalysisObject::EStatus SBSGEMPolarimeterTracker::Init( const TDatime& date )
     CompleteInitialization();
 
     //I'm not sure we really actually want any of these lines of code for the polarimeter context:
-    if( !fFrontTrackInitialized ){
+    // if( !fFrontTrackInitialized ){
     
-      new( (*fFrontTracks)[0] ) THaTrack();
-      fFrontTrackInitialized = true;
-    }
+    //   new( (*fFrontTracks)[0] ) THaTrack();
+    //   fFrontTrackInitialized = true;
+    // }
     
   } else {
     return kInitError;
@@ -119,10 +119,10 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   int doefficiency_flag = fMakeEfficiencyPlots ? 1 : 0;
   //int onlinezerosuppressflag = fOnlineZeroSuppression ? 1 : 0;
   int useconstraintflag = fUseConstraint ? 1 : 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other)
-  int usefronttrackconstraintflag = fUseFrontTrackConstraint ? 1 : 0; 
+  //int usefronttrackconstraintflag = fUseFrontTrackConstraint ? 1 : 0; 
   int mc_flag = fIsMC ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
-  int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
+  //int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   int usetrigtime = fUseTrigTime ? 1 : 0;
 
@@ -148,7 +148,6 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     { "gridedgetolerancey", &fGridEdgeToleranceY, kDouble, 0, 1},
     { "trackchi2cut", &fTrackChi2Cut, kDoubleV, 0, 1},
     { "useconstraint", &useconstraintflag, kInt, 0, 1},
-    { "usefronttrackconstraint", &usefronttrackconstraintflag, kInt, 0, 1 },
     { "sigmahitpos", &fSigma_hitpos, kDouble, 0, 1},
     { "pedestalmode", &pedestalmode_flag, kInt, 0, 1, 1},
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
@@ -193,7 +192,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   
   //fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
-  fUseFrontTrackConstraint = (usefronttrackconstraintflag != 0);
+  //fUseFrontTrackConstraint = (usefronttrackconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
 
   if( fPedestalMode ){ //then we will just dump raw data to the tree and/or histograms:
@@ -322,6 +321,8 @@ void SBSGEMPolarimeterTracker::Clear( Option_t *opt ){
   fTrackPhi.clear();
   fTrackSClose.clear();
   fTrackZClose.clear();
+
+  fFrontTrackIsSet = false;
   
 }
 
@@ -575,6 +576,10 @@ Int_t SBSGEMPolarimeterTracker::DefineVariables( EMode mode ){
     { "track.besttrack", "Index of 'best' track", "fBestTrackIndex" },
     { "track.ngoodhits", "Number of high quality hits on track", "fNgoodhitsOnTrack" },
     { "track.t0", "Track t0 time (weighted average of hit times relative to expected, ns)", "fT0track" },
+    { "track.theta", "Track polar theta wrt front track", "fTrackTheta" },
+    { "track.phi", "Track polar phi wrt front track", "fTrackPhi" },
+    { "track.sclose", "Track distance of closest approach wrt front track", "fTrackSClose" },
+    { "track.zclose", "Track point of closest approach wrt front track", "fTrackZClose" },
     { "hit.ngoodhits", "Total number of hits on all found tracks", "fNgoodhits" },
     { "hit.trackindex", "Index of track containing this hit", "fHitTrackIndex" },
     { "hit.module", "Module index of this hit", "fHitModule" },
@@ -730,8 +735,12 @@ Int_t SBSGEMPolarimeterTracker::CoarseProcess( TClonesArray& tracks ){
     //std::cout << "SBSGEMPolarimeterTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
-    find_tracks();
+    if( !ftracking_done ) find_tracks();
 
+    if( fFrontTrackIsSet && fNtracks_found > 0 ){ //there is currently no scenario is SBSEArm/GEN-RP context in which this condition could evaluate to true
+      CalcScatteringParameters();
+    }
+    
     //The following lines aren't applicable for PolarimeterTracker:
     // for( int itrack=0; itrack<fNtracks_found; itrack++ ){
     //   THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );
@@ -756,7 +765,15 @@ Int_t SBSGEMPolarimeterTracker::FineProcess( TClonesArray& tracks ){
 
   // In the polarimeter context, when FineProcess gets invoked, the TClonesArray &tracks refers to the tracks reconstructed by any
   // "spectrometer trackers" or "front" trackers upstream of the polarimeter tracker. However, in the GEN-RP context, we
-  // also need to worry about the "non-track" front track constraint. 
+  // also need to worry about the "non-track" front track constraint.
+  // In principle, this method can get called more than once.
+  // In particular, the SBSEArm class used by GEN-RP will call this method twice, once
+  // in SBSEArm::Track() and again in SBSEArm::Reconstruct() which just invokes THaSpectrometer::Reconstruct()!
+  // The first time, there will be no front track set and the tracking will not have been done.
+  // So the first call to this method from SBSEArm::Track() will cause tracking to happen, which will set
+  // ftracking_done to true.
+  // The second call to this method from SBSEArm::Reconstruct() will happen AFTER the "front track" parameters are set,
+  // based on the results from the front tracking. This will cause CalcScatteringParameters() to be invoked.
   
   if( fUseConstraint && !fPedestalMode ){ //
     //std::cout << "SBSGEMPolarimeterTracker::FineTrack..."; 
@@ -771,31 +788,105 @@ Int_t SBSGEMPolarimeterTracker::FineProcess( TClonesArray& tracks ){
 
       //In the polarimeter context, we want to loop on all the tracks in the tracks array that gets passed as argument to to FineProcess as well as any front "pseudotracks" based on a projected incident neutron trajectory 
 
-      find_tracks();
+      if( !ftracking_done ) find_tracks();
 
-      //The following lines are irrelevant for PolarimeterTracker:
-      // //We don't necessarily know 
-    
-      // for( int itrack=0; itrack<fNtracks_found; itrack++ ){
-      // 	//AddTrack returns a pointer to the created THaTrack:
-      // 	THaTrack *Track = AddTrack( tracks, fXtrack[itrack], fYtrack[itrack], fXptrack[itrack], fYptrack[itrack] );	// Then we can set additional properties of the track using the returned pointer:
-
-      // 	int ndf = 2*fNhitsOnTrack[itrack]-4;
-      // 	double chi2 = fChi2Track[itrack]*ndf;
-      
-      // 	Track->SetChi2( chi2, ndf );
-
-      // 	int index = tracks.GetLast();
-      // 	Track->SetIndex( index );
-      
-      // }
     }
     //std::cout << "done. found " << fNtracks_found << " tracks" << std::endl;
     
+  }
+
+  // regardless of constraint and whether tracking was done here or in CoarseProcess, if front track was set and
+  // we have at least one track, calculate the scattering parameters:
+  if( fFrontTrackIsSet && fNtracks_found > 0 ){
+    CalcScatteringParameters();
   }
   
   return 0;
 }
 
+void SBSGEMPolarimeterTracker::CalcScatteringParameters(){
+  //Just in case there is anything leftover here from a previous event:
+  fTrackTheta.clear();
+  fTrackPhi.clear();
+  fTrackSClose.clear();
+  fTrackZClose.clear();
+  if( !fFrontTrackIsSet ){ //just assign kBig to each track
+    for( int itr=0; itr<fNtracks_found; itr++ ){
+      fTrackTheta.push_back( 1.e20 );
+      fTrackPhi.push_back( 1.e20 );
+      fTrackSClose.push_back( 1.e20 );
+      fTrackZClose.push_back( 1.e20 );
+    }
+  } else {
+    //Calculate theta, phi, SClose, ZClose (the formulas for these parameters can found in e.g.,
+    // Andrew Puckett's Ph.D. thesis). It is ASSUMED that the back tracker coordinate system
+    // is the same as the front, if it isn't, then the results of these calculations
+    // won't be trustworthy:
+    TVector3 FrontDir(fFrontTrackXp,fFrontTrackYp,1.0);
+    FrontDir = FrontDir.Unit();
+    TVector3 FrontPos( fFrontTrackX, fFrontTrackY, 0.0 );
+    for( int itr=0; itr<fNtracks_found; itr++ ){
+      TVector3 BackDir( fXptrack[itr], fYptrack[itr], 1.0 );
+      BackDir = BackDir.Unit();
+      TVector3 BackPos( fXtrack[itr], fYtrack[itr], 0.0 );
+
+      // Theta and phi calculations are simple. Theta is the simplest. Since
+      // both direction vectors are unit vectors, we simply take the arccosine of back dot front:
+      double theta = acos(BackDir.Dot(FrontDir));
+      //For the phi direction, we need to calculate the basis vectors of the comoving coordinate
+      //system:
+      // The standard convention for azimuthal scattering angles is that we choose the y axis
+      // of the comoving coordinate system to be
+      // perpendicular to the z axis and parallel to the yz plane of TRANSPORT coordinates, and
+      // then we choose the x axis to be perpendicular to both:
+      TVector3 xaxis(1,0,0);
+      TVector3 yaxis = (FrontDir.Cross(xaxis)).Unit(); //y axis is perpendicular to both z and the x axis of transport coordinates.
+      xaxis = (yaxis.Cross(FrontDir)).Unit(); //Final x axis is chosen by requiring orthogonality to both y and z and making sure the coordinate system is right-handed
+      // now take the projections of the scattered (back) track along y and x;
+      // The phi angle is given by tan(phi) = by/bx
+      double phi = atan2( BackDir.Dot( yaxis ), BackDir.Dot( xaxis ) );
+      fTrackTheta.push_back( theta ); //in radians
+      fTrackPhi.push_back( phi ); //in radians, -PI < phi < PI
+      //Next up: distance and point of closest approach. Refer to Andrew Puckett Ph.D. thesis for the
+      // formulas (equations 4.26, 4.29, 4.30, etc)
+      double a = 1.0 + pow( fFrontTrackXp, 2 ) + pow( fFrontTrackYp, 2 );
+      double c = 1.0 + pow( fXptrack[itr], 2 ) + pow( fYptrack[itr], 2 );
+      double b = 1.0 + fFrontTrackXp*fXptrack[itr] + fFrontTrackYp*fYptrack[itr];
+
+      double det = a*c-b*b;
+      double d1 = -fFrontTrackXp*(fFrontTrackX-fXtrack[itr])-fFrontTrackYp*(fFrontTrackY-fYtrack[itr]);
+      double d2 = fXptrack[itr]*(fFrontTrackX-fXtrack[itr])+fYptrack[itr]*(fFrontTrackY-fYtrack[itr]);
+
+      double z1 = (c*d1 + b*d2)/det;
+      double z2 = (b*d1 + a*d2)/det;
+
+      fTrackZClose.push_back( 0.5*(z1+z2) );
+
+      double x1close = fFrontTrackX + z1*fFrontTrackXp;
+      double x2close = fXtrack[itr]+z2*fXptrack[itr];
+      double y1close = fFrontTrackY + z1*fFrontTrackYp;
+      double y2close = fYtrack[itr]+z2*fYptrack[itr];
+      double s2 = pow(x1close-x2close,2)+pow(y1close-y2close,2)+pow(z1-z2,2);
+      fTrackSClose.push_back( sqrt(s2) );
+      
+    }
+  }
+}
+
+void SBSGEMPolarimeterTracker::SetFrontTrack( TVector3 pos, TVector3 dir){
+  fFrontTrackXp = dir.X()/dir.Z();
+  fFrontTrackYp = dir.Y()/dir.Z();
+  fFrontTrackX = pos.X() - fFrontTrackXp * pos.Z();
+  fFrontTrackY = pos.Y() - fFrontTrackYp * pos.Z();
+  fFrontTrackIsSet = true;
+}
+
+void SBSGEMPolarimeterTracker::SetFrontTrack( double x, double y, double theta, double phi ){
+  fFrontTrackX = x;
+  fFrontTrackY = y;
+  fFrontTrackXp = theta;
+  fFrontTrackYp = phi;
+  fFrontTrackIsSet = true;
+}
 
 ClassImp(SBSGEMPolarimeterTracker)

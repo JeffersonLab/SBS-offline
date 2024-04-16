@@ -84,8 +84,8 @@ public:
   void GetTrack(int itrack, double &x, double &y, double &xp, double &yp);
   double GetXTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXtrack[itrack] : 1.e20; };
   double GetYTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fYtrack[itrack] : 1.e20; };
-  double GetXpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXtrack[itrack] : 1.e20; };
-  double GetYpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXtrack[itrack] : 1.e20; };
+  double GetXpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXptrack[itrack] : 1.e20; };
+  double GetYpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fYptrack[itrack] : 1.e20; };
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
