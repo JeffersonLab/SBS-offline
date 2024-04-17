@@ -3,31 +3,29 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //  - 2021-02-25 Juan Carlos Cornejo <cornejo@jlab.org>
-//  * Create this global (instanton) class
+//  * Create this global (singleton) class
 
-#include <TString.h>
-#include <TObject.h>
-
-
-namespace Decoder {
-  class THaCrateMap;
-}
+#include "TString.h"
+#include "TObject.h"
+#include "THaCrateMap.h"
 
 class SBSManager : public TObject {
 public:
   SBSManager();
-  virtual ~SBSManager();
   static SBSManager *GetInstance();
-  static void SetDefaultCrateMapName(const char* name);
+  void SetDefaultCrateMapName(const char* name);
 
-  Decoder::THaCrateMap* GetCrateMap();
+  Decoder::THaCrateMap* GetCrateMap( Long64_t tloc );
 
 private:
-  Decoder::THaCrateMap *fCrateMap;
-  static TString fCrateMapName;
-  static SBSManager *fManager;
+  std::unique_ptr<Decoder::THaCrateMap> fCrateMap;
+  TString fCrateMapName;
+  //FIXME: With analyzer >= 1.8, use the time stored in THaCrateMap
+  Long64_t fCrateMapInitTime;
 
-  ClassDef(SBSManager,0) ///< Base class for SBS Manage
+  static std::unique_ptr<SBSManager> fManager;
+
+  ClassDefNV(SBSManager,0) ///< Base class for SBS Manage
 };
 
 #endif//SBSMANAGER_H
