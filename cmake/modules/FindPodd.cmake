@@ -23,7 +23,7 @@ set(Podd_find_library_name "HallA")
 ## Find the compiled shared library
 find_library(Podd_LIBRARY
   NAMES ${Podd_find_library_name}
-  PATHS $ENV{ANALYZER}/lib
+  PATHS $ENV{ANALYZER}/lib64 $ENV{ANALYZER}/lib NO_DEFAULT_PATH
   )
 if(Podd_LIBRARY)
   ## Get the path to the library: under the new cmake build system for Podd,
