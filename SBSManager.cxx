@@ -1,6 +1,6 @@
 #include "SBSManager.h"
 
-unique_ptr<SBSManager> SBSManager::fManager = nullptr;
+std::unique_ptr<SBSManager> SBSManager::fManager = nullptr;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Get an instance of the singleton
