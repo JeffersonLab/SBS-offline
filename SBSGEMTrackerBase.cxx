@@ -3463,7 +3463,7 @@ void SBSGEMTrackerBase::SetConstraintWidth_phi( double dph ){
 
 void SBSGEMTrackerBase::GetTrack(int itrack, double &x, double &y, double &xp, double &yp){
   double big=-1.e20;
-  if( itrack >= 0 && itrack<fNtracks_found; itrack++ ){
+  if( itrack >= 0 && itrack<fNtracks_found){
     x = fXtrack[itrack];
     y = fYtrack[itrack];
     xp = fXptrack[itrack];

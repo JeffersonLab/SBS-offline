@@ -23,6 +23,8 @@ public:
   virtual Int_t	Reconstruct();
   virtual Int_t	Track();
   virtual Int_t CalcPID();
+
+  void SetPolarimeterMode( Bool_t ispol );
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
@@ -102,7 +104,8 @@ protected:
   std::vector<int> f_om;
 
   Bool_t fPolarimeterMode; //Use polarimeter mode
-
+  Bool_t fPolarimeterMode_DBoverride; //flag to override DB value
+  
   Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
   
   //Also include (optional) forward optics model to aid in false track rejection. 

@@ -116,6 +116,8 @@ THaSpectrometer( name, description )
   f_fom.clear();
 
   fPolarimeterMode = false; //if true, then we are using SBS with front and rear GEM trackers.
+  fPolarimeterMode_DBoverride = false;
+  
   fAnalyzerZ0 = 0.0;
 
 }
@@ -209,7 +211,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     return status;
   }
 
-  fPolarimeterMode = (polarimetermode != 0);
+  fPolarimeterMode = !fPolarimeterMode_DBoverride && (polarimetermode != 0);
 
   //Once we parse the database, we need to check whether the constraint centering and width parameters
   //wered defined sensibly. This method checks, and if any are not sensibly initialized, ALL are
@@ -820,45 +822,46 @@ Int_t SBSEArm::Track()
 
     //Only attempt tracking in FT if we got a track in back tracker:
     
-    if( BackTracker->GetNtracks() > 0 && FrontTracker != nullptr ){ //Use the back tracker to initialize constraints for front tracker:
-      //Initially, let's set up a front constraint using only the "best" (first) track found in the back tracker
-      //Later, we may consider multiple tracks pointing to multiple clusters in HCAL: 
-      double xback = BackTracker->GetXTrack( 0 );
-      double yback = BackTracker->GetYTrack( 0 );
-      double xpback = BackTracker->GetXpTrack( 0 );
-      double ypback = BackTracker->GetYpTrack( 0 );
-      
-      double x_bcp = xback + xpback * fAnalyzerZ0;
-      double y_bcp = yback + ypback * fAnalyzerZ0;
-      
-      FrontTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], fAnalyzerZ0 );
-      
-      double x_fcp = x_bcp;
-      double y_fcp = y_bcp;
-      
-      FrontTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], 0.0 );
-      
-      FrontTracker->SetBackConstraintWidth( fBackConstraintWidthX[0], fBackConstraintWidthY[0] );
-      FrontTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[0], fFrontConstraintWidthY[0] );
-
-      //NOTE: if constraints aren't being used by the front tracker,
-      //then the following line has no effect (as intended!)
-      FrontTracker->FineTrack( *fTracks );
-
-      if( FrontTracker->GetNtracks() > 0 ){
-	//If we found a front track, then set the "front track" for the back tracker
-	//for the purpose of scattering angle/closest-approach reconstruction:
-	BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
-				    FrontTracker->GetYTrack( 0 ),
-				    FrontTracker->GetXpTrack( 0 ),
-				    FrontTracker->GetYpTrack( 0 ) );
-	// Technically, we could also call BackTracker->CalcScatteringParameters here,
-	// But given the current structure of the SBSEArm code, it is unnecessary
-	// since BackTracker->FineProcess will get called again in SBSEArm::Reconstruct();
+    if( BackTracker != nullptr && FrontTracker != nullptr ){ //Use the back tracker to initialize constraints for front tracker:
+      if( BackTracker->GetNtracks() > 0 ){
+	//Initially, let's set up a front constraint using only the "best" (first) track found in the back tracker
+	//Later, we may consider multiple tracks pointing to multiple clusters in HCAL: 
+	double xback = BackTracker->GetXTrack( 0 );
+	double yback = BackTracker->GetYTrack( 0 );
+	double xpback = BackTracker->GetXpTrack( 0 );
+	double ypback = BackTracker->GetYpTrack( 0 );
 	
+	double x_bcp = xback + xpback * fAnalyzerZ0;
+	double y_bcp = yback + ypback * fAnalyzerZ0;
+	
+	FrontTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], fAnalyzerZ0 );
+	
+	double x_fcp = x_bcp;
+	double y_fcp = y_bcp;
+	
+	FrontTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], 0.0 );
+	
+	FrontTracker->SetBackConstraintWidth( fBackConstraintWidthX[0], fBackConstraintWidthY[0] );
+	FrontTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[0], fFrontConstraintWidthY[0] );
+	
+	//NOTE: if constraints aren't being used by the front tracker,
+	//then the following line has no effect (as intended!)
+	FrontTracker->FineTrack( *fTracks );
+	
+	if( FrontTracker->GetNtracks() > 0 ){
+	  //If we found a front track, then set the "front track" for the back tracker
+	  //for the purpose of scattering angle/closest-approach reconstruction:
+	  BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
+				      FrontTracker->GetYTrack( 0 ),
+				      FrontTracker->GetXpTrack( 0 ),
+				      FrontTracker->GetYpTrack( 0 ) );
+	  // Technically, we could also call BackTracker->CalcScatteringParameters here,
+	  // But given the current structure of the SBSEArm code, it is unnecessary
+	  // since BackTracker->FineProcess will get called again in SBSEArm::Reconstruct();
+	  
+	}
       }
     }
-
     // Don't forget to call FindVertices regardless! This is NOT done automatically
     // in the polarimeter mode, for which we override the standard
     // THaSpectrometer::Track();
@@ -1035,6 +1038,11 @@ void SBSEArm::CheckConstraintOffsetsAndWidths(){
     }
   }
   
+}
+
+void SBSEArm::SetPolarimeterMode( Bool_t ispol ){
+  fPolarimeterMode = ispol;
+  fPolarimeterMode_DBoverride = true;
 }
 
 //_____________________________________________________________________________
