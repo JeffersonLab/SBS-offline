@@ -18,6 +18,7 @@
 #pragma link C++ class SBSBigBite+;
 #pragma link C++ class SBSGEMSpectrometerTracker+;
 #pragma link C++ class SBSGEMPolarimeterTracker+;
+#pragma link C++ class SBSGEMPRTracker+;
 #pragma link C++ class SBSGEMModule+;
 #pragma link C++ class SBSGRINCH+;
 #pragma link C++ class SBSCherenkovDetector+;

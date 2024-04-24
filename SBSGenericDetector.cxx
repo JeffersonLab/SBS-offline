@@ -1182,9 +1182,8 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   
   if(fIsMC)reftime = 1000.0;
   
-    
   Int_t edge = 0;
-    Int_t le_count = 0; Int_t te_count = 0;
+  Int_t le_count = 0; Int_t te_count = 0;
   Int_t elemID=blk->GetID();
   for(Int_t ihit = 0; ihit < nhit; ihit++) {
         if(fModeTDC == SBSModeTDC::kTDCSimple) {
@@ -1214,7 +1213,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
         }else if(edge ==1){
             te_count++;
         }
-        //insert arbitrary large number (50000 or kbig) for missing hit if observed
+        //insert arbitrary large number (kbig) for missing hit if observed
         if(le_count > te_count+1){//missing TE
             blk->TDC()->Process(elemID,kBig, 1.);
             te_count++;
@@ -1628,10 +1627,10 @@ Int_t SBSGenericDetector::FindGoodHit(SBSElement *blk)
        Int_t HitIndex = -1;
        Double_t GoodTimeCut = blk->TDC()->GetGoodTimeCut();
        for (Int_t ih=0;ih<nhits;ih++) {
-	 if (std::abs(blk->TDC()->GetData(ih)-GoodTimeCut) < MinDiff) { //without std::abs, it doesn't work for kBig
-           HitIndex = ih;
-	   MinDiff = abs(blk->TDC()->GetData(ih)-GoodTimeCut);
-	 }
+           if (std::abs(blk->TDC()->GetData(ih)-GoodTimeCut) < MinDiff) { //without std::abs, it doesn't work for kBig
+               HitIndex = ih;
+               MinDiff = abs(blk->TDC()->GetData(ih)-GoodTimeCut);
+           }
        }      
        blk->TDC()->SetGoodHit(HitIndex);
       GoodHit=1;

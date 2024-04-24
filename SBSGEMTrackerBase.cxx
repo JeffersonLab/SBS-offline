@@ -122,6 +122,9 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fdyfpcut = 0.05;
   fdxpfpcut = 0.01;
   fdypfpcut = 0.01;
+    
+  //add position of active analyzer as tracking point for PR gems
+  fAddPointPRgem.SetXYZ(0.,-0.524,0.);
 
   fUseTrigTime = false; 
 
@@ -429,7 +432,12 @@ void SBSGEMTrackerBase::CompleteInitialization(){
   // }
 
   //make sure the user has defined something sensible:
-  fMinHitsOnTrack = std::max(3,std::min(fNlayers,fMinHitsOnTrack) );
+  if(fNlayers==2){
+    fMinHitsOnTrack = 2;
+  }else{
+    fMinHitsOnTrack = std::max(3,std::min(fNlayers,fMinHitsOnTrack) );
+  }
+  //fMinHitsOnTrack = std::max(3,std::min(fNlayers,fMinHitsOnTrack) );
 
   // Now initialize the min high quality hits and track chi2 cuts if 
   // the initialization from the database is not sensible:
@@ -1888,110 +1896,177 @@ void SBSGEMTrackerBase::find_tracks(){
 		    //std::cout << "Number of hit combinations to test = " << ncombos << endl;
 		      
 		    if( ncombos <= fMaxHitCombinations_InnerLayers ){
-		      while( (nextcomboexists = GetNextCombo( otherlayers, freehitcounter, hitcombo, firstcombo ) ) ){
-			// I think that the assignment of the result of GetNextCombo() to nextcomboexists in the while loop condition renders an extra check of the value of
-			// nextcomboexists unnecessary
-			//Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one (and later we will possibly add enhanced criteria other than chi2):
-			
-			
-			//First, add the hits from minlayer and maxlayer to the combo:
-			hitcombo[minlayer] = hitmin;
-			hitcombo[maxlayer] = hitmax;
-			
-			//std::cout << "Testing hit combo: " << ncombostested << std::endl;
-			// for( auto ilay = hitcombo.begin(); ilay != hitcombo.end(); ++ilay ){
-		    
-			//   int layertemp = ilay->first;
-			//   int hittemp = ilay->second;
-		    
-			//   int hitcountertemp;
-		    
-			//   if( layertemp == minlayer ) {
-			//     hitcountertemp = ihit;
-			//   } else if( layertemp == maxlayer ) {
-			//     hitcountertemp = jhit;
-			//   } else {
-			//     hitcountertemp = freehitcounter[layertemp];
-			//   }
-		    
-		    
-			//   // std::cout << "(layer, freehitcounter, freehitindex)=(" << layertemp << ", "
-			//   // 	      << hitcountertemp << ", " << hittemp << ")" << std::endl;
-			// }
-		    
-			//ncombostested++;
-		    
-			//double xptrtemp, yptrtemp, xtrtemp, ytrtemp, chi2ndftemp;
-		    
-			double chi2ndftemp, t0temp = 0.0;
+                //separate hit processing if Nlayers=2 for PR gems with extra hit as active analyzer
+                if(fNlayers==2){
+                    hitcombo[minlayer] = hitmin;
+                    hitcombo[maxlayer] = hitmax;
+                    
+                    double chi2ndftemp, t0temp = 0.0;
+                    int nhighQhits = CountHighQualityHits( hitcombo );
+                    int minhits = mingoodhits;
 
-			int nhighQhits = CountHighQualityHits( hitcombo );
-			//This declaration might shadow another one up above
-			//(actually it DOESN'T: the ones above are for the "best" hit combo, these are temporary dummy variables. Proceed)
+                    //add one arbitrary point to have track of 3 points with layer -1 and hit -1
+                    hitcombo[-1] = -1;
 
-			int minhits = mingoodhits;
-			if( hitcombo.size() == 3 ){
-			  minhits = std::max( 2, std::min( 3, mingoodhits ) ); //to use a 3-hit track, we will require at least two "good" hits on the track.
-			  //minhits = 3;
-			}
-			
-			if( nhighQhits >= minhits ){
-			  //don't bother fitting if we lack the "minimum" number of good hits:
-			  vector<double> uresidtemp, vresidtemp;
-			  
-			  //Fit a track to the current hit combination:
-			  //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
-			  FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
-			  
-			  double chi2enhanced = chi2ndftemp; 
-			
-			  if( fUseEnhancedChi2 >= 2 ){ //Use sum of hit chi2 and spatial chi2 as criterion for best hit candidate selection
-			    double chi2space = chi2ndftemp * (2.0*hitcombo.size() - 4.0);
-			    double chi2hits = (3.0*hitcombo.size() + 1.0 ) * CalcTrackChi2HitQuality( hitcombo, t0temp );
-			    double ndftot = 5.0*hitcombo.size() + 1.0 - 4.0;
-			    chi2enhanced = (chi2space + chi2hits)/ndftot;
-			  }
+                    if(nhighQhits>=minhits){
+                          vector<double> uresidtemp, vresidtemp;
+                          FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
+                        hitcombo.erase(-1);
 
-			  bool validcombo = true;
-			  if( fUseEnhancedChi2 == 1 ){
-			    validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= chi2cut_hits_temp;
-			  }
-			  
-			  validcombo = validcombo && fabs( t0temp ) <= fCutTrackT0;
+                        double chi2enhanced = chi2ndftemp;
+                
+                        if( fUseEnhancedChi2 >= 2 ){ //Use sum of hit chi2 and spatial chi2 as criterion for best hit candidate selection
+                          double chi2space = chi2ndftemp * (2.0*hitcombo.size() - 4.0);
+                          double chi2hits = (3.0*hitcombo.size() + 1.0 ) * CalcTrackChi2HitQuality( hitcombo, t0temp );
+                          double ndftot = 5.0*hitcombo.size() + 1.0 - 4.0;
+                          chi2enhanced = (chi2space + chi2hits)/ndftot;
+                        }
 
-			  //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
-			  
-			  if( validcombo && (firstgoodcombo || chi2enhanced < minchi2) ){
-			    
-			    if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
-			      
-			      firstgoodcombo = false;
-			      minchi2 = chi2enhanced;
-			      
-			      chi2space_bestcombo = chi2ndftemp;
-			      chi2hits_bestcombo = CalcTrackChi2HitQuality( hitcombo, t0track_bestcombo );
-			      
-			      besthitcombo = hitcombo;
+                        bool validcombo = true;
+                        if( fUseEnhancedChi2 == 1 ){
+                          validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= chi2cut_hits_temp;
+                        }
+                  
+                        validcombo = validcombo && fabs( t0temp ) <= fCutTrackT0;
 
-			      //t0track_bestcombo = t0temp;
-			      
-			      //record track properties so we don't need to re-fit later
-			      besttrack[0] = xtrtemp;
-			      besttrack[1] = ytrtemp;
-			      besttrack[2] = xptrtemp;
-			      besttrack[3] = yptrtemp;
-			      
-			      //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
-			      uresidbest = uresidtemp;
-			      vresidbest = vresidtemp; 
-			    }
-			  }
-			  
-			  ncombostested++;
-			} 
-			//clear hitcombo just so we start fresh each iteration of the loop: this is PROBABLY unnecessary, but safer than not doing so:
-			hitcombo.clear();
-		      } //end while( nextcomboexists )
+                        if( validcombo && (firstgoodcombo || chi2enhanced < minchi2) ){
+                    
+                          if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
+                      
+                            firstgoodcombo = false;
+                            minchi2 = chi2enhanced;
+                      
+                            chi2space_bestcombo = chi2ndftemp;
+                            chi2hits_bestcombo = CalcTrackChi2HitQuality( hitcombo, t0track_bestcombo );
+                      
+                            besthitcombo = hitcombo;
+
+                            //t0track_bestcombo = t0temp;
+                      
+                            //record track properties so we don't need to re-fit later
+                            besttrack[0] = xtrtemp;
+                            besttrack[1] = ytrtemp;
+                            besttrack[2] = xptrtemp;
+                            besttrack[3] = yptrtemp;
+                      
+                            //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
+                            uresidbest = uresidtemp;
+                            vresidbest = vresidtemp;
+                          }
+                        }
+                        
+                    }
+                    hitcombo.clear();
+                    //
+                    //
+                }else{
+                    
+                    while( (nextcomboexists = GetNextCombo( otherlayers, freehitcounter, hitcombo, firstcombo ) ) ){
+                        // I think that the assignment of the result of GetNextCombo() to nextcomboexists in the while loop condition renders an extra check of the value of
+                        // nextcomboexists unnecessary
+                        //Then we form the track from minhit, maxhit, and hitcombo, and check if this hit combination has better chi2 than any previous one (and later we will possibly add enhanced criteria other than chi2):
+                        
+                        
+                        //First, add the hits from minlayer and maxlayer to the combo:
+                        hitcombo[minlayer] = hitmin;
+                        hitcombo[maxlayer] = hitmax;
+                        
+                        //std::cout << "Testing hit combo: " << ncombostested << std::endl;
+                        // for( auto ilay = hitcombo.begin(); ilay != hitcombo.end(); ++ilay ){
+                        
+                        //   int layertemp = ilay->first;
+                        //   int hittemp = ilay->second;
+                        
+                        //   int hitcountertemp;
+                        
+                        //   if( layertemp == minlayer ) {
+                        //     hitcountertemp = ihit;
+                        //   } else if( layertemp == maxlayer ) {
+                        //     hitcountertemp = jhit;
+                        //   } else {
+                        //     hitcountertemp = freehitcounter[layertemp];
+                        //   }
+                        
+                        
+                        //   // std::cout << "(layer, freehitcounter, freehitindex)=(" << layertemp << ", "
+                        //   // 	      << hitcountertemp << ", " << hittemp << ")" << std::endl;
+                        // }
+                        
+                        //ncombostested++;
+                        
+                        //double xptrtemp, yptrtemp, xtrtemp, ytrtemp, chi2ndftemp;
+                        
+                        double chi2ndftemp, t0temp = 0.0;
+                        
+                        int nhighQhits = CountHighQualityHits( hitcombo );
+                        //This declaration might shadow another one up above
+                        //(actually it DOESN'T: the ones above are for the "best" hit combo, these are temporary dummy variables. Proceed)
+                        
+                        int minhits = mingoodhits;
+                        if( hitcombo.size() == 3 ){
+                            minhits = std::max( 2, std::min( 3, mingoodhits ) ); //to use a 3-hit track, we will require at least two "good" hits on the track.
+                            //minhits = 3;
+                        }
+                        
+                        if( nhighQhits >= minhits ){
+                            //don't bother fitting if we lack the "minimum" number of good hits:
+                            vector<double> uresidtemp, vresidtemp;
+                            
+                            //Fit a track to the current hit combination:
+                            //NOTE: the FitTrack method computes the line of best fit and chi2 and gives us the hit residuals:
+                            FitTrack( hitcombo, xtrtemp, ytrtemp, xptrtemp, yptrtemp, chi2ndftemp, uresidtemp, vresidtemp );
+                            
+                            double chi2enhanced = chi2ndftemp;
+                            
+                            if( fUseEnhancedChi2 >= 2 ){ //Use sum of hit chi2 and spatial chi2 as criterion for best hit candidate selection
+                                double chi2space = chi2ndftemp * (2.0*hitcombo.size() - 4.0);
+                                double chi2hits = (3.0*hitcombo.size() + 1.0 ) * CalcTrackChi2HitQuality( hitcombo, t0temp );
+                                double ndftot = 5.0*hitcombo.size() + 1.0 - 4.0;
+                                chi2enhanced = (chi2space + chi2hits)/ndftot;
+                            }
+                            
+                            bool validcombo = true;
+                            if( fUseEnhancedChi2 == 1 ){
+                                validcombo = CalcTrackChi2HitQuality( hitcombo, t0temp ) <= chi2cut_hits_temp;
+                            }
+                            
+                            validcombo = validcombo && fabs( t0temp ) <= fCutTrackT0;
+                            
+                            //std::cout << "combo, chi2ndf = " << ncombostested << ", " << chi2ndftemp << std::endl;
+                            
+                            if( validcombo && (firstgoodcombo || chi2enhanced < minchi2) ){
+                                
+                                if( !fUseConstraint || CheckConstraint( xtrtemp, ytrtemp, xptrtemp, yptrtemp ) ){
+                                    
+                                    firstgoodcombo = false;
+                                    minchi2 = chi2enhanced;
+                                    
+                                    chi2space_bestcombo = chi2ndftemp;
+                                    chi2hits_bestcombo = CalcTrackChi2HitQuality( hitcombo, t0track_bestcombo );
+                                    
+                                    besthitcombo = hitcombo;
+                                    
+                                    //t0track_bestcombo = t0temp;
+                                    
+                                    //record track properties so we don't need to re-fit later
+                                    besttrack[0] = xtrtemp;
+                                    besttrack[1] = ytrtemp;
+                                    besttrack[2] = xptrtemp;
+                                    besttrack[3] = yptrtemp;
+                                    
+                                    //Perhaps this is an inefficent copy of vector<double>, but probably fine compared to repeating the calculation of residuals later on:
+                                    uresidbest = uresidtemp;
+                                    vresidbest = vresidtemp;
+                                }
+                            }
+                            
+                            ncombostested++;
+                        }
+                        //clear hitcombo just so we start fresh each iteration of the loop: this is PROBABLY unnecessary, but safer than not doing so:
+                        hitcombo.clear();
+                    } //end while( nextcomboexists )
+                }//end of if..else statement (fNlayers==2) for PR gems
+                    
 		      
 		    } else if( fTryFastTrack ){
 			std::cout << "Warning in [SBSGEMTrackerBase::find_tracks()]... number of hit combos for inner layers = " << ncombos
@@ -2821,11 +2896,23 @@ void SBSGEMTrackerBase::CalcLineOfBestFit( const std::map<int,int> &hitcombo, do
     int layer = ilayer->first;   //layer 
     int hitidx = ilayer->second; //index in the "hit list" array
     
+      //changes made to include an active analyzer position in PR gem track
+    TVector3 hitpos_global;
+   
+    if(layer==-1 && hitidx==-1){
+        hitpos_global = fAddPointPRgem;
+    }else{
+        int module = modindexhit2D[layer][hitidx];
+        int clustidx = clustindexhit2D[layer][hitidx];
+        
+        hitpos_global = GetHitPosGlobal( module, clustidx );
+    }
+      
     //grab hit coordinates:
-    int module = modindexhit2D[layer][hitidx];
-    int clustidx = clustindexhit2D[layer][hitidx];
+    //int module = modindexhit2D[layer][hitidx];
+    //int clustidx = clustindexhit2D[layer][hitidx];
     
-    TVector3 hitpos_global = GetHitPosGlobal( module, clustidx );
+    //TVector3 hitpos_global = GetHitPosGlobal( module, clustidx );
     
     //we don't use the u and v coordinates until the chi2 calculation, which comes later:
     //double uhit = fModules[module]->fHits[clustidx].uhit;
@@ -2866,6 +2953,8 @@ void SBSGEMTrackerBase::FitTrack( const std::map<int,int> &hitcombo, double &xtr
   for( auto ilayer=hitcombo.begin(); ilayer != hitcombo.end(); ++ilayer ){
     int layer = ilayer->first;
     int hitidx = ilayer->second;
+      
+    if(layer==-1 && hitidx==-1) continue; //skip further calculation for added point as layers/modules doesn't exist!
 
     int module = modindexhit2D[layer][hitidx];
     int clustidx = clustindexhit2D[layer][hitidx];
@@ -3146,6 +3235,9 @@ void SBSGEMTrackerBase::AddNewTrack( const std::map<int,int> &hitcombo, const ve
     //copy the hit combo to a temporary local container:
     std::map<int,int> hitcombotemp = hitcombo;
     hitcombotemp.erase( layer ); //remove the current layer from the temporary copy of the list of hits
+      
+    //only two layers for PR gems so add extra point again for fitting  a line
+    if(fNlayers==2) hitcombotemp[-1]=-1;
 
     //dummy variables to hold temporary track parameters:
     double xtemp,ytemp, xptemp,yptemp;

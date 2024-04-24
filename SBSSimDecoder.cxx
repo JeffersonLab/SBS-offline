@@ -1069,7 +1069,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       */
     }
   }
-  if(strcmp(detname.c_str(), "sbs.prpolscint_farside")==0){
+  if(strcmp(detname.c_str(), "sbs.hodoPR")==0){
     //cout << " ouh " << detname.c_str() << " " << simev->Tgenrp->Earm_BBHodoScint_hit_nhits << " " << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_nchan << endl;
     // cout << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_chan->size() << " " 
     // 	 << simev->Tgenrp->Harm_PRPolScintFarSide_dighit_adc->size() << " " 
@@ -1131,7 +1131,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
   
-  if(strcmp(detname.c_str(), "sbs.cepolfront_gem")==0){
+  if(strcmp(detname.c_str(), "sbs.gemCeF")==0){
     //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
     samps.clear();  
     strips.clear();  
@@ -1186,7 +1186,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
 
-  if(strcmp(detname.c_str(), "sbs.cepolrear_gem")==0){
+  if(strcmp(detname.c_str(), "sbs.gemCeR")==0){
     //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
     samps.clear();  
     strips.clear();  
@@ -1241,7 +1241,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     }
   }
 
-  if(strcmp(detname.c_str(), "sbs.prpolgem_farside")==0){
+  if(strcmp(detname.c_str(), "sbs.gemPR")==0){
     //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
     samps.clear();  
     strips.clear();  

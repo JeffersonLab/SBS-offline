@@ -51,7 +51,7 @@ endif()
 ##----------------------------------------------------------------------------
 ## Set the sources which have a corresponding .h file here
 set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
-  SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx SBSGEMPolarimeterTracker.cxx
+  SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx SBSGEMPolarimeterTracker.cxx SBSGEMPRTracker.cxx
   SBSBBShower.cxx SBSBBTotalShower.cxx 
   SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx 
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
@@ -107,7 +107,10 @@ find_package(ROOT REQUIRED)
 #---Define useful ROOT functions and macros (e.g. ROOT_GENERATE_DICTIONARY)
 include(${ROOT_USE_FILE})
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+# set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+##---Setting up path finder automatically 
+list(APPEND CMAKE_PREFIX_PATH $ENV{PODD})
+
 ##----------------------------------------------------------------------------
 ## Setup the PODD Analyzer
 find_package(Podd 1.7 REQUIRED)

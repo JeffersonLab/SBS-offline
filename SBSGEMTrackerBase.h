@@ -290,6 +290,8 @@ protected:
   bool fUseSlopeConstraint;
   double fxpfpmin, fxpfpmax;
   double fypfpmin, fypfpmax;
+    
+TVector3 fAddPointPRgem; //add active analyzer position for 3 point tracking of 2 layers of PR gems
 
   //FP track cuts: 
   
