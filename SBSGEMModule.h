@@ -115,6 +115,7 @@ struct sbsgemcluster_t {  //1D clusters;
   Double_t t_mean_deconv; //cluster-summed mean deconvoluted hit time.
   Double_t t_mean_fit; //cluster-summed "fit" time.
   //Do we want to store the individual strip ADC Samples with the 1D clustering results? I don't think so; as these can be accessed via the decoded strip info.
+  
   std::vector<UInt_t> hitindex; //position in decoded hit array of each strip in the cluster:
   UInt_t rawstrip; //Raw APV strip number before decoding 
   UInt_t rawMPD; //Raw MPD number before decoding 
@@ -122,6 +123,7 @@ struct sbsgemcluster_t {  //1D clusters;
   bool isneg; //Cluster is from negative strips
   bool isnegontrack; //Cluster is from negative strips
   bool keep;
+  bool ontrack;
 };
 
 
@@ -170,9 +172,11 @@ class SBSGEMModule : public THaSubDetector {
 
   //new version to do clustering and spatial splitting in each time sample, and then combine the different time samples
   void find_clusters_1D_experimental(SBSGEM::GEMaxis_t axis, Double_t constraint_center=0.0, Double_t constraint_width=1000.0);
+
+  void add_constraint( TVector2 constraint_center, TVector2 constraint_width );
   
   void find_2Dhits(); // Version with no arguments assumes no constraint points
-  void find_2Dhits(TVector2 constraint_center, TVector2 constraint_width); // Version with TVector2 arguments 
+  //void find_2Dhits(TVector2 constraint_center, TVector2 constraint_width); // Version with TVector2 arguments 
 
   // fill the 2D hit arrays from the 1D cluster arrays:
   void fill_2D_hit_arrays(); 
@@ -374,8 +378,9 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fSamplePeriod; //for timing calculations: default = 24 ns for Hall A .
 
   //variables defining rectangular track search region constraint (NOTE: these will change event-to-event, they are NOT constant!)
-  Double_t fxcmin, fxcmax;
-  Double_t fycmin, fycmax;
+  
+  std::vector<Double_t> fxcmin, fxcmax;
+  std::vector<Double_t> fycmin, fycmax;
 
   //Arrays to temporarily hold raw data from ONE APV card:
   std::vector<UInt_t> fStripAPV;
@@ -468,6 +473,9 @@ class SBSGEMModule : public THaSubDetector {
   
   ////// (1D and 2D) Clustering results (see above for definition of struct sbsgemcluster_t and struct sbsgemhit_t):
 
+  Bool_t fClustering1DIsDone;
+  Bool_t fStoreAll1Dclusters; //default false; this is set based on the "fMultiTrackSearch" of the parent trackerbase
+  
   UInt_t fNclustU; // number of U clusters found
   UInt_t fNclustV; // number of V clusters found
   UInt_t fNclustU_pos; // number of positive U clusters found

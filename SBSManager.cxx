@@ -1,48 +1,48 @@
 #include "SBSManager.h"
-#include "THaCrateMap.h"
-#include <ctime>
 
-
-SBSManager* SBSManager::fManager = 0;
-TString SBSManager::fCrateMapName = "cratemap";
+std::unique_ptr<SBSManager> SBSManager::fManager = nullptr;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Get an instance of the singleton
 SBSManager* SBSManager::GetInstance()
 {
   if(!fManager) {
-    fManager = new SBSManager();
+    fManager.reset(new SBSManager);
   }
-  return fManager;
+  return fManager.get();
 }
   
 ///////////////////////////////////////////////////////////////////////////////
 // Get the instance of the global crate map
-Decoder::THaCrateMap* SBSManager::GetCrateMap()
+// Initialize the map for the given Unix time 'tloc'. If the time changed since
+// the previous initialization, then re-initialize the map.
+Decoder::THaCrateMap* SBSManager::GetCrateMap( Long64_t tloc )
 {
   if(!fCrateMap) {
-    fCrateMap = new Decoder::THaCrateMap(fCrateMapName);
-    // Initialize to the default run time (which is right now)
-    fCrateMap->init(time(0));
+    fCrateMap.reset(new Decoder::THaCrateMap(fCrateMapName));
+    fCrateMapInitTime = -1;
   }
-
-  return fCrateMap;
+  if(fCrateMapInitTime != tloc) {
+    fCrateMap->init(tloc);
+    fCrateMapInitTime = tloc;
+  }
+  return fCrateMap.get();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 void SBSManager::SetDefaultCrateMapName(const char* name)
 {
+  if( fCrateMapName != name ) {
+    // Force re-init
+    fCrateMap.reset();
+  }
   fCrateMapName = name;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // Basic constructor
-SBSManager::SBSManager() : fCrateMap(0) {
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Destructor
-SBSManager::~SBSManager() {
-  if(fCrateMap)
-    delete fCrateMap;
-};
+SBSManager::SBSManager()
+  : fCrateMap{}
+  , fCrateMapName{"cratemap"}
+  , fCrateMapInitTime{-1}
+{}

@@ -123,6 +123,8 @@ THaSpectrometer( name, description )
   fUseForwardOptics = false;
   fForwardOpticsOrder = -1;
 
+  fETOF_avg = (fMagDist + 3.0)/3.0e8*1.e9;
+
 }
 
 //_____________________________________________________________________________
@@ -211,7 +213,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   std::vector<Double_t> optics_param;
   std::vector<Double_t> foptics_param;
   std::vector<Double_t> doptics_param; //down bending optics
-    
+  std::vector<Double_t> TOF_param;
+  
   std::vector<Double_t> pssh_pidproba;
   std::vector<Double_t> pcal_pidproba;
   std::vector<Double_t> grinch_pidproba;
@@ -233,6 +236,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "optics_origin", &optics_origin, kDoubleV, 0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
     { "optics_parameters", &optics_param, kDoubleV, 0, 1, 1},
+    { "etof_order", &fETOF_order, kUInt, 0, 1, 1},
+    { "etof_avg", &fETOF_avg, kDouble, 0, 1, 1},
+    { "etof_parameters", &TOF_param, kDoubleV, 0, 1, 1},
     { "ecalo_fudgefactor", &fECaloFudgeFactor, kDouble, 0, 1, 1},
     { "do_pid",    &pidflag, kInt,  0, 1, 1},
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDouble, 0, 1, 0},
@@ -339,7 +345,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
         
     if(nparams!=optics_param.size()){
       std::cerr << "Warning: mismatch between " << optics_param.size()
-		<< " optics parameters provided and " << nparams*9
+		<< " optics parameters provided and " << nparams
 		<< " optics parameters expected!" << std::endl;
       std::cerr << " Fix database! " << std::endl;
       return kInitError;
@@ -383,7 +389,49 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 	fYtar_00010 = fb_ytar[i];
     }
   }
+
+  if( fETOF_order >= 0 ){
+    unsigned int nterms=0;
+    for( int i=0; i<=fETOF_order; i++ ){
+      for( int j=0; j<=fETOF_order-i; j++ ){
+	for( int k=0; k<=fETOF_order-i-j; k++ ){
+	  for( int l=0; l<=fETOF_order-i-j-k; l++ ){
+	    for( int m=0; m<=fETOF_order-i-j-k-l; m++ ){
+	      nterms++;
+	    }
+	  }
+	}
+      }
+    }
+    cout << nterms << " lines of parameters expected for TOF of order " << fETOF_order << endl;
+    unsigned int nparams = 6 * nterms;
+
+    if( nparams != TOF_param.size() ){
+      std::cerr << "Warning: mismatch between " << TOF_param.size()
+		<< " eTOF parameters provided and " << nparams
+		<< " eTOF parameters expected!" << std::endl;
+      std::cerr << " Fix database! " << std::endl;
+      return kInitError;
+    }
+
+    fb_ETOF.resize( nterms );
+    f_oi_ETOF.resize( nterms );
+    f_oj_ETOF.resize( nterms );
+    f_ok_ETOF.resize( nterms );
+    f_ol_ETOF.resize( nterms );
+    f_om_ETOF.resize( nterms );
+
+    for( unsigned int term=0; term<nterms; term++ ){
+      fb_ETOF[term] = TOF_param[6*term];
+      f_oi_ETOF[term] = int(TOF_param[6*term+1]);
+      f_oj_ETOF[term] = int(TOF_param[6*term+2]);
+      f_ok_ETOF[term] = int(TOF_param[6*term+3]);
+      f_ol_ETOF[term] = int(TOF_param[6*term+4]);
+      f_om_ETOF[term] = int(TOF_param[6*term+5]);
+    }
     
+  }
+  
   if( fForwardOpticsOrder >= 0 ){
     unsigned int nterms=0;
     for(int i = 0; i<=fForwardOpticsOrder; i++){ //x
@@ -402,7 +450,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     unsigned int nparams = 9*nterms;
     if(nparams!=foptics_param.size()){
       std::cerr << "Warning: mismatch between " << foptics_param.size()
-		<< " forward optics parameters provided and " << nparams*9
+		<< " forward optics parameters provided and " << nterms*9
 		<< " forward optics parameters expected!" << std::endl;
       std::cerr << " Fix database! " << std::endl;
       return kInitError;
@@ -1198,7 +1246,9 @@ void SBSBigBite::CalcOpticsCoords( THaTrack* track )
 void SBSBigBite::CalcTargetCoords( THaTrack* track )
 {
   //std::cout << "SBSBigBite::CalcTargetCoords()...";
-    
+
+  //Let's also calculate path length here since it uses a lot of the same machinery.
+  
   //const double //make it configurable
   const double th_bb = GetThetaGeo();//retrieve the actual angle
     
@@ -1311,7 +1361,7 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     xtar = -cos(GetThetaGeo()) * vz_fit * xptar_fit;    
     if( fUseBeamPosInOptics ) xtar += -ybeam;
   }
-    
+
   //Let's simplify the bend angle reconstruction to avoid double-counting, even though
   //this calculation is almost certainly correct:
     
@@ -1364,12 +1414,37 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   pz = pvect_BB.Z()*cos(th_bb)-pvect_BB.Y()*sin(th_bb);
     
   //  f_xtg_exp.push_back(xtar);
+
+  //Let's also calculate electron TOF (AFTER reconstructing xtar, etc):
+  double ETOF = fETOF_avg;
+  
+  int ipar=0;
+  
+  for( int i=0; i<=fETOF_order; i++){
+    for( int j=0; j<=fETOF_order-i; j++ ){
+      for( int k=0; k<=fETOF_order-i-j; k++ ){
+	for( int l=0; l<=fETOF_order-i-j-k; l++ ){
+	  for( int m=0; m<=fETOF_order-i-j-k-l; m++ ){
+	    double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
+	    
+	    ETOF += fb_ETOF[ipar] * term;
+
+	    ipar++;
+	  }
+	}
+      }
+    }
+  }
+
+  double pathlength = 0.299792458*ETOF; //ETOF is already calculated in ns, so 0.3 m/ns (or 1 foot/ns)
   
   track->SetTarget(xtar, ytar_fit, xptar_fit, yptar_fit);
   track->SetMomentum(p_fit);
   track->SetPvect(TVector3(px, py, pz));
   track->SetVertex(TVector3(xbeam, ybeam, vz_fit));
-    
+  track->SetPathLen( pathlength ); //this should be in meters
+  
+  
   //cout << px << " " << py << " " << pz << "   " << vz_fit << endl;
   //cout << track->GetLabPx() << " " << track->GetLabPy() << " " << track->GetLabPz()
   //   << "   " << track->GetVertexZ() << endl;
@@ -1470,6 +1545,7 @@ Int_t SBSBigBite::CalcPID()
 //_____________________________________________________________________________
 void SBSBigBite::CalcTrackTiming(THaTrack* the_track)
 {
+  
   TIter next( fNonTrackingDetectors );
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {

@@ -51,7 +51,7 @@ endif()
 ##----------------------------------------------------------------------------
 ## Set the sources which have a corresponding .h file here
 set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
-  SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx
+  SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx SBSGEMPolarimeterTracker.cxx
   SBSBBShower.cxx SBSBBTotalShower.cxx 
   SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx 
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx

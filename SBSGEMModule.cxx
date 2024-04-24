@@ -222,6 +222,8 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
   fClusteringFlag = 0; //"standard" clustering based on sum of six time samples on a strip
   //fDeconvolutionFlag = 1; //Set "keep strip" flag based on deconvoluted ADC samples
   fDeconvolutionFlag = 0; //Default should be zero
+
+  fStoreAll1Dclusters = false;
   
   return;
 }
@@ -293,7 +295,7 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   int useTSchi2cut = fUseTSchi2cut ? 1 : 0;
   int suppressfirstlast = fSuppressFirstLast;
   int usecommonmoderollingaverage = fMeasureCommonMode ? 1 : 0;
-
+  
   int correctcommonmode = fCorrectCommonMode ? 1 : 0;
   
   std::vector<double> TSfrac_mean_temp;
@@ -1304,6 +1306,8 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fNdecoded_ADCsamples = 0;
   fIsDecoded = false;
 
+  fClustering1DIsDone = false;
+  
   fTrackPassedThrough = 0;
 
   //numbers of strips passing basic zero suppression thresholds and timing cuts:
@@ -1335,6 +1339,11 @@ void SBSGEMModule::Clear( Option_t* opt){ //we will want to clear out many more 
   fTrigTime = 0.0;
   
   fCM_online.assign(fN_MPD_TIME_SAMP,0.0);
+
+  fxcmin.clear();
+  fxcmax.clear();
+  fycmin.clear();
+  fycmax.clear();
   
   //fStripAxis.clear();
   // fADCsamples1D.clear();
@@ -2662,88 +2671,152 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
   return 0;
 }
 
-void SBSGEMModule::find_2Dhits(){ //version with no arguments calls 1D cluster finding with default (wide-open) track search constraints
-  //these functions will fill the 1D cluster arrays:
+void SBSGEMModule::add_constraint( TVector2 constraint_center, TVector2 constraint_width ){
+  fxcmin.push_back( constraint_center.X() - constraint_width.X() );
+  fxcmax.push_back( constraint_center.X() + constraint_width.X() );
+  fycmin.push_back( constraint_center.Y() - constraint_width.Y() );
+  fycmax.push_back( constraint_center.Y() + constraint_width.Y() );
+}
 
+void SBSGEMModule::find_2Dhits(){
+  // Let's handle this the following way. We only want to call 1D cluster-finding and 2D hit finding ONCE, regardless of
+  // the number of constraints! 
+  // This means that if we want to handle MORE than one constraint point, we MUST set fStoreAll1Dclusters to true
+  // 
+
+  // std::cout << "Calling hit reconstruction for detector " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
+  // 	    << GetParent()->GetName() << "." << GetName()
+  // 	    << ", N fired strips = " << fNstrips_hit << std::endl;
   
-  find_clusters_1D(SBSGEM::kUaxis); //u strips
-  find_clusters_1D(SBSGEM::kVaxis); //v strips
+  //Start with 1D clustering; if the constraint array for this module has EXACTLY one point and the store all clusters flag is
+  // NOT set, do the clustering with constraints! Otherwise do it without constraints!
 
-  // find_clusters_1D_experimental(SBSGEM::kUaxis);
-  // find_clusters_1D_experimental(SBSGEM::kVaxis);
+  if( fxcmin.size() >= 1 && !fStoreAll1Dclusters ){ 
+
+    double xcenter = 0.5*(fxcmin[0]+fxcmax[0]);
+    double xwidth = 0.5*(fxcmax[0]-fxcmin[0]);
+    double ycenter = 0.5*(fycmin[0]+fycmax[0]);
+    double ywidth = 0.5*(fycmax[0]-fycmin[0]);
+
+    double ucenter = xcenter * fPxU + ycenter * fPyU;
+    double vcenter = xcenter * fPxV + ycenter * fPyV;
+
+    double umin,umax,vmin,vmax;
+
+    double xmin = fxcmin[0];
+    double xmax = fxcmax[0];
+    double ymin = fycmin[0];
+    double ymax = fycmax[0];
+    
+    //check the four corners of the rectangle and compute the maximum values of u and v occuring at the four corners of the rectangular region:
+    // NOTE: we will ALSO enforce the 2D search region in X and Y when we combine 1D U/V clusters into 2D X/Y hits, which, depending on the U/V strip orientation
+    // can exclude some 2D hits that would have passed the U/V constraints defined by the corners of the X/Y rectangle, but been outside the X/Y constraint rectangle
+
+    double u00 = xmin * fPxU + ymin * fPyU;
+    double u01 = xmin * fPxU + ymax * fPyU;
+    double u10 = xmax * fPxU + ymin * fPyU;
+    double u11 = xmax * fPxU + ymax * fPyU;
+
+    //this is some elegant-looking (compact) code, but perhaps algorithmically clunky:
+    umin = std::min( u00, std::min(u01, std::min(u10, u11) ) );
+    umax = std::max( u00, std::max(u01, std::max(u10, u11) ) );
+
+    double v00 = xmin * fPxV + ymin * fPyV;
+    double v01 = xmin * fPxV + ymax * fPyV;
+    double v10 = xmax * fPxV + ymin * fPyV;
+    double v11 = xmax * fPxV + ymax * fPyV;
+  
+    vmin = std::min( v00, std::min(v01, std::min(v10, v11) ) );
+    vmax = std::max( v00, std::max(v01, std::max(v10, v11) ) );
+    
+    find_clusters_1D(SBSGEM::kUaxis, ucenter, 0.5*(umax-umin) ); //u strips
+    find_clusters_1D(SBSGEM::kVaxis, vcenter, 0.5*(vmax-vmin) ); //v strips
+  } else { //use the default wide-open limits!
+    find_clusters_1D(SBSGEM::kUaxis);
+    find_clusters_1D(SBSGEM::kVaxis);
+  }
+
+  // std::cout << "After 1D cluster-finding, (fNclustU,fNclustV)=("
+  // 	    << fNclustU << ", " << fNclustV << ")" << std::endl;
   
   //Now make 2D clusters:
 
   if( fNclustU > 0 && fNclustV > 0 ){
   
-    fxcmin = -1.e12;
-    fxcmax = 1.e12;
-    fycmin = -1.e12;
-    fycmax = 1.e12;
+    // fxcmin = -1.e12;
+    // fxcmax = 1.e12;
+    // fycmin = -1.e12;
+    // fycmax = 1.e12;
 
     fill_2D_hit_arrays();
 
   }
 }
 
-void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_width ){
-  //constraint center and constraint width are assumed given in meters in "local" detector x,y coordinates.
+// void SBSGEMModule::find_2Dhits(TVector2 constraint_center, TVector2 constraint_width ){
+//   //constraint center and constraint width are assumed given in meters in "local" detector x,y coordinates.
 
-  double ucenter = constraint_center.X() * fPxU + constraint_center.Y() * fPyU;
-  double vcenter = constraint_center.X() * fPxV + constraint_center.Y() * fPyV;
+//   // In the case with multiple constraint points, this method can be called more than once. However,
+//   // In that case fStoreAll1Dclusters is always TRUE, and the implementation of constraints here is
+//   // irrelevant (but also doesn't cost us anything)! Still, we don't want to repeat 1D clustering, it only needs to be done once!
+//   // And if we are using a constraint but not using multiple constraint points, then we do want to
+//   // implement the constraint here. 
+//   if( !fClustering1DIsDone ){ 
+//     double ucenter = constraint_center.X() * fPxU + constraint_center.Y() * fPyU;
+//     double vcenter = constraint_center.X() * fPxV + constraint_center.Y() * fPyV;
+    
+//     //To determine the constraint width along u/v, we need to transform the X/Y constraint widths, which define a rectangular region,
+//     //into U and V limits for 1D clustering:
+    
+//     double umin,umax,vmin,vmax;
 
-  //To determine the constraint width along u/v, we need to transform the X/Y constraint widths, which define a rectangular region,
-  //into U and V limits for 1D clustering:
+//     double xmin = constraint_center.X() - constraint_width.X();
+//     double xmax = constraint_center.X() + constraint_width.X();
+//     double ymin = constraint_center.Y() - constraint_width.Y();
+//     double ymax = constraint_center.Y() + constraint_width.Y();
 
-  double umin,umax,vmin,vmax;
-
-  double xmin = constraint_center.X() - constraint_width.X();
-  double xmax = constraint_center.X() + constraint_width.X();
-  double ymin = constraint_center.Y() - constraint_width.Y();
-  double ymax = constraint_center.Y() + constraint_width.Y();
-
-  //store these for later use:
-  fxcmin = xmin;
-  fxcmax = xmax;
-  fycmin = ymin;
-  fycmax = ymax;
+//     //store these for later use; the constraint limits get one entry for each call to find_2Dhits:
+//     fxcmin.push_back(xmin);
+//     fxcmax.push_back(xmax);
+//     fycmin.push_back(ymin);
+//     fycmax.push_back(ymax);
   
-  //check the four corners of the rectangle and compute the maximum values of u and v occuring at the four corners of the rectangular region:
-  // NOTE: we will ALSO enforce the 2D search region in X and Y when we combine 1D U/V clusters into 2D X/Y hits, which, depending on the U/V strip orientation
-  // can exclude some 2D hits that would have passed the U/V constraints defined by the corners of the X/Y rectangle, but been outside the X/Y constraint rectangle
+//     //check the four corners of the rectangle and compute the maximum values of u and v occuring at the four corners of the rectangular region:
+//     // NOTE: we will ALSO enforce the 2D search region in X and Y when we combine 1D U/V clusters into 2D X/Y hits, which, depending on the U/V strip orientation
+//     // can exclude some 2D hits that would have passed the U/V constraints defined by the corners of the X/Y rectangle, but been outside the X/Y constraint rectangle
 
-  double u00 = xmin * fPxU + ymin * fPyU;
-  double u01 = xmin * fPxU + ymax * fPyU;
-  double u10 = xmax * fPxU + ymin * fPyU;
-  double u11 = xmax * fPxU + ymax * fPyU;
+//     double u00 = xmin * fPxU + ymin * fPyU;
+//     double u01 = xmin * fPxU + ymax * fPyU;
+//     double u10 = xmax * fPxU + ymin * fPyU;
+//     double u11 = xmax * fPxU + ymax * fPyU;
 
-  //this is some elegant-looking (compact) code, but perhaps algorithmically clunky:
-  umin = std::min( u00, std::min(u01, std::min(u10, u11) ) );
-  umax = std::max( u00, std::max(u01, std::max(u10, u11) ) );
+//     //this is some elegant-looking (compact) code, but perhaps algorithmically clunky:
+//     umin = std::min( u00, std::min(u01, std::min(u10, u11) ) );
+//     umax = std::max( u00, std::max(u01, std::max(u10, u11) ) );
 
-  double v00 = xmin * fPxV + ymin * fPyV;
-  double v01 = xmin * fPxV + ymax * fPyV;
-  double v10 = xmax * fPxV + ymin * fPyV;
-  double v11 = xmax * fPxV + ymax * fPyV;
+//     double v00 = xmin * fPxV + ymin * fPyV;
+//     double v01 = xmin * fPxV + ymax * fPyV;
+//     double v10 = xmax * fPxV + ymin * fPyV;
+//     double v11 = xmax * fPxV + ymax * fPyV;
   
-  vmin = std::min( v00, std::min(v01, std::min(v10, v11) ) );
-  vmax = std::max( v00, std::max(v01, std::max(v10, v11) ) );
+//     vmin = std::min( v00, std::min(v01, std::min(v10, v11) ) );
+//     vmax = std::max( v00, std::max(v01, std::max(v10, v11) ) );
 
-  //The following routines will loop on all the strips and populate the 1D "cluster list" (vector<sbsgemcluster_t> )
-  //Taking half the difference between max and min as the "width" is consistent with how it is used in
-  // find_clusters_1D; i.e., the peak is required to be within |peak position - constraint center| <= constraint width
-  find_clusters_1D(SBSGEM::kUaxis, ucenter, (umax-umin)/2.0 ); //U clusters
-  find_clusters_1D(SBSGEM::kVaxis, vcenter, (vmax-vmin)/2.0 );  //V clusters
-
-  //find_clusters_1D_experimental(SBSGEM::kUaxis, ucenter, (umax-umin)/2.0 );
-  //find_clusters_1D_experimental(SBSGEM::kVaxis, vcenter, (vmax-vmin)/2.0 );
+//     //The following routines will loop on all the strips and populate the 1D "cluster list" (vector<sbsgemcluster_t> )
+//     //Taking half the difference between max and min as the "width" is consistent with how it is used in
+//     // find_clusters_1D; i.e., the peak is required to be within |peak position - constraint center| <= constraint width
+//     find_clusters_1D(SBSGEM::kUaxis, ucenter, (umax-umin)/2.0 ); //U clusters
+//     find_clusters_1D(SBSGEM::kVaxis, vcenter, (vmax-vmin)/2.0 );  //V clusters
+//   }
+//   //find_clusters_1D_experimental(SBSGEM::kUaxis, ucenter, (umax-umin)/2.0 );
+//   //find_clusters_1D_experimental(SBSGEM::kVaxis, vcenter, (vmax-vmin)/2.0 );
   
-  //Now make 2D clusters
+//   //Now make 2D clusters
 
-  if( fNclustU > 0 && fNclustV > 0 ){
-    fill_2D_hit_arrays();
-  }
-}
+//   if( fNclustU > 0 && fNclustV > 0 ){
+//     fill_2D_hit_arrays();
+//   }
+// }
 
 //This will borrow a lot from the "standard" version:
 void SBSGEMModule::find_clusters_1D_experimental( SBSGEM::GEMaxis_t axis, Double_t constraint_center, Double_t constraint_width ){
@@ -3613,6 +3686,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     clusttemp.rawstrip = fStripRaw[hitindex[stripmax]];
     clusttemp.rawMPD = fStripMPD[hitindex[stripmax]];
     clusttemp.rawAPV = fStripADC_ID[hitindex[stripmax]];
+    clusttemp.ontrack = false;
 
     for( int isamp=0; isamp<fN_MPD_TIME_SAMP; isamp++ ){ //initialize cluster-summed ADC samples to zero:
       clusttemp.ADCsamples[isamp] = 0.0;
@@ -3737,7 +3811,7 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     }
     
     //Hopefully this works correctly:
-    if( fabs( clusttemp.hitpos_mean - constraint_center ) <= constraint_width ){
+    if( fabs( clusttemp.hitpos_mean - constraint_center ) <= constraint_width || fStoreAll1Dclusters ){
 
       //Fit max strip time for hits in constraint region:
       // double Tfit = FitStripTime( hitindex[stripmax], 20.0 );
@@ -4090,22 +4164,33 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
   
   clusters.resize(nclust); //just to make sure no pathological behavior later on
  
-
+  fClustering1DIsDone = true;
 }
 
 void SBSGEMModule::fill_2D_hit_arrays(){
+
+  //This will also need to be modified to allow for the possibility of multiple constraint points.
+  // 1) Don't zero out the size of everything since there may already be some hits in here from a previous call
+  // 2) We'll need to implement some checks to ensure that we don't double-count any potential 2D hit candidates
+  // 3) We'll ALSO need to find a way to implement the constraints here! Oh wait, no we don't
+  // 4) But we DO need to make this method slightly more efficient: on a FIRST call to this routine
+  
   //Clear out the 2D hit array to get rid of any leftover junk from prior events:
-  //fHits.clear();
+  fHits.clear();
   fN2Dhits = 0;
 
-  //fHits.resize( fNclustU * fNclustV );
-  //fHits.clear();
   fHits.resize( std::min( fNclustU*fNclustV, fMAX2DHITS ) );
-
+  
   //if( fNclustU * fNclustV > fMAX2DHITS ){
   //   std::cout << "Warning in SBSGEMModule::fill_2D_hit_arrays(): 
   // }
 
+  TString appname = (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName();
+  TString detname = GetParent()->GetName();
+  
+  // std::cout << "SBSGEMModule::fill_2D_hit_arrays(), module \"" << appname << "." << detname << "." << GetName() << "\", (nclustu,nclustv)=(" << fNclustU << ", " << fNclustV
+  // 	    << ")" << std::endl;
+  
   int nsamp_corr = fN_MPD_TIME_SAMP;
   int firstsamp_corr = 0;
 
@@ -4125,8 +4210,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 
   for( UInt_t iu=0; iu<fNclustU; iu++ ){
     for( UInt_t iv=0; iv<fNclustV; iv++ ){
-
-      if( fUclusters[iu].keep && fVclusters[iv].keep ){
+      //Check that this is a "good" cluster and that it was not already used in track formation:
+      if( fUclusters[iu].keep && fVclusters[iv].keep && !fUclusters[iu].ontrack && !fVclusters[iv].ontrack ){ 
 	//Initialize sums for computing cluster and strip correlation coefficients:
 	sbsgemhit_t hittemp; // declare a temporary "hit" object:
 
@@ -4158,150 +4243,153 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	hittemp.xhit = XYtemp.X();
 	hittemp.yhit = XYtemp.Y();
 
-	
-	
-	//Check if candidate 2D hit is inside the constraint region before doing anything else:
-	if( fxcmin <= hittemp.xhit && hittemp.xhit <= fxcmax &&
-	    fycmin <= hittemp.yhit && hittemp.yhit <= fycmax &&
-	    IsInActiveArea( hittemp.xhit, hittemp.yhit ) ){
-    
-	  hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
-	  hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
-	
-	  hittemp.thitcorr = hittemp.thit; //don't apply any corrections on thit yet
-	
-	  //Next up is to calculate "global" hit coordinates (actually coordinates in "tracker-local" system)
-	  //DetToTrackCoord is a utility function defined in THaDetectorBase
-	  TVector3 hitpos_global = DetToTrackCoord( hittemp.xhit, hittemp.yhit );
-	
-	  // Unclear whether it is actually necessary to store these variables, but we also probably want to avoid 
-	  // repeated calls to THaDetectorBase::DetToTrackCoord, so let's keep these for now:
-	  hittemp.xghit = hitpos_global.X();
-	  hittemp.yghit = hitpos_global.Y();
-	  hittemp.zghit = hitpos_global.Z();
-	
-	  hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
-
-	  hittemp.ADCasymDeconv = (fUclusters[iu].clusterADCsumDeconvMaxCombo-fVclusters[iv].clusterADCsumDeconvMaxCombo)/(fUclusters[iu].clusterADCsumDeconvMaxCombo+fVclusters[iv].clusterADCsumDeconvMaxCombo);
-
-	  hittemp.EhitDeconv = 0.5*(fUclusters[iu].clusterADCsumDeconvMaxCombo+fVclusters[iv].clusterADCsumDeconvMaxCombo);
-	  
-	  hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean - (fHitTimeMean[0]-fHitTimeMean[1]);
-	  hittemp.tdiffDeconv = fUclusters[iu].t_mean_deconv - fVclusters[iv].t_mean_deconv - (fHitTimeMeanDeconv[0]-fHitTimeMeanDeconv[1]);
-	  hittemp.thitDeconv = 0.5*(fUclusters[iu].t_mean_deconv + fVclusters[iv].t_mean_deconv);
-	  
-	  //Calculate correlation coefficients:
-	  hittemp.corrcoeff_clust = CorrCoeff( nsamp_corr, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples, firstsamp_corr );
-	
-	  //compute index of strip with max ADC sum within cluster strip array:
-	  UInt_t ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
-	  UInt_t vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; //
-	
-	  //compute index of strip with max ADC sum within decoded hit array:
-	  UInt_t uhitidx = fUclusters[iu].hitindex[ustripidx];
-	  UInt_t vhitidx = fVclusters[iv].hitindex[vstripidx];
-	
-	  hittemp.corrcoeff_strip = CorrCoeff( nsamp_corr, fADCsamples[uhitidx], fADCsamples[vhitidx], firstsamp_corr );
-
-	  hittemp.corrcoeff_clust_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].DeconvADCsamples, fVclusters[iv].DeconvADCsamples );
-	  hittemp.corrcoeff_strip_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[uhitidx], fADCsamples_deconv[vhitidx] );
-	  //these lines redundant with the lines above (3860-3862):
-	  // hittemp.ADCasymDeconv = (fUclusters[iu].clusterADCsumDeconvMaxCombo - fVclusters[iv].clusterADCsumDeconvMaxCombo)/
-	  //   (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
-	  // hittemp.EhitDeconv = 0.5 * (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
-
-	  hittemp.thitFit = 0.5*( fUclusters[iu].t_mean_fit + fVclusters[iv].t_mean_fit );
-	  hittemp.tdiffFit = fUclusters[iu].t_mean_fit - fVclusters[iv].t_mean_fit - (fHitTimeMeanFit[0]-fHitTimeMeanFit[1]);
-	  
-	  //A "high-quality" hit is one that passes filtering criteria for either "standard" or deconvoluted information:
-	  
-	  double asym = hittemp.ADCasym;
-	  double ccor = hittemp.corrcoeff_clust;
-	  double ADCsum = hittemp.Ehit;
-	  double deltat = hittemp.tdiff;
-	  double thit = hittemp.thit;
-	  double ADC_thresh = fThresholdClusterSum;
-	  double ccor_cut = fCorrCoeffCut;
-	  //Do we want to hard-code the number of sigmas in the "high-quality" designation?
-	  // --> Yes: if we want to make it wider or narrower, we can adjust the sigma
-	  // or the cut value in the database. 
-	  // Go with the larger of 3.5sigma or cut from DB
-	  double dtcut = std::max( 3.5 * fTimeCutUVsigma, fTimeCutUVdiff );
-	  double t0 = 0.5*(fHitTimeMean[0]+fHitTimeMean[1]);
-	  double tcut = 3.5*0.5*(fHitTimeSigma[0]+fHitTimeSigma[1]);
-	  
-	  
-	  if( fClusteringFlag == 1 ){
-	    asym = hittemp.ADCasymDeconv;
-	    ccor = hittemp.corrcoeff_clust_deconv;
-	    ADCsum = hittemp.EhitDeconv;
-	    deltat = hittemp.tdiffDeconv;
-	    thit = hittemp.thitDeconv;
-	    ADC_thresh = fThresholdClusterSumDeconv;
-	    ccor_cut = fCorrCoeffCutDeconv;
-	    dtcut = std::max( 3.5*fTimeCutUVsigmaDeconv, fTimeCutUVdiffDeconv );
-	    t0 = 0.5*(fHitTimeMeanDeconv[0]+fHitTimeMeanDeconv[1]);
-	    tcut = 3.5*0.5*(fHitTimeSigmaDeconv[0]+fHitTimeSigmaDeconv[1]);
+	if( IsInActiveArea( hittemp.xhit, hittemp.yhit ) ){
+	  bool passed_any_constraint = false;
+	  for( int icp=0; icp<fxcmin.size(); icp++ ){
+	    if( fxcmin[icp] <= hittemp.xhit && hittemp.xhit <= fxcmax[icp] &&
+		fycmin[icp] <= hittemp.yhit && hittemp.yhit <= fycmax[icp] ){
+	      passed_any_constraint = true;
+	    }
 	  }
+	
+	  if( passed_any_constraint || fxcmin.size() == 0 ){
+	    hittemp.thit = 0.5*(fUclusters[iu].t_mean + fVclusters[iv].t_mean);
+	    hittemp.Ehit = 0.5*(fUclusters[iu].clusterADCsum + fVclusters[iv].clusterADCsum);
+	    
+	    hittemp.thitcorr = hittemp.thit; //don't apply any corrections on thit yet
+	    
+	    //Next up is to calculate "global" hit coordinates (actually coordinates in "tracker-local" system)
+	    //DetToTrackCoord is a utility function defined in THaDetectorBase
+	    TVector3 hitpos_global = DetToTrackCoord( hittemp.xhit, hittemp.yhit );
+	
+	    // Unclear whether it is actually necessary to store these variables, but we also probably want to avoid 
+	    // repeated calls to THaDetectorBase::DetToTrackCoord, so let's keep these for now:
+	    hittemp.xghit = hitpos_global.X();
+	    hittemp.yghit = hitpos_global.Y();
+	    hittemp.zghit = hitpos_global.Z();
+	
+	    hittemp.ADCasym = ( fUclusters[iu].clusterADCsum - fVclusters[iv].clusterADCsum )/( 2.0*hittemp.Ehit );
 
-	  if( fClusteringFlag == 0 && fUseStripTimingCuts == 2 ){
-	    thit = hittemp.thitFit;
-	    t0 = 0.5*(fHitTimeMeanFit[0]+fHitTimeMeanFit[1]);
-	    dtcut = std::max( 3.5*fTimeCutUVsigmaFit, fTimeCutUVdiffFit );
-	    tcut = 3.5*0.5*(fHitTimeSigmaFit[0]+fHitTimeSigmaFit[1]);
-	  }
+	    hittemp.ADCasymDeconv = (fUclusters[iu].clusterADCsumDeconvMaxCombo-fVclusters[iv].clusterADCsumDeconvMaxCombo)/(fUclusters[iu].clusterADCsumDeconvMaxCombo+fVclusters[iv].clusterADCsumDeconvMaxCombo);
 
-	  double asymcut = std::max( 4.5*fADCasymSigma, fADCasymCut );
+	    hittemp.EhitDeconv = 0.5*(fUclusters[iu].clusterADCsumDeconvMaxCombo+fVclusters[iv].clusterADCsumDeconvMaxCombo);
 	  
-	  hittemp.highquality = fabs(asym) <= asymcut &&
-	    fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 &&
-	    ADCsum >= ADC_thresh && ccor >= ccor_cut &&
-	    fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
-
-	  //hittemp.highquality = true;
-
-	  hittemp.thitcorr = thit - t0;
+	    hittemp.tdiff = fUclusters[iu].t_mean - fVclusters[iv].t_mean - (fHitTimeMean[0]-fHitTimeMean[1]);
+	    hittemp.tdiffDeconv = fUclusters[iu].t_mean_deconv - fVclusters[iv].t_mean_deconv - (fHitTimeMeanDeconv[0]-fHitTimeMeanDeconv[1]);
+	    hittemp.thitDeconv = 0.5*(fUclusters[iu].t_mean_deconv + fVclusters[iv].t_mean_deconv);
 	  
-	  // hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
-	  //   fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
-	  //   fUclusters[iu].clusterADCsum >= fThresholdClusterSum && 
-	  //   fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
-	  //   hittemp.corrcoeff_clust >= fCorrCoeffCut &&
-	  //   hittemp.corrcoeff_strip >= fCorrCoeffCut && 
-	  //   fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
-	  //   fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
-	  //   hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
-	  //   hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv;
+	    //Calculate correlation coefficients:
+	    hittemp.corrcoeff_clust = CorrCoeff( nsamp_corr, fUclusters[iu].ADCsamples, fVclusters[iv].ADCsamples, firstsamp_corr );
+	
+	    //compute index of strip with max ADC sum within cluster strip array:
+	    UInt_t ustripidx = fUclusters[iu].istripmax-fUclusters[iu].istriplo; //
+	    UInt_t vstripidx = fVclusters[iv].istripmax-fVclusters[iv].istriplo; //
+	
+	    //compute index of strip with max ADC sum within decoded hit array:
+	    UInt_t uhitidx = fUclusters[iu].hitindex[ustripidx];
+	    UInt_t vhitidx = fVclusters[iv].hitindex[vstripidx];
+	
+	    hittemp.corrcoeff_strip = CorrCoeff( nsamp_corr, fADCsamples[uhitidx], fADCsamples[vhitidx], firstsamp_corr );
+
+	    hittemp.corrcoeff_clust_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fUclusters[iu].DeconvADCsamples, fVclusters[iv].DeconvADCsamples );
+	    hittemp.corrcoeff_strip_deconv = CorrCoeff( fN_MPD_TIME_SAMP, fADCsamples_deconv[uhitidx], fADCsamples_deconv[vhitidx] );
+	    //these lines redundant with the lines above (3860-3862):
+	    // hittemp.ADCasymDeconv = (fUclusters[iu].clusterADCsumDeconvMaxCombo - fVclusters[iv].clusterADCsumDeconvMaxCombo)/
+	    //   (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
+	    // hittemp.EhitDeconv = 0.5 * (fUclusters[iu].clusterADCsumDeconvMaxCombo + fVclusters[iv].clusterADCsumDeconvMaxCombo);
+
+	    hittemp.thitFit = 0.5*( fUclusters[iu].t_mean_fit + fVclusters[iv].t_mean_fit );
+	    hittemp.tdiffFit = fUclusters[iu].t_mean_fit - fVclusters[iv].t_mean_fit - (fHitTimeMeanFit[0]-fHitTimeMeanFit[1]);
+	  
+	    //A "high-quality" hit is one that passes filtering criteria for either "standard" or deconvoluted information:
+	  
+	    double asym = hittemp.ADCasym;
+	    double ccor = hittemp.corrcoeff_clust;
+	    double ADCsum = hittemp.Ehit;
+	    double deltat = hittemp.tdiff;
+	    double thit = hittemp.thit;
+	    double ADC_thresh = fThresholdClusterSum;
+	    double ccor_cut = fCorrCoeffCut;
+	    //Do we want to hard-code the number of sigmas in the "high-quality" designation?
+	    // --> Yes: if we want to make it wider or narrower, we can adjust the sigma
+	    // or the cut value in the database. 
+	    // Go with the larger of 3.5sigma or cut from DB
+	    double dtcut = std::max( 3.5 * fTimeCutUVsigma, fTimeCutUVdiff );
+	    double t0 = 0.5*(fHitTimeMean[0]+fHitTimeMean[1]);
+	    double tcut = 3.5*0.5*(fHitTimeSigma[0]+fHitTimeSigma[1]);
+	  
+	  
+	    if( fClusteringFlag == 1 ){
+	      asym = hittemp.ADCasymDeconv;
+	      ccor = hittemp.corrcoeff_clust_deconv;
+	      ADCsum = hittemp.EhitDeconv;
+	      deltat = hittemp.tdiffDeconv;
+	      thit = hittemp.thitDeconv;
+	      ADC_thresh = fThresholdClusterSumDeconv;
+	      ccor_cut = fCorrCoeffCutDeconv;
+	      dtcut = std::max( 3.5*fTimeCutUVsigmaDeconv, fTimeCutUVdiffDeconv );
+	      t0 = 0.5*(fHitTimeMeanDeconv[0]+fHitTimeMeanDeconv[1]);
+	      tcut = 3.5*0.5*(fHitTimeSigmaDeconv[0]+fHitTimeSigmaDeconv[1]);
+	    }
+
+	    if( fClusteringFlag == 0 && fUseStripTimingCuts == 2 ){
+	      thit = hittemp.thitFit;
+	      t0 = 0.5*(fHitTimeMeanFit[0]+fHitTimeMeanFit[1]);
+	      dtcut = std::max( 3.5*fTimeCutUVsigmaFit, fTimeCutUVdiffFit );
+	      tcut = 3.5*0.5*(fHitTimeSigmaFit[0]+fHitTimeSigmaFit[1]);
+	    }
+
+	    double asymcut = std::max( 4.5*fADCasymSigma, fADCasymCut );
+	  
+	    hittemp.highquality = fabs(asym) <= asymcut &&
+	      fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 &&
+	      ADCsum >= ADC_thresh && ccor >= ccor_cut &&
+	      fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
+
+	    //hittemp.highquality = true;
+
+	    hittemp.thitcorr = thit - t0;
+	  
+	    // hittemp.highquality = fabs(hittemp.ADCasym)<=fADCasymCut && 
+	    //   fUclusters[iu].nstrips > 1 && fVclusters[iv].nstrips > 1 && 
+	    //   fUclusters[iu].clusterADCsum >= fThresholdClusterSum && 
+	    //   fVclusters[iv].clusterADCsum >= fThresholdClusterSum && 
+	    //   hittemp.corrcoeff_clust >= fCorrCoeffCut &&
+	    //   hittemp.corrcoeff_strip >= fCorrCoeffCut && 
+	    //   fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
+	    //   fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
+	    //   hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
+	    //   hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv;
 
        
 	  
-	  //cutting on deconvoluted ADC quantities could be dangerous before further study...
+	    //cutting on deconvoluted ADC quantities could be dangerous before further study...
 
-	  bool add_hit = true;
-	  //we need special handling if we want to use single-strip clusters: 
-	  if( fUclusters[iu].nstrips == 1 || fVclusters[iv].nstrips == 1 ){
-	    //If EITHER of these clusters is only single-strip, it must pass more stringent requirements to use as a 2D hit candidate:
-	    //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
-	    add_hit = fabs(asym) <= asymcut && ccor >= ccor_cut && fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
-	    // if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
-	    // 	hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
-	    // 	hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
-	    // 	hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv ){
-	    //   add_hit = true;
-	    // }
-	  }
+	    bool add_hit = true;
+	    //we need special handling if we want to use single-strip clusters: 
+	    if( fUclusters[iu].nstrips == 1 || fVclusters[iv].nstrips == 1 ){
+	      //If EITHER of these clusters is only single-strip, it must pass more stringent requirements to use as a 2D hit candidate:
+	      //To use single-strip clusters, we will REQUIRE good timing, ADC asymmetry, and correlation coefficient cuts:
+	      add_hit = fabs(asym) <= asymcut && ccor >= ccor_cut && fabs(deltat)<=dtcut && fabs(thit-t0)<=tcut;
+	      // if( fabs(hittemp.ADCasym) <= fADCasymCut && fabs( hittemp.tdiff ) <= fTimeCutUVdiff*fTimeCutUVsigma &&
+	      // 	hittemp.corrcoeff_strip >= fCorrCoeffCut && hittemp.corrcoeff_clust >= fCorrCoeffCut && fabs( hittemp.ADCasymDeconv ) <= fADCasymCut &&
+	      // 	hittemp.corrcoeff_clust_deconv >= fCorrCoeffCutDeconv &&
+	      // 	hittemp.corrcoeff_strip_deconv >= fCorrCoeffCutDeconv ){
+	      //   add_hit = true;
+	      // }
+	    }
 
-	  //add_hit = true;
-	  
-	  //Okay, that should be everything. Now add it to the 2D hit array:
-	  //fHits.push_back( hittemp );
-	  if( add_hit && fN2Dhits < fMAX2DHITS ) {
-	    fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
-	  } else if( add_hit ){ //
-	    maxhits_exceeded = true;
-	  }
-	  //fN2Dhits++;
-	} //end check that 2D point is inside track search region
+	    //add_hit = true;
+	    
+	    //Okay, that should be everything. Now add it to the 2D hit array:
+	    //fHits.push_back( hittemp );
+	    if( add_hit && fN2Dhits < fMAX2DHITS ) {
+	      fHits[fN2Dhits++] = hittemp; //should be faster than push_back();
+	    } else if( add_hit ){ //
+	      maxhits_exceeded = true;
+	    }
+	  } //end check that hit passes any constraint (or that constraint application is not applicable)
+	} //end check that 2D point is inside active area
       } //end check that both U and V clusters passed filtering criteria:
     } //end loop over "V" clusters
   } //end loop over "U" clusters
@@ -4310,6 +4398,12 @@ void SBSGEMModule::fill_2D_hit_arrays(){
     std::cout << "Warning in [SBSGEMModule::fill_2D_hit_arrays()]: good 2D hit candidates exceeded user maximum of " << fMAX2DHITS << " for module " << GetName() << ", 2D hit list truncated" << std::endl;
   }
 
+  // std::cout << "GEM module " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
+  // 	    << GetParent()->GetName() << "." << GetName() << ": (nclustu,nclustv,n2dhits)=("
+  // 	    << fNclustU << ", " << fNclustV << ", " << fN2Dhits << ")" << std::endl;
+  
+  //std::cout << "N 2D hit candidates = " << fN2Dhits << std::endl;
+  
   fHits.resize( fN2Dhits );
   
   filter_2Dhits();

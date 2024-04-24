@@ -124,6 +124,18 @@ protected:
   std::vector<int> f_ol;
   std::vector<int> f_om;
 
+  //Build out the same infrastructure for single-arm electron TOF (basically path length): 
+
+  Double_t fETOF_avg;
+  int fETOF_order;
+
+  std::vector<double> fb_ETOF;
+  std::vector<int> f_oi_ETOF;
+  std::vector<int> f_oj_ETOF;
+  std::vector<int> f_ok_ETOF;
+  std::vector<int> f_ol_ETOF;
+  std::vector<int> f_om_ETOF;
+  
   //Only relevant if downbending optics are defined via the DB:
   int fOpticsOrderDownbend;
   std::vector<double> fb_xptar_downbend;

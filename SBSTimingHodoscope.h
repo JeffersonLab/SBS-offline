@@ -25,7 +25,11 @@ struct SBSTimingHodoscopeOutput {
   std::vector<Double_t> t;   //< []
   std::vector<Double_t> tot;   //< []
   std::vector<Double_t> tdiff;   //< []
-  std::vector<Int_t> trackindex; 
+  std::vector<Double_t> tleft; //< "raw" tleft with no corrections
+  std::vector<Double_t> tright; //< "raw" tright with no corrections
+  std::vector<Double_t> totleft; //< "raw" tleft with no corrections
+  std::vector<Double_t> totright; //< "raw" tright with no corrections
+  std::vector<Int_t> trackindex;
 };
 
 class SBSTimingHodoscope : public SBSGenericDetector {
@@ -139,6 +143,7 @@ public:
   std::vector<Double_t> fGoodBarTDCRtot;
   std::vector<Double_t> fGoodBarTDCRtotW;
 
+  
   std::vector<Int_t>   fGoodBarIDsADC;
   std::vector<Double_t> fGoodBarADCmean;
   std::vector<Double_t> fGoodBarADCLa;
