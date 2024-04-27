@@ -120,6 +120,8 @@ THaSpectrometer( name, description )
   
   fAnalyzerZ0 = 0.0;
 
+  fUseDynamicConstraint = false;
+  
 }
 
 //_____________________________________________________________________________
@@ -181,6 +183,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
   double opticsthetadeg = fOpticsAngle * TMath::RadToDeg();
 
   int polarimetermode = fPolarimeterMode ? 1 : 0;
+  int usedynamicconstraint = fUseDynamicConstraint ? 1 : 0;
   
   const DBRequest request[] = {
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDoubleV, 0, 1, 0},
@@ -202,6 +205,11 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "polarimetermode", &polarimetermode, kInt, 0, 1, 1 },
     { "z0analyzer", &fAnalyzerZ0, kDouble, 0, 1, 1 },
     { "BdL", &fBdL, kDouble, 0, 1, 1 },
+    { "usedynamicconstraint", &usedynamicconstraint, kInt, 0, 1, 1},
+    { "dynamicthslope", &fDynamicConstraintSlopeX, kDouble, 0, 1, 1},
+    { "dynamicth0", &fDynamicConstraintOffsetX, kDouble, 0, 1, 1},
+    { "dynamicphslope", &fDynamicConstraintSlopeY, kDouble, 0, 1, 1},
+    { "dynamicph0", &fDynamicConstraintOffsetY, kDouble, 0, 1, 1},
     {0}
   };
 
@@ -211,12 +219,19 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     return status;
   }
 
-  fPolarimeterMode = !fPolarimeterMode_DBoverride && (polarimetermode != 0);
-
+  if( !fPolarimeterMode_DBoverride ){
+    fPolarimeterMode = (polarimetermode != 0);
+  }
+  // std::cout << "SBSEArm::ReadDatabase: polarimeter mode = " << fPolarimeterMode
+  // 	    << std::endl;
+  
   //Once we parse the database, we need to check whether the constraint centering and width parameters
   //wered defined sensibly. This method checks, and if any are not sensibly initialized, ALL are
   //initialized with sensible default values:
   CheckConstraintOffsetsAndWidths();
+
+  fUseDynamicConstraint = ( usedynamicconstraint != 0 );
+ 
   
   fOpticsAngle = opticsthetadeg * TMath::DegToRad();
   if( optics_origin.size() == 3 ){ //database overrides default values:
@@ -638,6 +653,9 @@ Int_t SBSEArm::CoarseTrack()
 
 Int_t SBSEArm::CoarseReconstruct()
 {
+
+  // std::cout << "SBSArm::CoarseReconstruct(): polarimeter mode = "
+  // 	    << fPolarimeterMode << std::endl;
   
   fHCALtheta_n = kBig;
   fHCALphi_n = kBig;
@@ -677,6 +695,8 @@ Int_t SBSEArm::CoarseReconstruct()
 	 static_cast<THaTrackingDetector*>( next2() )) {
     if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
       FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+      // std::cout << "Got front tracker, name = " << FrontTracker->GetName()
+      // 		<< std::endl;
     }
   }
 
@@ -717,23 +737,64 @@ Int_t SBSEArm::CoarseReconstruct()
   x_fcp = 0.0;
   y_fcp = 0.0;
   z_fcp = 0.0;
-
+  
   //Set constraint points for FT and BT, regardless
   //whether those detectors are actually using the constraints:
   
   if( !fPolarimeterMode && FrontTracker != nullptr ){
     //std::cout << "setting constraints for tracks" << std::endl;
-    FrontTracker->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], z_fcp);
+    
     FrontTracker->SetBackConstraintPoint(x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], z_bcp);
+
+    if ( fUseDynamicConstraint ){
+      double thcp = fDynamicConstraintSlopeX * (x_bcp + fBackConstraintX0[0]) + fDynamicConstraintOffsetX;
+      double phcp = fDynamicConstraintSlopeY * (y_bcp + fBackConstraintY0[0]) + fDynamicConstraintOffsetY;
+
+      x_fcp = x_bcp + thcp * (z_fcp - z_bcp);
+      y_fcp = y_bcp + phcp * (z_fcp - z_bcp);
+      
+    }
+    
+    FrontTracker->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], z_fcp);
+    
+    
+    
     FrontTracker->SetFrontConstraintWidth(fFrontConstraintWidthX[0], 
 					  fFrontConstraintWidthY[0]);
     FrontTracker->SetBackConstraintWidth(fBackConstraintWidthX[0], 
 					 fBackConstraintWidthY[0]);
-	    
+
+    if( BackTracker != nullptr ){
+      // IF there is a back tracker, and we're not using polarimeter mode,
+      // initialize it with identical constraints as the front:
+      BackTracker->SetBackConstraintPoint(x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], z_bcp);
+      BackTracker->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], z_fcp);
+      
+      
+      
+      BackTracker->SetFrontConstraintWidth(fFrontConstraintWidthX[0], 
+					   fFrontConstraintWidthY[0]);
+      BackTracker->SetBackConstraintWidth(fBackConstraintWidthX[0], 
+					  fBackConstraintWidthY[0]);
+      
+    }
+    
   } else if( fPolarimeterMode && BackTracker != nullptr ){ //Polarimeter mode: look for NonTrackingDetectors inheriting SBSGEMPolarimeterTracker
     z_fcp = fAnalyzerZ0; 
-    BackTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[1], y_fcp + fFrontConstraintY0[1], z_fcp);
+    
     BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1], y_bcp + fBackConstraintY0[1], z_bcp);
+
+    if ( fUseDynamicConstraint ){
+      double thcp = fDynamicConstraintSlopeX * (x_bcp + fBackConstraintX0[1]) + fDynamicConstraintOffsetX;
+      double phcp = fDynamicConstraintSlopeY * (y_bcp + fBackConstraintY0[1]) + fDynamicConstraintOffsetY;
+
+      x_fcp = x_bcp + thcp * (z_fcp - z_bcp);
+      y_fcp = y_bcp + phcp * (z_fcp - z_bcp);
+      
+    }
+
+    BackTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[1], y_fcp + fFrontConstraintY0[1], z_fcp);
+    
     BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1], 
 					  fFrontConstraintWidthY[1] );
     BackTracker->SetBackConstraintWidth( fBackConstraintWidthX[1], 
@@ -780,6 +841,7 @@ Int_t SBSEArm::CoarseReconstruct()
 //_____________________________________________________________________________
 Int_t SBSEArm::Track()
 {
+  //std::cout << "SBSEArm::Track(): polarimeter mode = " << fPolarimeterMode << std::endl;
   // Fine track Reconstruction
   if( !fPolarimeterMode ){  //Call regular spectrometer Track() method
     THaSpectrometer::Track();
@@ -788,12 +850,22 @@ Int_t SBSEArm::Track()
     if( !IsDone(kCoarseRecon) )
       CoarseReconstruct();
 
+    // std::cout << "Number of tracking detectors assigned to this EArm = "
+    // 	      << fTrackingDetectors->GetSize() << std::endl;
+    
     SBSGEMSpectrometerTracker *FrontTracker = nullptr;
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
+      assert(dynamic_cast<THaTrackingDetector*>(theTrackDetector));
+      // std::cout << "Got tracking detector, name = "
+      // 		<< theTrackDetector->GetName() << std::endl;
+
+      
+      
       if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
 	FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+	//std::cout << "Got Front tracker, name = " << FrontTracker->GetName() << std::endl;
       }
     }
     
@@ -823,9 +895,14 @@ Int_t SBSEArm::Track()
     //Only attempt tracking in FT if we got a track in back tracker:
     
     if( BackTracker != nullptr && FrontTracker != nullptr ){ //Use the back tracker to initialize constraints for front tracker:
+      // std::cout << "Back tracker n tracks found = " << BackTracker->GetNtracks()
+      // 		<< std::endl;
       if( BackTracker->GetNtracks() > 0 ){
 	//Initially, let's set up a front constraint using only the "best" (first) track found in the back tracker
-	//Later, we may consider multiple tracks pointing to multiple clusters in HCAL: 
+	//Later, we may consider multiple tracks pointing to multiple clusters in HCAL:
+	// std::cout << "Back tracker has tracks, initializing front tracker: "
+	// 	  << std::endl;
+	
 	double xback = BackTracker->GetXTrack( 0 );
 	double yback = BackTracker->GetYTrack( 0 );
 	double xpback = BackTracker->GetXpTrack( 0 );
@@ -833,13 +910,20 @@ Int_t SBSEArm::Track()
 	
 	double x_bcp = xback + xpback * fAnalyzerZ0;
 	double y_bcp = yback + ypback * fAnalyzerZ0;
+
+	// std::cout << "(xbcp,ybcp,zbcp)=(" << x_bcp << ", " << y_bcp
+	// 	  << ", " << fAnalyzerZ0 << ")" << std::endl; 
 	
 	FrontTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], fAnalyzerZ0 );
-	
-	double x_fcp = x_bcp;
-	double y_fcp = y_bcp;
+
+	//Set front constraint point to position of back track at front layer:
+	double x_fcp = xback;
+	double y_fcp = yback;
 	
 	FrontTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], 0.0 );
+
+	// std::cout << "(xfcp,yfcp,zfcp)=(" << x_fcp << ", " << y_fcp << ",0)"
+	// 	  << std::endl;
 	
 	FrontTracker->SetBackConstraintWidth( fBackConstraintWidthX[0], fBackConstraintWidthY[0] );
 	FrontTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[0], fFrontConstraintWidthY[0] );

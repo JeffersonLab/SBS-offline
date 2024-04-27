@@ -123,6 +123,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   int multitracksearch = fMultiTrackSearch ? 1 : 0;
 
+  int nontrackmode = fNonTrackingMode ? 1 : 0;
+  
   //  std::vector<int> mingoodhits; 
   //std::vector<double> chi2cut_space;
   //std::vector<double> chi2cut_hits;
@@ -187,6 +189,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "sigmatrackt0", &fSigmaTrackT0, kDouble, 0, 1, 1 },
     { "cuttrackt0", &fCutTrackT0, kDouble, 0, 1, 1 },
     { "multitracksearch", &multitracksearch, kInt, 0, 1, 1},
+    { "nontrackingmode", &nontrackmode, kInt, 0, 1, 1},
     {0}
   };
 
@@ -204,6 +207,10 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     fPedestalMode = ( pedestalmode_flag != 0 );
     fSubtractPedBeforeCommonMode = ( pedestalmode_flag < 0 );
   }
+
+  if( !fNonTrackingMode_DBoverride ){
+    fNonTrackingMode = ( nontrackmode != 0 );
+  }
   
   fNegSignalStudy = negsignalstudy_flag != 0;
 
@@ -220,7 +227,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   // std::cout << "pedestal mode flag = " << pedestalmode_flag << std::endl;
   // std::cout << "do efficiency flag = " << doefficiency_flag << std::endl;
   // std::cout << "pedestal mode, efficiency plots = " << fPedestalMode << ", " << fMakeEfficiencyPlots << std::endl;
-  
+ 
   //fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
@@ -786,6 +793,9 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
       fConstraintWidth_Front_IsInitialized && fConstraintWidth_Back_IsInitialized;
 
     if( fConstraintInitialized ){
+      // std::cout << "[SBSGEMSpectrometerTracker::FineTrack()]: name = "
+      // 		<< GetName() << std::endl;
+      
       if( !ftracking_done ) find_tracks();
 
       //We don't necessarily know 

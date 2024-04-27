@@ -127,7 +127,9 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fSigmaTrackT0 = 5.0;
   fCutTrackT0 = 1000.0; //default to some large value
-  
+
+  fNonTrackingMode = false;
+  fNonTrackingMode_DBoverride = false;
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -363,7 +365,7 @@ void SBSGEMTrackerBase::CompleteInitialization(){
       fModules[imod]->SetMakeCommonModePlots( fCommonModePlotsFlag );
     }
 
-    if( fMultiTrackSearch ){
+    if( fMultiTrackSearch || fNonTrackingMode ){
       fModules[imod]->fStoreAll1Dclusters = true;
     }
     
@@ -1308,7 +1310,21 @@ void SBSGEMTrackerBase::find_tracks(){
   //Everything here needs to be modified to account for the possibility of multiple tracking iterations:
 
   Clear();
-  //std::cout << "[SBSGEMTrackerBase::find_tracks]: finished clearing track arrays..." << std::endl;
+  // std::cout << "[SBSGEMTrackerBase::find_tracks]: finished clearing track arrays..., constraint points are:" << std::endl
+  // 	    << "Front: (x,y,z)=("
+  // 	    << fConstraintPoint_Front[0].X() << ", "
+  // 	    << fConstraintPoint_Front[0].Y() << ", "
+  // 	    << fConstraintPoint_Front[0].Z() << ")" << std::endl
+  // 	    << "Back: (x,y,z)=("
+  // 	    << fConstraintPoint_Back[0].X() << ", "
+  // 	    << fConstraintPoint_Back[0].Y() << ", "
+  // 	    << fConstraintPoint_Back[0].Z() << ")" << std::endl
+  // 	    << "Front width (x,y)=("
+  // 	    << fConstraintWidth_Front.X() << ", "
+  // 	    << fConstraintWidth_Front.Y() << ")" << std::endl
+  // 	    << "Back width (x,y)=("
+  // 	    << fConstraintWidth_Back.X() << ", "
+  // 	    << fConstraintWidth_Back.Y() << ")" << std::endl;
   
   fNtracks_found = 0;
   
@@ -1316,6 +1332,9 @@ void SBSGEMTrackerBase::find_tracks(){
     hit_reconstruction();
   }
 
+  //skip tracking if we want to only do the "hit reconstruction" (essentially just clustering):
+  if( fNonTrackingMode ) return;
+  
   //std::cout << "[SBSGEMTrackerBase::find_tracks]: finished hit reconstruction..." << std::endl;
   
   ftracking_done = true;
@@ -3351,15 +3370,21 @@ bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, do
   // For now we are lazy and assume without checking that the front and back constraint point arrays are the same size:
   bool passed_any = false;
   for( int icp=0; icp<fConstraintPoint_Front.size(); icp++ ){
+
+    TVector3 fcp = fConstraintPoint_Front[icp];
+    TVector3 bcp = fConstraintPoint_Back[icp];
+      
     
-    double xproject_bcp = xtr + xptr * fConstraintPoint_Back[icp].Z();
-    double yproject_bcp = ytr + yptr * fConstraintPoint_Back[icp].Z();
+    double xproject_bcp = xtr + xptr * bcp.Z();
+    double yproject_bcp = ytr + yptr * bcp.Z();
     
-    double xproject_fcp = xtr + xptr * fConstraintPoint_Front[icp].Z();
-    double yproject_fcp = ytr + yptr * fConstraintPoint_Front[icp].Z();
+    double xproject_fcp = xtr + xptr * fcp.Z();
+    double yproject_fcp = ytr + yptr * fcp.Z();
     
-    double xpc = ( fConstraintPoint_Back[icp].X() - fConstraintPoint_Front[icp].X() )/( fConstraintPoint_Back[icp].Z() - fConstraintPoint_Front[icp].Z() );
-    double ypc = ( fConstraintPoint_Back[icp].Y() - fConstraintPoint_Front[icp].Y() )/( fConstraintPoint_Back[icp].Z() - fConstraintPoint_Front[icp].Z() );
+    //    double xpc = ( fConstraintPoint_Back[icp].X() - fConstraintPoint_Front[icp].X() )/( fConstraintPoint_Back[icp].Z() - fConstraintPoint_Front[icp].Z() );
+    //double ypc = ( fConstraintPoint_Back[icp].Y() - fConstraintPoint_Front[icp].Y() )/( fConstraintPoint_Back[icp].Z() - fConstraintPoint_Front[icp].Z() );
+    double xpc = ( bcp.X() - fcp.X() )/(bcp.Z()-fcp.Z());
+    double ypc = ( bcp.Y() - fcp.Y() )/(bcp.Z()-fcp.Z());
     
     bool constraint_check = false;
     
@@ -3371,6 +3396,7 @@ bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, do
     double cutdxdz = fConstraintWidth_theta;
     double cutdydz = fConstraintWidth_phi;
 
+    
     if( coarsecheck ){
       //this is the coarse check based on grid bin centers and widths. 
       //Even though the typical grid bin size is small compared to the constraint region, we should add at least one
@@ -3387,10 +3413,10 @@ bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, do
       cutdydz += 3.0*fGridBinWidthY/(fConstraintPoint_Back[icp].Z()-fConstraintPoint_Front[icp].Z());
     }
   
-    if( fabs( xproject_bcp - fConstraintPoint_Back[icp].X() ) <= cutxb &&
-	fabs( yproject_bcp - fConstraintPoint_Back[icp].Y() ) <= cutyb &&
-	fabs( xproject_fcp - fConstraintPoint_Front[icp].X() ) <= cutxf &&
-	fabs( yproject_fcp - fConstraintPoint_Front[icp].Y() ) <= cutyf ){
+    if( fabs( xproject_bcp - bcp.X() ) <= cutxb &&
+	fabs( yproject_bcp - bcp.Y() ) <= cutyb &&
+	fabs( xproject_fcp - fcp.X() ) <= cutxf &&
+	fabs( yproject_fcp - fcp.Y() ) <= cutyf ){
     
       constraint_check = true;
     }

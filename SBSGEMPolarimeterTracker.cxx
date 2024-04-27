@@ -120,6 +120,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   //int onlinezerosuppressflag = fOnlineZeroSuppression ? 1 : 0;
   int useconstraintflag = fUseConstraint ? 1 : 0; //use constraint on track search region from other detectors in the parent THaSpectrometer (or other)
   //int usefronttrackconstraintflag = fUseFrontTrackConstraint ? 1 : 0; 
+  
   int mc_flag = fIsMC ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   //int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
@@ -128,6 +129,8 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
 
   int multitracksearch = fMultiTrackSearch ? 1 : 0;
 
+  int nontrackmode = fNonTrackingMode ? 1 : 0;
+  
   //  std::vector<int> mingoodhits; 
   //std::vector<double> chi2cut_space;
   //std::vector<double> chi2cut_hits;
@@ -167,6 +170,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     { "sigmatrackt0", &fSigmaTrackT0, kDouble, 0, 1, 1 },
     { "cuttrackt0", &fCutTrackT0, kDouble, 0, 1, 1 },
     { "multitracksearch", &multitracksearch, kInt, 0, 1, 1},
+    { "nontrackingmode", &nontrackmode, kInt, 0, 1, 1},
     {0}
   };
 
@@ -184,6 +188,10 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     fPedestalMode = ( pedestalmode_flag != 0 );
     fSubtractPedBeforeCommonMode = ( pedestalmode_flag < 0 );
   }
+
+  if( !fNonTrackingMode_DBoverride ){
+    fNonTrackingMode = ( nontrackmode != 0 );
+  }
   
   fNegSignalStudy = negsignalstudy_flag != 0;
 
@@ -192,6 +200,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   
   //fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
   fUseConstraint = (useconstraintflag != 0);
+
   //fUseFrontTrackConstraint = (usefronttrackconstraintflag != 0);
   fMinHitsOnTrack = std::max(3,fMinHitsOnTrack);
 

@@ -52,6 +52,17 @@ protected:
   std::vector<Double_t> fBackConstraintX0; 
   std::vector<Double_t> fBackConstraintY0;
 
+  //Idea is that slope of the track along x and y is roughly linearly correlated with the position of the back constraint:
+
+  bool fUseDynamicConstraint; //The "dynamic constraint" sets the front constraint point automatically based on the back constraint point; it is useful for applying effective loose constraints based on spectrometer optics (correlation between x and theta, y and phi, etc)
+  double fDynamicConstraintSlopeX;
+  double fDynamicConstraintOffsetX;
+  //double fDynamicWidthX; 
+  double fDynamicConstraintSlopeY;
+  double fDynamicConstraintOffsetY; 
+  //double fDynamicWidthY;
+  
+  
   //for output only... Vectors instead?
   std::vector<double> fFrontConstraintX;
   std::vector<double> fFrontConstraintY;

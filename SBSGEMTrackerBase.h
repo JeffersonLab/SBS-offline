@@ -79,6 +79,8 @@ public:
   
   inline void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
 
+  inline void SetNonTrackingMode( int ntm=1 ){ fNonTrackingMode = ( ntm != 0 ); fNonTrackingMode_DBoverride = true; }
+  
   //Need to add some public "getter" and "setter" methods for the polarimeter-mode analysis:
   int GetNtracks() const { return fNtracks_found; }
   void GetTrack(int itrack, double &x, double &y, double &xp, double &yp);
@@ -173,6 +175,9 @@ protected:
   bool fPedMode_DBoverride; 
   bool fPedestalMode;
 
+  bool fNonTrackingMode; 
+  bool fNonTrackingMode_DBoverride; 
+  
   bool fSubtractPedBeforeCommonMode; //flag only applies to pedestal-mode analysis
   
   bool fCommonModePlotsFlagIsSet; 
@@ -229,12 +234,15 @@ protected:
   std::vector<double> fTrackChi2CutHitQuality; //chi2/NDF cut for hit quality versus number of hit layers
 
   bool fUseConstraint;
+  
   bool fUseOpticsConstraint; //default to FALSE:
   bool fUseForwardOpticsConstraint;
   // "Constraint points" to restrict the search region for track-finding; we are making these vectors
   // to allow for multiple "regions of interest" to be defined. For now, we keep the "optics" and/or "forward optics" constraints
   // single-valued although we might decide to change that later
 
+  
+  
   // "constraint points" are calculated from event-by-event quantities; but constraint widths are set via the database.
   // So in fact, the constraint widths should probably be single-valued!
   // But what are the use cases?
