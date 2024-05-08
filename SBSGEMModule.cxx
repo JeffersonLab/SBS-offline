@@ -2684,10 +2684,20 @@ void SBSGEMModule::find_2Dhits(){
   // This means that if we want to handle MORE than one constraint point, we MUST set fStoreAll1Dclusters to true
   // 
 
-  // std::cout << "Calling hit reconstruction for detector " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
-  // 	    << GetParent()->GetName() << "." << GetName()
-  // 	    << ", N fired strips = " << fNstrips_hit << std::endl;
-  
+  // TString sname;
+  // sname.Form("%s.%s.%s",(static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName(),GetParent()->GetName(), GetName() );
+
+  // if( sname.Contains("gemCeF") ){
+  //   std::cout << "Calling hit reconstruction for detector " << (static_cast<THaDetector *>(GetParent()) )->GetApparatus()->GetName() << "."
+  // 	      << GetParent()->GetName() << "." << GetName()
+  // 	      << ", N fired strips = " << fNstrips_hit << std::endl;
+  //   std::cout << "Number of constraints defined = " << fxcmin.size() << std::endl;
+  //   for( int i=0; i<fxcmin.size(); i++ ){
+  //     std::cout << "Constraint " << i << ": (xmin,xmax,ymin,ymax)=("
+  // 		<< fxcmin[i] << ", " << fxcmax[i] << ", "
+  // 		<< fycmin[i] << ", " << fycmax[i] << ")" << std::endl;
+  //   }
+  // }
   //Start with 1D clustering; if the constraint array for this module has EXACTLY one point and the store all clusters flag is
   // NOT set, do the clustering with constraints! Otherwise do it without constraints!
 
