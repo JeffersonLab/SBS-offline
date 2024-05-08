@@ -108,9 +108,6 @@ find_package(ROOT REQUIRED)
 include(${ROOT_USE_FILE})
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
-##---Setting up path finder automatically 
-list(APPEND CMAKE_PREFIX_PATH $ENV{PODD})
-
 ##----------------------------------------------------------------------------
 ## Setup the PODD Analyzer
 find_package(Podd 1.7 REQUIRED)
