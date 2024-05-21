@@ -23,6 +23,8 @@ public:
   virtual Int_t	Reconstruct();
   virtual Int_t	Track();
   virtual Int_t CalcPID();
+
+  void SetPolarimeterMode( Bool_t ispol );
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
@@ -37,15 +39,30 @@ protected:
   void InitGEMAxes(double, double, const TVector3 & );
   void InitGEMAxes(double, double); //version with only angle arguments:
 
-  Double_t fFrontConstraintWidthX;
-  Double_t fFrontConstraintWidthY;
-  Double_t fBackConstraintWidthX;
-  Double_t fBackConstraintWidthY;
-  Double_t fFrontConstraintX0;
-  Double_t fFrontConstraintY0;
-  Double_t fBackConstraintX0; 
-  Double_t fBackConstraintY0;
+  void CheckConstraintOffsetsAndWidths();
+  
+  //We have to make these vectors to accommodate the polarimeter mode; separate offsets and widths for front and back trackers:
+  
+  std::vector<Double_t> fFrontConstraintWidthX;
+  std::vector<Double_t> fFrontConstraintWidthY;
+  std::vector<Double_t> fBackConstraintWidthX;
+  std::vector<Double_t> fBackConstraintWidthY;
+  std::vector<Double_t> fFrontConstraintX0;
+  std::vector<Double_t> fFrontConstraintY0;
+  std::vector<Double_t> fBackConstraintX0; 
+  std::vector<Double_t> fBackConstraintY0;
 
+  //Idea is that slope of the track along x and y is roughly linearly correlated with the position of the back constraint:
+
+  bool fUseDynamicConstraint; //The "dynamic constraint" sets the front constraint point automatically based on the back constraint point; it is useful for applying effective loose constraints based on spectrometer optics (correlation between x and theta, y and phi, etc)
+  double fDynamicConstraintSlopeX;
+  double fDynamicConstraintOffsetX;
+  //double fDynamicWidthX; 
+  double fDynamicConstraintSlopeY;
+  double fDynamicConstraintOffsetY; 
+  //double fDynamicWidthY;
+  
+  
   //for output only... Vectors instead?
   std::vector<double> fFrontConstraintX;
   std::vector<double> fFrontConstraintY;
@@ -97,6 +114,11 @@ protected:
   std::vector<int> f_ol;
   std::vector<int> f_om;
 
+  Bool_t fPolarimeterMode; //Use polarimeter mode
+  Bool_t fPolarimeterMode_DBoverride; //flag to override DB value
+  
+  Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
+  
   //Also include (optional) forward optics model to aid in false track rejection. 
   int fForwardOpticsOrder;
   std::vector<double> fb_xfp;

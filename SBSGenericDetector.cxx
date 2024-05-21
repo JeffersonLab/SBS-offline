@@ -18,6 +18,8 @@
 #include "SBSManager.h"
 #include "THaCrateMap.h"
 #include "Helper.h"
+#include "TSystem.h"
+#include "Database.h"
 
 #include <cstring>
 #include <iostream>
@@ -301,7 +303,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fRefChanMap.resize(nmodules);
     fRefChanLo.resize(nmodules);
     fRefChanHi.resize(nmodules);
-    Decoder::THaCrateMap *cratemap = SBSManager::GetInstance()->GetCrateMap();
+    WithDefaultTZ(Long64_t tloc = date.Convert());
+    Decoder::THaCrateMap *cratemap = SBSManager::GetInstance()->GetCrateMap(tloc);
     Int_t kr = 0,ka = 0, kt = 0, km = 0, k = 0;
     for( Int_t i = 0; i < nmodules && !err; i++) {
       Int_t krmod = 0;
@@ -1190,7 +1193,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 	       }else if(rawdata <= reftime){ rawdata+=fF1_RollOver;} 
 	     } 
 	   }
-	  UInt_t TrigTime = 0;
+	   UInt_t TrigTime = 0;
 	   Int_t LeadingEdge=0;
 	  if (d->GetModel() == 6401) {
 	    TrigTime = evdata.GetRawData(d->crate, d->slot, chan, ihit); // for F1 "raw" is trigger time

@@ -24,6 +24,10 @@ public:
     Double_t GetTmean() const {return fTmean;}
     Double_t GetToTmean() const {return fToTmean;}
     Double_t GetTdiff() const {return fMaxElement->GetTimeDiff(); }
+  Double_t GetTleft() const { return fMaxElement->GetLeftHit().le.val; }
+  Double_t GetTright() const { return fMaxElement->GetRightHit().le.val; }
+  Double_t GetTOTleft() const { return fMaxElement->GetLeftHit().ToT.val; }
+  Double_t GetTOTright() const { return fMaxElement->GetRightHit().ToT.val; }
     
     Int_t GetNMaxElements() const {return fNMaxElements;}
     Int_t GetMaxBarID() const { return fMaxElement->GetBarNum(); }
