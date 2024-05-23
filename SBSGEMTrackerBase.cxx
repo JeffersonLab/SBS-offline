@@ -24,6 +24,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fNlayers = 0;
   fTrackingAlgorithmFlag = 2; //Apparently this is irrelevant
 
+  fPurgeHitsFlag = 1;
+
   fMinHitsOnTrack = 3;
   //fMinHighQualityHitsOnTrack = 0;
   fMinHighQualityHitsOnTrack.clear();
@@ -3218,11 +3220,17 @@ void SBSGEMTrackerBase::PurgeHits( int itrack ){
       int clustj = clustindexhit2D[layer][jhit];
 
       if( modj == module ){
-	int uj = fModules[modj]->fHits[clustj].iuclust;
-	int vj = fModules[modj]->fHits[clustj].ivclust;
+	if( fPurgeHitsFlag == 0 ){
+	  if( clustj == cluster ){ //purge only the 2D hit in question
+	    hitused2D[layer][jhit] = true;
+	  }
+	} else { //purge all 2D hits containing either of the 1D clusters used to form this 2D hit candidate
+	  int uj = fModules[modj]->fHits[clustj].iuclust;
+	  int vj = fModules[modj]->fHits[clustj].ivclust;
 
-	if( uj == uidx || vj == vidx ){
-	  hitused2D[layer][jhit] = true;
+	  if( uj == uidx || vj == vidx ){
+	    hitused2D[layer][jhit] = true;
+	  }
 	}
       }
     }
