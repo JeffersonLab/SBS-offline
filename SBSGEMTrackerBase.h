@@ -625,6 +625,8 @@ protected:
   Double_t fSigmaTrackT0; // sigma of track mean time. Default = 5 ns
   Double_t fCutTrackT0; // (optional) Hard cutoff in track t0
 
+  Bool_t fPurgeHitsFlag; //0 = normal behavior, purge only 2D hit combinations used on tracks. 1 = purge all 2D hit candidates containing the 1D cluster on track: 
+
   //Double_t fRefTime_offset;
   
 };
