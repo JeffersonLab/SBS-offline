@@ -309,6 +309,13 @@ Int_t SBSSimFile::Close()
 //-----------------------------------------------------------------------------
 Int_t SBSSimFile::ReadEvent()
 {
+  Int_t ret;
+  if( !IsOpen() ) {
+    std::cout << " Warning: file not open when ReadEvent() called... unintended consequences?" << std::endl;
+    ret = Open();
+    if( ret ) return ret;
+  }
+  
   // Read next event from ROOT file
   if(fVerbose>1 || fEntry%(fNEntries/100)==0 )
     std::cout << " SBSSimFile::ReadEvent() -> fEntry = " 
@@ -316,14 +323,7 @@ Int_t SBSSimFile::ReadEvent()
 	      << std::endl;
   if( fEntry >= fNEntries )
     return EOF;
-
-  Int_t ret;
-  if( !IsOpen() ) {
-    std::cout << " Warning: file not open when ReadEvent() called... unintended consequences?" << std::endl;
-    ret = Open();
-    if( ret ) return ret;
-  }
-
+  
   // Clear the event to get rid of anything still hanging around
   if( fEvent ) fEvent->Clear();
 
