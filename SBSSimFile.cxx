@@ -317,7 +317,7 @@ Int_t SBSSimFile::ReadEvent()
   }
   
   // Read next event from ROOT file
-  if(fVerbose>1 || fEntry%(fNEntries/100)==0 )
+  if(fVerbose>1 || fEntry%1000==0 )
     std::cout << " SBSSimFile::ReadEvent() -> fEntry = " 
 	      << fEntry << " / " << fNEntries
 	      << std::endl;
