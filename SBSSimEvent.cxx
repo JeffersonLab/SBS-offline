@@ -33,7 +33,7 @@ SBSSimEvent::SBSSimEvent(TTree* tree, Exp_t experiment) {
     Tgenrp = new genrp_tree_digitized(tree);
     break;
   case kGEp://"gep":
-    //Tgep = new gep_tree_digitized(tree);
+    Tgep = new gep_tree_digitized(tree);
     break;
   case kSIDIS://"sidis":
     //Tsidis = new sidis_tree_digitized(tree);
@@ -111,11 +111,10 @@ Int_t SBSSimEvent::GetEntry( Long64_t entry )
   switch( fExperiment ){
   case kGEnRP://"genrp":
     //do nothing for now; eventually we will invoke the "GetEntry" methods of the various classes:
-    ret = Tgmn->GetEntry(entry);
     ret = Tgenrp->GetEntry(entry);
     break;
   case kGEp://"gep":
-    //ret = Tgep->GetEntry(entry);
+    ret = Tgep->GetEntry(entry);
     break;
   case kSIDIS://"sidis":
     //ret = Tsidis->GetEntry(entry);

@@ -1771,8 +1771,8 @@ void SBSSimDecoder::ChanToROC(const std::string& detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
-  if(h_chan>=fInvDetMap.at(detname).size())std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
-  assert(h_chan<fInvDetMap.at(detname).size());
+  if( (size_t)h_chan>=fInvDetMap.at(detname).size() )std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
+  assert( (size_t)h_chan<fInvDetMap.at(detname).size() );
   
   if(fDebug>3){
   
@@ -1793,8 +1793,8 @@ int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
   // std::cout << "(detname, mod, h_chan, chan, n )= (" << detname << ", " << mod << ", "
   // 	    << h_chan << ", " << chan << ", " << n << ")" << std::endl;
   
-  assert(mod<fInvGEMDetMap.at(detname).size());
-  assert(n<(fInvGEMDetMap.at(detname)[mod]).size());
+  assert( (size_t)mod<fInvGEMDetMap.at(detname).size() );
+  assert( (size_t)n<(fInvGEMDetMap.at(detname)[mod]).size() );
 
   // if( mod>fInvGEMDetMap.at(detname).size() ){
   //   std::err << "ERROR: map size =  " << " for detector " << detname 
