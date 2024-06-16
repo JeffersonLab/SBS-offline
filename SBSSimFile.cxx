@@ -175,8 +175,7 @@ Int_t SBSSimFile::Init()
 //-----------------------------------------------------------------------------
 Int_t SBSSimFile::ReadDatabase()
 {
-  
-  static const char* const here = "ReadDatabase";
+  //static const char* const here = "ReadDatabase";
   
   THaRunBase::ReadDatabase();
   
