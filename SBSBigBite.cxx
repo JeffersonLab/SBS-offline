@@ -68,7 +68,11 @@ THaSpectrometer( name, description )
   fGEMtheta = fOpticsAngle;
   fGEMphi   = 180.0*TMath::DegToRad();
   fGEMorigin = fOpticsOrigin;
-    
+
+  fGEMax = 0.0;
+  fGEMay = -fOpticsAngle;
+  fGEMaz = 0.0;
+  
   InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
     
   // Define our own PID parameters (undo what THaSpectrometer has set up)
@@ -209,7 +213,8 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   int downbend = fDownBendingMode ? 1 : 0;
     
   std::vector<Double_t> firstgem_offset;
-    
+  std::vector<Double_t> gem_angles;
+  
   std::vector<Double_t> optics_param;
   std::vector<Double_t> foptics_param;
   std::vector<Double_t> doptics_param; //down bending optics
@@ -232,6 +237,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
     { "gemphi", &gemphideg, kDouble, 0, 1, 1},
     { "gemorigin_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
+    { "gemangles_xyz", &gem_angles, kDoubleV, 0, 1, 1},
     { "opticstheta", &opticsthetadeg, kDouble, 0, 1, 1},
     { "optics_origin", &optics_origin, kDoubleV, 0, 1, 1},
     { "optics_order",    &fOpticsOrder, kUInt,  0, 1, 1},
@@ -299,13 +305,21 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
   // These will have been initialized to default values in degrees above, or if they were loaded from the database they will have been given in degrees:
   fGEMtheta = gemthetadeg * TMath::DegToRad();
   fGEMphi = gemphideg * TMath::DegToRad();
+  InitGEMAxes( fGEMtheta, fGEMphi );
+  
   if( firstgem_offset.size() == 3 ){ //database overrides default values:
     fGEMorigin.SetXYZ( firstgem_offset[0],
 		       firstgem_offset[1],
 		       firstgem_offset[2] );
   }
     
-  InitGEMAxes( fGEMtheta, fGEMphi );
+  //If GEM x,y,z angles are given, override the version based on theta, phi:
+  if( gem_angles.size() == 3 ){
+    for( int i=0; i<3; i++ ){
+      gem_angles[i] *= TMath::DegToRad();
+    }
+    InitGEMAxes( gem_angles[0], gem_angles[1], gem_angles[2] );
+  }
     
   if(fECaloFudgeFactor!=1.0)cout << "Setting the calorimeter energy fudge factor to " << fECaloFudgeFactor << endl;
     
@@ -1858,6 +1872,33 @@ void SBSBigBite::InitGEMAxes( double theta, double phi ){
   fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
   fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
   fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
+}
+
+//Experimental:
+void SBSBigBite::InitGEMAxes( double ax, double ay, double az, const TVector3 &Origin ){
+  TRotation Rtot;
+  Rtot.RotateY(ay);
+  Rtot.RotateZ(az);
+  Rtot.RotateX(ax);
+
+  fGEMorigin = Origin;
+  
+  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
+  fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
+  fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
+}
+
+void SBSBigBite::InitGEMAxes( double ax, double ay, double az ){
+  TRotation Rtot;
+  Rtot.RotateY(ay);
+  Rtot.RotateZ(az);
+  Rtot.RotateX(ax);
+
+  //  fGEMorigin = Origin;
+  
+  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
+  fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
+  fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
 }
 
 
