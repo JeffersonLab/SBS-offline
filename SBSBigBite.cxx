@@ -315,10 +315,14 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
     
   //If GEM x,y,z angles are given, override the version based on theta, phi:
   if( gem_angles.size() == 3 ){
-    for( int i=0; i<3; i++ ){
-      gem_angles[i] *= TMath::DegToRad();
-    }
-    InitGEMAxes( gem_angles[0], gem_angles[1], gem_angles[2] );
+    //for( int i=0; i<3; i++ ){
+    //  gem_angles[i] *= TMath::DegToRad();
+    //}
+    fGEMax = gem_angles[0] * TMath::DegToRad();
+    fGEMay = gem_angles[1] * TMath::DegToRad();
+    fGEMaz = gem_angles[2] * TMath::DegToRad();
+    
+    InitGEMAxes( fGEMax, fGEMay, fGEMaz );
   }
     
   if(fECaloFudgeFactor!=1.0)cout << "Setting the calorimeter energy fudge factor to " << fECaloFudgeFactor << endl;
