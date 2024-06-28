@@ -327,11 +327,8 @@ Int_t SBSSimFile::ReadEvent()
   if( fEvent ) fEvent->Clear();
 
   // Read input file
-  //ret = fTree->GetEntry(fEntry++);
-
-  //std::cout << "trying to load event " << fEntry << std::endl;
-  
   ret = fEvent->GetEntry(fEntry++);
+  
   if( ret == 0 )
     return EOF;
   if( ret < 0 )
