@@ -38,7 +38,9 @@ protected:
   void InitOpticsAxes(double); //version with only bend angle argument
   void InitGEMAxes(double, double, const TVector3 & );
   void InitGEMAxes(double, double); //version with only angle arguments:
-
+  void InitGEMAxes(double, double, double, const TVector3 &); //version that takes three angles, consistent with more correct alignment procedure
+  void InitGEMAxes(double, double, double);
+  
   void CheckConstraintOffsetsAndWidths();
   
   //We have to make these vectors to accommodate the polarimeter mode; separate offsets and widths for front and back trackers:
@@ -82,6 +84,11 @@ protected:
   Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
   Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
 
+  //X,Y,Z rotation angles (yaw,pitch,roll, resp.):
+  Double_t fGEMax;
+  Double_t fGEMay;
+  Double_t fGEMaz;
+  
   Double_t fMagDist; //mandatory parameter from run database
   Double_t fHCALdist; //add to run database (this only changes when kinematics change). But should it be optional or mandatory? 
   
