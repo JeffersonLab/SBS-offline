@@ -59,7 +59,9 @@ protected:
   void InitOpticsAxes(double); //version with only bend angle argument
   void InitGEMAxes(double, double, const TVector3 & );
   void InitGEMAxes(double, double); //version with only angle arguments:
-
+  //Version using more general x,y,z axis rotations:
+  void InitGEMAxes(double, double, double, const TVector3 & );
+  void InitGEMAxes(double, double, double);
   
   // My current understanding is that fPointingOffset designates the point 
   // towards the beamline that the "mouth" of the spectrometer is pointing to...
@@ -76,6 +78,10 @@ protected:
   
   Double_t fGEMtheta;   //polar angle of GEM z axis wrt TARGET transport coordinates
   Double_t fGEMphi;     //azimuthal angle of GEM z axis wrt TARGET transport coordinates
+  Double_t fGEMax; //GEM x axis rotation
+  Double_t fGEMay; //GEM y axis rotation
+  Double_t fGEMaz; //GEM z axis rotation
+  
   TVector3 fGEMorigin;  //Absolute position of GEM origin relative to target center, in TARGET transport coordinates
 
   TVector3 fGEMxaxis_global;

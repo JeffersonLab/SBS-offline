@@ -75,7 +75,9 @@ THaSpectrometer( name, description )
   fBdL = 1.58; // T*m (optional: calculate avg. proton deflection for pcentral)
   
   fOpticsAngle = 0.0;
-  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.025 ); //In g4sbs, the front tracker first plane starts (by default) at 2.025 m downstream of the SBS magnet front face by default (actually I'm not sure that's still true).
+  //Default to GEN-RP settings; in GEN-RP the first GEM plane is 4.105 m from the target for SBS magnet distance of 2.25 m
+  //  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.025 ); //In g4sbs, the front tracker first plane starts (by default) at 2.025 m downstream of the SBS magnet front face by default (actually I'm not sure that's still true).
+  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 1.855 );
   InitOpticsAxes( fOpticsAngle );
 
   fGEMtheta = fOpticsAngle;
@@ -84,6 +86,10 @@ THaSpectrometer( name, description )
 
   InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
 
+  fGEMax = 0.0;
+  fGEMay = 0.0;
+  fGEMaz = 0.0;
+  
   fPrecon_flag = 0;
 
   fFrontConstraintX.clear();
@@ -175,6 +181,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
   }
     
   std::vector<Double_t> firstgem_offset;
+  std::vector<Double_t> gem_angles;
   std::vector<Double_t> optics_origin;
   std::vector<Double_t> optics_param;
   
@@ -195,6 +202,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "backconstraint_x0", &fBackConstraintX0, kDoubleV, 0, 1, 0},
     { "backconstraint_y0", &fBackConstraintY0, kDoubleV, 0, 1, 0},
     { "gemorigin_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
+    { "gemangles_xyz",  &gem_angles, kDoubleV, 0, 1, 1},
     { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
     { "gemphi", &gemphideg, kDouble, 0, 1, 1},
     { "opticstheta", &opticsthetadeg, kDouble, 0, 1, 1},
@@ -253,6 +261,18 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
 
   InitGEMAxes( fGEMtheta, fGEMphi );
 
+  //If GEM x,y,z angles are given, override the version based on theta, phi:
+  if( gem_angles.size() == 3 ){
+    //for( int i=0; i<3; i++ ){
+    //  gem_angles[i] *= TMath::DegToRad();
+    //}
+    fGEMax = gem_angles[0] * TMath::DegToRad();
+    fGEMay = gem_angles[1] * TMath::DegToRad();
+    fGEMaz = gem_angles[2] * TMath::DegToRad();
+    
+    InitGEMAxes( fGEMax, fGEMay, fGEMaz );
+  }
+  
   //Optics model initialization (copy of BigBite for now):
   if(fOpticsOrder>=0){
     unsigned int nterms = 0;
@@ -1127,6 +1147,33 @@ void SBSEArm::CheckConstraintOffsetsAndWidths(){
 void SBSEArm::SetPolarimeterMode( Bool_t ispol ){
   fPolarimeterMode = ispol;
   fPolarimeterMode_DBoverride = true;
+}
+
+void SBSEArm::InitGEMAxes( double ax, double ay, double az, const TVector3 &Origin ){
+  fGEMorigin = Origin;
+
+  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
+  TRotation Rtot;
+  Rtot.RotateX(ax);
+  Rtot.RotateY(ay);
+  Rtot.RotateZ(az);
+
+  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
+  fGEMxaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
+  fGEMxaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
+}
+
+void SBSEArm::InitGEMAxes( double ax, double ay, double az ){
+
+  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
+  TRotation Rtot;
+  Rtot.RotateX(ax);
+  Rtot.RotateY(ay);
+  Rtot.RotateZ(az);
+
+  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
+  fGEMxaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
+  fGEMxaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
 }
 
 //_____________________________________________________________________________
