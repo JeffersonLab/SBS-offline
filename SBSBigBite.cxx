@@ -73,8 +73,8 @@ THaSpectrometer( name, description )
   fGEMay = -fOpticsAngle;
   fGEMaz = 0.0;
   
+  // InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
   InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
-    
   // Define our own PID parameters (undo what THaSpectrometer has set up)
   SBSBigBite::DefinePidParticles();
     

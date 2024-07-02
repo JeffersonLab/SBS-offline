@@ -94,6 +94,9 @@ protected:
   
   Double_t fBdL; //define BdL (assumed units = T*m)
 
+  TRotation fGEM_Rtotal; //Total rotation;
+  TRotation fGEM_Rinverse; //Inverse rotation
+  
   TVector3 fGEMxaxis_global;
   TVector3 fGEMyaxis_global;
   TVector3 fGEMzaxis_global;
