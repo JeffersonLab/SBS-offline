@@ -315,116 +315,161 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   // add a check here!!!
   
   //simc variables
-  fSigma_simc = simEvent->Tgmn->simc_sigma;
-  fWeight_simc = simEvent->Tgmn->simc_Weight;
-  fQ2_simc = simEvent->Tgmn->simc_Q2;
-  fXbj_simc = simEvent->Tgmn->simc_xbj;
-  fNu_simc = simEvent->Tgmn->simc_nu;
-  fW_simc = simEvent->Tgmn->simc_W;
-  fEpsilon_simc = simEvent->Tgmn->simc_epsilon;
-  fEbeam_simc = simEvent->Tgmn->simc_Ebeam;
-  fEp_simc = simEvent->Tgmn->simc_p_e;
-  fEtheta_simc = simEvent->Tgmn->simc_theta_e;
-  fEphi_simc = simEvent->Tgmn->simc_phi_e;
-  fEPx_simc = simEvent->Tgmn->simc_px_e;
-  fEPy_simc = simEvent->Tgmn->simc_py_e;
-  fEPz_simc = simEvent->Tgmn->simc_pz_e;
-  fFnucl_simc = simEvent->Tgmn->simc_fnucl;
-  fNp_simc = simEvent->Tgmn->simc_p_n;
-  fNtheta_simc = simEvent->Tgmn->simc_theta_n;
-  fNphi_simc = simEvent->Tgmn->simc_phi_n;
-  fNPx_simc = simEvent->Tgmn->simc_px_n;
-  fNPy_simc = simEvent->Tgmn->simc_py_n;
-  fNPz_simc = simEvent->Tgmn->simc_pz_n;
-  fVx_simc = simEvent->Tgmn->simc_vx;
-  fVy_simc = simEvent->Tgmn->simc_vy;
-  fVz_simc = simEvent->Tgmn->simc_vz;
-  fVeE_simc = simEvent->Tgmn->simc_veE;
-  fVetheta_simc = simEvent->Tgmn->simc_vetheta;
-  //g4sbs variables
-  fSigma = simEvent->Tgmn->ev_sigma;
-  fOmega = simEvent->Tgmn->ev_solang;
-  fEPx = simEvent->Tgmn->ev_epx;
-  fEPy = simEvent->Tgmn->ev_epy;
-  fEPz = simEvent->Tgmn->ev_epz;
-  fNPx = simEvent->Tgmn->ev_npx;
-  fNPy = simEvent->Tgmn->ev_npy;
-  fNPz = simEvent->Tgmn->ev_npz;
-  fVx = simEvent->Tgmn->ev_vx;
-  fVy = simEvent->Tgmn->ev_vy;
-  fVz = simEvent->Tgmn->ev_vz;
-  fEp = simEvent->Tgmn->ev_ep;
-  fNp = simEvent->Tgmn->ev_np;
-  fNucl = simEvent->Tgmn->ev_nucl;
-  fFnucl = simEvent->Tgmn->ev_fnucl;
-  fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
-  fBBtrack_Nhits = *(simEvent->Tgmn->Earm_BBGEM_Track_NumHits);
-  fBBtrack_TID = *(simEvent->Tgmn->Earm_BBGEM_Track_TID);
-  fBBtrack_PID = *(simEvent->Tgmn->Earm_BBGEM_Track_PID);
-  fBBtrack_MID = *(simEvent->Tgmn->Earm_BBGEM_Track_MID);
-  fBBtrack_P = *(simEvent->Tgmn->Earm_BBGEM_Track_P);
-  fBBtrack_X = *(simEvent->Tgmn->Earm_BBGEM_Track_X);
-  fBBtrack_Y = *(simEvent->Tgmn->Earm_BBGEM_Track_Y);
-  fBBtrack_dX = *(simEvent->Tgmn->Earm_BBGEM_Track_Xp);
-  fBBtrack_dY = *(simEvent->Tgmn->Earm_BBGEM_Track_Yp);
-  fNBBGEMhits = simEvent->Tgmn->Earm_BBGEM_hit_nhits;
-  fBBGEMhit_plane = *(simEvent->Tgmn->Earm_BBGEM_hit_plane);
-  fBBGEMhit_TID = *(simEvent->Tgmn->Earm_BBGEM_hit_trid);
-  fBBGEMhit_PID = *(simEvent->Tgmn->Earm_BBGEM_hit_pid);
-  fBBGEMhit_MID = *(simEvent->Tgmn->Earm_BBGEM_hit_mid);
-  fBBGEMhit_edep = *(simEvent->Tgmn->Earm_BBGEM_hit_edep);
-  fBBGEMhit_x = *(simEvent->Tgmn->Earm_BBGEM_hit_tx);
-  fBBGEMhit_y = *(simEvent->Tgmn->Earm_BBGEM_hit_ty);
-  fBBPS_esum = simEvent->Tgmn->Earm_BBPSTF1_det_esum;
-  fBBSH_esum = simEvent->Tgmn->Earm_BBSHTF1_det_esum;
-  fBBGEMhit_ptridx = *(simEvent->Tgmn->Earm_BBGEM_hit_ptridx);
-  fBBGEMhit_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_hit_sdtridx);
-  fBBGEMtrack_ptridx = *(simEvent->Tgmn->Earm_BBGEM_Track_ptridx);
-  fBBGEMtrack_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_Track_sdtridx);
-  fBBHODOhit_ptridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_ptridx);
-  fBBHODOhit_sdtridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_sdtridx);
-  fBBPSTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_ptridx);
-  fBBPSTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_sdtridx);
-  fBBSHTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_ptridx);
-  fBBSHTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_sdtridx);
-  fHCALhit_ptridx = *(simEvent->Tgmn->Harm_HCalScint_hit_ptridx);
-  fHCALhit_sdtridx = *(simEvent->Tgmn->Harm_HCalScint_hit_sdtridx);
-  fPTrack_ntracks = simEvent->Tgmn->PTrack_ntracks;
-  fPTrack_TID = *(simEvent->Tgmn->PTrack_TID);
-  fPTrack_PID = *(simEvent->Tgmn->PTrack_PID);
-  fPTrack_posx = *(simEvent->Tgmn->PTrack_posx);
-  fPTrack_posy = *(simEvent->Tgmn->PTrack_posy);
-  fPTrack_posz = *(simEvent->Tgmn->PTrack_posz);
-  fPTrack_momx = *(simEvent->Tgmn->PTrack_momx);
-  fPTrack_momy = *(simEvent->Tgmn->PTrack_momy);
-  fPTrack_momz = *(simEvent->Tgmn->PTrack_momz);
-  fPTrack_polx = *(simEvent->Tgmn->PTrack_polx);
-  fPTrack_poly = *(simEvent->Tgmn->PTrack_poly);
-  fPTrack_polz = *(simEvent->Tgmn->PTrack_polz);
-  fPTrack_Etot = *(simEvent->Tgmn->PTrack_Etot);
-  fPTrack_T = *(simEvent->Tgmn->PTrack_T);
-  fSDTrack_ntracks = simEvent->Tgmn->SDTrack_ntracks;
-  fSDTrack_TID = *(simEvent->Tgmn->SDTrack_TID);
-  fSDTrack_MID = *(simEvent->Tgmn->SDTrack_MID);
-  fSDTrack_PID = *(simEvent->Tgmn->SDTrack_PID);
-  fSDTrack_posx = *(simEvent->Tgmn->SDTrack_posx);
-  fSDTrack_posy = *(simEvent->Tgmn->SDTrack_posy);
-  fSDTrack_posz = *(simEvent->Tgmn->SDTrack_posz);
-  fSDTrack_momx = *(simEvent->Tgmn->SDTrack_momx);
-  fSDTrack_momy = *(simEvent->Tgmn->SDTrack_momy);
-  fSDTrack_momz = *(simEvent->Tgmn->SDTrack_momz);
-  fSDTrack_polx = *(simEvent->Tgmn->SDTrack_polx);
-  fSDTrack_poly = *(simEvent->Tgmn->SDTrack_poly);
-  fSDTrack_polz = *(simEvent->Tgmn->SDTrack_polz);
-  fSDTrack_Etot = *(simEvent->Tgmn->SDTrack_Etot);
-  fSDTrack_T = *(simEvent->Tgmn->SDTrack_T);
-  fSDTrack_vx = *(simEvent->Tgmn->SDTrack_vx);
-  fSDTrack_vy = *(simEvent->Tgmn->SDTrack_vy);
-  fSDTrack_vz = *(simEvent->Tgmn->SDTrack_vz);
-  fSDTrack_vnx = *(simEvent->Tgmn->SDTrack_vnx);
-  fSDTrack_vny = *(simEvent->Tgmn->SDTrack_vny);
-  fSDTrack_vnz = *(simEvent->Tgmn->SDTrack_vnz);
-  fSDTrack_vEkin = *(simEvent->Tgmn->SDTrack_vEkin);
+  if(simEvent->GetExperiment()==kGEp){
+    // fSigma_simc = simEvent->Tgep->simc_sigma;
+    // fWeight_simc = simEvent->Tgep->simc_Weight;
+    // fQ2_simc = simEvent->Tgep->simc_Q2;
+    // fXbj_simc = simEvent->Tgep->simc_xbj;
+    // fNu_simc = simEvent->Tgep->simc_nu;
+    // fW_simc = simEvent->Tgep->simc_W;
+    // fEpsilon_simc = simEvent->Tgep->simc_epsilon;
+    // fEbeam_simc = simEvent->Tgep->simc_Ebeam;
+    // fEp_simc = simEvent->Tgep->simc_p_e;
+    // fEtheta_simc = simEvent->Tgep->simc_theta_e;
+    // fEphi_simc = simEvent->Tgep->simc_phi_e;
+    // fEPx_simc = simEvent->Tgep->simc_px_e;
+    // fEPy_simc = simEvent->Tgep->simc_py_e;
+    // fEPz_simc = simEvent->Tgep->simc_pz_e;
+    // fFnucl_simc = simEvent->Tgep->simc_fnucl;
+    // fNp_simc = simEvent->Tgep->simc_p_n;
+    // fNtheta_simc = simEvent->Tgep->simc_theta_n;
+    // fNphi_simc = simEvent->Tgep->simc_phi_n;
+    // fNPx_simc = simEvent->Tgep->simc_px_n;
+    // fNPy_simc = simEvent->Tgep->simc_py_n;
+    // fNPz_simc = simEvent->Tgep->simc_pz_n;
+    // fVx_simc = simEvent->Tgep->simc_vx;
+    // fVy_simc = simEvent->Tgep->simc_vy;
+    // fVz_simc = simEvent->Tgep->simc_vz;
+    // fVeE_simc = simEvent->Tgep->simc_veE;
+    // fVetheta_simc = simEvent->Tgep->simc_vetheta;
+    //g4sbs variables
+    fSigma = simEvent->Tgep->ev_sigma;
+    fOmega = simEvent->Tgep->ev_solang;
+    fEPx = simEvent->Tgep->ev_epx;
+    fEPy = simEvent->Tgep->ev_epy;
+    fEPz = simEvent->Tgep->ev_epz;
+    fNPx = simEvent->Tgep->ev_npx;
+    fNPy = simEvent->Tgep->ev_npy;
+    fNPz = simEvent->Tgep->ev_npz;
+    fVx = simEvent->Tgep->ev_vx;
+    fVy = simEvent->Tgep->ev_vy;
+    fVz = simEvent->Tgep->ev_vz;
+    fEp = simEvent->Tgep->ev_ep;
+    fNp = simEvent->Tgep->ev_np;
+    fNucl = simEvent->Tgep->ev_nucl;
+    fFnucl = simEvent->Tgep->ev_fnucl;
+  }else{
+    fSigma_simc = simEvent->Tgmn->simc_sigma;
+    fWeight_simc = simEvent->Tgmn->simc_Weight;
+    fQ2_simc = simEvent->Tgmn->simc_Q2;
+    fXbj_simc = simEvent->Tgmn->simc_xbj;
+    fNu_simc = simEvent->Tgmn->simc_nu;
+    fW_simc = simEvent->Tgmn->simc_W;
+    fEpsilon_simc = simEvent->Tgmn->simc_epsilon;
+    fEbeam_simc = simEvent->Tgmn->simc_Ebeam;
+    fEp_simc = simEvent->Tgmn->simc_p_e;
+    fEtheta_simc = simEvent->Tgmn->simc_theta_e;
+    fEphi_simc = simEvent->Tgmn->simc_phi_e;
+    fEPx_simc = simEvent->Tgmn->simc_px_e;
+    fEPy_simc = simEvent->Tgmn->simc_py_e;
+    fEPz_simc = simEvent->Tgmn->simc_pz_e;
+    fFnucl_simc = simEvent->Tgmn->simc_fnucl;
+    fNp_simc = simEvent->Tgmn->simc_p_n;
+    fNtheta_simc = simEvent->Tgmn->simc_theta_n;
+    fNphi_simc = simEvent->Tgmn->simc_phi_n;
+    fNPx_simc = simEvent->Tgmn->simc_px_n;
+    fNPy_simc = simEvent->Tgmn->simc_py_n;
+    fNPz_simc = simEvent->Tgmn->simc_pz_n;
+    fVx_simc = simEvent->Tgmn->simc_vx;
+    fVy_simc = simEvent->Tgmn->simc_vy;
+    fVz_simc = simEvent->Tgmn->simc_vz;
+    fVeE_simc = simEvent->Tgmn->simc_veE;
+    fVetheta_simc = simEvent->Tgmn->simc_vetheta;
+    //g4sbs variables
+    fSigma = simEvent->Tgmn->ev_sigma;
+    fOmega = simEvent->Tgmn->ev_solang;
+    fEPx = simEvent->Tgmn->ev_epx;
+    fEPy = simEvent->Tgmn->ev_epy;
+    fEPz = simEvent->Tgmn->ev_epz;
+    fNPx = simEvent->Tgmn->ev_npx;
+    fNPy = simEvent->Tgmn->ev_npy;
+    fNPz = simEvent->Tgmn->ev_npz;
+    fVx = simEvent->Tgmn->ev_vx;
+    fVy = simEvent->Tgmn->ev_vy;
+    fVz = simEvent->Tgmn->ev_vz;
+    fEp = simEvent->Tgmn->ev_ep;
+    fNp = simEvent->Tgmn->ev_np;
+    fNucl = simEvent->Tgmn->ev_nucl;
+    fFnucl = simEvent->Tgmn->ev_fnucl;
+    fNBBtracks = simEvent->Tgmn->Earm_BBGEM_Track_ntracks;
+    fBBtrack_Nhits = *(simEvent->Tgmn->Earm_BBGEM_Track_NumHits);
+    fBBtrack_TID = *(simEvent->Tgmn->Earm_BBGEM_Track_TID);
+    fBBtrack_PID = *(simEvent->Tgmn->Earm_BBGEM_Track_PID);
+    fBBtrack_MID = *(simEvent->Tgmn->Earm_BBGEM_Track_MID);
+    fBBtrack_P = *(simEvent->Tgmn->Earm_BBGEM_Track_P);
+    fBBtrack_X = *(simEvent->Tgmn->Earm_BBGEM_Track_X);
+    fBBtrack_Y = *(simEvent->Tgmn->Earm_BBGEM_Track_Y);
+    fBBtrack_dX = *(simEvent->Tgmn->Earm_BBGEM_Track_Xp);
+    fBBtrack_dY = *(simEvent->Tgmn->Earm_BBGEM_Track_Yp);
+    fNBBGEMhits = simEvent->Tgmn->Earm_BBGEM_hit_nhits;
+    fBBGEMhit_plane = *(simEvent->Tgmn->Earm_BBGEM_hit_plane);
+    fBBGEMhit_TID = *(simEvent->Tgmn->Earm_BBGEM_hit_trid);
+    fBBGEMhit_PID = *(simEvent->Tgmn->Earm_BBGEM_hit_pid);
+    fBBGEMhit_MID = *(simEvent->Tgmn->Earm_BBGEM_hit_mid);
+    fBBGEMhit_edep = *(simEvent->Tgmn->Earm_BBGEM_hit_edep);
+    fBBGEMhit_x = *(simEvent->Tgmn->Earm_BBGEM_hit_tx);
+    fBBGEMhit_y = *(simEvent->Tgmn->Earm_BBGEM_hit_ty);
+    fBBPS_esum = simEvent->Tgmn->Earm_BBPSTF1_det_esum;
+    fBBSH_esum = simEvent->Tgmn->Earm_BBSHTF1_det_esum;
+    fBBGEMhit_ptridx = *(simEvent->Tgmn->Earm_BBGEM_hit_ptridx);
+    fBBGEMhit_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_hit_sdtridx);
+    fBBGEMtrack_ptridx = *(simEvent->Tgmn->Earm_BBGEM_Track_ptridx);
+    fBBGEMtrack_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_Track_sdtridx);
+    fBBHODOhit_ptridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_ptridx);
+    fBBHODOhit_sdtridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_sdtridx);
+    fBBPSTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_ptridx);
+    fBBPSTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_sdtridx);
+    fBBSHTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_ptridx);
+    fBBSHTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_sdtridx);
+    fHCALhit_ptridx = *(simEvent->Tgmn->Harm_HCalScint_hit_ptridx);
+    fHCALhit_sdtridx = *(simEvent->Tgmn->Harm_HCalScint_hit_sdtridx);
+    fPTrack_ntracks = simEvent->Tgmn->PTrack_ntracks;
+    fPTrack_TID = *(simEvent->Tgmn->PTrack_TID);
+    fPTrack_PID = *(simEvent->Tgmn->PTrack_PID);
+    fPTrack_posx = *(simEvent->Tgmn->PTrack_posx);
+    fPTrack_posy = *(simEvent->Tgmn->PTrack_posy);
+    fPTrack_posz = *(simEvent->Tgmn->PTrack_posz);
+    fPTrack_momx = *(simEvent->Tgmn->PTrack_momx);
+    fPTrack_momy = *(simEvent->Tgmn->PTrack_momy);
+    fPTrack_momz = *(simEvent->Tgmn->PTrack_momz);
+    fPTrack_polx = *(simEvent->Tgmn->PTrack_polx);
+    fPTrack_poly = *(simEvent->Tgmn->PTrack_poly);
+    fPTrack_polz = *(simEvent->Tgmn->PTrack_polz);
+    fPTrack_Etot = *(simEvent->Tgmn->PTrack_Etot);
+    fPTrack_T = *(simEvent->Tgmn->PTrack_T);
+    fSDTrack_ntracks = simEvent->Tgmn->SDTrack_ntracks;
+    fSDTrack_TID = *(simEvent->Tgmn->SDTrack_TID);
+    fSDTrack_MID = *(simEvent->Tgmn->SDTrack_MID);
+    fSDTrack_PID = *(simEvent->Tgmn->SDTrack_PID);
+    fSDTrack_posx = *(simEvent->Tgmn->SDTrack_posx);
+    fSDTrack_posy = *(simEvent->Tgmn->SDTrack_posy);
+    fSDTrack_posz = *(simEvent->Tgmn->SDTrack_posz);
+    fSDTrack_momx = *(simEvent->Tgmn->SDTrack_momx);
+    fSDTrack_momy = *(simEvent->Tgmn->SDTrack_momy);
+    fSDTrack_momz = *(simEvent->Tgmn->SDTrack_momz);
+    fSDTrack_polx = *(simEvent->Tgmn->SDTrack_polx);
+    fSDTrack_poly = *(simEvent->Tgmn->SDTrack_poly);
+    fSDTrack_polz = *(simEvent->Tgmn->SDTrack_polz);
+    fSDTrack_Etot = *(simEvent->Tgmn->SDTrack_Etot);
+    fSDTrack_T = *(simEvent->Tgmn->SDTrack_T);
+    fSDTrack_vx = *(simEvent->Tgmn->SDTrack_vx);
+    fSDTrack_vy = *(simEvent->Tgmn->SDTrack_vy);
+    fSDTrack_vz = *(simEvent->Tgmn->SDTrack_vz);
+    fSDTrack_vnx = *(simEvent->Tgmn->SDTrack_vnx);
+    fSDTrack_vny = *(simEvent->Tgmn->SDTrack_vny);
+    fSDTrack_vnz = *(simEvent->Tgmn->SDTrack_vnz);
+    fSDTrack_vEkin = *(simEvent->Tgmn->SDTrack_vEkin);
+  }
   
   Int_t ret = HED_OK;
   if (first_decode || fNeedInit) {
@@ -884,25 +929,159 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
     //cout << " ouh " << detname.c_str() << " " << simev->Tgmn->Harm_HCalScint_hit_nhits << " " << simev->Tgmn->Harm_HCal_dighit_nchan << endl;
     samps.clear();
     times.clear();
-    
-    assert(simev->Tgmn->b_Harm_HCal_dighit_nchan);
-    for(int j = 0; j<simev->Tgmn->Harm_HCal_dighit_nchan; j++){
-      loadevt = false;
-      lchan = simev->Tgmn->Harm_HCal_dighit_chan->at(j);
-      if(simev->Tgmn->Harm_HCal_dighit_samp->at(j)>=0){
-	samps.push_back(simev->Tgmn->Harm_HCal_dighit_adc->at(j));
-      }else{
-	times.push_back(simev->Tgmn->Harm_HCal_dighit_tdc->at(j));
+
+    if(simev->GetExperiment()==kGEp){
+      assert(simev->Tgep->b_Harm_HCal_dighit_nchan);
+      for(int j = 0; j<simev->Tgep->Harm_HCal_dighit_nchan; j++){
+	loadevt = false;
+	lchan = simev->Tgep->Harm_HCal_dighit_chan->at(j);
+	if(simev->Tgep->Harm_HCal_dighit_samp->at(j)>=0){
+	  samps.push_back(simev->Tgep->Harm_HCal_dighit_adc->at(j));
+	}else{
+	  times.push_back(simev->Tgep->Harm_HCal_dighit_tdc->at(j));
+	}
+	
+	if(j==simev->Tgep->Harm_HCal_dighit_nchan-1){
+	  loadevt = true;
+	}else if(simev->Tgep->Harm_HCal_dighit_chan->at(j+1)!=lchan){
+	  loadevt = true;
+	}
+	
+	// In simulation row 0 col 0 block starts at top left corner weheras in real data row 0 col 0 starts at top
+	// right corner, while looking at HCAL from front. Lets try the following to eleminate the mismatch:
+	col = lchan%12;
+	row = (lchan-col)/12; // row in simulation is already same as real data
+	col = 12 - 1 - col; // this will fix the mismatch in column numbering
+	lchan = row*12 + col; 
+	// --
+      
+	if(loadevt){
+	  //ADC
+	  ChanToROC(detname, lchan, crate, slot, chan);
+	
+	  if( crate >= 0 || slot >=  0 ) {
+	    sldat = crateslot[idx(crate,slot)].get();
+	  }
+	  std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	  // cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	  //      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	  if(!samps.empty()){
+	    myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	    for(unsigned int samp : samps){
+	      myev->push_back(samp);
+	      //cout << " " << samps[k];
+	    }
+	  }
+	  //cout << endl;
+
+	  //TDC
+	  ChanToROC(detname, lchan+288, crate, slot, chan);
+	  if( crate >= 0 || slot >=  0 ) {
+	    sldat = crateslot[idx(crate,slot)].get();
+	  }
+	  myev = &(map[sldat]);
+	  if(!times.empty()){
+	    myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, times.size()));
+	    for(unsigned int time : times){
+	      myev->push_back(time);
+	    }
+	  }
+	
+	  samps.clear();
+	  times.clear();
+	}
       }
       
-      if(j==simev->Tgmn->Harm_HCal_dighit_nchan-1){
+    }else{
+      assert(simev->Tgmn->b_Harm_HCal_dighit_nchan);
+      for(int j = 0; j<simev->Tgmn->Harm_HCal_dighit_nchan; j++){
+	loadevt = false;
+	lchan = simev->Tgmn->Harm_HCal_dighit_chan->at(j);
+	if(simev->Tgmn->Harm_HCal_dighit_samp->at(j)>=0){
+	  samps.push_back(simev->Tgmn->Harm_HCal_dighit_adc->at(j));
+	}else{
+	  times.push_back(simev->Tgmn->Harm_HCal_dighit_tdc->at(j));
+	}
+	
+	if(j==simev->Tgmn->Harm_HCal_dighit_nchan-1){
+	  loadevt = true;
+	}else if(simev->Tgmn->Harm_HCal_dighit_chan->at(j+1)!=lchan){
+	  loadevt = true;
+	}
+	
+	// In simulation row 0 col 0 block starts at top left corner weheras in real data row 0 col 0 starts at top
+	// right corner, while looking at HCAL from front. Lets try the following to eleminate the mismatch:
+	col = lchan%12;
+	row = (lchan-col)/12; // row in simulation is already same as real data
+	col = 12 - 1 - col; // this will fix the mismatch in column numbering
+	lchan = row*12 + col; 
+	// --
+      
+	if(loadevt){
+	  //ADC
+	  ChanToROC(detname, lchan, crate, slot, chan);
+	
+	  if( crate >= 0 || slot >=  0 ) {
+	    sldat = crateslot[idx(crate,slot)].get();
+	  }
+	  std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	  // cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
+	  //      << ", slot " << slot << " chan " << chan << " size " << samps.size() << endl;
+	  if(!samps.empty()){
+	    myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, samps.size()));
+	    for(unsigned int samp : samps){
+	      myev->push_back(samp);
+	      //cout << " " << samps[k];
+	    }
+	  }
+	  //cout << endl;
+
+	  //TDC
+	  ChanToROC(detname, lchan+288, crate, slot, chan);
+	  if( crate >= 0 || slot >=  0 ) {
+	    sldat = crateslot[idx(crate,slot)].get();
+	  }
+	  myev = &(map[sldat]);
+	  if(!times.empty()){
+	    myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, times.size()));
+	    for(unsigned int time : times){
+	      myev->push_back(time);
+	    }
+	  }
+	
+	  samps.clear();
+	  times.clear();
+	}
+      }
+    }
+  }
+
+  //GEP electron arm systems:
+  if(strcmp(detname.c_str(), "earm.ecal")==0){
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgep->Earm_EcalScint_hit_nhits << " " << simev->Tgep->Earm_Ecal_dighit_nchan << endl;
+    samps.clear();
+    times.clear();
+    
+    assert(simev->Tgep->b_Earm_ECal_dighit_nchan);
+    for(int j = 0; j<simev->Tgep->Earm_ECal_dighit_nchan; j++){
+      loadevt = false;
+      lchan = simev->Tgep->Earm_ECal_dighit_chan->at(j);
+      if(simev->Tgep->Earm_ECal_dighit_samp->at(j)>=0){
+	samps.push_back(simev->Tgep->Earm_ECal_dighit_adc->at(j));
+      }else{
+	times.push_back(simev->Tgep->Earm_ECal_dighit_tdc->at(j));
+      }
+      
+      if(j==simev->Tgep->Earm_ECal_dighit_nchan-1){
 	loadevt = true;
-      }else if(simev->Tgmn->Harm_HCal_dighit_chan->at(j+1)!=lchan){
+      }else if(simev->Tgep->Earm_ECal_dighit_chan->at(j+1)!=lchan){
 	loadevt = true;
       }
 
       // In simulation row 0 col 0 block starts at top left corner weheras in real data row 0 col 0 starts at top
-      // right corner, while looking at HCAL from front. Lets try the following to eleminate the mismatch:
+      // right corner, while looking at ECAL from front. Lets try the following to eleminate the mismatch:
       col = lchan%12;
       row = (lchan-col)/12; // row in simulation is already same as real data
       col = 12 - 1 - col; // this will fix the mismatch in column numbering
@@ -946,53 +1125,183 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	times.clear();
       }
       
-      /*
+    }
+    
+  }
+
+  if(strcmp(detname.c_str(), "earm.cdet")==0){
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgep->Earm_BBHodoScint_hit_nhits << " " << simev->Tgep->Earm_CDET_dighit_nchan << endl;
+    // cout << simev->Tgep->Earm_CDET_dighit_chan->size() << " " 
+    // 	 << simev->Tgep->Earm_CDET_dighit_adc->size() << " " 
+    // 	 << simev->Tgep->Earm_CDET_dighit_tdc_l->size() << " " 
+    // 	 << simev->Tgep->Earm_CDET_dighit_tdc_t->size() << endl; 
+    /*
+    ChanToROC(detname, 180, crate, slot, chan);
+    cout << crate << " " << slot << " " << chan << endl;
+    if( crate >= 0 || slot >=  0 ) {
+      sldat = crateslot[idx(crate,slot)].get();
+    }
+    std::vector<UInt_t> *myev = &(map[sldat]);
+    myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, 2));
+    myev->push_back(0);
+    */
+    int ntdc = 0;
+    assert(simev->Tgep->b_Earm_CDET_dighit_nchan);
+    for(int j = 0; j<simev->Tgep->Earm_CDET_dighit_nchan; j++){
+      ntdc = 0;
+      lchan = simev->Tgep->Earm_CDET_dighit_chan->at(j);
+      //do we want that???
+      //col = lchan%2;
+      //row = (lchan-col)/2;
+      //lchan = col*24+row;
       ChanToROC(detname, lchan, crate, slot, chan);
-      //cout << lchan << " " << crate << " " << slot << " " << chan << endl;
-      
+      //if(crate!=9)cout << detname << " " << simev->Tgep->Earm_CDET_dighit_chan->at(j) << " " << lchan << " " << crate << " " << slot << endl;
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)].get();
       }
-      std::vector<UInt_t> *myev = &(map[sldat]);
+      if(simev->Tgep->Earm_CDET_dighit_tdc_l->at(j)>-1000000)ntdc++;
+      if(simev->Tgep->Earm_CDET_dighit_tdc_t->at(j)>-1000000)ntdc++;
       
-      //cout << SBSSimDataDecoder::EncodeHeader(5, chan, 20) << endl;
-      //cout << SBSSimDataDecoder::EncodeHeader(5, chan, 1) << endl;
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(5, chan, 20));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_0->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_1->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_2->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_3->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_4->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_5->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_6->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_7->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_8->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_9->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_10->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_11->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_12->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_13->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_14->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_15->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_16->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_17->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_18->at(j));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_adc_19->at(j));
-      ChanToROC(detname, lchan+288, crate, slot, chan);//+288 ??? that might be the trick
-
-      //cout << lchan+288  << " " << crate << " " << slot << " " << chan << endl;
+      if(ntdc){
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	myev->push_back(SBSSimDataDecoder::EncodeHeader(1, chan, ntdc));
+	
+	if(simev->Tgep->Earm_CDET_dighit_tdc_l->at(j)>-1000000)myev->push_back(simev->Tgep->Earm_CDET_dighit_tdc_l->at(j));
+	if(simev->Tgep->Earm_CDET_dighit_tdc_t->at(j)>-1000000){
+	  uint tdc =  simev->Tgep->Earm_CDET_dighit_tdc_t->at(j)|(1<<31);
+	  //cout << tdc << endl;
+	  myev->push_back( tdc );
+	}
+      /*
+      ChanToROC(detname, lchan, crate, slot, chan);//+91 ??? that might be the trick
       if( crate >= 0 || slot >=  0 ) {
 	sldat = crateslot[idx(crate,slot)].get();
       }
       myev = &(map[sldat]);
       
-      myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, 1));
-      myev->push_back(simev->Tgmn->Harm_HCal_dighit_tdc->at(j));
+      myev->push_back(SBSSimDataDecoder::EncodeHeader(8, chan, 1));
+      myev->push_back(simev->Tgep->Earm_CDET_dighit_adc->at(j));
       */
+	if(fDebug>2){
+	  std::cout << " j = " << j << " my ev = {";
+	  for(size_t k = 0; k<myev->size(); k++)std::cout << myev->at(k) << " ; ";
+	  std::cout << " } " << std::endl;
+	}
+      }
     }
-
   }
 
+  //GEP GEMs
+  if(strcmp(detname.c_str(), "sbs.gemFT")==0){
+    //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
+    samps.clear();  
+    strips.clear();  
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgep->Harm_FT_dighit_nstrips << endl;
+    assert(simev->Tgep->b_Harm_FT_dighit_nstrips);
+    for(int j = 0; j<simev->Tgep->Harm_FT_dighit_nstrips; j++){
+      loadevt = false;
+      mod = simev->Tgep->Harm_FT_dighit_module->at(j);
+      lchan = simev->Tgep->Harm_FT_dighit_strip->at(j);
+      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      
+      if(simev->Tgep->Harm_FT_dighit_samp->at(j)>=0){
+	strips.push_back(chan);
+	samps.push_back(simev->Tgep->Harm_FT_dighit_adc->at(j));
+      }
+      
+      if(fDebug>3)
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FT_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FT_dighit_adc->at(j) << endl;
+      //if(mod>=26 && simev->Tgep->Harm_FT_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
+      
+      if(j==simev->Tgep->Harm_FT_dighit_nstrips-1){
+	loadevt = true;
+      }else if(mod!=simev->Tgep->Harm_FT_dighit_module->at(j+1) ||
+	       //fabs(lchan-simev->Tgep->Harm_FT_dighit_strip->at(j+1))>=128
+	       floor(simev->Tgep->Harm_FT_dighit_strip->at(j+1)/128)!=floor(lchan/128)
+	       ){
+	loadevt = true;
+      }
+	
+      if(loadevt){
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	if(!samps.empty()){
+	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  //I think I'm onto something here, but I also need to transmit strip num 
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
+	  for(int k = 0; k<(int)samps.size(); k++){
+	    // cout << " " << samps[k];
+	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	  }
+	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
+	  //cout << endl;
+	}
+	//cout << endl;
+	
+	samps.clear();
+	strips.clear();
+      }
+    }
+  }
+  
+  if(strcmp(detname.c_str(), "sbs.gemFPP")==0){
+    //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
+    samps.clear();  
+    strips.clear();  
+    //cout << " ouh " << detname.c_str() << " " << simev->Tgep->Harm_FPP1_dighit_nstrips << endl;
+    assert(simev->Tgep->b_Harm_FPP1_dighit_nstrips);
+    for(int j = 0; j<simev->Tgep->Harm_FPP1_dighit_nstrips; j++){
+      loadevt = false;
+      mod = simev->Tgep->Harm_FPP1_dighit_module->at(j);
+      lchan = simev->Tgep->Harm_FPP1_dighit_strip->at(j);
+      apvnum = APVnum(detname, mod, lchan, crate, slot, chan);
+      
+      if(simev->Tgep->Harm_FPP1_dighit_samp->at(j)>=0){
+	strips.push_back(chan);
+	samps.push_back(simev->Tgep->Harm_FPP1_dighit_adc->at(j));
+      }
+      
+      if(fDebug>3)
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FPP1_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FPP1_dighit_adc->at(j) << endl;
+      //if(mod>=26 && simev->Tgep->Harm_FPP1_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
+      
+      if(j==simev->Tgep->Harm_FPP1_dighit_nstrips-1){
+	loadevt = true;
+      }else if(mod!=simev->Tgep->Harm_FPP1_dighit_module->at(j+1) ||
+	       //fabs(lchan-simev->Tgep->Harm_FPP1_dighit_strip->at(j+1))>=128
+	       floor(simev->Tgep->Harm_FPP1_dighit_strip->at(j+1)/128)!=floor(lchan/128)
+	       ){
+	loadevt = true;
+      }
+	
+      if(loadevt){
+	if( crate >= 0 || slot >=  0 ) {
+	  sldat = crateslot[idx(crate,slot)].get();
+	}
+	std::vector<UInt_t> *myev = &(map[sldat]);
+	
+	if(!samps.empty()){
+	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
+	  //I think I'm onto something here, but I also need to transmit strip num 
+	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
+	  for(int k = 0; k<(int)samps.size(); k++){
+	    // cout << " " << samps[k];
+	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	  }
+	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
+	  //cout << endl;
+	}
+	//cout << endl;
+	
+	samps.clear();
+	strips.clear();
+      }
+    }
+  }
+    
   //add here the GEN-RP scintillators
   if(strcmp(detname.c_str(), "sbs.active_ana")==0){
     //cout << " ouh " << detname.c_str() << " " << simev->Tgenrp->Earm_BBSHTF1_hit_nhits << " " << simev->Tgenrp->Earm_BBSH_dighit_nchan << endl;
@@ -1130,7 +1439,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
     }
   }
-  
+
+  //GENRP GEMs
   if(strcmp(detname.c_str(), "sbs.gemCeF")==0){
     //cout << fPx << " " << fPy << " " << fPz << "   " << fVz << endl;
     samps.clear();  
@@ -1771,8 +2081,8 @@ void SBSSimDecoder::ChanToROC(const std::string& detname, Int_t h_chan,
   crate = d.quot+FC;
   slot  = d.rem+FS;
   */
-  if(h_chan>=fInvDetMap.at(detname).size())std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
-  assert(h_chan<fInvDetMap.at(detname).size());
+  if( (size_t)h_chan>=fInvDetMap.at(detname).size() )std::cout << " " << detname << " "  << h_chan << " " << &fInvDetMap.at(detname) << std::endl;
+  assert( (size_t)h_chan<fInvDetMap.at(detname).size() );
   
   if(fDebug>3){
   
@@ -1793,8 +2103,8 @@ int SBSSimDecoder::APVnum(const std::string& detname, Int_t mod, Int_t h_chan,
   // std::cout << "(detname, mod, h_chan, chan, n )= (" << detname << ", " << mod << ", "
   // 	    << h_chan << ", " << chan << ", " << n << ")" << std::endl;
   
-  assert(mod<fInvGEMDetMap.at(detname).size());
-  assert(n<(fInvGEMDetMap.at(detname)[mod]).size());
+  assert( (size_t)mod<fInvGEMDetMap.at(detname).size() );
+  assert( (size_t)n<(fInvGEMDetMap.at(detname)[mod]).size() );
 
   // if( mod>fInvGEMDetMap.at(detname).size() ){
   //   std::err << "ERROR: map size =  " << " for detector " << detname 

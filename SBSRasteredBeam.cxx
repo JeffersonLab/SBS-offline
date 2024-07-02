@@ -20,8 +20,7 @@ SBSRasteredBeam::SBSRasteredBeam( const char* name, const char* description ) :
 //_____________________________________________________________________________
 Int_t SBSRasteredBeam::ReadDatabase( const TDatime& date )
 {
-
-  const char* const here = "ReadDatabase";
+  //const char* const here = "ReadDatabase";
 
   vector<Double_t> Rasterx_range, Rastery_range, Raster2x_range, Raster2y_range;
   Double_t Raster_size;

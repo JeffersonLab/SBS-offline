@@ -236,7 +236,7 @@ Int_t LHRSScalerEvtHandler::Analyze(THaEvData *evdata)
   NWORDS        = ParseData(pc,word,A);
   UInt_t *p     = A;  
   UInt_t *pstop = p + ndata - 4;  
-
+  if (fDebugFile) *fDebugFile << "number of words: " << NWORDS << endl;
   // char msg[200];  
 
   AnalyzeBuffer(ndata,rdata); 

@@ -5,6 +5,7 @@
 //#include "g4sbs_tree.h"
 
 #include "gmn_tree_digitized.h"
+#include "gep_tree_digitized.h"
 #include "genrp_tree_digitized.h"
 
 enum Exp_t    { kGEp, kGEnRP, kGMN, kSIDIS};
@@ -46,7 +47,7 @@ class SBSSimEvent {
   //class name, and copy the source and header files into SBS-offline,
   //recompile, and voila: compatibility guaranteed:
   gmn_tree_digitized *Tgmn;
-  //gep_tree_digitized *Tgep;
+  gep_tree_digitized *Tgep;
   genrp_tree_digitized *Tgenrp;//EPAF: for now, genrp tree is thought as a complement of the GMN tree. 
   // we might keep it this way unless it induces crashes or significant slowdown!
 
