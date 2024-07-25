@@ -34,7 +34,6 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
       virtual Int_t  Decode( const THaEvData& evdata );
       virtual Int_t  End( THaRunBase* r=nullptr );
       virtual void   SetDebug( Int_t level );
-      virtual Bool_t HelicityValid() const { return fValidHel; }
 
       void PrintEvent( UInt_t evtnum );
 
@@ -57,42 +56,18 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
 
    protected:
       virtual void  FillHisto();
-      void  CheckTIRvsRing( UInt_t eventnumber );
-      void  LoadHelicity( UInt_t eventnumber );
+
       UInt_t RanBit30( UInt_t& ranseed );
-      THaHelicityDet::EHelicity SetHelicity( UInt_t polarity, UInt_t phase);
 
       // variables that need to be read from the database
-      UInt_t fOffsetTIRvsRing;
-      // Offset between the ring reported value and the TIR reported value
-      UInt_t fQWEAKDelay;
-      // delay of helicity (# windows)
-      UInt_t fMAXBIT;
-      //number of bit in the pseudo random helicity generator
-      std::vector<Int_t> fPatternSequence; // sequence of 0 and 1 in the pattern
-      UInt_t fQWEAKNPattern; // maximum of event in the pattern
-      Bool_t HWPIN;
 
-      Int_t fHelicityDelay;
+      Int_t fMAXBIT; // Number of bits in the pseudorandom helicity generator
+      std::vector<Int_t> fPatternSequence; // Sequence of +1 and -1 in the pattern
+      Int_t fHelicityDelay; // Helicity delay in # of patterns
 
-      Int_t fQrt;
-      Int_t fTSettle;
-      Bool_t fValidHel;
 
-      UInt_t fHelicityLastTIR;
-      UInt_t fPatternLastTIR;
-      void SetErrorCode(Int_t error);
-      Double_t fErrorCode;
-
-      // Ring related data
-      // UInt_t fScalerCumulative[32];
-      UInt_t fScalerCumulativePlus[32];
-      UInt_t fScalerCumulativeMinus[32];
-      // 64-bit signed integer versions
-      Long64_t fScalerCumulative[32];  // 64-bit signed integer 
-      // Long64_t fScalerCumulativePlus[32];
-      // Long64_t fScalerCumulativeMinus[32];
-
+      Int_t fTriggerCounter; //  Reports the physics event number of the scaler event
+  
       UInt_t fRingFinalQrtHel;
       UInt_t fRingFinalEvtNum;
       UInt_t fRingFinalPatNum;
@@ -105,13 +80,7 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
       Long_t fScalerYield[32];
       Long_t fScalerDiff[32];
 
-
-      UInt_t fRing_NSeed; //number of event collected for seed
-      UInt_t fRingU3plus, fRingU3minus;
-      UInt_t fRingT3plus, fRingT3minus;
-      UInt_t fRingT5plus, fRingT5minus;
-      UInt_t fRingT10plus, fRingT10minus;
-      UInt_t fRingTimeplus, fRingTimeminus;
+      Int_t  fSeedbits;
       UInt_t fRingSeed_reported;
       UInt_t fRingSeed_actual;
       UInt_t fRingPhase_reported;
@@ -124,9 +93,9 @@ class SBSScalerHelicity : public THaHelicityDet, public SBSScalerHelicityReader 
 
       // tree to write data to 
       TTree *fHelScalerTree;
+      TTree *fAsymmetryTree;
       // branch variables
       UInt_t fBranch_seed;
-      Double_t fBranch_errCode;
 
       static const Int_t NHIST = 2;
       std::vector<TH1F*> fHisto;
