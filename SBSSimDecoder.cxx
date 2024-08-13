@@ -140,7 +140,7 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"simc_pz_e",     "MC e mom. z componant from SIMC gen.",   "fEPz_simc"},
     {"simc_fnucl",    "MC final-state nucleon type from SIMC gen.",   "fFnucl_simc"},
     {"simc_p_n",      "MC nucleon mom. from SIMC gen.",   "fNp_simc"},
-    {"simc_theta_n",  "MC nucleon polar angle from SIMC gen.",   "fEtheta_simc"},
+    {"simc_theta_n",  "MC nucleon polar angle from SIMC gen.",   "fNtheta_simc"},
     {"simc_phi_n",    "MC nucleon azimuthal angle from SIMC gen.",   "fNphi_simc"},
     {"simc_px_n",     "MC nucleon mom. x componant from SIMC gen.",   "fNPx_simc"},
     {"simc_py_n",     "MC nucleon mom. y componant from SIMC gen.",   "fNPy_simc"},
