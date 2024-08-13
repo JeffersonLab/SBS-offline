@@ -26,6 +26,7 @@
 //#pragma link C++ class SBSECal+;
 //#pragma link C++ class SBSECalCluster+;
 #pragma link C++ class SBSEArm+;
+#pragma link C++ class SBSGEPEArm+;
 #pragma link C++ class SBSHCal+;
 #pragma link C++ class SBSGenericDetector+;
 #pragma link C++ class SBSElement+;
