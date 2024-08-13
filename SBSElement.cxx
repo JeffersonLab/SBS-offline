@@ -41,6 +41,10 @@ Bool_t SBSElement::HasADCData()
   return ( ( fADC && fADC->HasData() ) || ( fWaveform && fWaveform->HasData() ) );
 }
 
+Bool_t SBSElement::HasTDCData()
+{
+  return ( fTDC && fTDC->HasData() );
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Clear event from generic Element (with no data)

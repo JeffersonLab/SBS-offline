@@ -31,6 +31,7 @@ struct SBSBlockSet {
   Double_t TDCTime;
   Double_t ADCTime;
   Bool_t InCluster;
+  Bool_t GoodTDC; 
 };
 
 struct SBSCalBlocks {
@@ -43,6 +44,7 @@ struct SBSCalBlocks {
   std::vector<Double_t> y; //< []
   std::vector<Int_t>   id;      // []
   std::vector<Int_t>   cid;
+  std::vector<Bool_t>  GoodTDC; 
   void clear() {
     e.clear();
     x.clear();
@@ -53,6 +55,7 @@ struct SBSCalBlocks {
     col.clear();
     TDCTime.clear();
     ADCTime.clear();
+    GoodTDC.clear();
   }
 };
 
@@ -70,6 +73,15 @@ struct SBSCalorimeterOutput {
   std::vector<Double_t> blk_e;   // block energy of max energy block
   //std::vector<Double_t> blk_e_c; // block corrected energy of max energy block
   std::vector<Int_t>   id;      // block id of max energy block
+
+  std::vector<Double_t> atime_mean;
+  std::vector<Double_t> e_goodtdc;
+  std::vector<Double_t> tdctime_mean;
+  std::vector<Double_t> blk_e_goodtdc;
+  std::vector<Int_t> ngoodtdc;
+  std::vector<Int_t> rowgoodtdc;
+  std::vector<Int_t> colgoodtdc;
+  std::vector<Int_t> idgoodtdc;
 };
    
 typedef std::vector<SBSBlockSet> SBSBlockSetList;
@@ -85,6 +97,8 @@ public:
   virtual Int_t MakeGoodBlocks();
   virtual Int_t FindClusters();
 
+  virtual Int_t SelectBestCluster();
+
   // Get information from the main cluster
   Double_t GetE();             //< Main cluster energy
   Double_t GetAgain();         //< Pedestal subtracted ADC integral (pC)
@@ -94,11 +108,23 @@ public:
   Double_t GetX();             //< Main cluster energy average x
   Double_t GetY();             //< Main cluster energy average y
   Double_t GetEBlk();          //< Main cluster energy of max block in cluster
+
+  Double_t GetAtimeMean();
+  Double_t GetEGoodTDC();
+  Double_t GetTDCtimeMean();
+  Double_t GetEBlkGoodTDC();
+
   /* Double_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster */
   Int_t GetNblk();            //< Number of blocks in main cluster
   Int_t GetBlkID();           //< ID/block number of max energy block in cluster
   Int_t GetRow();             //< Main cluster row of max block
   Int_t GetCol();             //< Main cluster col of max block
+
+  Int_t GetNblkGoodTDC();
+  Int_t GetBlkIDGoodTDC();
+  Int_t GetRowGoodTDC();
+  Int_t GetColGoodTDC();
+ 
 
   Int_t    GetNRows() {return fNrows;}
   Int_t    GetNCols(Int_t r = 0);
@@ -223,6 +249,22 @@ inline Double_t SBSCalorimeter::GetY() {
   return GetVVal(fMainclus.y);
 }
 
+inline Double_t SBSCalorimeter::GetAtimeMean() {
+  return GetVVal(fMainclus.atime_mean);
+}
+
+inline Double_t SBSCalorimeter::GetEGoodTDC() {
+  return GetVVal(fMainclus.e_goodtdc);
+}
+
+inline Double_t SBSCalorimeter::GetTDCtimeMean() {
+  return GetVVal(fMainclus.tdctime_mean);
+}
+
+inline Double_t SBSCalorimeter::GetEBlkGoodTDC() {
+  return GetVVal(fMainclus.blk_e_goodtdc);
+}
+
 inline Int_t SBSCalorimeter::GetRow() {
   return GetVVal(fMainclus.row);
 }
@@ -237,6 +279,22 @@ inline Int_t SBSCalorimeter::GetNblk() {
 
 inline Int_t SBSCalorimeter::GetBlkID() {
   return GetVVal(fMainclus.id);
+}
+
+inline Int_t SBSCalorimeter::GetNblkGoodTDC(){
+  return GetVVal(fMainclus.ngoodtdc);
+}
+
+inline Int_t SBSCalorimeter::GetRowGoodTDC(){
+  return GetVVal(fMainclus.rowgoodtdc);
+}
+
+inline Int_t SBSCalorimeter::GetColGoodTDC(){
+  return GetVVal(fMainclus.colgoodtdc);
+}
+
+inline Int_t SBSCalorimeter::GetBlkIDGoodTDC(){
+  return GetVVal(fMainclus.idgoodtdc);
 }
 
 inline Int_t SBSCalorimeter::GetNCols(Int_t r) {

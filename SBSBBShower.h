@@ -31,6 +31,7 @@ public:
   virtual void MakeMainCluster(Int_t icl=0); 
   virtual void Clear( Option_t* opt="" );
 
+  //virtual Int_t SelectBestCluster(); //Potential override/extension of SBSCalorimeter::SelectBestCluster
 
   Int_t GetRowMax() {return GetRow();}
   Int_t GetColMax() {return GetCol();}

@@ -40,6 +40,7 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
   SBSGenericDetector(name,description,apparatus),
   fMaxNclus(10), fConst(1.0), fSlope(0.0), fAccCharge(0.0), fDataOutputLevel(1000)
 {
+  
   // Constructor.
   fTmax = 1000.0; // 1000 ns maximum arrival time difference with seed to be in cluster
   fEmin = 0.001; // 1 MeV minimum energy to be in cluster (Hit threshold)  
@@ -50,6 +51,7 @@ SBSCalorimeter::SBSCalorimeter( const char* name, const char* description,
   fRmax_dis = .30; // Maximum Radius (m) from cluster center to be included in cluster
   fBestClusterIndex = -1;
   fClusters.reserve(10);
+  
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -212,6 +214,14 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     { "nblk",   "Number of blocks in the largest cluster",    "GetNblk()" },
     { "idblk",  "Logic number of block with highest energy in cluster",    "GetBlkID()" },
     { "index", "Index of best cluster in the array of all clusters", "fBestClusterIndex" },
+    { "tdctime", "Energy-weighted mean TDC time, main cluster", "GetTDCtimeMean()" },
+    { "adctime", "Energy-weighted mean ADC time, main cluster", "GetAtimeMean()" },
+    { "e_goodtdc", "Energy sum in blocks with good TDC, main cluster", "GetEGoodTDC()" },
+    { "eblk_goodtdc", "Energy in highest-energy block with good TDC, main cluster", "GetEBlkGoodTDC()" },
+    { "nblk_goodtdc", "Number of blocks with good TDC hits, main cluster", "GetNblkGoodTDC()" },
+    { "rowblk_goodtdc", "Row of highest-energy block with good TDC hit, main cluster", "GetRowGoodTDC()" },
+    { "colblk_goodtdc", "Column of highest-energy block with good TDC hit, main cluster", "GetColGoodTDC()" },
+    { "idblk_goodtdc", "element ID of highest-energy block with good TDC hit, main cluster", "GetBlkIDGoodTDC()" },
     {0}
   };
   err = DefineVarsFromList( vars, mode );
@@ -261,8 +271,8 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     // Store every cluster
     RVarDef vars_raw[] = {
       { "clus.e", "Energy of cluster", "fOutclus.e"},
-      { "clus.atime", "ADC time of cluster", "fOutclus.atime"},
-      { "clus.tdctime", "TDC time of cluster", "fOutclus.tdctime"},
+      { "clus.atimeblk", "ADC time of cluster", "fOutclus.atime"},
+      { "clus.tdctimeblk", "TDC time of cluster", "fOutclus.tdctime"},
       //{ "clus.e_c","Energy calibrated of cluster", "fOutclus.e_c"},
       { "clus.again","ADC gain coeff. of cluster", "fOutclus.again"},
       { "clus.x", "x-position of cluster", "fOutclus.x"},
@@ -272,6 +282,14 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       { "clus.id","block number in cluster",    "fOutclus.id" },
       { "clus.nblk","number of blocks in cluster",    "fOutclus.n" },
       { "clus.eblk", "Energy of block with highest energy in cluster", "fOutclus.blk_e"},
+      { "clus.adctime", "Energy-weighted mean ADC time", "fOutclus.atime_mean" },
+      { "clus.tdctime", "Energy-weighted mean TDC time", "fOutclus.tdctime_mean" },
+      { "clus.e_goodtdc", "sum of energy in blocks with good TDC", "fOutclus.e_goodtdc" },
+      { "clus.eblk_goodtdc", "highest single-block energy with good TDC in cluster", "fOutclus.blk_e_goodtdc" },
+      { "clus.nblk_goodtdc", "number of blocks with good tdc in cluster", "fOutclus.ngoodtdc" },
+      { "clus.row_goodtdc", "row of highest-energy block with good TDC in cluster", "fOutclus.rowgoodtdc" },
+      { "clus.col_goodtdc", "column of highest-energy block with good TDC in cluster", "fOutclus.colgoodtdc" },
+      { "clus.id_goodtdc", "id of highest-energy block with good TDC in cluster", "fOutclus.idgoodtdc" },
       // { "clus.eblk_c","Energy calibrated of block with highest energy in cluster", "fOutclus.blk_e_c"},
       { 0 }
     };
@@ -318,8 +336,8 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	fGoodBlocks.cid.push_back(-1); //initialize good block cluster id to -1
 	fGoodBlocks.x.push_back(blk->GetX());
 	fGoodBlocks.y.push_back(blk->GetY());
-	//
-	//
+	
+	
 	if(fModeADC != SBSModeADC::kWaveform) {
 	  const SBSData::PulseADCData &ahit = blk->ADC()->GetGoodHit();
 	  blk->SetE(ahit.integral.val);
@@ -340,8 +358,10 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	if (WithTDC() && blk->TDC()->HasData() ) { 
 	  const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
 	  fGoodBlocks.TDCTime.push_back(hit.le.val);
-	  blk->SetTDCtime(hit.le.val);
+	  fGoodBlocks.GoodTDC.push_back( true );
+	  blk->SetTDCtime(hit.le.val); //Is this line necessary? 
 	} else {
+	  fGoodBlocks.GoodTDC.push_back( false );
 	  fGoodBlocks.TDCTime.push_back(-1000.);
 	  blk->SetTDCtime(-1000.);
 	}
@@ -353,7 +373,7 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
   //  fBlockSet.reserve(fGoodBlocks.e.size());
   fBlockSet.clear();
   for (UInt_t nb=0;nb< fGoodBlocks.e.size();nb++) {
-    SBSBlockSet c1 = {fGoodBlocks.e[nb],fGoodBlocks.x[nb],fGoodBlocks.y[nb],fGoodBlocks.row[nb],fGoodBlocks.col[nb],fGoodBlocks.id[nb],fGoodBlocks.TDCTime[nb],fGoodBlocks.ADCTime[nb],kFALSE};
+    SBSBlockSet c1 = {fGoodBlocks.e[nb],fGoodBlocks.x[nb],fGoodBlocks.y[nb],fGoodBlocks.row[nb],fGoodBlocks.col[nb],fGoodBlocks.id[nb],fGoodBlocks.TDCTime[nb],fGoodBlocks.ADCTime[nb],kFALSE,fGoodBlocks.GoodTDC[nb]};
     if (fGoodBlocks.e[nb] > fEmin) fBlockSet.push_back(c1);
   }
   std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) {
@@ -448,8 +468,6 @@ Int_t SBSCalorimeter::FindClusters()
       // threshold:
       if( cluster->GetE() >= fEmin_clusTotal ){
 	fClusters.push_back( cluster );
-
-	clusterids_by_blockid.clear();
 	
 	for( iblk=0; iblk<cluster->GetMult(); iblk++ ){
 
@@ -548,6 +566,15 @@ Int_t SBSCalorimeter::FindClusters()
     fMainclus.id.push_back(clus->GetElemID());
     fMainclus.row.push_back(clus->GetRow());
     fMainclus.col.push_back(clus->GetCol());
+
+    fMainclus.atime_mean.push_back(clus->GetAtimeMean());
+    fMainclus.e_goodtdc.push_back(clus->GetE_GoodTDC());
+    fMainclus.tdctime_mean.push_back(clus->GetTDCtimeMean());
+    fMainclus.blk_e_goodtdc.push_back(clus->GetEblk_GoodTDC());
+    fMainclus.ngoodtdc.push_back(clus->GetNgoodTDChits());
+    fMainclus.rowgoodtdc.push_back(clus->GetRowGoodTDC());
+    fMainclus.colgoodtdc.push_back(clus->GetColGoodTDC());
+    fMainclus.idgoodtdc.push_back(clus->GetElemIDGoodTDC());
   }
 
   //
@@ -563,10 +590,12 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     return err;
   // Get information on the cluster with highest energy (useful even if
   // fMaxNclus is zero, i.e., storing no vector of clusters)
+
+  Int_t best = SelectBestCluster(); //by default this simply returns fBestClusterIndex, derived classes may override. 
   
-  if( !(fClusters.empty()) && fBestClusterIndex >= 0 && fBestClusterIndex < (Int_t)fClusters.size() ) {
+  if( !(fClusters.empty()) && best >= 0 && best < (Int_t)fClusters.size() ) {
     //if( !(fClusters.empty()) ) {
-    SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
+    SBSCalorimeterCluster *clus = fClusters[best];
  
     if(fDataOutputLevel > 0 ) {
       for(Int_t nc=0;nc<clus->GetMult();nc++ ) {
@@ -603,6 +632,15 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     fOutclus.col.reserve(nres);
     fOutclus.id.reserve(nres);
 
+    fOutclus.atime_mean.reserve(nres);
+    fOutclus.e_goodtdc.reserve(nres);
+    fOutclus.tdctime_mean.reserve(nres);
+    fOutclus.blk_e_goodtdc.reserve(nres);
+    fOutclus.ngoodtdc.reserve(nres);
+    fOutclus.rowgoodtdc.reserve(nres);
+    fOutclus.colgoodtdc.reserve(nres);
+    fOutclus.idgoodtdc.reserve(nres);
+    
     int nclus = 0;
     for( const auto* cluster: fClusters ) {
       if(nclus < fMaxNclus) { // Keep adding them until we reach fMaxNclus
@@ -619,6 +657,15 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
         fOutclus.row.push_back(cluster->GetRow());
         fOutclus.col.push_back(cluster->GetCol());
         fOutclus.id.push_back(cluster->GetElemID());
+
+	fOutclus.atime_mean.push_back(cluster->GetAtimeMean());
+	fOutclus.e_goodtdc.push_back(cluster->GetE_GoodTDC());
+	fOutclus.tdctime_mean.push_back(cluster->GetTDCtimeMean());
+	fOutclus.blk_e_goodtdc.push_back(cluster->GetEblk_GoodTDC());
+	fOutclus.ngoodtdc.push_back(cluster->GetNgoodTDChits());
+	fOutclus.rowgoodtdc.push_back(cluster->GetRowGoodTDC());
+	fOutclus.colgoodtdc.push_back(cluster->GetColGoodTDC());
+	fOutclus.idgoodtdc.push_back(cluster->GetElemIDGoodTDC());
       }
       nclus++;
     }
@@ -655,4 +702,18 @@ void SBSCalorimeter::ClearCaloOutput(SBSCalorimeterOutput &out)
   out.blk_e.clear();
   // out.blk_e_c.clear();
   out.id.clear();
+
+  out.atime_mean.clear();
+  out.e_goodtdc.clear();
+  out.tdctime_mean.clear();
+  out.blk_e_goodtdc.clear();
+  out.ngoodtdc.clear();
+  out.rowgoodtdc.clear();
+  out.colgoodtdc.clear();
+  out.idgoodtdc.clear();
+}
+
+Int_t SBSCalorimeter::SelectBestCluster(){ //Default to just returning best cluster index from FindClusters() (which gives highest-total-energy cluster regardless of any timing info);
+  //Derived classes may override
+  return fBestClusterIndex;
 }
