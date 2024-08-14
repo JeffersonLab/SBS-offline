@@ -271,8 +271,8 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     // Store every cluster
     RVarDef vars_raw[] = {
       { "clus.e", "Energy of cluster", "fOutclus.e"},
-      { "clus.atimeblk", "ADC time of cluster", "fOutclus.atime"},
-      { "clus.tdctimeblk", "TDC time of cluster", "fOutclus.tdctime"},
+      { "clus.atimeblk", "ADC time of highest energy blk in the cluster", "fOutclus.atime"},
+      { "clus.tdctimeblk", "TDC time of highest energy blk in the cluster", "fOutclus.tdctime"},
       //{ "clus.e_c","Energy calibrated of cluster", "fOutclus.e_c"},
       { "clus.again","ADC gain coeff. of cluster", "fOutclus.again"},
       { "clus.x", "x-position of cluster", "fOutclus.x"},
