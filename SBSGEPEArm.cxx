@@ -147,8 +147,8 @@ Int_t SBSGEPEArm::ReadRunDatabase( const TDatime &date ){
   
   //Require magdist:
   const DBRequest req[] = {
-    { "magdist", &fMagDist, kDouble, 0, 0, 1 },
-    { "hcaldist", &fECALdist, kDouble, 0, 0, 1 },
+    //{ "magdist", &fMagDist, kDouble, 0, 0, 1 },
+    { "ecaldist", &fECALdist, kDouble, 0, 0, 1 },
     { nullptr }
   };
   err = LoadDB( file, date, req );
@@ -690,69 +690,69 @@ Int_t SBSGEPEArm::CoarseReconstruct()
 
   THaSpectrometer::CoarseReconstruct(); 
 
-  Double_t x_fcp = 0, y_fcp = 0, z_fcp = 0;
-  Double_t x_bcp = 0, y_bcp = 0, z_bcp = 0;
+  // Double_t x_fcp = 0, y_fcp = 0, z_fcp = 0;
+  // Double_t x_bcp = 0, y_bcp = 0, z_bcp = 0;
  
 
-  TIter next( fNonTrackingDetectors );
+  // TIter next( fNonTrackingDetectors );
 
-  //Loop on non-tracking detectors and grab pointers to ECAL and PolarimeterTracker (if it exists):
-  SBSCalorimeter *ECal = nullptr;
-  // SBSGEMPolarimeterTracker *BackTracker = nullptr;
+  // //Loop on non-tracking detectors and grab pointers to ECAL and PolarimeterTracker (if it exists):
+  // SBSCalorimeter *ECal = nullptr;
+  // // SBSGEMPolarimeterTracker *BackTracker = nullptr;
 
-  // //Loop on tracking detectors and grab pointer to SBSGEMSpectrometerTracker (if it exists):
-  // SBSGEMSpectrometerTracker *FrontTracker = nullptr; 
+  // // //Loop on tracking detectors and grab pointer to SBSGEMSpectrometerTracker (if it exists):
+  // // SBSGEMSpectrometerTracker *FrontTracker = nullptr; 
   
-  while( auto* theNonTrackDetector =
-	 static_cast<THaNonTrackingDetector*>( next() )) {
-    if(theNonTrackDetector->InheritsFrom("SBSCalorimeter")){
-      ECal = reinterpret_cast<SBSCalorimeter*>(theNonTrackDetector);
-    }
+  // while( auto* theNonTrackDetector =
+  // 	 static_cast<THaNonTrackingDetector*>( next() )) {
+  //   if(theNonTrackDetector->InheritsFrom("SBSCalorimeter")){
+  //     ECal = reinterpret_cast<SBSCalorimeter*>(theNonTrackDetector);
+  //   }
 
-    // if(theNonTrackDetector->InheritsFrom("SBSGEMPolarimeterTracker")){
-    //   BackTracker = reinterpret_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
-    // }
-  }
+  //   // if(theNonTrackDetector->InheritsFrom("SBSGEMPolarimeterTracker")){
+  //   //   BackTracker = reinterpret_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
+  //   // }
+  // }
   
-  // TIter next2( fTrackingDetectors );
-  // while( auto* theTrackDetector =
-  // 	 static_cast<THaTrackingDetector*>( next2() )) {
-  //   if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
-  //     FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
-  //     // std::cout << "Got front tracker, name = " << FrontTracker->GetName()
-  //     // 		<< std::endl;
+  // // TIter next2( fTrackingDetectors );
+  // // while( auto* theTrackDetector =
+  // // 	 static_cast<THaTrackingDetector*>( next2() )) {
+  // //   if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
+  // //     FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+  // //     // std::cout << "Got front tracker, name = " << FrontTracker->GetName()
+  // //     // 		<< std::endl;
+  // //   }
+  // // }
+
+  // if(ECal->GetNclust() == 0 || ECal == nullptr) return 0; //If no ECAL clusters, we don't attempt tracking
+  
+  // std::vector<SBSCalorimeterCluster*> ECalClusters = ECal->GetClusters();
+  
+  // int i_max = 0;
+  // double E_max = 0;
+  
+  // for(unsigned int i = 0; i<ECalClusters.size(); i++){
+    
+  //   if(ECalClusters[i]->GetE() > E_max){
+  //     i_max = i;
+  //     E_max = ECalClusters[i]->GetE();
   //   }
   // }
 
-  if(ECal->GetNclust() == 0 || ECal == nullptr) return 0; //If no ECAL clusters, we don't attempt tracking
-  
-  std::vector<SBSCalorimeterCluster*> ECalClusters = ECal->GetClusters();
-  
-  int i_max = 0;
-  double E_max = 0;
-  
-  for(unsigned int i = 0; i<ECalClusters.size(); i++){
-    
-    if(ECalClusters[i]->GetE() > E_max){
-      i_max = i;
-      E_max = ECalClusters[i]->GetE();
-    }
-  }
-
-  x_bcp = ECalClusters[i_max]->GetX() + ECal->GetOrigin().X();
-  y_bcp = ECalClusters[i_max]->GetY() + ECal->GetOrigin().Y();
-  z_bcp = ECal->GetOrigin().Z();
+  // x_bcp = ECalClusters[i_max]->GetX() + ECal->GetOrigin().X();
+  // y_bcp = ECalClusters[i_max]->GetY() + ECal->GetOrigin().Y();
+  // z_bcp = ECal->GetOrigin().Z();
           
-  fECALtheta_n = ECalClusters[i_max]->GetX()/fECALdist;
-  fECALphi_n = ECalClusters[i_max]->GetY()/fECALdist;
+  // fECALtheta_n = ECalClusters[i_max]->GetX()/fECALdist;
+  // fECALphi_n = ECalClusters[i_max]->GetY()/fECALdist;
 
-  TVector3 ECALdir_global; 
+  // TVector3 ECALdir_global; 
 
-  TransportToLab( 1.0, fECALtheta_n, fECALphi_n, ECALdir_global );
+  // TransportToLab( 1.0, fECALtheta_n, fECALphi_n, ECALdir_global );
 
-  fECALdir_x = ECALdir_global.X();
-  fECALdir_y = ECALdir_global.Y();
-  fECALdir_z = ECALdir_global.Z();
+  // fECALdir_x = ECALdir_global.X();
+  // fECALdir_y = ECALdir_global.Y();
+  // fECALdir_z = ECALdir_global.Z();
 
   //x_fcp = fGEMorigin.X();
   //y_fcp = fGEMorigin.Y();
