@@ -24,123 +24,123 @@ public:
   virtual Int_t	Track();
   virtual Int_t CalcPID();
 
-  void SetPolarimeterMode( Bool_t ispol );
+  // void SetPolarimeterMode( Bool_t ispol );
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
   virtual Int_t ReadRunDatabase( const TDatime& date );
   virtual Int_t DefineVariables( EMode mode = kDefine );
 
-  void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
-  void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords
+  // void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
+  // void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords
   
-  void InitOpticsAxes(double, const TVector3 & );
-  void InitOpticsAxes(double); //version with only bend angle argument
-  void InitGEMAxes(double, double, const TVector3 & );
-  void InitGEMAxes(double, double); //version with only angle arguments:
-  void InitGEMAxes(double, double, double, const TVector3 &); //version that takes three angles, consistent with more correct alignment procedure
-  void InitGEMAxes(double, double, double);
+  // void InitOpticsAxes(double, const TVector3 & );
+  // void InitOpticsAxes(double); //version with only bend angle argument
+  // void InitGEMAxes(double, double, const TVector3 & );
+  // void InitGEMAxes(double, double); //version with only angle arguments:
+  // void InitGEMAxes(double, double, double, const TVector3 &); //version that takes three angles, consistent with more correct alignment procedure
+  // void InitGEMAxes(double, double, double);
   
-  void CheckConstraintOffsetsAndWidths();
+  // void CheckConstraintOffsetsAndWidths();
   
   //We have to make these vectors to accommodate the polarimeter mode; separate offsets and widths for front and back trackers:
   
-  std::vector<Double_t> fFrontConstraintWidthX;
-  std::vector<Double_t> fFrontConstraintWidthY;
-  std::vector<Double_t> fBackConstraintWidthX;
-  std::vector<Double_t> fBackConstraintWidthY;
-  std::vector<Double_t> fFrontConstraintX0;
-  std::vector<Double_t> fFrontConstraintY0;
-  std::vector<Double_t> fBackConstraintX0; 
-  std::vector<Double_t> fBackConstraintY0;
+  // std::vector<Double_t> fFrontConstraintWidthX;
+  // std::vector<Double_t> fFrontConstraintWidthY;
+  // std::vector<Double_t> fBackConstraintWidthX;
+  // std::vector<Double_t> fBackConstraintWidthY;
+  // std::vector<Double_t> fFrontConstraintX0;
+  // std::vector<Double_t> fFrontConstraintY0;
+  // std::vector<Double_t> fBackConstraintX0; 
+  // std::vector<Double_t> fBackConstraintY0;
 
   //Idea is that slope of the track along x and y is roughly linearly correlated with the position of the back constraint:
 
-  bool fUseDynamicConstraint; //The "dynamic constraint" sets the front constraint point automatically based on the back constraint point; it is useful for applying effective loose constraints based on spectrometer optics (correlation between x and theta, y and phi, etc)
-  double fDynamicConstraintSlopeX;
-  double fDynamicConstraintOffsetX;
-  //double fDynamicWidthX; 
-  double fDynamicConstraintSlopeY;
-  double fDynamicConstraintOffsetY; 
-  //double fDynamicWidthY;
+  // bool fUseDynamicConstraint; //The "dynamic constraint" sets the front constraint point automatically based on the back constraint point; it is useful for applying effective loose constraints based on spectrometer optics (correlation between x and theta, y and phi, etc)
+  // double fDynamicConstraintSlopeX;
+  // double fDynamicConstraintOffsetX;
+  // //double fDynamicWidthX; 
+  // double fDynamicConstraintSlopeY;
+  // double fDynamicConstraintOffsetY; 
+  // //double fDynamicWidthY;
   
   
-  //for output only... Vectors instead?
-  std::vector<double> fFrontConstraintX;
-  std::vector<double> fFrontConstraintY;
-  std::vector<double> fFrontConstraintZ;
-  std::vector<double> fBackConstraintX;
-  std::vector<double> fBackConstraintY;
-  std::vector<double> fBackConstraintZ;
+  // //for output only... Vectors instead?
+  // std::vector<double> fFrontConstraintX;
+  // std::vector<double> fFrontConstraintY;
+  // std::vector<double> fFrontConstraintZ;
+  // std::vector<double> fBackConstraintX;
+  // std::vector<double> fBackConstraintY;
+  // std::vector<double> fBackConstraintZ;
 
-  Double_t fHCALtheta_n; //xHCAL/HCALdist
-  Double_t fHCALphi_n; //yHCAL/HCALdist
+  Double_t fECALtheta_n; //xECAL/ECALdist
+  Double_t fECALphi_n; //yECAL/ECALdist
 
-  Double_t fHCALdir_x;
-  Double_t fHCALdir_y;
-  Double_t fHCALdir_z;
+  Double_t fECALdir_x;
+  Double_t fECALdir_y;
+  Double_t fECALdir_z;
 
-  TVector3 fGEMorigin;  //Absolute position of GEM origin relative to target center, in TARGET transport coordinates
-  Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
-  Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
+  // TVector3 fGEMorigin;  //Absolute position of GEM origin relative to target center, in TARGET transport coordinates
+  // Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
+  // Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
 
-  //X,Y,Z rotation angles (yaw,pitch,roll, resp.):
-  Double_t fGEMax;
-  Double_t fGEMay;
-  Double_t fGEMaz;
+  // //X,Y,Z rotation angles (yaw,pitch,roll, resp.):
+  // Double_t fGEMax;
+  // Double_t fGEMay;
+  // Double_t fGEMaz;
   
   Double_t fMagDist; //mandatory parameter from run database
-  Double_t fHCALdist; //add to run database (this only changes when kinematics change). But should it be optional or mandatory? 
+  Double_t fECALdist; //add to run database (this only changes when kinematics change). But should it be optional or mandatory? 
   
-  Double_t fBdL; //define BdL (assumed units = T*m)
+  // Double_t fBdL; //define BdL (assumed units = T*m)
 
-  TRotation fGEM_Rtotal; //Total rotation;
-  TRotation fGEM_Rinverse; //Inverse rotation
+  // TRotation fGEM_Rtotal; //Total rotation;
+  // TRotation fGEM_Rinverse; //Inverse rotation
   
-  TVector3 fGEMxaxis_global;
-  TVector3 fGEMyaxis_global;
-  TVector3 fGEMzaxis_global;
+  // TVector3 fGEMxaxis_global;
+  // TVector3 fGEMyaxis_global;
+  // TVector3 fGEMzaxis_global;
 
-  TVector3 fOpticsOrigin; //Give origin of ideal optics system
-  double fOpticsAngle; //Ideal central bend angle of GEM wrt BigBite
-  TVector3 fOpticsXaxis_global;
-  TVector3 fOpticsYaxis_global;
-  TVector3 fOpticsZaxis_global;
+  // TVector3 fOpticsOrigin; //Give origin of ideal optics system
+  // double fOpticsAngle; //Ideal central bend angle of GEM wrt BigBite
+  // TVector3 fOpticsXaxis_global;
+  // TVector3 fOpticsYaxis_global;
+  // TVector3 fOpticsZaxis_global;
   
   //TRotation fOpt2DetRot;// transformation from optics (ideal) to detector (actual)
   //TRotation fDet2OptRot;// transformation from detector (actual) to optics (ideal)
 
-  UInt_t fPrecon_flag; //Indicate which momentum reconstruction formalism we are using:
+  // UInt_t fPrecon_flag; //Indicate which momentum reconstruction formalism we are using:
 
-  int fOpticsOrder;
-  std::vector<double> fb_xptar;
-  std::vector<double> fb_yptar;
-  std::vector<double> fb_ytar;
-  std::vector<double> fb_pinv;
-  //AJRP: changed the exponents to integers here for speed:
-  std::vector<int> f_oi;
-  std::vector<int> f_oj;
-  std::vector<int> f_ok;
-  std::vector<int> f_ol;
-  std::vector<int> f_om;
+  // int fOpticsOrder;
+  // std::vector<double> fb_xptar;
+  // std::vector<double> fb_yptar;
+  // std::vector<double> fb_ytar;
+  // std::vector<double> fb_pinv;
+  // //AJRP: changed the exponents to integers here for speed:
+  // std::vector<int> f_oi;
+  // std::vector<int> f_oj;
+  // std::vector<int> f_ok;
+  // std::vector<int> f_ol;
+  // std::vector<int> f_om;
 
-  Bool_t fPolarimeterMode; //Use polarimeter mode
-  Bool_t fPolarimeterMode_DBoverride; //flag to override DB value
+  // Bool_t fPolarimeterMode; //Use polarimeter mode
+  // Bool_t fPolarimeterMode_DBoverride; //flag to override DB value
   
-  Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
+  // Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
   
-  //Also include (optional) forward optics model to aid in false track rejection. 
-  int fForwardOpticsOrder;
-  std::vector<double> fb_xfp;
-  std::vector<double> fb_yfp;
-  std::vector<double> fb_xpfp;
-  std::vector<double> fb_ypfp;
-  //AJRP: changed the exponents to integers here for speed:
-  std::vector<int> f_foi;
-  std::vector<int> f_foj;
-  std::vector<int> f_fok;
-  std::vector<int> f_fol;
-  std::vector<int> f_fom;
+  // //Also include (optional) forward optics model to aid in false track rejection. 
+  // int fForwardOpticsOrder;
+  // std::vector<double> fb_xfp;
+  // std::vector<double> fb_yfp;
+  // std::vector<double> fb_xpfp;
+  // std::vector<double> fb_ypfp;
+  // //AJRP: changed the exponents to integers here for speed:
+  // std::vector<int> f_foi;
+  // std::vector<int> f_foj;
+  // std::vector<int> f_fok;
+  // std::vector<int> f_fol;
+  // std::vector<int> f_fom;
   
   ClassDef(SBSGEPEArm,0) // BigBite spectrometer
 
