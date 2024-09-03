@@ -1082,10 +1082,10 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 
       // In simulation row 0 col 0 block starts at top left corner weheras in real data row 0 col 0 starts at top
       // right corner, while looking at ECAL from front. Lets try the following to eleminate the mismatch:
-      col = lchan%12;
-      row = (lchan-col)/12; // row in simulation is already same as real data
-      col = 12 - 1 - col; // this will fix the mismatch in column numbering
-      lchan = row*12 + col; 
+      // col = lchan%12;
+      // row = (lchan-col)/12; // row in simulation is already same as real data
+      // col = 12 - 1 - col; // this will fix the mismatch in column numbering
+      // lchan = row*12 + col; 
       // --
       
       if(loadevt){
@@ -1108,21 +1108,21 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	}
 	//cout << endl;
 
-	//TDC
-	ChanToROC(detname, lchan+288, crate, slot, chan);
-	if( crate >= 0 || slot >=  0 ) {
-	  sldat = crateslot[idx(crate,slot)].get();
-	}
-	myev = &(map[sldat]);
-	if(!times.empty()){
-	  myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, times.size()));
-	  for(unsigned int time : times){
-	    myev->push_back(time);
-	  }
-	}
+	// //TDC
+	// ChanToROC(detname, lchan+288, crate, slot, chan);
+	// if( crate >= 0 || slot >=  0 ) {
+	//   sldat = crateslot[idx(crate,slot)].get();
+	// }
+	// myev = &(map[sldat]);
+	// if(!times.empty()){
+	//   myev->push_back(SBSSimDataDecoder::EncodeHeader(4, chan, times.size()));
+	//   for(unsigned int time : times){
+	//     myev->push_back(time);
+	//   }
+	// }
 	
 	samps.clear();
-	times.clear();
+	//times.clear();
       }
       
     }
@@ -2017,6 +2017,8 @@ Int_t SBSSimDecoder::ReadDetectorDB(std::string detname, TDatime date)
        }
      }else{
        int chan_offset = 1;
+       if(detname.find("ecal")!=std::string::npos)chan_offset = 0;
+       if(detname.find("cdet")!=std::string::npos)chan_offset = 0;
        if(detname.find("sh")!=std::string::npos)chan_offset = 0;
        if(detname.find("hodo")!=std::string::npos)chan_offset = 0;
        if(detname.find("grinch")!=std::string::npos)chan_offset = 0;
