@@ -632,8 +632,16 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
 	*/
 	//That stuff below is confusing... let's stick to the use of the block position in the DB!
+
+	// In sbsdig, the preshower channel number is assigned based on Earm.BBPSTF1.hit.cell from g4sbs
+	// for which channel number runs from 0 to 25 along the "left" column and 26-51 along the "right" column
+	// So row = lchan%26 and col = (lchan-row)/26 = (lchan - lchan % 26)/26
+       
 	row = lchan%26;
-	col = (lchan-row)/26;
+	//col = (lchan-row)/26; //this is equivalent to writing lchan/26 because lchan % 26 is always, by definition, between 0 and 25, so when we do integer division it is always true by definition that (anything modulo N)/N = 0
+	col = lchan/26;
+
+	//On the other hand, in the MC replay database, the positions are defined by channel in such a way that we alternate left right left right going from row 0 to row 25. so the following line is also correct:
 	lchan = row*2+col;
 	//row = 25-row;
 	//lchan = col*26+row;
@@ -644,6 +652,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	if( crate >= 0 || slot >=  0 ) {
 	  sldat = crateslot[idx(crate,slot)].get();
 	}
+
+	// This line is very confusing since it (somewhat irresponsibly/carelessly IMO) uses the STL keyword map as a function argument. We can do better. But ANYWAY,
+	// map is an argument passed to SBSSimDecoder::LoadDetector by reference, of type std::map<Decoder::THaSlotData*, std::vector<UInt_t> >
+	// The line below is grabbing a pointer to the std::vector<UInt_t> that is the mapped value corresponding to the "key" sldat, which itself
+	// is a pointer to Decoder::THaSlotData 
 	std::vector<UInt_t> *myev = &(map[sldat]);
 	
 	// cout << detname.c_str() << " det channel " << lchan << ", crate " << crate 
@@ -707,12 +720,20 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  cout << " " << simev->Tgmn->Earm_BBSHTF1_hit_cell->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_row->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_col->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_xcell->at(k) << " " << simev->Tgmn->Earm_BBSHTF1_hit_ycell->at(k);// << endl;
 	  break;
 	}
-      }
+      
+      
 	*/
+
+	//Yes, the row/col mapping below appears to be consistent with g4sbs/sbsdig: 
 	row = lchan%27;
-	col = (lchan-row)/27;
+	//col = (lchan-row)/27; //Again, (anything modulo N)/N = 0 by definition with integer division.
+	col = lchan/27;
       // row = 26-row;
       // col = 6-col;
+
+	//What about in the MC replay database? In the replay database the channels are ordered such that we go from left to right as column number increases (positive to negative y) and from top to bottom (negative to positive x) as row number increases;
+	//So it looks naively correct
+	
 	lchan = row*7+col;
       //cout << " => " << row << ", " << col << " new lchan = " << lchan << endl;
 	//ADC
