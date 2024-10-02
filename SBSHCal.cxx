@@ -163,13 +163,14 @@ Int_t SBSHCal::SelectBestCluster(){ //Default is just highest-energy cluster reg
   //This will implement the equivalent of the "highest-energy in-time" algorithm for HCAL best cluster selection:
   if( fNclus <= 0 ) return -1;
 
-  // std::cout << "Calling SBSHCal::SelectBestCluster(), atime (min,max,ref)=("
-  // 	    << fAtimeMinGoodCluster << ", " << fAtimeMaxGoodCluster << ", " << fRefADCtimeGoodCluster << ")" << std::endl;
+  // std::cout << "Calling SBSHCal::SelectBestCluster(), atime (min,max,ref,ibest)=("
+  //  	    << fAtimeMinGoodCluster << ", " << fAtimeMaxGoodCluster << ", " << fRefADCtimeGoodCluster
+  // 	    << ", " << fBestClusterIndex << ")" << std::endl;
   
   int oldindex = fBestClusterIndex;
 
   //we're not implementing the filtering algorithm below unless and until it is fully debugged/understood.
-  if( true ) return fBestClusterIndex;
+  //if( true ) return fBestClusterIndex;
   
   int best=-1;
   std::vector<Bool_t> keep(fNclus,true);
@@ -179,10 +180,15 @@ Int_t SBSHCal::SelectBestCluster(){ //Default is just highest-energy cluster reg
   // 2) at least one good TDC hit
   //First: ADC time check:
   int ngood = 0;
+
+  double Told = fClusters[oldindex]->GetAtime();
+  double Eold = fClusters[oldindex]->GetE();
+  double Tbest = Told;
+  double Ebest = Eold;
   
   for( int ipass=0; ipass<2; ipass++ ){
     for( int iclus=0; iclus<fNclus; iclus++ ){
-      double Tcheck = fClusters[iclus]->GetAtime() - fRefADCtimeGoodCluster;
+      double Tcheck = fClusters[iclus]->GetAtime();
       bool goodADCtime = fAtimeMinGoodCluster < Tcheck && Tcheck < fAtimeMaxGoodCluster;
       if( ipass == 0 && keep[iclus] && goodADCtime ) ngood++;
       if( ipass > 0 && !goodADCtime && ngood > 0 ) keep[iclus] = false; //If at least one cluster with ADC time in "good" window, reject other clusters
@@ -210,8 +216,16 @@ Int_t SBSHCal::SelectBestCluster(){ //Default is just highest-energy cluster reg
     }
   }
 
-  //if( best != oldindex ) std::cout << "Changed best cluster index from " << oldindex << " to " << best << std::endl;
+  Tbest = fClusters[best]->GetAtime();
+  Ebest = fClusters[best]->GetE();
   
+  if( best != oldindex ) {
+    std::cout << "Changed best cluster index from " << oldindex << " to " << best
+	      << ", (Told,Tnew)=(" << Told << ", " << Tbest << "), (Eold, Enew)=("
+	      << Eold << ", " << Ebest << ")" << std::endl;
+
+  }
+    
   if( best >= 0 ) fBestClusterIndex = best;
   return fBestClusterIndex;
 }

@@ -38,7 +38,7 @@
 #include "VarType.h"
 #include "TClonesArray.h"
 #include "TMath.h"
-#include "THaNonTrackingDetector.h"
+#include "SBSGenericDetector.h"
 #include <TTree.h>
 #include <cmath>
 //#include "THaDB.h"
@@ -73,8 +73,10 @@ ClassImp(SBSCDet)
 //____________________________________________________________________________
 SBSCDet::SBSCDet( const char* name, const char* description,
                   THaApparatus* apparatus) :
-THaNonTrackingDetector(name,description,apparatus)
+SBSGenericDetector(name,description,apparatus)
 {
+  SetModeTDC(SBSModeTDC::kTDC); //  A TDC with leading & trailing edge info
+  SetModeADC(SBSModeADC::kNone); // Default is No ADC, but can be re-enabled later
 
 
 	DEBUG_LEVEL_RELATED_PERFORMACE_CHECKER;
@@ -139,7 +141,7 @@ THaNonTrackingDetector(name,description,apparatus)
 }
 //_____________________________________________________________________________
 
-SBSCDet::SBSCDet( ) : THaNonTrackingDetector("plane","scintplane",0),
+SBSCDet::SBSCDet( ) : SBSGenericDetector("plane","scintplane",0),
 fBars(0), fNBars(0), fHits(0), /*fCombHits(0), */
 fRefHits(0),
 fLaHits(0), fRaHits(0),
@@ -270,1084 +272,1088 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 	// beginning of the analysis.
 	// 'date' contains the date/time of the run being analyzed.
 
-
-	FILE* file = OpenFile( date );
-
-	if( !file ) return kFileError;
-
-	// Use default values until ready to read from database
-
-	static const char* const here = "ReadDatabase";
-	const int LEN = 200;
-	char buff[LEN];
-	char cbuff[LEN];	//commment buffer
-	Int_t i;
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tStart reading Database");
-#endif//#if DEBUG_LEVEL>=3
-
-	// Build the search tag and find it in the file. Search tags
-	// are of form [ <prefix> ], e.g. [ N.bar.n1 ].
-	TString line;
-
-	TString prefix=fPrefix;
-	prefix.Chop();  // remove trailing dot of prefix
-	TString tag = Form("[%s.%s]",prefix.Data(),  "cratemap.tdc"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-	bool found = false;
-	while (!found && fgets (buff, LEN, file) != NULL) {
-		char* buf = ::Compress(buff);  //strip blanks
-		line = buf;
-		delete [] buf;
-#if DEBUG_LEVEL>=5//start show info
-		Info(Here(here),"\tTrying to search line <%s>", line.Data());
-#endif
-		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
-#if DEBUG_LEVEL>=5//start show info
-		Info(Here(here),"\tafter line.Chop() <%s>", line.Data());
-#endif
-		line.ToLower();
-		if ( tag == line ) 
-			found = true;
-	}
-	if( !found ) {
-		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
-		fclose(file);
-		return kInitError;
-	}
-
-	//Found the entry for this plane
-	//first are definitions of the reference channels
-	//then the definitions of the tdc channels for individiual PMTs
-	//
-	Int_t nLPMTs = 0;    // Number of PMTs to create
-	Int_t nRPMTs = 0;    // Number of PMTs to create
-
-	Int_t nRefCh = 0;    // Number of ref.channels to create
-	Int_t prev_first = 0, prev_nPMTs = 0;
-	// Set up the detector map
-	fDetMap->Clear();
-
-	Int_t crate, slot, lo, hi, model, refindex;
-	Int_t lolo;
-	crate = 0 ;
-	// Get crate, slot, low channel and high channel from file
-	// for the reference channels
-	while (crate!=-1) {
-
-		//jump throug comment lines
-		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-		fgets( buff, LEN, file );
-		if( sscanf( buff, "%d%d%d%d%d%d", &crate, &slot, &lo, &hi, &model, &refindex ) != 6 ) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 9 reading %s : %s", tag.Data(),buff );
-			fclose(file);
-			return kInitError;
-		}
-		if (crate!=-1) {
-			int first = prev_first + prev_nPMTs;
-			// Add module to the detector map
-			if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
-        //TODO: Switch to using FillDetmap
-				fclose(file);
-				return kInitError;
-			}
-			prev_first = first;
-			prev_nPMTs = (hi - lo + 1 );
-			nRefCh += prev_nPMTs;
-		}
-	}
-
-	// Get crate, slot, low channel and high channel from file
-	// for the left PMTs
-	crate = 0;
-	while (crate!=-1) {
-
-		//jump throug comment lines
-		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-		fgets( buff, LEN, file );
-		if( sscanf( buff, "%d%d%d%d%d%d", &crate, &slot, &lo, &hi, &model, &refindex ) != 6 ) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 10 reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-		if (crate!=-1) {
-			if (lo<=hi) {
-				int first = prev_first + prev_nPMTs;
-				// Add module to the detector map
-				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
-          //TODO: Switch to using FillDetmap
-					fclose(file);
-					return kInitError;
-				}
-				prev_first = first;
-				prev_nPMTs = (hi - lo + 1 );
-				nLPMTs += prev_nPMTs;
-			} else {
-				lolo = lo ;
-				while (lolo>=hi) {
-					int first = prev_first + prev_nPMTs;
-					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model, refindex) < 0 ) {
-						fclose(file);
-						return kInitError;
-					}
-					prev_first = first;
-					prev_nPMTs =  1 ;
-					nLPMTs += prev_nPMTs;
-					lolo -= 1 ;
-				}
-			}
-		}
-	}
-
-	// Get crate, slot, low channel and high channel from file
-	// for the right PMTs
-	crate = 0;
-	while (crate!=-1) {
-
-		//jump throug comment lines
-		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-		fgets( buff, LEN, file );
-		if( sscanf( buff, "%d%d%d%d%d%d", &crate, &slot, &lo, &hi, &model, &refindex ) != 6 ) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 11 reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-		if (crate!=-1) {
-			if (lo<=hi) {
-				int first = prev_first + prev_nPMTs;
-				// Add module to the detector map
-				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
-					fclose(file);
-					return kInitError;
-				}
-				prev_first = first;
-				prev_nPMTs = (hi - lo + 1 );
-				nRPMTs += prev_nPMTs;
-			} else {
-				lolo = lo ;
-				while (lolo>=hi) {
-					int first = prev_first + prev_nPMTs;
-					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model, refindex) < 0 ) {
-						fclose(file);
-						return kInitError;
-					}
-					prev_first = first;
-					prev_nPMTs =  1 ;
-					nRPMTs += prev_nPMTs;
-					lolo -= 1 ;
-				}
-			}
-		}
-	}
-
-	//Warning Thresholds
-	tag = Form("[%s.%s]",prefix.Data(),  "WarningThreshold"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-	found=false;
-	rewind(file);
-	do {
-		if (fgets (buff, LEN, file) == NULL ) {
-			Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
-			fclose(file);
-			return kInitError;
-		}
-		char* buf = ::Compress(buff);  //strip blanks
-		line = buf;
-		delete [] buf;
-		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
-		line.ToLower();
-		if ( tag == line ) 
-			found = true;
-	} while (!found);
-
-	//jump throug comment lines
-	while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-	fgets( buff, LEN, file );
-	if( sscanf( buff, "%lg", &fErrorReferenceChRateWarningThreshold ) != 1 ) {
-		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-		Error( Here(here), "Error 12 reading %s : %s", tag.Data(),buff );
-		fclose(file);
-		return kInitError;
-	}
-
-	DEBUG_INFO(Here(here),
-		"fErrorReferenceChRateWarningThreshold=%f"
-		,fErrorReferenceChRateWarningThreshold);
-
-	if (fErrorReferenceChRateWarningThreshold<0 
-		or fErrorReferenceChRateWarningThreshold>1)
-	{
-		DEBUG_WARNING(Here(here)
-			,"Invalid value (=%f) from database section %s for Threshold of error reference"
-			,fErrorReferenceChRateWarningThreshold,tag.Data());
-	}
-
-
-	// now we search for the ADC detector map
-	tag = Form("[%s.%s]",prefix.Data(),  "cratemap.adc"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-	found = false;
-	rewind(file);
-	while (!found && fgets (buff, LEN, file) != NULL) {
-		char* buf = ::Compress(buff);  //strip blanks
-		line = buf;
-		delete [] buf;
-		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
-		line.ToLower();
-		if ( tag == line ) 
-			found = true;
-	}
-	if( !found ) {
-		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
-		fclose(file);
-		return kInitError;
-	}
-
-
-	//Found the entry for this plane
-	//first the definition for the left adc channels then for the right side
-	//
-	Int_t nLPMTadc = 0;    // Number of PMTs to create
-	Int_t nRPMTadc = 0;    // Number of PMTs to create
-
-	crate = 0;
-	while (crate!=-1) {
-
-		//jump throug comment lines
-		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-		fgets( buff, LEN, file );
-		if( sscanf( buff, "%d%d%d%d%d", &crate, &slot, &lo, &hi, &model ) != 5 ) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 12 reading %s : %s", tag.Data(),buff );
-			fclose(file);
-			return kInitError;
-		}
-		if (crate!=-1) {
-			if (lo<=hi) {
-				int first = prev_first + prev_nPMTs;
-				// Add module to the detector map
-				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model ) < 0 ) {
-					fclose(file);
-					return kInitError;
-				}
-				prev_first = first;
-				prev_nPMTs = (hi - lo + 1 );
-				nLPMTadc += prev_nPMTs;
-			} else {
-				lolo = lo ;
-				while (lolo>=hi) {
-					int first = prev_first + prev_nPMTs;
-					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model) < 0 ) {
-						fclose(file);
-						return kInitError;
-					}
-					prev_first = first;
-					prev_nPMTs =  1 ;
-					nLPMTadc += prev_nPMTs;
-					lolo -= 1 ;
-				}
-			}
-		}
-	}
-
-	// Get crate, slot, low channel and high channel from file
-	// for the right PMTs
-	crate = 0;
-	while (crate!=-1) {
-
-		//jump throug comment lines
-		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-		fgets( buff, LEN, file );
-		if( sscanf( buff, "%d%d%d%d%d", &crate, &slot, &lo, &hi, &model ) != 5 ) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 13 reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-		if (crate!=-1) {
-			if (lo<=hi) {
-				int first = prev_first + prev_nPMTs;
-				// Add module to the detector map
-				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model ) < 0 ) {
-					fclose(file);
-					return kInitError;
-				}
-				prev_first = first;
-				prev_nPMTs = (hi - lo + 1 );
-				nRPMTadc += prev_nPMTs;
-			} else {
-				lolo = lo ;
-				while (lolo>=hi) {
-					int first = prev_first + prev_nPMTs;
-					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model ) < 0 ) {
-						fclose(file);
-						return kInitError;
-					}
-					prev_first = first;
-					prev_nPMTs =  1 ;
-					nRPMTadc += prev_nPMTs;
-					lolo -= 1 ;
-				}
-			}
-		}
-	}
-
-	if ( (nRPMTadc != nLPMTadc) || (nRPMTs != nLPMTs) || 
-		(nLPMTadc != nLPMTs) || (nRPMTadc != nRPMTs) ) 
-	{
-		Error( Here(here), 
-			" Database corrupted, mismatch in number of ADC or TDC channels.");
-		fclose(file);
-		return kInitError;
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "calib"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-	found=false;
-	rewind(file);
-	do {
-		if (fgets (buff, LEN, file) == NULL ) {
-			Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
-			fclose(file);
-			return kInitError;
-		}
-		char* buf = ::Compress(buff);  //strip blanks
-		line = buf;
-		delete [] buf;
-		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
-		line.ToLower();
-		if ( tag == line ) 
-			found = true;
-	} while (!found);
-
-
-
-	//Int_t prevfirst=0;
-	Int_t prevlast=-1;
-	int first=0;
-	int last=-1;
-	Double_t lres=1;
-	Double_t rres=1;
-
-	fRefCh->Clear();
-	fBars->Clear();
-
-	while (( last<nRefCh-1 )&&( first<nRefCh) ) {
-
-		//jump throug comment lines
-		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-		fgets( buff, LEN, file );
-		if( sscanf( buff, "%d%d",&first,&last) != 2 ) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 14 reading %s : %s", tag.Data(),buff );
-			fclose(file);
-			return kInitError;
-		}
-		if (first>prevlast+1) { 
-			for (i=prevlast+1;i<first;i++) {
-				new((*fRefCh)[i]) SBSScintPMT(1.,0,lres);
-#if DEBUG_LEVEL>=4//massive info
-				Info(Here(here),"\tlres:new((*fRefCh)[%d]) SBSScintPMT(1.0,0,%lg)",i, lres);
-#endif//#if DEBUG_LEVEL>=4
-			}
-		}
-		if (last<first) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 15 reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		} else {
-			if (first<nRefCh) {
-				if (last>=nRefCh) { last=nRefCh-1; }
-
-				//jump throug comment lines
-				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-				fgets( buff, LEN, file );
-				if( sscanf( buff, "%lg",&rres) != 1 ) {
-					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-					Error( Here(here), "Error 16 reading %s : %s", tag.Data(), buff );
-					fclose(file);
-					return kInitError;
-				}
-				for (i=first;i<=last;i++) {
-					new((*fRefCh)[i]) SBSScintPMT(1.0,0,rres);
-#if DEBUG_LEVEL>=4//massive info
-					Info(Here(here),"\trres:new((*fRefCh)[%d]) SBSScintPMT(1.0,0,%lg)",i, rres);
-#endif//#if DEBUG_LEVEL>=4
-				}
-			}
-			//prevfirst=first;
-			prevlast=last;
-		}
-	}
-
-	//construct parts
-	Double_t x=0,y=0,z=0,dx=0,dy=0,dz=0,xw=0,yw=0,zw=0,c=3e8,att=0;
-	Double_t lgain=1,ltoff=0,lwalk=0;
-	Int_t lped=0;
-	Double_t rgain=1,rtoff=0,rwalk=0;
-	Int_t rped=0;
-	rres=1;
-	lres=1;
-	Double_t lwrapa=0.;
-	Double_t rwrapa=0.;
-	Int_t llowtdclim=0, luptdclim=65536;
-	Int_t rlowtdclim=0, ruptdclim=65536;
-	//prevfirst=0;
-	prevlast=-1;
-	first=0;
-	last=-1;
-
-	while (( last<nLPMTs-1 )&&( first<nLPMTs) ) {
-
-		//jump throug comment lines
-		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-		fgets( buff, LEN, file );
-		if( sscanf( buff, "%d%d",&first,&last) != 2 ) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 17 reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-		if (first>prevlast+1) { 
-			for (i=prevlast+1;i<first;i++) {
-#if DEBUG_LEVEL>=4//massive info
-				Info(Here(here),"\tnew((*fBars)[%d]) SBSScintBar",i);
-#endif//#if DEBUG_LEVEL>=4
-				new((*fBars)[i]) SBSScintBar(x,y,z,xw,yw,zw,c,att,
-					lgain,lped,lres,ltoff,lwalk,
-					rgain,rped,rres,rtoff,rwalk,
-					i,
-					llowtdclim,luptdclim,lwrapa,
-					rlowtdclim,ruptdclim,rwrapa);
-				x=x+dx; y=y+dy; z=z+dz;
-			}
-		}
-		if (last<first) {
-			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-			Error( Here(here), "Error 18 reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		} else {
-			if (first<nLPMTs) {
-
-				if (last>=nLPMTs) { last=nLPMTs-1; }
-
-				//jump throug comment lines
-				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-				fgets( buff, LEN, file );
-				if( sscanf( buff, "%lg%lg%lg%lg%lg%lg",&x,&y,&z,&dx,&dy,&dz) != 6 ) {
-					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-					Error( Here(here), "Error 1 reading %s : %s", tag.Data(), buff );
-					fclose(file);
-					return kInitError;
-				}
-
-				//jump throug comment lines
-				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-				fgets( buff, LEN, file );
-				if( sscanf( buff, "%lg%lg%lg",&xw,&yw,&zw) != 3 ) {
-					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-					Error( Here(here), "Error 2 reading %s : %s", tag.Data(), buff );
-					fclose(file);
-					return kInitError;
-				}
-
-				//jump throug comment lines
-				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-				fgets( buff, LEN, file );
-				if( sscanf( buff, "%lg%lg",&c,&att) != 2 ) {
-					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-					Error( Here(here), "Error 3 reading %s : %s", tag.Data(), buff );
-					fclose(file);
-					return kInitError;
-				}
-#if DEBUG_LEVEL>=4//massive info
-				Info(Here(here),"\tc=%lg,att=%lg",c,att);
-#endif//#if DEBUG_LEVEL>=4
-
-				//jump throug comment lines
-				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-				fgets( buff, LEN, file );
-				if( sscanf( buff, "%lg%d%lg%lg%lg%d%d%lg",&lgain,&lped,&lres,&ltoff,&lwalk,&llowtdclim,&luptdclim,&lwrapa) != 8 ) {
-					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-					Error( Here(here), "Error 4 reading %s : %s", tag.Data(), buff );
-					fclose(file);
-					return kInitError;
-				}
-
-				//jump throug comment lines
-				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-				fgets( buff, LEN, file );
-				if( sscanf( buff, "%lg%d%lg%lg%lg%d%d%lg",&rgain,&rped,&rres,&rtoff,&rwalk,&rlowtdclim,&ruptdclim,&rwrapa) != 8 ) {
-					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-					Error( Here(here), "Error 5 reading %s : %s", tag.Data(), buff );
-					fclose(file);
-					return kInitError;
-				}
-
-				for (i=first;i<=last;i++) {
-					new((*fBars)[i]) SBSScintBar(x,y,z,xw,yw,zw,c,att,
-						lgain,lped,lres,ltoff,lwalk,
-						rgain,rped,rres,rtoff,rwalk,
-						i,
-						llowtdclim,luptdclim,lwrapa,
-						rlowtdclim,ruptdclim,rwrapa
-						);
-					x=x+dx; y=y+dy; z=z+dz;
-				}
-			}
-			//prevfirst=first;
-			prevlast=last;      
-		}
-	}
-	//// optional parts in the database:
-	//// Threshold a standalone number at the end of the calib section
-	////jump throug comment lines
-	//while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-	//fgets( buff, LEN, file );
-	//Double_t v;
-	//if( sscanf( buff, "%lg",&v ) == 1 ) {
-	//	fThreshold = v;
-	//}
-
-	// now for the tables: rewind the file and start again
-
-	// to read in tables of pedestals
-
-	Double_t* values = new Double_t[GetNBars()+10];
-	Int_t j;
-	tag = Form("[%s.%s]",prefix.Data(),  "left_pedestals"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				lped = (Int_t) values[j];
-				(GetBar(i)->GetLPMT())->SetPed(lped);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "right_pedestals"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				rped = (Int_t) values[j];
-				(GetBar(i)->GetRPMT())->SetPed(rped);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "left_gain"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetLPMT())->SetGain(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "right_gain"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetRPMT())->SetGain(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "left_toff"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetLPMT())->SetTOffset(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "right_toff"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetRPMT())->SetTOffset(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "speed_of_light"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<GetNBars())&&(last>=first)&&(last<GetNBars())) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				GetBar(i)->SetC(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "attenuation"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<GetNBars())&&(last>=first)&&(last<GetNBars())) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				GetBar(i)->SetAtt(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "left_walkcor"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetLPMT())->SetTimeWalk(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "right_walkcor"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetRPMT())->SetTimeWalk(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "left_walkexp"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetLPMT())->SetTimeWExp(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	tag = Form("[%s.%s]",prefix.Data(),  "right_walkexp"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-
-	rewind(file);
-	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
-		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				(GetBar(i)->GetRPMT())->SetTimeWExp(values[j]);
-				j++;
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	delete [] values;
-
-	// now for the geometry
-	tag = Form("[%s.%s]",prefix.Data(),  "bar_geom"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-	Int_t maxvs = 6*GetNBars();
-	values = new Double_t[maxvs];  // x y z dx dy dz
-
-	rewind(file);
-	while (GetTable(file,tag,values,maxvs,&first,&last)==0) {
-		// put last back into bar number
-		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
-			j=0;
-			for (i=first; i<=last; i++) {
-				SBSScintBar* b = GetBar(i);
-				if (!b) {
-					Error( Here(here), "Error setting geometry, found at entry %d for bar %d", j,i );
-					fclose(file);
-					return kInitError;
-				}
-				b->SetXPos(values[j++]);
-				b->SetYPos(values[j++]);
-				b->SetZPos(values[j++]);
-				b->SetXWidth(values[j++]);
-				b->SetYWidth(values[j++]);
-				b->SetZWidth(values[j++]);
-			}      
-		} else {
-			Error( Here(here), "Error reading %s : %s, first=%d, last=%d, nRPMTs=%d", tag.Data(), buff,first,last,nRPMTs );
-			fclose(file);
-			return kInitError;
-		}
-	}
-
-	delete [] values;
-
-	fNBars= GetNBars();
-	if (fLE) {
-		Warning(Here(here),"Re-initializing: detectors must be the SAME SIZE!");
-	} else {
-		fLE    = new Double_t[fNBars];
-		fRE    = new Double_t[fNBars];
-		fLT    = new Double_t[fNBars];
-		fRT    = new Double_t[fNBars];
-		fLrawA = new Double_t[fNBars];
-		fRrawA = new Double_t[fNBars];
-		fLpedcA= new Double_t[fNBars];
-		fRpedcA= new Double_t[fNBars];
-
-		fLTcounter= new Int_t[fNBars];
-		fRTcounter= new Int_t[fNBars];
-		hitcounter= new Int_t[fNBars];
-		Energy = new Double_t[fNBars];
-		TDIFF  = new Double_t[fNBars];
-		T_tot  = new Double_t[fNBars];
-		TOF    = new Double_t[fNBars];
-		Yt_pos = new Double_t[fNBars];
-		Ya_pos = new Double_t[fNBars];
-		Y_pred = new Double_t[fNBars];
-		Y_dev  = new Double_t[fNBars];
-		fAngle = new Double_t[fNBars];
-		fLtIndex = new Int_t[fNBars];
-		fRtIndex = new Int_t[fNBars];
-		fLaIndex = new Int_t[fNBars];
-		fRaIndex = new Int_t[fNBars];
-	}
-
-
-	///////////////////////// geometry ///////////////////////////
-	tag = Form("[%s.%s]",prefix.Data(),  "geometry"  );
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-	found = false;
-
-	rewind(file);
-	while (!found && fgets (buff, LEN, file) != NULL) {
-		char* buf = ::Compress(buff);  //strip blanks
-		line = buf;
-		delete [] buf;
-#if DEBUG_LEVEL>=5//start show info
-		Info(Here(here),"\tTrying to search line <%s>", line.Data());
-#endif
-		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
-#if DEBUG_LEVEL>=5//start show info
-		Info(Here(here),"\tafter line.Chop() <%s>", line.Data());
-#endif
-		line.ToLower();
-		if ( tag == line ) 
-			found = true;
-	}
-	if( !found ) {
-		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
-		fclose(file);
-		return kInitError;
-	}
-
-	//jump throug comment lines
-	while ( ReadNumberSignStartComment( file, cbuff, LEN ));
-
-	Double_t xtmp,ytmp,ztmp;
-	fgets( buff, LEN, file );
-	if( sscanf( buff, "%lg%lg%lg",&xtmp,&ytmp,&ztmp) != 3 ) {
-		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-		Error( Here(here), "Error 4 reading %s (fOrigin): %s", tag.Data(), buff );
-		fclose(file);
-		return kInitError;
-	}
-	fOrigin.SetXYZ(xtmp,ytmp,ztmp);
-
-	//jump throug comment lines
-	while ( ReadNumberSignStartComment( file, cbuff, LEN ));
-
-	fgets( buff, LEN, file );
-	if( sscanf( buff, "%lg%lg%lg",&xtmp,&ytmp,&ztmp) != 3 ) {
-		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-		Error( Here(here), "Error 4 reading %s (fXax): %s", tag.Data(), buff );
-		fclose(file);
-		return kInitError;
-	}
-	fXax.SetXYZ( xtmp,ytmp,ztmp );
-
-	//jump throug comment lines
-	while ( ReadNumberSignStartComment( file, cbuff, LEN ));
-
-	fgets( buff, LEN, file );
-	if( sscanf( buff, "%lg%lg%lg",&xtmp,&ytmp,&ztmp) != 3 ) {
-		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-		Error( Here(here), "Error 4 reading %s (fZax): %s", tag.Data(), buff );
-		fclose(file);
-		return kInitError;
-	}
-	fYax.SetXYZ( xtmp,ytmp,ztmp );
-	fZax = fXax.Cross(fYax);
-
-
-	///////////////////////// hit_acceptance ///////////////////////////
-
-	tag = Form("[%s.%s]",prefix.Data(),  "hit_acceptance"  );
-
-	rewind(file);
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
-#endif
-
-	tag.ToLower();
-	found = false;
-	while (!found && fgets (buff, LEN, file) != NULL) {
-		char* buf = ::Compress(buff);  //strip blanks
-		line = buf;
-		delete [] buf;
-#if DEBUG_LEVEL>=5//start show info
-		Info(Here(here),"\tTrying to search line <%s>", line.Data());
-#endif
-		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
-#if DEBUG_LEVEL>=5//start show info
-		Info(Here(here),"\tafter line.Chop() <%s>", line.Data());
-#endif
-		line.ToLower();
-		if ( tag == line ) 
-			found = true;
-	}
-	if( !found ) {
-		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
-		fclose(file);
-		return kInitError;
-	}
-
-	//jump throug comment lines
-	while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
-
-	//#accepatble time difference between 2 hits in E and dE plane is smaller
-	//#time difference=TOF(dE)-TOF(E)
-	fgets( buff, LEN, file );
-	if( sscanf( buff, "%lg%lg",&fTrackAcceptanceDx,&fTrackAcceptanceDy) != 2 ) {
-		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
-		Error( Here(here), "Error 4 reading %s : %s", tag.Data(), buff );
-		fclose(file);
-		return kInitError;
-	}
-
-#if DEBUG_LEVEL>=3//start show info
-	Info(Here(here),"Printing Origin and x,y,z axis vector:");
-	fOrigin.Print();
-	fXax.Print();
-	fYax.Print();
-	fZax.Print();
-
-	TString sDebugOutput;
-	sDebugOutput=GetName();
-	sDebugOutput+=" Database read in successfully with:";
-	sDebugOutput+="\n \tTrackAcceptanceDx\t= ";	sDebugOutput+=fTrackAcceptanceDx;
-	sDebugOutput+="\n \tTrackAcceptanceDy\t= ";	sDebugOutput+=fTrackAcceptanceDy;
-	sDebugOutput+="\n";
-	Info(Here(here),sDebugOutput.Data());
-
-	Info(Here(here),"Printing Detector Map:");
-	fDetMap->Print();
-
-#endif	
-
-
-
-	fclose(file);
-	return kOK;
+  Int_t err = SBSGenericDetector::ReadDatabase(date);
+  if(err)
+    return err;
+  
+// 	FILE* file = OpenFile( date );
+
+// 	if( !file ) return kFileError;
+
+// 	// Use default values until ready to read from database
+
+// 	static const char* const here = "ReadDatabase";
+// 	const int LEN = 200;
+// 	char buff[LEN];
+// 	char cbuff[LEN];	//commment buffer
+// 	Int_t i;
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tStart reading Database");
+// #endif//#if DEBUG_LEVEL>=3
+
+// 	// Build the search tag and find it in the file. Search tags
+// 	// are of form [ <prefix> ], e.g. [ N.bar.n1 ].
+// 	TString line;
+
+// 	TString prefix=fPrefix;
+// 	prefix.Chop();  // remove trailing dot of prefix
+// 	TString tag = Form("[%s.%s]",prefix.Data(),  "cratemap.tdc"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+// 	bool found = false;
+// 	while (!found && fgets (buff, LEN, file) != NULL) {
+// 		char* buf = ::Compress(buff);  //strip blanks
+// 		line = buf;
+// 		delete [] buf;
+// #if DEBUG_LEVEL>=5//start show info
+// 		Info(Here(here),"\tTrying to search line <%s>", line.Data());
+// #endif
+// 		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
+// #if DEBUG_LEVEL>=5//start show info
+// 		Info(Here(here),"\tafter line.Chop() <%s>", line.Data());
+// #endif
+// 		line.ToLower();
+// 		if ( tag == line ) 
+// 			found = true;
+// 	}
+// 	if( !found ) {
+// 		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+
+// 	//Found the entry for this plane
+// 	//first are definitions of the reference channels
+// 	//then the definitions of the tdc channels for individiual PMTs
+// 	//
+// 	Int_t nLPMTs = 0;    // Number of PMTs to create
+// 	Int_t nRPMTs = 0;    // Number of PMTs to create
+
+// 	Int_t nRefCh = 0;    // Number of ref.channels to create
+// 	Int_t prev_first = 0, prev_nPMTs = 0;
+// 	// Set up the detector map
+// 	fDetMap->Clear();
+
+// 	Int_t crate, slot, lo, hi, model, refindex;
+// 	Int_t lolo;
+// 	crate = 0 ;
+// 	// Get crate, slot, low channel and high channel from file
+// 	// for the reference channels
+// 	while (crate!=-1) {
+
+// 		//jump throug comment lines
+// 		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 		fgets( buff, LEN, file );
+// 		if( sscanf( buff, "%d%d%d%d%d%d", &crate, &slot, &lo, &hi, &model, &refindex ) != 6 ) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 9 reading %s : %s", tag.Data(),buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		if (crate!=-1) {
+// 			int first = prev_first + prev_nPMTs;
+// 			// Add module to the detector map
+// 			if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
+//         //TODO: Switch to using FillDetmap
+// 				fclose(file);
+// 				return kInitError;
+// 			}
+// 			prev_first = first;
+// 			prev_nPMTs = (hi - lo + 1 );
+// 			nRefCh += prev_nPMTs;
+// 		}
+// 	}
+
+// 	// Get crate, slot, low channel and high channel from file
+// 	// for the left PMTs
+// 	crate = 0;
+// 	while (crate!=-1) {
+
+// 		//jump throug comment lines
+// 		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 		fgets( buff, LEN, file );
+// 		if( sscanf( buff, "%d%d%d%d%d%d", &crate, &slot, &lo, &hi, &model, &refindex ) != 6 ) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 10 reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		if (crate!=-1) {
+// 			if (lo<=hi) {
+// 				int first = prev_first + prev_nPMTs;
+// 				// Add module to the detector map
+// 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
+//           //TODO: Switch to using FillDetmap
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+// 				prev_first = first;
+// 				prev_nPMTs = (hi - lo + 1 );
+// 				nLPMTs += prev_nPMTs;
+// 			} else {
+// 				lolo = lo ;
+// 				while (lolo>=hi) {
+// 					int first = prev_first + prev_nPMTs;
+// 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model, refindex) < 0 ) {
+// 						fclose(file);
+// 						return kInitError;
+// 					}
+// 					prev_first = first;
+// 					prev_nPMTs =  1 ;
+// 					nLPMTs += prev_nPMTs;
+// 					lolo -= 1 ;
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Get crate, slot, low channel and high channel from file
+// 	// for the right PMTs
+// 	crate = 0;
+// 	while (crate!=-1) {
+
+// 		//jump throug comment lines
+// 		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 		fgets( buff, LEN, file );
+// 		if( sscanf( buff, "%d%d%d%d%d%d", &crate, &slot, &lo, &hi, &model, &refindex ) != 6 ) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 11 reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		if (crate!=-1) {
+// 			if (lo<=hi) {
+// 				int first = prev_first + prev_nPMTs;
+// 				// Add module to the detector map
+// 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model, refindex) < 0 ) {
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+// 				prev_first = first;
+// 				prev_nPMTs = (hi - lo + 1 );
+// 				nRPMTs += prev_nPMTs;
+// 			} else {
+// 				lolo = lo ;
+// 				while (lolo>=hi) {
+// 					int first = prev_first + prev_nPMTs;
+// 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model, refindex) < 0 ) {
+// 						fclose(file);
+// 						return kInitError;
+// 					}
+// 					prev_first = first;
+// 					prev_nPMTs =  1 ;
+// 					nRPMTs += prev_nPMTs;
+// 					lolo -= 1 ;
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	//Warning Thresholds
+// 	tag = Form("[%s.%s]",prefix.Data(),  "WarningThreshold"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+// 	found=false;
+// 	rewind(file);
+// 	do {
+// 		if (fgets (buff, LEN, file) == NULL ) {
+// 			Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		char* buf = ::Compress(buff);  //strip blanks
+// 		line = buf;
+// 		delete [] buf;
+// 		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
+// 		line.ToLower();
+// 		if ( tag == line ) 
+// 			found = true;
+// 	} while (!found);
+
+// 	//jump throug comment lines
+// 	while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 	fgets( buff, LEN, file );
+// 	if( sscanf( buff, "%lg", &fErrorReferenceChRateWarningThreshold ) != 1 ) {
+// 		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 		Error( Here(here), "Error 12 reading %s : %s", tag.Data(),buff );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+
+// 	DEBUG_INFO(Here(here),
+// 		"fErrorReferenceChRateWarningThreshold=%f"
+// 		,fErrorReferenceChRateWarningThreshold);
+
+// 	if (fErrorReferenceChRateWarningThreshold<0 
+// 		or fErrorReferenceChRateWarningThreshold>1)
+// 	{
+// 		DEBUG_WARNING(Here(here)
+// 			,"Invalid value (=%f) from database section %s for Threshold of error reference"
+// 			,fErrorReferenceChRateWarningThreshold,tag.Data());
+// 	}
+
+
+// 	// now we search for the ADC detector map
+// 	tag = Form("[%s.%s]",prefix.Data(),  "cratemap.adc"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+// 	found = false;
+// 	rewind(file);
+// 	while (!found && fgets (buff, LEN, file) != NULL) {
+// 		char* buf = ::Compress(buff);  //strip blanks
+// 		line = buf;
+// 		delete [] buf;
+// 		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
+// 		line.ToLower();
+// 		if ( tag == line ) 
+// 			found = true;
+// 	}
+// 	if( !found ) {
+// 		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+
+
+// 	//Found the entry for this plane
+// 	//first the definition for the left adc channels then for the right side
+// 	//
+// 	Int_t nLPMTadc = 0;    // Number of PMTs to create
+// 	Int_t nRPMTadc = 0;    // Number of PMTs to create
+
+// 	crate = 0;
+// 	while (crate!=-1) {
+
+// 		//jump throug comment lines
+// 		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 		fgets( buff, LEN, file );
+// 		if( sscanf( buff, "%d%d%d%d%d", &crate, &slot, &lo, &hi, &model ) != 5 ) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 12 reading %s : %s", tag.Data(),buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		if (crate!=-1) {
+// 			if (lo<=hi) {
+// 				int first = prev_first + prev_nPMTs;
+// 				// Add module to the detector map
+// 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model ) < 0 ) {
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+// 				prev_first = first;
+// 				prev_nPMTs = (hi - lo + 1 );
+// 				nLPMTadc += prev_nPMTs;
+// 			} else {
+// 				lolo = lo ;
+// 				while (lolo>=hi) {
+// 					int first = prev_first + prev_nPMTs;
+// 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model) < 0 ) {
+// 						fclose(file);
+// 						return kInitError;
+// 					}
+// 					prev_first = first;
+// 					prev_nPMTs =  1 ;
+// 					nLPMTadc += prev_nPMTs;
+// 					lolo -= 1 ;
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Get crate, slot, low channel and high channel from file
+// 	// for the right PMTs
+// 	crate = 0;
+// 	while (crate!=-1) {
+
+// 		//jump throug comment lines
+// 		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 		fgets( buff, LEN, file );
+// 		if( sscanf( buff, "%d%d%d%d%d", &crate, &slot, &lo, &hi, &model ) != 5 ) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 13 reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		if (crate!=-1) {
+// 			if (lo<=hi) {
+// 				int first = prev_first + prev_nPMTs;
+// 				// Add module to the detector map
+// 				if ( fDetMap->AddModule(crate, slot, lo, hi, first, model ) < 0 ) {
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+// 				prev_first = first;
+// 				prev_nPMTs = (hi - lo + 1 );
+// 				nRPMTadc += prev_nPMTs;
+// 			} else {
+// 				lolo = lo ;
+// 				while (lolo>=hi) {
+// 					int first = prev_first + prev_nPMTs;
+// 					if ( fDetMap->AddModule(crate, slot, lolo, lolo, first, model ) < 0 ) {
+// 						fclose(file);
+// 						return kInitError;
+// 					}
+// 					prev_first = first;
+// 					prev_nPMTs =  1 ;
+// 					nRPMTadc += prev_nPMTs;
+// 					lolo -= 1 ;
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	if ( (nRPMTadc != nLPMTadc) || (nRPMTs != nLPMTs) || 
+// 		(nLPMTadc != nLPMTs) || (nRPMTadc != nRPMTs) ) 
+// 	{
+// 		Error( Here(here), 
+// 			" Database corrupted, mismatch in number of ADC or TDC channels.");
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "calib"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+// 	found=false;
+// 	rewind(file);
+// 	do {
+// 		if (fgets (buff, LEN, file) == NULL ) {
+// 			Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		char* buf = ::Compress(buff);  //strip blanks
+// 		line = buf;
+// 		delete [] buf;
+// 		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
+// 		line.ToLower();
+// 		if ( tag == line ) 
+// 			found = true;
+// 	} while (!found);
+
+
+
+// 	//Int_t prevfirst=0;
+// 	Int_t prevlast=-1;
+// 	int first=0;
+// 	int last=-1;
+// 	Double_t lres=1;
+// 	Double_t rres=1;
+
+// 	fRefCh->Clear();
+// 	fBars->Clear();
+
+// 	while (( last<nRefCh-1 )&&( first<nRefCh) ) {
+
+// 		//jump throug comment lines
+// 		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 		fgets( buff, LEN, file );
+// 		if( sscanf( buff, "%d%d",&first,&last) != 2 ) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 14 reading %s : %s", tag.Data(),buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		if (first>prevlast+1) { 
+// 			for (i=prevlast+1;i<first;i++) {
+// 				new((*fRefCh)[i]) SBSScintPMT(1.,0,lres);
+// #if DEBUG_LEVEL>=4//massive info
+// 				Info(Here(here),"\tlres:new((*fRefCh)[%d]) SBSScintPMT(1.0,0,%lg)",i, lres);
+// #endif//#if DEBUG_LEVEL>=4
+// 			}
+// 		}
+// 		if (last<first) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 15 reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		} else {
+// 			if (first<nRefCh) {
+// 				if (last>=nRefCh) { last=nRefCh-1; }
+
+// 				//jump throug comment lines
+// 				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 				fgets( buff, LEN, file );
+// 				if( sscanf( buff, "%lg",&rres) != 1 ) {
+// 					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 					Error( Here(here), "Error 16 reading %s : %s", tag.Data(), buff );
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+// 				for (i=first;i<=last;i++) {
+// 					new((*fRefCh)[i]) SBSScintPMT(1.0,0,rres);
+// #if DEBUG_LEVEL>=4//massive info
+// 					Info(Here(here),"\trres:new((*fRefCh)[%d]) SBSScintPMT(1.0,0,%lg)",i, rres);
+// #endif//#if DEBUG_LEVEL>=4
+// 				}
+// 			}
+// 			//prevfirst=first;
+// 			prevlast=last;
+// 		}
+// 	}
+
+// 	//construct parts
+// 	Double_t x=0,y=0,z=0,dx=0,dy=0,dz=0,xw=0,yw=0,zw=0,c=3e8,att=0;
+// 	Double_t lgain=1,ltoff=0,lwalk=0;
+// 	Int_t lped=0;
+// 	Double_t rgain=1,rtoff=0,rwalk=0;
+// 	Int_t rped=0;
+// 	rres=1;
+// 	lres=1;
+// 	Double_t lwrapa=0.;
+// 	Double_t rwrapa=0.;
+// 	Int_t llowtdclim=0, luptdclim=65536;
+// 	Int_t rlowtdclim=0, ruptdclim=65536;
+// 	//prevfirst=0;
+// 	prevlast=-1;
+// 	first=0;
+// 	last=-1;
+
+// 	while (( last<nLPMTs-1 )&&( first<nLPMTs) ) {
+
+// 		//jump throug comment lines
+// 		while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 		fgets( buff, LEN, file );
+// 		if( sscanf( buff, "%d%d",&first,&last) != 2 ) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 17 reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 		if (first>prevlast+1) { 
+// 			for (i=prevlast+1;i<first;i++) {
+// #if DEBUG_LEVEL>=4//massive info
+// 				Info(Here(here),"\tnew((*fBars)[%d]) SBSScintBar",i);
+// #endif//#if DEBUG_LEVEL>=4
+// 				new((*fBars)[i]) SBSScintBar(x,y,z,xw,yw,zw,c,att,
+// 					lgain,lped,lres,ltoff,lwalk,
+// 					rgain,rped,rres,rtoff,rwalk,
+// 					i,
+// 					llowtdclim,luptdclim,lwrapa,
+// 					rlowtdclim,ruptdclim,rwrapa);
+// 				x=x+dx; y=y+dy; z=z+dz;
+// 			}
+// 		}
+// 		if (last<first) {
+// 			if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 			Error( Here(here), "Error 18 reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		} else {
+// 			if (first<nLPMTs) {
+
+// 				if (last>=nLPMTs) { last=nLPMTs-1; }
+
+// 				//jump throug comment lines
+// 				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 				fgets( buff, LEN, file );
+// 				if( sscanf( buff, "%lg%lg%lg%lg%lg%lg",&x,&y,&z,&dx,&dy,&dz) != 6 ) {
+// 					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 					Error( Here(here), "Error 1 reading %s : %s", tag.Data(), buff );
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+
+// 				//jump throug comment lines
+// 				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 				fgets( buff, LEN, file );
+// 				if( sscanf( buff, "%lg%lg%lg",&xw,&yw,&zw) != 3 ) {
+// 					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 					Error( Here(here), "Error 2 reading %s : %s", tag.Data(), buff );
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+
+// 				//jump throug comment lines
+// 				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 				fgets( buff, LEN, file );
+// 				if( sscanf( buff, "%lg%lg",&c,&att) != 2 ) {
+// 					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 					Error( Here(here), "Error 3 reading %s : %s", tag.Data(), buff );
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+// #if DEBUG_LEVEL>=4//massive info
+// 				Info(Here(here),"\tc=%lg,att=%lg",c,att);
+// #endif//#if DEBUG_LEVEL>=4
+
+// 				//jump throug comment lines
+// 				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 				fgets( buff, LEN, file );
+// 				if( sscanf( buff, "%lg%d%lg%lg%lg%d%d%lg",&lgain,&lped,&lres,&ltoff,&lwalk,&llowtdclim,&luptdclim,&lwrapa) != 8 ) {
+// 					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 					Error( Here(here), "Error 4 reading %s : %s", tag.Data(), buff );
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+
+// 				//jump throug comment lines
+// 				while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 				fgets( buff, LEN, file );
+// 				if( sscanf( buff, "%lg%d%lg%lg%lg%d%d%lg",&rgain,&rped,&rres,&rtoff,&rwalk,&rlowtdclim,&ruptdclim,&rwrapa) != 8 ) {
+// 					if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 					Error( Here(here), "Error 5 reading %s : %s", tag.Data(), buff );
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+
+// 				for (i=first;i<=last;i++) {
+// 					new((*fBars)[i]) SBSScintBar(x,y,z,xw,yw,zw,c,att,
+// 						lgain,lped,lres,ltoff,lwalk,
+// 						rgain,rped,rres,rtoff,rwalk,
+// 						i,
+// 						llowtdclim,luptdclim,lwrapa,
+// 						rlowtdclim,ruptdclim,rwrapa
+// 						);
+// 					x=x+dx; y=y+dy; z=z+dz;
+// 				}
+// 			}
+// 			//prevfirst=first;
+// 			prevlast=last;      
+// 		}
+// 	}
+// 	//// optional parts in the database:
+// 	//// Threshold a standalone number at the end of the calib section
+// 	////jump throug comment lines
+// 	//while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 	//fgets( buff, LEN, file );
+// 	//Double_t v;
+// 	//if( sscanf( buff, "%lg",&v ) == 1 ) {
+// 	//	fThreshold = v;
+// 	//}
+
+// 	// now for the tables: rewind the file and start again
+
+// 	// to read in tables of pedestals
+
+// 	Double_t* values = new Double_t[GetNBars()+10];
+// 	Int_t j;
+// 	tag = Form("[%s.%s]",prefix.Data(),  "left_pedestals"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				lped = (Int_t) values[j];
+// 				(GetBar(i)->GetLPMT())->SetPed(lped);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "right_pedestals"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				rped = (Int_t) values[j];
+// 				(GetBar(i)->GetRPMT())->SetPed(rped);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "left_gain"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetLPMT())->SetGain(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "right_gain"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetRPMT())->SetGain(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "left_toff"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetLPMT())->SetTOffset(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "right_toff"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetRPMT())->SetTOffset(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "speed_of_light"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<GetNBars())&&(last>=first)&&(last<GetNBars())) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				GetBar(i)->SetC(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "attenuation"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<GetNBars())&&(last>=first)&&(last<GetNBars())) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				GetBar(i)->SetAtt(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "left_walkcor"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetLPMT())->SetTimeWalk(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "right_walkcor"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetRPMT())->SetTimeWalk(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "left_walkexp"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nLPMTs)&&(last>=first)&&(last<nLPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetLPMT())->SetTimeWExp(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "right_walkexp"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,GetNBars(),&first,&last)==0) {
+// 		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				(GetBar(i)->GetRPMT())->SetTimeWExp(values[j]);
+// 				j++;
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s", tag.Data(), buff );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	delete [] values;
+
+// 	// now for the geometry
+// 	tag = Form("[%s.%s]",prefix.Data(),  "bar_geom"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+// 	Int_t maxvs = 6*GetNBars();
+// 	values = new Double_t[maxvs];  // x y z dx dy dz
+
+// 	rewind(file);
+// 	while (GetTable(file,tag,values,maxvs,&first,&last)==0) {
+// 		// put last back into bar number
+// 		if ((first>=0)&&(first<nRPMTs)&&(last>=first)&&(last<nRPMTs)) {
+// 			j=0;
+// 			for (i=first; i<=last; i++) {
+// 				SBSScintBar* b = GetBar(i);
+// 				if (!b) {
+// 					Error( Here(here), "Error setting geometry, found at entry %d for bar %d", j,i );
+// 					fclose(file);
+// 					return kInitError;
+// 				}
+// 				b->SetXPos(values[j++]);
+// 				b->SetYPos(values[j++]);
+// 				b->SetZPos(values[j++]);
+// 				b->SetXWidth(values[j++]);
+// 				b->SetYWidth(values[j++]);
+// 				b->SetZWidth(values[j++]);
+// 			}      
+// 		} else {
+// 			Error( Here(here), "Error reading %s : %s, first=%d, last=%d, nRPMTs=%d", tag.Data(), buff,first,last,nRPMTs );
+// 			fclose(file);
+// 			return kInitError;
+// 		}
+// 	}
+
+// 	delete [] values;
+
+// 	fNBars= GetNBars();
+// 	if (fLE) {
+// 		Warning(Here(here),"Re-initializing: detectors must be the SAME SIZE!");
+// 	} else {
+// 		fLE    = new Double_t[fNBars];
+// 		fRE    = new Double_t[fNBars];
+// 		fLT    = new Double_t[fNBars];
+// 		fRT    = new Double_t[fNBars];
+// 		fLrawA = new Double_t[fNBars];
+// 		fRrawA = new Double_t[fNBars];
+// 		fLpedcA= new Double_t[fNBars];
+// 		fRpedcA= new Double_t[fNBars];
+
+// 		fLTcounter= new Int_t[fNBars];
+// 		fRTcounter= new Int_t[fNBars];
+// 		hitcounter= new Int_t[fNBars];
+// 		Energy = new Double_t[fNBars];
+// 		TDIFF  = new Double_t[fNBars];
+// 		T_tot  = new Double_t[fNBars];
+// 		TOF    = new Double_t[fNBars];
+// 		Yt_pos = new Double_t[fNBars];
+// 		Ya_pos = new Double_t[fNBars];
+// 		Y_pred = new Double_t[fNBars];
+// 		Y_dev  = new Double_t[fNBars];
+// 		fAngle = new Double_t[fNBars];
+// 		fLtIndex = new Int_t[fNBars];
+// 		fRtIndex = new Int_t[fNBars];
+// 		fLaIndex = new Int_t[fNBars];
+// 		fRaIndex = new Int_t[fNBars];
+// 	}
+
+
+// 	///////////////////////// geometry ///////////////////////////
+// 	tag = Form("[%s.%s]",prefix.Data(),  "geometry"  );
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+// 	found = false;
+
+// 	rewind(file);
+// 	while (!found && fgets (buff, LEN, file) != NULL) {
+// 		char* buf = ::Compress(buff);  //strip blanks
+// 		line = buf;
+// 		delete [] buf;
+// #if DEBUG_LEVEL>=5//start show info
+// 		Info(Here(here),"\tTrying to search line <%s>", line.Data());
+// #endif
+// 		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
+// #if DEBUG_LEVEL>=5//start show info
+// 		Info(Here(here),"\tafter line.Chop() <%s>", line.Data());
+// #endif
+// 		line.ToLower();
+// 		if ( tag == line ) 
+// 			found = true;
+// 	}
+// 	if( !found ) {
+// 		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+
+// 	//jump throug comment lines
+// 	while ( ReadNumberSignStartComment( file, cbuff, LEN ));
+
+// 	Double_t xtmp,ytmp,ztmp;
+// 	fgets( buff, LEN, file );
+// 	if( sscanf( buff, "%lg%lg%lg",&xtmp,&ytmp,&ztmp) != 3 ) {
+// 		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 		Error( Here(here), "Error 4 reading %s (fOrigin): %s", tag.Data(), buff );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+// 	fOrigin.SetXYZ(xtmp,ytmp,ztmp);
+
+// 	//jump throug comment lines
+// 	while ( ReadNumberSignStartComment( file, cbuff, LEN ));
+
+// 	fgets( buff, LEN, file );
+// 	if( sscanf( buff, "%lg%lg%lg",&xtmp,&ytmp,&ztmp) != 3 ) {
+// 		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 		Error( Here(here), "Error 4 reading %s (fXax): %s", tag.Data(), buff );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+// 	fXax.SetXYZ( xtmp,ytmp,ztmp );
+
+// 	//jump throug comment lines
+// 	while ( ReadNumberSignStartComment( file, cbuff, LEN ));
+
+// 	fgets( buff, LEN, file );
+// 	if( sscanf( buff, "%lg%lg%lg",&xtmp,&ytmp,&ztmp) != 3 ) {
+// 		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 		Error( Here(here), "Error 4 reading %s (fZax): %s", tag.Data(), buff );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+// 	fYax.SetXYZ( xtmp,ytmp,ztmp );
+// 	fZax = fXax.Cross(fYax);
+
+
+// 	///////////////////////// hit_acceptance ///////////////////////////
+
+// 	tag = Form("[%s.%s]",prefix.Data(),  "hit_acceptance"  );
+
+// 	rewind(file);
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"\tTrying to read in database section %s", tag.Data());
+// #endif
+
+// 	tag.ToLower();
+// 	found = false;
+// 	while (!found && fgets (buff, LEN, file) != NULL) {
+// 		char* buf = ::Compress(buff);  //strip blanks
+// 		line = buf;
+// 		delete [] buf;
+// #if DEBUG_LEVEL>=5//start show info
+// 		Info(Here(here),"\tTrying to search line <%s>", line.Data());
+// #endif
+// 		if( line.EndsWith("\n") ) line.Chop();  //delete trailing newline
+// #if DEBUG_LEVEL>=5//start show info
+// 		Info(Here(here),"\tafter line.Chop() <%s>", line.Data());
+// #endif
+// 		line.ToLower();
+// 		if ( tag == line ) 
+// 			found = true;
+// 	}
+// 	if( !found ) {
+// 		Error(Here(here), "Database entry \"%s\" not found!", tag.Data() );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+
+// 	//jump throug comment lines
+// 	while ( ReadNumberSignStartComment( file, cbuff, LEN ));	
+
+// 	//#accepatble time difference between 2 hits in E and dE plane is smaller
+// 	//#time difference=TOF(dE)-TOF(E)
+// 	fgets( buff, LEN, file );
+// 	if( sscanf( buff, "%lg%lg",&fTrackAcceptanceDx,&fTrackAcceptanceDy) != 2 ) {
+// 		if( *buff ) buff[strlen(buff)-1] = 0; //delete trailing newline
+// 		Error( Here(here), "Error 4 reading %s : %s", tag.Data(), buff );
+// 		fclose(file);
+// 		return kInitError;
+// 	}
+
+// #if DEBUG_LEVEL>=3//start show info
+// 	Info(Here(here),"Printing Origin and x,y,z axis vector:");
+// 	fOrigin.Print();
+// 	fXax.Print();
+// 	fYax.Print();
+// 	fZax.Print();
+
+// 	TString sDebugOutput;
+// 	sDebugOutput=GetName();
+// 	sDebugOutput+=" Database read in successfully with:";
+// 	sDebugOutput+="\n \tTrackAcceptanceDx\t= ";	sDebugOutput+=fTrackAcceptanceDx;
+// 	sDebugOutput+="\n \tTrackAcceptanceDy\t= ";	sDebugOutput+=fTrackAcceptanceDy;
+// 	sDebugOutput+="\n";
+// 	Info(Here(here),sDebugOutput.Data());
+
+// 	Info(Here(here),"Printing Detector Map:");
+// 	fDetMap->Print();
+
+// #endif	
+
+
+
+	// fclose(file);
+  fIsInit = true;
+  return kOK;
 }
 
 
@@ -1686,349 +1692,349 @@ Double_t SBSCDet::TimeWalkCorrection( SBSScintPMT* pmt, Double_t ADC, Double_t t
 	return time - tw + tw_ref;
 }
 
-//_____________________________________________________________________________
-Int_t SBSCDet::Decode( const THaEvData& evdata )
-{
-	// Decode scintillator data, correct TDC times and ADC amplitudes, and copy
-	// the data to the local data members.
-	static const char *here="Decode()";
+// //_____________________________________________________________________________
+// Int_t SBSCDet::Decode( const THaEvData& evdata )
+// {
+// 	// Decode scintillator data, correct TDC times and ADC amplitudes, and copy
+// 	// the data to the local data members.
+// 	static const char *here="Decode()";
 
-	fEventCount++;
+// 	fEventCount++;
 
-	if (!evdata.IsPhysicsTrigger()) return -1;
+// 	if (!evdata.IsPhysicsTrigger()) return -1;
 
-#if DEBUG_LEVEL>=4//massive info
-	cout <<"-- SBSCDet (name: "<<GetName()<<") Decode THaEvData of Run#"<<evdata.GetRunNum()<<" --"<<endl;
-	cout<<"EvType="<<evdata.GetEvType()<<"; EvLength="<<evdata.GetEvLength()<<"; EvNum="<<evdata.GetEvNum()<<endl;
-#endif//#if DEBUG_LEVEL>=4
+// #if DEBUG_LEVEL>=4//massive info
+// 	cout <<"-- SBSCDet (name: "<<GetName()<<") Decode THaEvData of Run#"<<evdata.GetRunNum()<<" --"<<endl;
+// 	cout<<"EvType="<<evdata.GetEvType()<<"; EvLength="<<evdata.GetEvLength()<<"; EvNum="<<evdata.GetEvNum()<<endl;
+// #endif//#if DEBUG_LEVEL>=4
 
-#if DEBUG_LEVEL>=5//super massive info
-	cout<<">>>> search detector map in SBSCDet::Decode"<<endl;
-	Int_t tmpidx=-1;
-	while (++tmpidx < fDetMap->GetSize()) {
-		THaDetMap::Module * d = fDetMap->GetModule(tmpidx);
+// #if DEBUG_LEVEL>=5//super massive info
+// 	cout<<">>>> search detector map in SBSCDet::Decode"<<endl;
+// 	Int_t tmpidx=-1;
+// 	while (++tmpidx < fDetMap->GetSize()) {
+// 		THaDetMap::Module * d = fDetMap->GetModule(tmpidx);
 
-		// Get number of channels with hits
-		for (Int_t chan=d->lo;chan<=d->hi;chan++){
-			Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
-			if (nHits)
-				cout<<"d->crate="<<d->crate<<" , d->slot="<< d->slot<<" , chan="<<chan
-				<<" nHits="<<nHits<<endl;
-		}
-	}
-	cout <<">>>>End search"<<endl;
-#endif
+// 		// Get number of channels with hits
+// 		for (Int_t chan=d->lo;chan<=d->hi;chan++){
+// 			Int_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+// 			if (nHits)
+// 				cout<<"d->crate="<<d->crate<<" , d->slot="<< d->slot<<" , chan="<<chan
+// 				<<" nHits="<<nHits<<endl;
+// 		}
+// 	}
+// 	cout <<">>>>End search"<<endl;
+// #endif
 
-	Int_t nextLaHit=0;
-	Int_t nextRaHit=0;
-	Int_t nextLtHit=0;
-	Int_t nextRtHit=0;
+// 	Int_t nextLaHit=0;
+// 	Int_t nextRaHit=0;
+// 	Int_t nextLtHit=0;
+// 	Int_t nextRtHit=0;
 
-	// Loop over all detector modules containing reference lines
-	// they have to be at the beginning of the detector map
-	// and we need one line (=one module) per reference channel
-	// otherwise only the first will be used
-	Int_t i=0;
-        while( i < (Int_t)fDetMap->GetSize() && i < GetNRefCh() ) {
-		THaDetMap::Module * d = fDetMap->GetModule(i);
+// 	// Loop over all detector modules containing reference lines
+// 	// they have to be at the beginning of the detector map
+// 	// and we need one line (=one module) per reference channel
+// 	// otherwise only the first will be used
+// 	Int_t i=0;
+//         while( i < (Int_t)fDetMap->GetSize() && i < GetNRefCh() ) {
+// 		THaDetMap::Module * d = fDetMap->GetModule(i);
 
-		// Get number of channels with hits
-		UInt_t chan=d->lo;
-		UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+// 		// Get number of channels with hits
+// 		UInt_t chan=d->lo;
+// 		UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
-#if DEBUG_THIS
-		cout << "Found " << nHits << "  hits in the reference channel for " << GetName()
-			<< " at " << d->crate << "  " << d->slot << "  " << chan << endl;
-#endif
+// #if DEBUG_THIS
+// 		cout << "Found " << nHits << "  hits in the reference channel for " << GetName()
+// 			<< " at " << d->crate << "  " << d->slot << "  " << chan << endl;
+// #endif
 
-		//complaining about error reference channel
-		if (nHits!=1) 
-			fErrorReferenceChCount++;
+// 		//complaining about error reference channel
+// 		if (nHits!=1) 
+// 			fErrorReferenceChCount++;
 
-		fTooManyErrRefCh=
-			((Double_t)fErrorReferenceChCount/(Double_t)fEventCount>
-			fErrorReferenceChRateWarningThreshold)
-			and
-			fEventCount>2000;
+// 		fTooManyErrRefCh=
+// 			((Double_t)fErrorReferenceChCount/(Double_t)fEventCount>
+// 			fErrorReferenceChRateWarningThreshold)
+// 			and
+// 			fEventCount>2000;
 
-		if (nHits!=1 and fTooManyErrRefCh) 
-		{
-/*			DEBUG_WARNING(Here(here),
-				"Till Event %d, There are too many events with error"
-				"reference channel(%f\%)."
-				"The last error states as following:",
-				fEventCount,
-				100.*(Double_t)fErrorReferenceChCount/(Double_t)fEventCount
-				);
-                                */
-		}
+// 		if (nHits!=1 and fTooManyErrRefCh) 
+// 		{
+// /*			DEBUG_WARNING(Here(here),
+// 				"Till Event %d, There are too many events with error"
+// 				"reference channel(%f\%)."
+// 				"The last error states as following:",
+// 				fEventCount,
+// 				100.*(Double_t)fErrorReferenceChCount/(Double_t)fEventCount
+// 				);
+//                                 */
+// 		}
 
-                Int_t data = BIT(31);//new error value to
-                if (nHits<1) {
-#if DEBUG_LEVEL>=2//this warning occurs from time to time, lower its level to info.
-			if (fTooManyErrRefCh)
-			{
-				stringstream s;
-				s<<"\tEvent Number "
-					<<evdata.GetEvNum()
-					<<"; NO Hits for Reference Channel, ignore this event"
-					<<i<<" of detector"<<fPrefix<<endl;
-				Warning(Here(here),"%s",s.str().c_str());
-			}
-#endif//#if DEBUG_LEVEL>=2
-			return (0);//Jin Huang
-		} else {
-			if (nHits>1) {
-#if DEBUG_LEVEL>=2//start show info
-				if (fTooManyErrRefCh)
-				{
-					stringstream s;
-					s<<"\tEvent Number "
-						<<evdata.GetEvNum()
-						<<"; Multiple Hits for Reference Channel "<<i
-						<<" of detector"<<fPrefix
-						<<"Using first one"<<endl;
-					Warning(Here(here),"%s",s.str().c_str());
-				}
-#endif//#if DEBUG_LEVEL>=3
-			}
-			data = evdata.GetData(d->crate, d->slot, chan, 0);
-		}
+//                 Int_t data = BIT(31);//new error value to
+//                 if (nHits<1) {
+// #if DEBUG_LEVEL>=2//this warning occurs from time to time, lower its level to info.
+// 			if (fTooManyErrRefCh)
+// 			{
+// 				stringstream s;
+// 				s<<"\tEvent Number "
+// 					<<evdata.GetEvNum()
+// 					<<"; NO Hits for Reference Channel, ignore this event"
+// 					<<i<<" of detector"<<fPrefix<<endl;
+// 				Warning(Here(here),"%s",s.str().c_str());
+// 			}
+// #endif//#if DEBUG_LEVEL>=2
+// 			return (0);//Jin Huang
+// 		} else {
+// 			if (nHits>1) {
+// #if DEBUG_LEVEL>=2//start show info
+// 				if (fTooManyErrRefCh)
+// 				{
+// 					stringstream s;
+// 					s<<"\tEvent Number "
+// 						<<evdata.GetEvNum()
+// 						<<"; Multiple Hits for Reference Channel "<<i
+// 						<<" of detector"<<fPrefix
+// 						<<"Using first one"<<endl;
+// 					Warning(Here(here),"%s",s.str().c_str());
+// 				}
+// #endif//#if DEBUG_LEVEL>=3
+// 			}
+// 			data = evdata.GetData(d->crate, d->slot, chan, 0);
+// 		}
 
-#if DEBUG_THIS
-		cout<<"Use data=" << data << endl;
-#endif
-		// PMT numbers and channels go in the same order ... 
-		const SBSScintPMT* pmt = GetRefCh(i);
-		if( !pmt ) { 
-			cout<<"SBSCDet::Decode : Ref Channels are not initialized"<<endl;
-			cout<<"Skipping event"<<endl;
-			return -1;
-		}
-		new( (*fRefHits)[i] )  SBSTdcHit( pmt , data );    
-		i++;
-	}
-	if (i!=GetNRefCh()) {
-		cout<<"SBSCDet::Decode : Mismatch between fNRefCh and hits on RefLines"<<endl;
-		cout<<i<<" "<<GetNRefCh()<<endl;
-		return -1;
-	}
+// #if DEBUG_THIS
+// 		cout<<"Use data=" << data << endl;
+// #endif
+// 		// PMT numbers and channels go in the same order ... 
+// 		const SBSScintPMT* pmt = GetRefCh(i);
+// 		if( !pmt ) { 
+// 			cout<<"SBSCDet::Decode : Ref Channels are not initialized"<<endl;
+// 			cout<<"Skipping event"<<endl;
+// 			return -1;
+// 		}
+// 		new( (*fRefHits)[i] )  SBSTdcHit( pmt , data );    
+// 		i++;
+// 	}
+// 	if (i!=GetNRefCh()) {
+// 		cout<<"SBSCDet::Decode : Mismatch between fNRefCh and hits on RefLines"<<endl;
+// 		cout<<i<<" "<<GetNRefCh()<<endl;
+// 		return -1;
+// 	}
 
-	Int_t nref = GetNRefCh();
+// 	Int_t nref = GetNRefCh();
 
-	// two ways to process the data -- one is good for densely packed data in only
-	// one module, the second better for more scattered out data
+// 	// two ways to process the data -- one is good for densely packed data in only
+// 	// one module, the second better for more scattered out data
 
-	while (i < (Int_t)fDetMap->GetSize()){
-		THaDetMap::Module * d = fDetMap->GetModule(i);
-		Bool_t isAdc=fDetMap->IsADC(d);
+// 	while (i < (Int_t)fDetMap->GetSize()){
+// 		THaDetMap::Module * d = fDetMap->GetModule(i);
+// 		Bool_t isAdc=fDetMap->IsADC(d);
 
-		Bool_t known = fDetMap->IsADC(d) || fDetMap->IsTDC(d);
-#if DEBUG_LEVEL>=1//start show warning 
-		if(!known) Warning(Here(here),
-			"\tUnkown Module %d @ crate=%d, slot=%d",i,d->crate ,d->slot);
-#endif//#if DEBUG_LEVEL>=1
+// 		Bool_t known = fDetMap->IsADC(d) || fDetMap->IsTDC(d);
+// #if DEBUG_LEVEL>=1//start show warning 
+// 		if(!known) Warning(Here(here),
+// 			"\tUnkown Module %d @ crate=%d, slot=%d",i,d->crate ,d->slot);
+// #endif//#if DEBUG_LEVEL>=1
 
-		// NOT IMPLEMENTED YET:
-		// for speed, there is another version that creates a look-up
-		// table for each module as to the appropriate channel number
+// 		// NOT IMPLEMENTED YET:
+// 		// for speed, there is another version that creates a look-up
+// 		// table for each module as to the appropriate channel number
 
-#if 0    /* Good for compact cabling */
-		// Get number of channels with hits
-		Int_t nChan = evdata.GetNumChan(d->crate, d->slot);
+// #if 0    /* Good for compact cabling */
+// 		// Get number of channels with hits
+// 		Int_t nChan = evdata.GetNumChan(d->crate, d->slot);
 
-		for (Int_t chNdx = 0; chNdx < nChan; chNdx++) {
-			// Use channel index to loop through channels that have hits
+// 		for (Int_t chNdx = 0; chNdx < nChan; chNdx++) {
+// 			// Use channel index to loop through channels that have hits
 
-			Int_t chan = evdata.GetNextChan(d->crate, d->slot, chNdx);
-			if (chan < d->lo || chan > d->hi) 
-				continue; //Not part of this detector
-#else         /* Better for sparse cabling */
-		for (UInt_t chan=d->lo; chan<=d->hi; chan++) {
-#endif
+// 			Int_t chan = evdata.GetNextChan(d->crate, d->slot, chNdx);
+// 			if (chan < d->lo || chan > d->hi) 
+// 				continue; //Not part of this detector
+// #else         /* Better for sparse cabling */
+// 		for (UInt_t chan=d->lo; chan<=d->hi; chan++) {
+// #endif
 
-			DEBUG_MASSINFO(Here(here),
-				"Trying d->crate=%d, d->slot=%d, chan=%d. Slot info:",
-				d->crate, d->slot, chan);
-			DEBUG_LINE_MASSINFO(evdata.PrintSlotData(d->crate, d->slot));
+// 			DEBUG_MASSINFO(Here(here),
+// 				"Trying d->crate=%d, d->slot=%d, chan=%d. Slot info:",
+// 				d->crate, d->slot, chan);
+// 			DEBUG_LINE_MASSINFO(evdata.PrintSlotData(d->crate, d->slot));
 
-			// Get number of hits for this channel and loop through hits
-			UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
+// 			// Get number of hits for this channel and loop through hits
+// 			UInt_t nHits = evdata.GetNumHits(d->crate, d->slot, chan);
 
-			if (nHits<=0) continue;
-#if DEBUG_THIS
-			if (fDetMap->IsTDC(d))
-				cout<<"Decode found "<<nHits<<" TDC hit(s) @ crate="<<d->crate
-				<<", slot="<<d->slot<<", chan="<<chan<<endl;
-			else
-				cout<<"Decode found "<<nHits<<" hit(s) @ crate="<<d->crate
-				<<", slot="<<d->slot<<", chan="<<chan<<endl;
-#endif			
-
-
-			Bool_t isLeft;
-			SBSScintBar* abar=NULL;
-			SBSScintPMT* pmt=NULL;
-
-			// PMT  numbers and channels go in the same order ... 
-			// PMTNum is kind of artificial, since it comes from the 
-			// way the detector map is read in: so the first GetNbars are 
-			// left TDC channels, the next right TDC channels and so on
-			Int_t PMTNum  = d->first + chan - d->lo;
-
-			// due to numbering, the first channels are timing reference channels,
-			// so remove them
-			PMTNum -= nref;
-
-			Int_t nbars = GetNBars();
-
-			isLeft = (PMTNum/nbars % 2)==0;
-
-			abar=GetBar( PMTNum % GetNBars() );
-
-#if DEBUG_LEVEL>=1//start show warning 
-			if (!abar) Warning(Here(here),"\tcan not get bar #%d",PMTNum % GetNBars() );
-#endif//#if DEBUG_LEVEL>=1
-
-			// in case the readout-module type is unknown, fall back to numbering scheme
-			if ( isAdc || (!known && PMTNum>=2*GetNBars()) ) {
-				// ADC
-				isAdc=kTRUE;
-			} else {
-				// TDC
-				isAdc=kFALSE;
-			}
-
-			if (!abar) {
-				continue;
-			}
-			if (isLeft) { pmt = abar->GetLPMT(); } else { pmt = abar->GetRPMT(); }
-
-#if DEBUG_LEVEL>=1//start show warning 
-			if (!pmt) Warning(Here(here),"\tcan not get pmt on bar #%d",PMTNum % GetNBars() );
-#endif//#if DEBUG_LEVEL>=1
-			if( !pmt ) { continue;}
-
-#if DEBUG_LEVEL>=5 //hardware check for #7
-			if (!isAdc&&(PMTNum % GetNBars()==6||PMTNum % GetNBars()==7||PMTNum % GetNBars()==8))
-			{
-				if (!isAdc&&isLeft&&PMTNum % GetNBars()==6) 
-					Info(Here(here),"\tEvent #%d get TDC hit on left bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
-				if (!isAdc&&!isLeft&&PMTNum % GetNBars()==6) 
-					Info(Here(here),"\tEvent #%d get TDC hit on right bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
-				if (!isAdc&&isLeft&&PMTNum % GetNBars()==7) 
-					Info(Here(here),"\tEvent #%d get TDC hit on left bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
-				if (!isAdc&&!isLeft&&PMTNum % GetNBars()==7) 
-					Info(Here(here),"\tEvent #%d get TDC hit on right bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
-				if (!isAdc&&isLeft&&PMTNum % GetNBars()==8) 
-					Info(Here(here),"\tEvent #%d get TDC hit on left bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
-				if (!isAdc&&!isLeft&&PMTNum % GetNBars()==8) 
-					Info(Here(here),"\tEvent #%d get TDC hit on right bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
-			}
-#endif
-
-			// loop through the hits
-			for (UInt_t hit = 0; hit < nHits; hit++) {
-				// Loop through all hits for this channel, and store the
-				// TDC/ADC  data for this hit
-				Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
-				if (isAdc) {  // it is an ADC module
-					if (isLeft) {              
-						new( (*fLaHits)[nextLaHit++] )  SBSAdcHit( pmt, data );
-					} else {
-						new( (*fRaHits)[nextRaHit++] )  SBSAdcHit( pmt, data );
-					}
-				}
-				else { // it is a TDC module and hit
-					Double_t timeoff = 0.;
-					if ((d->refindex)>=0) {
-						// handle the clock/scaler based TDCs and remove the reference time,
-						// taking care of when the clock rolls-over
-						const SBSTdcHit* ahit = GetRefHit(d->refindex);
-						if (ahit && ahit->GetRawTime()>=0) {
-							Int_t diff = data - ahit->GetRawTime();
-							Double_t wrap = pmt->GetRawWrapAround();
-							if ( diff < -wrap/2. ) {
-								timeoff = ahit->GetTime() -  wrap * pmt->GetTDCRes() ;
-							} else if ( diff > wrap/2. ) {
-								timeoff = ahit->GetTime() +  wrap * pmt->GetTDCRes() ;
-							} else {
-								timeoff = ahit->GetTime();
-							}
-						}
-						else {  // missing reference-timing hit
-							fRefOkay = false ;
-						}
-
-					}
-
-					if (isLeft) {              
-						new( (*fLtHits)[nextLtHit++] )  SBSTdcHit( pmt, data, timeoff );
-					} else {
-						new( (*fRtHits)[nextRtHit++] )  SBSTdcHit( pmt, data, timeoff );
-					}
-				}
-			} // End hit loop
-		} // End channel index loop
-		i++;
-	}
-
-	// copy into the flat arrays for easy viewing
-#if SAVEFLAT
-	Int_t barno=0;
-	for(Int_t i=0; i< nextLaHit; i++){
-		const SBSAdcHit *la = GetLaHit(i);
-		barno=la->GetPMT()->GetBarNum();
-		fLrawA[barno]=la->GetRawAmpl();    
-		fLpedcA[barno]=la->GetAmplPedCor();    
-		fLE[barno]=la->GetAmpl();    
-	}
-
-	for(Int_t i=0; i< nextRaHit; i++){
-		const SBSAdcHit *ra = GetRaHit(i);
-		barno=ra->GetPMT()->GetBarNum();
-		fRrawA[barno]=ra->GetRawAmpl();    
-		fRpedcA[barno]=ra->GetAmplPedCor();    
-		fRE[barno]=ra->GetAmpl();    
-	}
-
-	for(Int_t i=0; i< nextLtHit; i++){
-		const SBSTdcHit *lt = GetLtHit(i);
-		barno=lt->GetPMT()->GetBarNum();
-		fLTcounter[barno]++;
-		if (fLTcounter[barno]==1) {
-			fLT[barno]=lt->GetTime();
-		}
-	}   
-
-	for(Int_t i=0; i< nextRtHit; i++){
-		const SBSTdcHit *rt = GetRtHit(i);
-		barno=rt->GetPMT()->GetBarNum();
-		fRTcounter[barno]++;
-		if (fRTcounter[barno]==1) {
-			fRT[barno]=rt->GetTime();
-		}
-	}
-
-	Double_t MaxEnergy=0, MaxADC=0;
-	for (barno=0;barno<GetNBars();barno++)
-	{
-		if (fLpedcA[barno]>0 && fLE[barno]>0 && fRpedcA[barno]>0 && fRE[barno]>0)
-		{
-			if (fLpedcA[barno]*fRpedcA[barno]>MaxADC) 
-			{fMaxADCHitBar=barno; MaxADC=fLpedcA[barno]*fRpedcA[barno];}
-			if (fLE[barno]*fRE[barno]>MaxEnergy) 
-			{fMaxEnergyHitBar=barno; MaxEnergy=fLE[barno]*fRE[barno];}
-		}
-	}
-	fMaxADCHit = sqrt(MaxADC);
-	fMaxEnergyHit = sqrt(MaxEnergy);
-
-#endif
+// 			if (nHits<=0) continue;
+// #if DEBUG_THIS
+// 			if (fDetMap->IsTDC(d))
+// 				cout<<"Decode found "<<nHits<<" TDC hit(s) @ crate="<<d->crate
+// 				<<", slot="<<d->slot<<", chan="<<chan<<endl;
+// 			else
+// 				cout<<"Decode found "<<nHits<<" hit(s) @ crate="<<d->crate
+// 				<<", slot="<<d->slot<<", chan="<<chan<<endl;
+// #endif			
 
 
-	return nextLtHit + nextRtHit + nextLaHit + nextRaHit;
-}
+// 			Bool_t isLeft;
+// 			SBSScintBar* abar=NULL;
+// 			SBSScintPMT* pmt=NULL;
+
+// 			// PMT  numbers and channels go in the same order ... 
+// 			// PMTNum is kind of artificial, since it comes from the 
+// 			// way the detector map is read in: so the first GetNbars are 
+// 			// left TDC channels, the next right TDC channels and so on
+// 			Int_t PMTNum  = d->first + chan - d->lo;
+
+// 			// due to numbering, the first channels are timing reference channels,
+// 			// so remove them
+// 			PMTNum -= nref;
+
+// 			Int_t nbars = GetNBars();
+
+// 			isLeft = (PMTNum/nbars % 2)==0;
+
+// 			abar=GetBar( PMTNum % GetNBars() );
+
+// #if DEBUG_LEVEL>=1//start show warning 
+// 			if (!abar) Warning(Here(here),"\tcan not get bar #%d",PMTNum % GetNBars() );
+// #endif//#if DEBUG_LEVEL>=1
+
+// 			// in case the readout-module type is unknown, fall back to numbering scheme
+// 			if ( isAdc || (!known && PMTNum>=2*GetNBars()) ) {
+// 				// ADC
+// 				isAdc=kTRUE;
+// 			} else {
+// 				// TDC
+// 				isAdc=kFALSE;
+// 			}
+
+// 			if (!abar) {
+// 				continue;
+// 			}
+// 			if (isLeft) { pmt = abar->GetLPMT(); } else { pmt = abar->GetRPMT(); }
+
+// #if DEBUG_LEVEL>=1//start show warning 
+// 			if (!pmt) Warning(Here(here),"\tcan not get pmt on bar #%d",PMTNum % GetNBars() );
+// #endif//#if DEBUG_LEVEL>=1
+// 			if( !pmt ) { continue;}
+
+// #if DEBUG_LEVEL>=5 //hardware check for #7
+// 			if (!isAdc&&(PMTNum % GetNBars()==6||PMTNum % GetNBars()==7||PMTNum % GetNBars()==8))
+// 			{
+// 				if (!isAdc&&isLeft&&PMTNum % GetNBars()==6) 
+// 					Info(Here(here),"\tEvent #%d get TDC hit on left bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
+// 				if (!isAdc&&!isLeft&&PMTNum % GetNBars()==6) 
+// 					Info(Here(here),"\tEvent #%d get TDC hit on right bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
+// 				if (!isAdc&&isLeft&&PMTNum % GetNBars()==7) 
+// 					Info(Here(here),"\tEvent #%d get TDC hit on left bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
+// 				if (!isAdc&&!isLeft&&PMTNum % GetNBars()==7) 
+// 					Info(Here(here),"\tEvent #%d get TDC hit on right bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
+// 				if (!isAdc&&isLeft&&PMTNum % GetNBars()==8) 
+// 					Info(Here(here),"\tEvent #%d get TDC hit on left bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
+// 				if (!isAdc&&!isLeft&&PMTNum % GetNBars()==8) 
+// 					Info(Here(here),"\tEvent #%d get TDC hit on right bar #%d",evdata.GetEvNum(),PMTNum % GetNBars() );
+// 			}
+// #endif
+
+// 			// loop through the hits
+// 			for (UInt_t hit = 0; hit < nHits; hit++) {
+// 				// Loop through all hits for this channel, and store the
+// 				// TDC/ADC  data for this hit
+// 				Int_t data = evdata.GetData(d->crate, d->slot, chan, hit);
+// 				if (isAdc) {  // it is an ADC module
+// 					if (isLeft) {              
+// 						new( (*fLaHits)[nextLaHit++] )  SBSAdcHit( pmt, data );
+// 					} else {
+// 						new( (*fRaHits)[nextRaHit++] )  SBSAdcHit( pmt, data );
+// 					}
+// 				}
+// 				else { // it is a TDC module and hit
+// 					Double_t timeoff = 0.;
+// 					if ((d->refindex)>=0) {
+// 						// handle the clock/scaler based TDCs and remove the reference time,
+// 						// taking care of when the clock rolls-over
+// 						const SBSTdcHit* ahit = GetRefHit(d->refindex);
+// 						if (ahit && ahit->GetRawTime()>=0) {
+// 							Int_t diff = data - ahit->GetRawTime();
+// 							Double_t wrap = pmt->GetRawWrapAround();
+// 							if ( diff < -wrap/2. ) {
+// 								timeoff = ahit->GetTime() -  wrap * pmt->GetTDCRes() ;
+// 							} else if ( diff > wrap/2. ) {
+// 								timeoff = ahit->GetTime() +  wrap * pmt->GetTDCRes() ;
+// 							} else {
+// 								timeoff = ahit->GetTime();
+// 							}
+// 						}
+// 						else {  // missing reference-timing hit
+// 							fRefOkay = false ;
+// 						}
+
+// 					}
+
+// 					if (isLeft) {              
+// 						new( (*fLtHits)[nextLtHit++] )  SBSTdcHit( pmt, data, timeoff );
+// 					} else {
+// 						new( (*fRtHits)[nextRtHit++] )  SBSTdcHit( pmt, data, timeoff );
+// 					}
+// 				}
+// 			} // End hit loop
+// 		} // End channel index loop
+// 		i++;
+// 	}
+
+// 	// copy into the flat arrays for easy viewing
+// #if SAVEFLAT
+// 	Int_t barno=0;
+// 	for(Int_t i=0; i< nextLaHit; i++){
+// 		const SBSAdcHit *la = GetLaHit(i);
+// 		barno=la->GetPMT()->GetBarNum();
+// 		fLrawA[barno]=la->GetRawAmpl();    
+// 		fLpedcA[barno]=la->GetAmplPedCor();    
+// 		fLE[barno]=la->GetAmpl();    
+// 	}
+
+// 	for(Int_t i=0; i< nextRaHit; i++){
+// 		const SBSAdcHit *ra = GetRaHit(i);
+// 		barno=ra->GetPMT()->GetBarNum();
+// 		fRrawA[barno]=ra->GetRawAmpl();    
+// 		fRpedcA[barno]=ra->GetAmplPedCor();    
+// 		fRE[barno]=ra->GetAmpl();    
+// 	}
+
+// 	for(Int_t i=0; i< nextLtHit; i++){
+// 		const SBSTdcHit *lt = GetLtHit(i);
+// 		barno=lt->GetPMT()->GetBarNum();
+// 		fLTcounter[barno]++;
+// 		if (fLTcounter[barno]==1) {
+// 			fLT[barno]=lt->GetTime();
+// 		}
+// 	}   
+
+// 	for(Int_t i=0; i< nextRtHit; i++){
+// 		const SBSTdcHit *rt = GetRtHit(i);
+// 		barno=rt->GetPMT()->GetBarNum();
+// 		fRTcounter[barno]++;
+// 		if (fRTcounter[barno]==1) {
+// 			fRT[barno]=rt->GetTime();
+// 		}
+// 	}
+
+// 	Double_t MaxEnergy=0, MaxADC=0;
+// 	for (barno=0;barno<GetNBars();barno++)
+// 	{
+// 		if (fLpedcA[barno]>0 && fLE[barno]>0 && fRpedcA[barno]>0 && fRE[barno]>0)
+// 		{
+// 			if (fLpedcA[barno]*fRpedcA[barno]>MaxADC) 
+// 			{fMaxADCHitBar=barno; MaxADC=fLpedcA[barno]*fRpedcA[barno];}
+// 			if (fLE[barno]*fRE[barno]>MaxEnergy) 
+// 			{fMaxEnergyHitBar=barno; MaxEnergy=fLE[barno]*fRE[barno];}
+// 		}
+// 	}
+// 	fMaxADCHit = sqrt(MaxADC);
+// 	fMaxEnergyHit = sqrt(MaxEnergy);
+
+// #endif
+
+
+// 	return nextLtHit + nextRtHit + nextLaHit + nextRaHit;
+// }
 
 
 //_____________________________________________________________________________

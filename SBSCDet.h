@@ -32,7 +32,7 @@ class SBSScintHit;
 class SBSScintBar;
 class SBSAdcHit;
 class SBSTdcHit;
-class THaNonTrackingDetector;
+class SBSGenericDetector;
 class SBSScintPartialHit;
 class THaTrackProj;
 //class THaMultiHit;
@@ -73,7 +73,7 @@ class THaTrackProj;
 
 //------------------------------------------------------//
 
-class SBSCDet : public THaNonTrackingDetector {
+class SBSCDet : public SBSGenericDetector {
 
 public:
 
@@ -86,7 +86,7 @@ public:
 	virtual Int_t        InitOutput( THaOutput* output );
 
         virtual void       Clear( Option_t* opt="" );
-	virtual Int_t      Decode( const THaEvData& );
+      //virtual Int_t      Decode( const THaEvData& );
 	virtual Int_t      CoarseProcess( TClonesArray& tracks );
 	virtual Int_t      FineProcess( TClonesArray& tracks );
 	//Int_t              ConstructTracks( TClonesArray * tracks = NULL ) {return 0;} 
