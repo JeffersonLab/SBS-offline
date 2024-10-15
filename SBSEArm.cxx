@@ -273,8 +273,12 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     fGEMax = gem_angles[0] * TMath::DegToRad();
     fGEMay = gem_angles[1] * TMath::DegToRad();
     fGEMaz = gem_angles[2] * TMath::DegToRad();
+
+    std::cout << "Calling InitGEMAxes, angles (ax,ay,az)=("
+	      << fGEMax << ", " << fGEMay << ", " << fGEMaz << ")" << std::endl;
     
     InitGEMAxes( fGEMax, fGEMay, fGEMaz );
+    
   }
   
   //Optics model initialization (copy of BigBite for now):
@@ -437,6 +441,15 @@ void SBSEArm::CalcOpticsCoords( THaTrack* track )
   //TrackDirGlobal_GEM = TrackDirGlobal_GEM.Unit(); //Likely unnecessary, but safer (I guess)
 
   TVector3 TrackDirGlobal_GEM = fGEM_Rinverse * TrackDirLocal_GEM;
+
+  //fGEM_Rinverse.Print();
+
+  // std::cout << "| Rinv_xx, Rinv_xy, Rinv_xz | = | "
+  // 	    << fGEM_Rinverse.XX() << ", " << fGEM_Rinverse.XY() << ", " << fGEM_Rinverse.XZ() << " |" << endl
+  // 	    << "| Rinv_yx, Rinv_yy, Rinv_yz | = | "
+  // 	    << fGEM_Rinverse.YX() << ", " << fGEM_Rinverse.YY() << ", " << fGEM_Rinverse.YZ() << " |" << endl
+  // 	    << "| Rinv_zx, Rinv_zy, Rinv_zz | = | "
+  // 	    << fGEM_Rinverse.ZX() << ", " << fGEM_Rinverse.ZY() << ", " << fGEM_Rinverse.ZZ() << " |" << std::endl;
   
   //  std::cout << "Track direction global = " << endl;
   //TrackDirGlobal_GEM.Print();
@@ -769,21 +782,25 @@ Int_t SBSEArm::CoarseReconstruct()
   
   if( !fPolarimeterMode && FrontTracker != nullptr ){
     //std::cout << "setting constraints for tracks" << std::endl;
+
+    x_bcp += fBackConstraintX0[0];
+    y_bcp += fBackConstraintY0[0];
     
-    FrontTracker->SetBackConstraintPoint(x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], z_bcp);
+    FrontTracker->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
 
     if ( fUseDynamicConstraint ){
-      double thcp = fDynamicConstraintSlopeX * (x_bcp + fBackConstraintX0[0]) + fDynamicConstraintOffsetX;
-      double phcp = fDynamicConstraintSlopeY * (y_bcp + fBackConstraintY0[0]) + fDynamicConstraintOffsetY;
+      double thcp = fDynamicConstraintSlopeX * (x_bcp) + fDynamicConstraintOffsetX;
+      double phcp = fDynamicConstraintSlopeY * (y_bcp) + fDynamicConstraintOffsetY;
 
       x_fcp = x_bcp + thcp * (z_fcp - z_bcp);
       y_fcp = y_bcp + phcp * (z_fcp - z_bcp);
       
     }
+
+    x_fcp += fFrontConstraintX0[0];
+    y_fcp += fFrontConstraintY0[0];
     
-    FrontTracker->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], z_fcp);
-    
-    
+    FrontTracker->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
     
     FrontTracker->SetFrontConstraintWidth(fFrontConstraintWidthX[0], 
 					  fFrontConstraintWidthY[0]);
@@ -793,8 +810,8 @@ Int_t SBSEArm::CoarseReconstruct()
     if( BackTracker != nullptr ){
       // IF there is a back tracker, and we're not using polarimeter mode,
       // initialize it with identical constraints as the front:
-      BackTracker->SetBackConstraintPoint(x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], z_bcp);
-      BackTracker->SetFrontConstraintPoint(x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], z_fcp);
+      BackTracker->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
+      BackTracker->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
       
       
       
@@ -807,19 +824,25 @@ Int_t SBSEArm::CoarseReconstruct()
     
   } else if( fPolarimeterMode && BackTracker != nullptr ){ //Polarimeter mode: look for NonTrackingDetectors inheriting SBSGEMPolarimeterTracker
     z_fcp = fAnalyzerZ0; 
+
+    x_bcp += fBackConstraintX0[1];
+    y_bcp += fBackConstraintY0[1];
     
-    BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1], y_bcp + fBackConstraintY0[1], z_bcp);
+    BackTracker->SetBackConstraintPoint( x_bcp, y_bcp, z_bcp);
 
     if ( fUseDynamicConstraint ){
-      double thcp = fDynamicConstraintSlopeX * (x_bcp + fBackConstraintX0[1]) + fDynamicConstraintOffsetX;
-      double phcp = fDynamicConstraintSlopeY * (y_bcp + fBackConstraintY0[1]) + fDynamicConstraintOffsetY;
+      double thcp = fDynamicConstraintSlopeX * (x_bcp) + fDynamicConstraintOffsetX;
+      double phcp = fDynamicConstraintSlopeY * (y_bcp) + fDynamicConstraintOffsetY;
 
       x_fcp = x_bcp + thcp * (z_fcp - z_bcp);
       y_fcp = y_bcp + phcp * (z_fcp - z_bcp);
       
     }
 
-    BackTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[1], y_fcp + fFrontConstraintY0[1], z_fcp);
+    x_fcp += fFrontConstraintX0[1];
+    y_fcp += fFrontConstraintY0[1];
+    
+    BackTracker->SetFrontConstraintPoint( x_fcp, y_fcp, z_fcp);
     
     BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1], 
 					  fFrontConstraintWidthY[1] );
@@ -847,7 +870,7 @@ Int_t SBSEArm::CoarseReconstruct()
 	x_fcp = FrontTracker->GetXTrack(0) + z_fcp * FrontTracker->GetXpTrack(0);
 	y_fcp = FrontTracker->GetYTrack(0) + z_fcp * FrontTracker->GetYpTrack(0);
 
-	BackTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[1], y_fcp + fFrontConstraintY0[1], z_fcp );
+	BackTracker->SetFrontConstraintPoint( x_fcp, y_fcp, z_fcp );
       }
     }
     
@@ -934,19 +957,19 @@ Int_t SBSEArm::Track()
 	double xpback = BackTracker->GetXpTrack( 0 );
 	double ypback = BackTracker->GetYpTrack( 0 );
 	
-	double x_bcp = xback + xpback * fAnalyzerZ0;
-	double y_bcp = yback + ypback * fAnalyzerZ0;
+	double x_bcp = xback + xpback * fAnalyzerZ0 + fBackConstraintX0[0];
+	double y_bcp = yback + ypback * fAnalyzerZ0 + fBackConstraintY0[0];
 
 	// std::cout << "(xbcp,ybcp,zbcp)=(" << x_bcp << ", " << y_bcp
 	// 	  << ", " << fAnalyzerZ0 << ")" << std::endl; 
 	
-	FrontTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], fAnalyzerZ0 );
+	FrontTracker->SetBackConstraintPoint( x_bcp, y_bcp, fAnalyzerZ0 );
 
 	//Set front constraint point to position of back track at front layer:
-	double x_fcp = xback;
-	double y_fcp = yback;
+	double x_fcp = xback + fFrontConstraintX0[0];
+	double y_fcp = yback + fFrontConstraintY0[0];
 	
-	FrontTracker->SetFrontConstraintPoint( x_fcp + fFrontConstraintX0[0], y_fcp + fFrontConstraintY0[0], 0.0 );
+	FrontTracker->SetFrontConstraintPoint( x_fcp, y_fcp, 0.0 );
 
 	// std::cout << "(xfcp,yfcp,zfcp)=(" << x_fcp << ", " << y_fcp << ",0)"
 	// 	  << std::endl;
@@ -1180,10 +1203,28 @@ void SBSEArm::InitGEMAxes( double ax, double ay, double az, const TVector3 &Orig
   fGEM_Rtotal = Rtot;
 
   fGEM_Rinverse = Rtot.Inverse();
+
+  std::cout << "| Rinv_xx, Rinv_xy, Rinv_xz | = | "
+	    << fGEM_Rinverse.XX() << ", " << fGEM_Rinverse.XY() << ", " << fGEM_Rinverse.XZ() << " |" << endl
+	    << "| Rinv_yx, Rinv_yy, Rinv_yz | = | "
+	    << fGEM_Rinverse.YX() << ", " << fGEM_Rinverse.YY() << ", " << fGEM_Rinverse.YZ() << " |" << endl
+	    << "| Rinv_zx, Rinv_zy, Rinv_zz | = | "
+	    << fGEM_Rinverse.ZX() << ", " << fGEM_Rinverse.ZY() << ", " << fGEM_Rinverse.ZZ() << " |" << std::endl;
   
   fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
   fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
   fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
+
+  std::cout << GetName() << ": GEM global X axis: ";
+  fGEMxaxis_global.Print();
+
+  std::cout << GetName() << ": GEM global Y axis: ";
+  fGEMyaxis_global.Print();
+
+  std::cout << GetName() << ": GEM global Z axis: ";
+  fGEMzaxis_global.Print();
+  
+  
 }
 
 void SBSEArm::InitGEMAxes( double ax, double ay, double az ){
@@ -1197,10 +1238,26 @@ void SBSEArm::InitGEMAxes( double ax, double ay, double az ){
   fGEM_Rtotal = Rtot;
 
   fGEM_Rinverse = Rtot.Inverse();
+
+  std::cout << "| Rinv_xx, Rinv_xy, Rinv_xz | = | "
+	    << fGEM_Rinverse.XX() << ", " << fGEM_Rinverse.XY() << ", " << fGEM_Rinverse.XZ() << " |" << endl
+	    << "| Rinv_yx, Rinv_yy, Rinv_yz | = | "
+	    << fGEM_Rinverse.YX() << ", " << fGEM_Rinverse.YY() << ", " << fGEM_Rinverse.YZ() << " |" << endl
+	    << "| Rinv_zx, Rinv_zy, Rinv_zz | = | "
+	    << fGEM_Rinverse.ZX() << ", " << fGEM_Rinverse.ZY() << ", " << fGEM_Rinverse.ZZ() << " |" << std::endl;
   
   fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
   fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
   fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
+
+  std::cout << GetName() << ": GEM global X axis: ";
+  fGEMxaxis_global.Print();
+
+  std::cout << GetName() << ": GEM global Y axis: ";
+  fGEMyaxis_global.Print();
+
+  std::cout << GetName() << ": GEM global Z axis: ";
+  fGEMzaxis_global.Print();
 }
 
 //_____________________________________________________________________________
