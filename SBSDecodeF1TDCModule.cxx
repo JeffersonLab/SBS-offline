@@ -171,6 +171,9 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
         if ( !( (*loc) & DATA_MARKER ) && checkf1slot>0 ) {
 	 // header/trailer word, to be ignored (except for trigTime)
 	  // trigTime = ((*loc)>>7)&0x1FF;
+
+	  //Trig Time is the bitwise AND of header word with FF80
+	  // FF80 = 1111 1111 1000 0000 This looks correct, we get bits 15:7 inclusive and nothing else. 
 	  trigTime = ((*loc)&0xFF80);
 	 Int_t chn = (*loc)&0x7;
 	 Int_t chip = ((*loc>>3))&0x7;
@@ -244,6 +247,7 @@ UInt_t SBSDecodeF1TDCModule::LoadSlot(THaSlotData *sldat, const UInt_t *evbuffer
 	      }
               // For now, only load data when our slot number matches that of
               // the base class
+	      // Does this line have the potential to cause shenanigans/data loss? 
               if((Int_t)fSlot == f1slot) {
                 raw_cor =  raw;
                  sldat->loadData("tdc",chan,raw_cor,trigTime); // 

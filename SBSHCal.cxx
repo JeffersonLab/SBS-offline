@@ -219,12 +219,12 @@ Int_t SBSHCal::SelectBestCluster(){ //Default is just highest-energy cluster reg
   Tbest = fClusters[best]->GetAtime();
   Ebest = fClusters[best]->GetE();
   
-  if( best != oldindex ) {
-    std::cout << "Changed best cluster index from " << oldindex << " to " << best
-	      << ", (Told,Tnew)=(" << Told << ", " << Tbest << "), (Eold, Enew)=("
-	      << Eold << ", " << Ebest << ")" << std::endl;
+  //if( best != oldindex ) {
+    // std::cout << "Changed best cluster index from " << oldindex << " to " << best
+    // 	      << ", (Told,Tnew)=(" << Told << ", " << Tbest << "), (Eold, Enew)=("
+    // 	      << Eold << ", " << Ebest << ")" << std::endl;
 
-  }
+  //}
     
   if( best >= 0 ) fBestClusterIndex = best;
   return fBestClusterIndex;

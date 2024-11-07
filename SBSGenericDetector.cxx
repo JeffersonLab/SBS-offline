@@ -20,6 +20,7 @@
 #include "Helper.h"
 #include "TSystem.h"
 #include "Database.h"
+#include "THaApparatus.h"
 
 #include <cstring>
 #include <iostream>
@@ -128,6 +129,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "F1_TimeWindow",      &fF1_TimeWindow, kInt,    0, true }, ///< 
     { 0 } ///< Request must end in a NULL
   };
+
+  //How were these default values determined? 
   fF1_RollOver = 64964;
   fF1_TimeWindow = 13000;
   err = LoadDB( file, date, config_request, fPrefix );
@@ -1153,30 +1156,54 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
      SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
 
-      //      std::cout << "Error reference TDC channel has no hits! refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
+      //std::cout << "Error reference TDC channel has no hits! detector = " << GetApparatus()->GetName() << "." << GetName() << ", refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
       
     } else {
-       Int_t nhits = refblk->TDC()->GetNHits(); 
+      Int_t nhits = refblk->TDC()->GetNHits(); 
       Double_t MinDiff = 10000.;
-       Int_t HitIndex = 0;
-       Double_t RefCent = refblk->TDC()->GetGoodTimeCut();
-       for (Int_t ih=0;ih<nhits;ih++) {
- 	 Double_t tempdata= refblk->TDC()->GetData(ih);
-	 if (d->GetModel() == 6401) {
- 	    tempdata= refblk->TDC()->GetDataRaw(ih);
-            Int_t trigtime = refblk->TDC()->GetTrigTime(ih);
-	    if ( trigtime>tempdata) tempdata+=fF1_RollOver;
+      Int_t HitIndex = 0;
+      Double_t RefCent = refblk->TDC()->GetGoodTimeCut();
+      for (Int_t ih=0;ih<nhits;ih++) {
+	Double_t tempdata= refblk->TDC()->GetData(ih);
+	if (d->GetModel() == 6401) {
+	  //Does the following line make sense? GetDataRaw(ih) invokes GetLead(ih).raw
+	  //But what is in GetLead(ih).raw? At line 1211 below, we invoke blk->TDC()->ProcessSimple(id,rawdata-reftime,ihit,TrigTime), which sets hit->TrigTime to TrigTime and sets le.raw to evdata.GetData(crate,slot,chan,ihit) - reftime
+	  // where reftime = 0 if this happens to be a reference channel,
+	  // it also sets le.val to (val-offset)*calib
+	  // Therefore tempdata contains the raw tdc value for the reference time for this channel,
+	  // and trigtime contains the F1 trigger time for the reference channel which, in principle, is the same
+	  // as for all the others on a given F1 chip
+	  tempdata= refblk->TDC()->GetDataRaw(ih);
+	  Int_t trigtime = refblk->TDC()->GetTrigTime(ih);
+
+	  // std::cout << "decoding F1 TDC reference time, (tempdata,trigtime,tempdata%128, trigtime%128)=("
+	  // 	    << tempdata << ", " << trigtime << ", " << fmod(tempdata,128.0) << ", "
+	  // 	    << fmod(trigtime,128) << ")" << std::endl;
+	  if ( trigtime>tempdata) { //As far as I can see, this condition is NEVER satisfied because the rollover correction (if applicable) was already applied at line 1217 below. As such, these lines of code are unnecessary
+	    tempdata+=fF1_RollOver;
+	    std::cout << "Applying rollover correction to reference time, detector = " << GetApparatus()->GetName() << "." << GetName() << std::endl;
+	  }
 	  Double_t cal=refblk->TDC()->GetCal();
 	  Double_t offset=refblk->TDC()->GetOffset();
-	  tempdata=(tempdata-trigtime-offset)*cal;
-	 }
-	 if (abs(tempdata-RefCent) < MinDiff) {
-           HitIndex = ih;
-	   MinDiff = abs(tempdata-RefCent);
-	 }
-       }      
-       reftime = refblk->TDC()->GetDataRaw(HitIndex);
+
+	  // std::cout << "decoding reference time for " << GetApparatus()->GetName() << "." << GetName()
+	  // 	    << ": (tempdata, trigtime, offset, cal)=(" << tempdata << ", " << trigtime << ", "
+	  // 	    << offset << ", " << cal << "), corrected ref. time = ";
+	  tempdata=(tempdata-trigtime-offset)*cal; //convert to a time so we can choose the correct hit if there are multiple hits in the ref channel.
+
+	  //std::cout << tempdata << " ns" << std::endl;
+	}
+	if (abs(tempdata-RefCent) < MinDiff) {
+	  HitIndex = ih;
+	  MinDiff = abs(tempdata-RefCent);
+	}
+      }      
+      reftime = refblk->TDC()->GetDataRaw(HitIndex);
       refblk->TDC()->SetGoodHit(HitIndex);
+
+      // if( d->GetModel() == 6401 ){
+      // 	std::cout << "F1 TDC final decoded (ref time, hit index)=(" << reftime << " ns, " << HitIndex << ")" << std::endl; 
+      // }
     }
   }
   
@@ -1188,8 +1215,8 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
         if(fModeTDC == SBSModeTDC::kTDCSimple) {
 	  UInt_t rawdata = evdata.GetData(d->crate, d->slot, chan, ihit);
 	   if (!IsRef && d->GetModel() == 6401) { // F1 TDC
-	     if ( abs(rawdata-reftime) > fF1_TimeWindow) {
-	       if (rawdata > reftime){ reftime+=fF1_RollOver; 
+	     if ( abs(rawdata-reftime) > fF1_TimeWindow) { //If abs(rawdata - reftime)>13000 (in raw TDC units, or ~13 us) 
+	       if (rawdata > reftime){ reftime+=fF1_RollOver; //Add fF1_RollOver to whichever time is smaller. Why?
 	       }else if(rawdata <= reftime){ rawdata+=fF1_RollOver;} 
 	     } 
 	   }
