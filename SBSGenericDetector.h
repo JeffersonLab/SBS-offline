@@ -183,8 +183,8 @@ protected:
   
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)
-  std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to element number
-  std::vector<std::vector<Int_t> > fRefChanMap; //< Maps modules in THaDetMap to Reference time
+  std::vector<std::vector<Int_t> > fChanMap; //< Maps modules in THaDetMap to element number: outer index = module, inner index = channel, value = element id? 
+  std::vector<std::vector<Int_t> > fRefChanMap; //< Maps modules in THaDetMap to Reference time: outer index = module, inner index = channel, value = Ref element ID? 
   std::vector<Bool_t> fModuleRefTimeFlag; //< If module has Reftime set to true
   std::vector<Int_t> fRefChanLo; //< Module Reftime Low channel number
   std::vector<Int_t> fRefChanHi; //< Module Reftime High channel number
@@ -216,6 +216,31 @@ protected:
   Int_t      fNGoodTDChits;     ///< Number of good TDC hits in event
   Int_t      fNGoodADChits;     ///< Number of good ADC hits in event
 
+  // New protected data members to hold trigger and RF time information;
+  // Here we are interested in the "main" physics trigger and assuming it is recorded by a TDC (we might add FADC trigger and/or RF time later but so far
+  // we have not recorded those signals in an FADC channel).
+
+  //Are we attempting to decode RF and trigger time for this detector?
+  Bool_t fDecodeRFtime;
+  Bool_t fDecodeTrigTime;
+  
+  Double_t   fRFtime;    //Decoded accelerator RF time
+  Double_t   fTrigTime;  //Decoded "trigger" time (for copy of "main" trigger (usually either BigBite singles or coincidence))
+
+  Bool_t fRFtimeIsRef;     // Flag for whether RF time is stored in a "reference" or "normal" channel
+  Bool_t fTrigTimeIsRef;   // Flag for whether trigger time is stored in a "reference" or "normal" channel
+  
+  Int_t fElemID_RFtime;    //
+  Int_t fElemID_TrigTime;  // 
+  
+  UInt_t  fCrate_RFtime;
+  UInt_t  fSlot_RFtime;
+  UInt_t  fChan_RFtime; 
+
+  UInt_t  fCrate_TrigTime;
+  UInt_t  fSlot_TrigTime;
+  UInt_t  fChan_TrigTime; 
+  
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
 

@@ -34,6 +34,8 @@ public:
   Int_t   GetLayer() const { return fLayer; }
   Int_t   GetStat()  const { return fStat; }
   Int_t   GetID()    const { return fID; }
+  Bool_t  IsRFtime() const { return fIsRFtime; }
+  Bool_t  IsTrigTime() const { return fIsTrigTime; }
   virtual SBSData::ADC* ADC()         { return fADC; }
   virtual SBSData::TDC* TDC()         { return fTDC; }
   virtual SBSData::Waveform* Waveform() { return fWaveform; }
@@ -55,6 +57,9 @@ public:
   void SetTDC(Double_t offset, Double_t cal, Double_t GoodTimeCut);
   void SetWaveform(Double_t ped, Double_t gain,Double_t ChanToMv,Double_t adc_timecut);
 
+  void SetRF( Bool_t isrf ){ fIsRFtime = isrf; }
+  void SetTrig( Bool_t istrig ){ fIsTrigTime = istrig; }
+  
   // Sub-classes may want a more comprehensive clear
   virtual void Clear( Option_t* opt="" );
 
@@ -65,6 +70,11 @@ public:
   virtual Bool_t HasTDCData();
 
 protected:
+
+  //Since the RF time and trigger time are usually stored in one of these "RefElements", 
+  Bool_t fIsRFtime; //flag indicating that this element contains the RF time for this detector (assumed to be a TDC channel)
+  Bool_t fIsTrigTime; //flag indicating that this element contains the Trigger time for this detector (assumed to be a TDC channel);
+  
   Double_t fX;       ///< relative x position of the center
   Double_t fY;       ///< relative y position of the center
   Double_t fZ;       ///< relative z position of the center

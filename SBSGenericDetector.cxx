@@ -43,6 +43,10 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false)
 {
   // Constructor.
+  fDecodeRFtime = false;
+  fDecodeTrigTime = false;
+  fElemID_RFtime = -1;
+  fElemID_TrigTime = -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -115,7 +119,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   fChanMapStart = 0;
   DBRequest config_request[] = {
     { "detmap",       &detmap,  kIntV }, ///< Detector map
-   { "model_in_detmap", &model_in_detmap,  kInt, 0, true }, ///< Optional Does detector map have module numbers?
+    { "model_in_detmap", &model_in_detmap,  kInt, 0, true }, ///< Optional Does detector map have module numbers?
     { "chanmap",      &chanmap, kIntV,    0, true }, ///< Optional channel map
     { "start_chanmap",&fChanMapStart, kInt, 0, true}, ///< Optional start of channel numbering
     { "nrows",        &nrows,   kInt, 1, true }, ///< [Optional] Number of rows in detector
@@ -126,7 +130,13 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "row_offset_pattern",        &row_offset_pattern,   kDoubleV, 0, true }, ///< [Optional] conflicts with ncols
     { "is_mc",      &is_mc, kInt,    0, true }, ///< Optional channel map
     { "F1_RollOver",      &fF1_RollOver, kInt,    0, true }, ///< 
-    { "F1_TimeWindow",      &fF1_TimeWindow, kInt,    0, true }, ///< 
+    { "F1_TimeWindow",      &fF1_TimeWindow, kInt,    0, true }, ///<
+    { "crate_rftime",  &fCrate_RFtime, kUInt, 0, 1, 1 },
+    { "slot_rftime", &fSlot_RFtime, kUInt, 0, 1, 1 },
+    { "chan_rftime", &fChan_RFtime, kUInt, 0, 1, 1 },
+    { "crate_trigtime",  &fCrate_TrigTime, kUInt, 0, 1, 1 },
+    { "slot_trigtime", &fSlot_TrigTime, kUInt, 0, 1, 1 },
+    { "chan_trigtime", &fChan_TrigTime, kUInt, 0, 1, 1 },
     { 0 } ///< Request must end in a NULL
   };
 
@@ -362,10 +372,36 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
      	      fRefChanMap[i][chan]=kr;
   	      if ( krmod==0) fRefChanLo[i]=chan+d->lo;
   	      if ( krmod>=0) fRefChanHi[i]=chan+d->lo;
-              kr++;
+
+	      if( d->crate == fCrate_RFtime && d->slot == fSlot_RFtime && d->lo + chan == fChan_RFtime ){
+		fElemID_RFtime = kr;
+		fRFtimeIsRef = true;
+		fDecodeRFtime = true; 
+	      }
+
+	      if( d->crate == fCrate_TrigTime && d->slot == fSlot_TrigTime && d->lo + chan == fChan_TrigTime ){
+		fElemID_TrigTime = kr;
+		fTrigTimeIsRef = true;
+		fDecodeTrigTime = true; 
+	      }
+	      
+	      kr++;
 	      krmod++;
-	    } else {
-          km = chanmap[k] - fChanMapStart;
+	    } else { //NOT a reference channel!
+	      km = chanmap[k] - fChanMapStart;
+
+	      if( d->crate == fCrate_RFtime && d->slot == fSlot_RFtime && d->lo + chan == fChan_RFtime ){
+		fElemID_RFtime = km + fChanMapStart; //need to add chanmap start back into element ID consistent with how the elements are constructed below:
+		fRFtimeIsRef = false;
+		fDecodeRFtime = true; 
+	      }
+
+	      if( d->crate == fCrate_TrigTime && d->slot == fSlot_TrigTime && d->lo + chan == fChan_TrigTime ){
+		fElemID_TrigTime = km + fChanMapStart;
+		fTrigTimeIsRef = false;
+		fDecodeTrigTime = true; 
+	      }
+	      
 	    }
           } else {
             km = d->IsADC() ? ka : kt;
@@ -401,6 +437,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fclose(file);
     return err;
   }
+
+  std::cout << "Detector \"" << GetApparatus()->GetName() << "." << GetName() << "\": (Decode RF time, Decode Trig. time)=(" << fDecodeRFtime << ", " << fDecodeTrigTime << ")"
+	    << std::endl;
+  
   //
   // ADC and TDC reference time parameters
   std::vector<Double_t> reftdc_offset, reftdc_cal, reftdc_GoodTimeCut;
@@ -441,14 +481,15 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     vr.push_back({ "refadc.GoodTimeCut",    &refadc_GoodTimeCut,    kDoubleV, 0, 1 });
     }
   }
+  
   if(WithTDC()) {
     vr.push_back({ "tdc.offset",   &tdc_offset, kDoubleV, 0, 1 });
     vr.push_back({ "tdc.calib",    &tdc_cal,    kDoubleV, 0, 1 });
     vr.push_back({ "tdc.GoodTimeCut",    &tdc_GoodTimeCut,    kDoubleV, 0, 1 });
     if (!fDisableRefTDC) {
-    vr.push_back({ "reftdc.offset",   &reftdc_offset, kDoubleV, 0, 1 });
-    vr.push_back({ "reftdc.calib",    &reftdc_cal,    kDoubleV, 0, 1 });
-    vr.push_back({ "reftdc.GoodTimeCut",    &reftdc_GoodTimeCut,    kDoubleV, 0, 1 });
+      vr.push_back({ "reftdc.offset",   &reftdc_offset, kDoubleV, 0, 1 });
+      vr.push_back({ "reftdc.calib",    &reftdc_cal,    kDoubleV, 0, 1 });
+      vr.push_back({ "reftdc.GoodTimeCut",    &reftdc_GoodTimeCut,    kDoubleV, 0, 1 });
     }
   };
   vr.push_back({0});
@@ -618,10 +659,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return kInitError;
   }
 
-    //
-    fNRefElem = NRefADCElem + NRefTDCElem;
-    // Set the reference time elements
-    if (!RefMode.empty()) {
+  //
+  fNRefElem = NRefADCElem + NRefTDCElem;
+  // Set the reference time elements
+  if (!RefMode.empty()) {
     DeleteContainer(fRefElements);
     fRefElements.resize(fNRefElem);
     for (Int_t nr=0;nr<fNRefElem;nr++) {
@@ -629,26 +670,34 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       if (RefMode[nr] ==0) {
 	el->SetTDC(reftdc_offset[nr],reftdc_cal[nr],reftdc_GoodTimeCut[nr]);
       } else {
-            if( fModeADC == SBSModeADC::kWaveform ) {
-              el->SetWaveform(refadc_ped[nr],refadc_gain[nr],refadc_conv[nr],refadc_GoodTimeCut[nr]);
-	      SBSData::Waveform *wave = el->Waveform();
-              wave->SetWaveformParam(refadc_thres[nr],refadc_FixThresBin[nr],refadc_NSB[nr],refadc_NSA[nr],refadc_NPedBin[nr]);
-	      wave->SetAmpCal(refadc_AmpToIntRatio[nr]*refadc_gain[nr]);
-	      wave->SetTrigCal(1.);
-            } else {
-              el->SetADC(refadc_ped[nr],refadc_gain[nr]);
-	      if( fModeADC == SBSModeADC::kADC ) {
-		SBSData::ADC *fadc=el->ADC();
-		fadc->SetADCParam(refadc_conv[nr],refadc_NSB[nr],refadc_NSA[nr],refadc_NPedBin[nr],refadc_GoodTimeCut[nr]);
-		fadc->SetAmpCal(refadc_AmpToIntRatio[nr]*refadc_gain[nr]);
-	        fadc->SetTrigCal(1.);
-	      }
-            }
+	if( fModeADC == SBSModeADC::kWaveform ) {
+	  el->SetWaveform(refadc_ped[nr],refadc_gain[nr],refadc_conv[nr],refadc_GoodTimeCut[nr]);
+	  SBSData::Waveform *wave = el->Waveform();
+	  wave->SetWaveformParam(refadc_thres[nr],refadc_FixThresBin[nr],refadc_NSB[nr],refadc_NSA[nr],refadc_NPedBin[nr]);
+	  wave->SetAmpCal(refadc_AmpToIntRatio[nr]*refadc_gain[nr]);
+	  wave->SetTrigCal(1.);
+	} else {
+	  el->SetADC(refadc_ped[nr],refadc_gain[nr]);
+	  if( fModeADC == SBSModeADC::kADC ) {
+	    SBSData::ADC *fadc=el->ADC();
+	    fadc->SetADCParam(refadc_conv[nr],refadc_NSB[nr],refadc_NSA[nr],refadc_NPedBin[nr],refadc_GoodTimeCut[nr]);
+	    fadc->SetAmpCal(refadc_AmpToIntRatio[nr]*refadc_gain[nr]);
+	    fadc->SetTrigCal(1.);
+	  }
+	}
       }
-          fRefElements[nr] = el;
+
+      if( nr == fElemID_RFtime && fRFtimeIsRef && fDecodeRFtime ){ 
+	el->SetRF( true );
+      }
+      if( nr == fElemID_TrigTime && fTrigTimeIsRef && fDecodeTrigTime ){
+	el->SetTrig( true );
+      }
+      
+      fRefElements[nr] = el;
     }
-    }
-    //
+  }
+  //
   if(tdc_offset.empty()) { // set all ped to zero
     ResetVector(tdc_offset,Double_t(0.0),fNelem);
   } else if(tdc_offset.size() == 1) { // expand vector to specify calibration for all elements
@@ -863,8 +912,17 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
           if( WithTDC() ) { // TDC info
             e->SetTDC(tdc_offset[k],tdc_cal[k],tdc_GoodTimeCut[k]);
           }
+
+	  if( k+fChanMapStart == fElemID_RFtime && !fRFtimeIsRef && fDecodeRFtime ){ 
+	    e->SetRF( true );
+	  }
+	  if( k+fChanMapStart == fElemID_TrigTime && !fTrigTimeIsRef && fDecodeTrigTime ){
+	    e->SetTrig( true );
+	  }
+	  
           fElements[k] = e;
           fElementGrid[r][c][l] = e;
+
         }
       }
     }
@@ -926,6 +984,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
         ve.push_back({ "Ref.hits.t_tot",  "Ref Time All TDC Time-over-threshold",  "fRefRaw.t_ToT" });
       }
     }
+    
   }
 //
 //
@@ -997,6 +1056,12 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
         ve.push_back({ "hits.t_tot",  "All TDC Time-over-threshold",  "fRaw.t_ToT" });
       }
     }
+    if( fDecodeRFtime ){
+      ve.push_back( { "rftime", "Decoded RF time", "fRFtime" });
+    }
+    if( fDecodeTrigTime ){
+      ve.push_back( { "trigtime", "Decoded Trigger time", "fTrigTime" });
+    } 
   }
 
   // Are we using multi-valued ADCs? Then define the samples variables
@@ -1030,21 +1095,22 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
   // Loop over modules for the reference time
   SBSElement *blk = nullptr;
   if (!fDisableRefADC || !fDisableRefTDC) {
-  for( UInt_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
-    if (!fModuleRefTimeFlag[imod]) continue;
-    THaDetMap::Module *d = fDetMap->GetModule( imod );
-    for(UInt_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
-      Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
-      if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] == -1) continue;
+    for( UInt_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
+      if (!fModuleRefTimeFlag[imod]) continue;
+      THaDetMap::Module *d = fDetMap->GetModule( imod );
+      for(UInt_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
+	Int_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
+	if( chan > fRefChanHi[imod] || chan < fRefChanLo[imod]||  fRefChanMap[imod][chan-d->lo] == -1) continue;
 	blk = fRefElements[ fRefChanMap[imod][chan-d->lo]];
 	fNRefhits++;
-         if(d->IsADC()) {
-	   DecodeADC(evdata,blk,d,chan,kTRUE);
-         } else if ( d->IsTDC()) {
-	    DecodeTDC(evdata,blk,d,chan,kTRUE);
-         }
+	
+	if(d->IsADC()) {
+	  DecodeADC(evdata,blk,d,chan,kTRUE);
+	} else if ( d->IsTDC()) {
+	  DecodeTDC(evdata,blk,d,chan,kTRUE);
+	}
+      }
     }
-  }
   }
 
   // Loop over all modules decode accordingly
@@ -1295,6 +1361,15 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fRefGood.t_te.push_back(hit.te.val);
           fRefGood.t_ToT.push_back(hit.ToT.val);
         }
+
+	if( blk->IsRFtime() && fDecodeRFtime && fRFtimeIsRef ){
+	  fRFtime = tempval;
+	}
+
+	if( blk->IsTrigTime() && fDecodeTrigTime && fTrigTimeIsRef ){
+	  fTrigTime = tempval;
+	}
+	
       } else if ( fStoreEmptyElements ) {
     fRefGood.TDCrow.push_back(blk->GetRow());
     fRefGood.TDCcol.push_back(blk->GetCol());
@@ -1478,6 +1553,10 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fGood.t_te.push_back(hit.te.val);
           fGood.t_ToT.push_back(hit.ToT.val);
         }
+
+	if( blk->IsRFtime() ) fRFtime = hit.le.val;
+	if( blk->IsTrigTime() ) fTrigTime = hit.le.val;
+	
       } else if ( fStoreEmptyElements ) {
         fGood.TDCrow.push_back(blk->GetRow());
         fGood.TDCcol.push_back(blk->GetCol());
@@ -1699,6 +1778,8 @@ void SBSGenericDetector::ClearOutputVariables()
   fRaw.clear();
   fRefGood.clear();
   fRefRaw.clear();
+  fRFtime = kBig;
+  fTrigTime = kBig;
 }
 
 

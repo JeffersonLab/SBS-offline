@@ -18,6 +18,8 @@ SBSElement::SBSElement(Double_t x, Double_t y,
   fX(x), fY(y), fZ(z), fE(0), fAgain(0), fAtime(kBig), fTDCtime(kBig), fRow(row), fCol(col), fLayer(layer),
   fStat(0), fID(id), fADC(nullptr), fTDC(nullptr), fWaveform(nullptr)
 {
+  fIsRFtime = false;
+  fIsTrigTime = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
