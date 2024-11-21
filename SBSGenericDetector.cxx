@@ -21,6 +21,7 @@
 #include "TSystem.h"
 #include "Database.h"
 #include "THaApparatus.h"
+#include "TString.h"
 
 #include <cstring>
 #include <iostream>
@@ -1435,7 +1436,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	    double T_i = blk->TDC()->GetLead(ihit).val;
 	    if( ihit>0 ){
 	      double Tprev = blk->TDC()->GetLead(ihit-1).val;
-	      hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
+	      if( hdTRF != nullptr ){
+		hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
+	      }
 	    }
 	  }
 	  
@@ -1900,19 +1903,30 @@ SBSElement* SBSGenericDetector::MakeElement(Double_t x, Double_t y, Double_t z,
 Int_t SBSGenericDetector::Begin( THaRunBase *run ){
   UInt_t runnum = run->GetNumber();
 
-  if( fDecodeRFtime ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
-    TString histname;
-    histname.Form("hdTRF_%s_%s", GetApparatus()->GetName(), GetName() );
+  if( fDecodeRFtime && fElemID_RFtime >= 0 ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
+    //TString histname;
+    //histname.Form("hdTRF_%s_%s", GetApparatus()->GetName(), GetName() );
+
+    TString appname(GetApparatus()->GetName());
+    TString detname(GetName());
+
+    std::cout << "Creating RF time interval histogram for detector " << appname << "." << detname << std::endl; 
     
-    hdTRF = new TH1D( histname.Data(), "Consecutive leading-edge RF hits; #Deltat (ns);", 4000, 0.0, 500.0);
+    hdTRF = new TH1D( TString::Format("hdTRF_%s_%s", appname.Data(), detname.Data()), "Consecutive leading-edge RF hits; #Deltat (ns);", 4000, 0.0, 500.0);
+  } else {
+    hdTRF = nullptr;
   }
+
+  return kOK;
 }
 
 Int_t SBSGenericDetector::End( THaRunBase *run ){
   UInt_t runnum = run->GetNumber();
 
-  if( fDecodeRFtime ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
+  if( fDecodeRFtime && fElemID_RFtime >= 0 && hdTRF != nullptr ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
     
     hdTRF->Write(0,kOverwrite);
   }
+
+  return kOK;
 }
