@@ -34,7 +34,7 @@ ClassImp(SBSGenericDetector);
 /// The default is to have single-valued ADC with no TDC information
 /// Sub-classes can change this accordingly.
 SBSGenericDetector::SBSGenericDetector( const char* name, const char* description,
-    THaApparatus* apparatus ) :
+					THaApparatus* apparatus ) :
   THaNonTrackingDetector(name,description,apparatus), fNrows(0),fNcolsMax(0),
   fNlayers(0), fModeADC(SBSModeADC::kADCSimple), fModeTDC(SBSModeTDC::kNone),
   fDisableRefADC(true),fDisableRefTDC(true),
@@ -47,6 +47,9 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fDecodeTrigTime = false;
   fElemID_RFtime = -1;
   fElemID_TrigTime = -1;
+
+  fF1TDCminraw = 67000;
+  fF1TDCmaxraw = 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -140,9 +143,14 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { 0 } ///< Request must end in a NULL
   };
 
-  //How were these default values determined? 
-  fF1_RollOver = 64964;
+  // How were these default values determined?
+  // They appear to be empirically determined; however, the accuracy might be off by ~1-2 LSBs:
+  fF1_RollOver = 64965;   
   fF1_TimeWindow = 13000;
+  //Why shouldn't this be 65536 for a 16-bit readout?
+  //fF1_RollOver = 65536;
+  //fF1_TimeWindow = 13000;
+  
   err = LoadDB( file, date, config_request, fPrefix );
   if(err) {
     fclose(file);
@@ -160,7 +168,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // Sanity checks (make sure there were no inconsistent values entered.
   if( !err && (nrows <= 0 || ncols.empty() || int(ncols.size()) > nrows || nlayers <= 0) ) {
     Error( Here(here), "Illegal number of rows, columns and/or layers: %d %d %d"
-        ". Must be > 0. Please fix the database.", nrows, int(ncols.size()), nlayers);
+	   ". Must be > 0. Please fix the database.", nrows, int(ncols.size()), nlayers);
     fclose(file);
     return kInitError;
   }
@@ -180,8 +188,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   if(!row_offset_pattern.empty()) {
     if(int(row_offset_pattern.size()) > 3*nrows || row_offset_pattern.size()%3 != 0) {
       Error( Here(here), "Inconsistent number of entries in row_offset_pattern "
-          " specified.  Expected 3*nrows = %d but got %d",3*nrows,
-          int(row_offset_pattern.size()));
+	     " specified.  Expected 3*nrows = %d but got %d",3*nrows,
+	     int(row_offset_pattern.size()));
       fclose(file);
       return kInitError;
     }
@@ -201,23 +209,23 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // Safety check, make sure we didn't somehow change number of entries
   assert(int(ncols.size()) == nrows);
 
-    // Reinitialization only possible for same basic configuration
+  // Reinitialization only possible for same basic configuration
   if( !err ) {
     if( fIsInit) {
       if(nelem != fNelem || nrows != fNrows ||
-          ncols.size() != fNcols.size() || nlayers != fNlayers ) {
+	 ncols.size() != fNcols.size() || nlayers != fNlayers ) {
         Error( Here(here), "Cannot re-initalize with different number of rows, "
-            "cols or layers. nelem(%d vs %d), nrows( %d vs %d), ncols(%d vs %d),"
-            " nlayers(%d vs %d). Detector not re-initialized.",
-            fNelem, nelem, fNrows, nrows, int(fNcols.size()), int(ncols.size()),
-            fNlayers, nlayers);
+	       "cols or layers. nelem(%d vs %d), nrows( %d vs %d), ncols(%d vs %d),"
+	       " nlayers(%d vs %d). Detector not re-initialized.",
+	       fNelem, nelem, fNrows, nrows, int(fNcols.size()), int(ncols.size()),
+	       fNlayers, nlayers);
         fclose(file);
         return kInitError;
       } else {
         for(int r = 0; r < nrows; r++) {
           if(fNcols[r] != ncols[r]) {
             Error( Here(here), "Cannot re-initalize with different number of "
-                " columns ( %d != %d ) for row %d.",fNcols[r],ncols[r], r);
+		   " columns ( %d != %d ) for row %d.",fNcols[r],ncols[r], r);
             fclose(file);
             return kInitError;
           }
@@ -243,7 +251,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
 
   // Find out how many channels got skipped:
   int nskipped = 0;
-    int nrefchans = 0;
+  int nrefchans = 0;
   if( !chanmap.empty() ) {
     for(auto i : chanmap) {
       if (i == -1) nskipped++;
@@ -264,8 +272,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     if( WithTDC() && WithADC() ) {
       if(nelem != 2*fNelem ) {
         Error( Here(here), "Number of crate module channels (%d) "
-            "inconsistent with 2 channels per block (%d, expected)", nelem,
-            fNelem );
+	       "inconsistent with 2 channels per block (%d, expected)", nelem,
+	       fNelem );
         err = kInitError;
       }
     } else if ( nelem != fNelem) {
@@ -286,13 +294,13 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     if( WithTDC() && WithADC() ) {
       if(cmapsize - nskipped- nrefchans != 2*fNelem ) {
         Error( Here(here), "Number of logical channel to detector block map (%d) "
-            "inconsistent with 2 channels per block (%d, expected)", cmapsize,
-            2*fNelem );
+	       "inconsistent with 2 channels per block (%d, expected)", cmapsize,
+	       2*fNelem );
         err = kInitError;
       }
     } else if ( cmapsize - nskipped- nrefchans != fNelem) {
       Error( Here(here), "Number of logical channel to detector block map (%d) "
-          "inconsistent with number of blocks (%d)", cmapsize, fNelem );
+	     "inconsistent with number of blocks (%d)", cmapsize, fNelem );
       err = kInitError;
     }
   }
@@ -423,12 +431,12 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       }
     }
     if(WithADC() && ka != fNelem) {
-        Error( Here(here), "Inconsistent ADC channels, found %d, expected %d.", ka,fNelem);
-        return kInitError;
+      Error( Here(here), "Inconsistent ADC channels, found %d, expected %d.", ka,fNelem);
+      return kInitError;
     }
     if(WithTDC() && kt != fNelem) {
-        Error( Here(here), "Inconsistent TDC channels, found %d, expected %d.", kt,fNelem);
-        return kInitError;
+      Error( Here(here), "Inconsistent TDC channels, found %d, expected %d.", kt,fNelem);
+      return kInitError;
     }
   }
   // At this point, if an error has been encountered, don't bother continuing,
@@ -469,16 +477,16 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     vr.push_back({ "adc.NPedBin",     &adc_NPedBin,   kIntV,0, 1 });
     vr.push_back({ "adc.GoodTimeCut",    &adc_GoodTimeCut,    kDoubleV, 0, 1 });
     if (!fDisableRefADC) {
-    vr.push_back({ "refadc.pedestal", &refadc_ped,    kDoubleV, 0, 1 });
-    vr.push_back({ "refadc.gain",     &refadc_gain,   kDoubleV, 0, 1 });
-    vr.push_back({ "refadc.conv",     &refadc_conv,   kDoubleV, 0, 1 });
-    vr.push_back({ "refadc.thres",     &refadc_thres,   kDoubleV, 0, 1 });
-    vr.push_back({ "refadc.AmpToIntRatio",     &refadc_AmpToIntRatio,   kDoubleV, 0, 1 });
-    vr.push_back({ "refadc.FixThresBin",     &refadc_FixThresBin,   kIntV, 0, 1 });
-    vr.push_back({ "refadc.NSB",     &refadc_NSB,   kIntV, 0, 1 });
-    vr.push_back({ "refadc.NSA",     &refadc_NSA,   kIntV, 0, 1 });
-    vr.push_back({ "refadc.NPedBin",     &refadc_NPedBin,   kIntV,0, 1 });
-    vr.push_back({ "refadc.GoodTimeCut",    &refadc_GoodTimeCut,    kDoubleV, 0, 1 });
+      vr.push_back({ "refadc.pedestal", &refadc_ped,    kDoubleV, 0, 1 });
+      vr.push_back({ "refadc.gain",     &refadc_gain,   kDoubleV, 0, 1 });
+      vr.push_back({ "refadc.conv",     &refadc_conv,   kDoubleV, 0, 1 });
+      vr.push_back({ "refadc.thres",     &refadc_thres,   kDoubleV, 0, 1 });
+      vr.push_back({ "refadc.AmpToIntRatio",     &refadc_AmpToIntRatio,   kDoubleV, 0, 1 });
+      vr.push_back({ "refadc.FixThresBin",     &refadc_FixThresBin,   kIntV, 0, 1 });
+      vr.push_back({ "refadc.NSB",     &refadc_NSB,   kIntV, 0, 1 });
+      vr.push_back({ "refadc.NSA",     &refadc_NSA,   kIntV, 0, 1 });
+      vr.push_back({ "refadc.NPedBin",     &refadc_NPedBin,   kIntV,0, 1 });
+      vr.push_back({ "refadc.GoodTimeCut",    &refadc_GoodTimeCut,    kDoubleV, 0, 1 });
     }
   }
   
@@ -505,148 +513,148 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   std::cout << " Nreftdc = " << NRefTDCElem<< " Nrefadc = " << NRefADCElem << std::endl;
   // Check that there were either only 1 calibratoin value specified per key
   // or fNelements
-    if (!fDisableRefTDC) {
-       if(reftdc_offset.empty()) { // set all offset to zero
-         ResetVector(reftdc_offset,Double_t(0.0),NRefTDCElem);
-  } else if(reftdc_offset.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=reftdc_offset[0];
-    ResetVector(reftdc_offset,temp,NRefTDCElem);    
-  } else if ( (int)reftdc_offset.size() != NRefTDCElem ) {
-    Error( Here(here), "Inconsistent number of reftdc.offset  specified. Expected "
-	   "%d but got %d",NRefTDCElem,int(reftdc_offset.size()));
-    return kInitError;
-  }
-       //
-       if(reftdc_GoodTimeCut.empty()) { // set all GoodTimeCut to zero
-         ResetVector(reftdc_GoodTimeCut,Double_t(0.0),NRefTDCElem);
-  } else if(reftdc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=reftdc_GoodTimeCut[0];
-    ResetVector(reftdc_GoodTimeCut,temp,NRefTDCElem);    
-  } else if ( (int)reftdc_GoodTimeCut.size() != NRefTDCElem ) {
-    Error( Here(here), "Inconsistent number of reftdc.GoodTimeCut  specified. Expected "
-	   "%d but got %d",NRefTDCElem,int(reftdc_GoodTimeCut.size()));
-    return kInitError;
-  }
-       //
-       if(reftdc_cal.empty()) { // set all cal to 0.1
-         ResetVector(reftdc_cal,Double_t(0.1),NRefTDCElem);
-  } else if(reftdc_cal.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=reftdc_cal[0];
-    ResetVector(reftdc_cal,temp,NRefTDCElem);    
-  } else if ( (int)reftdc_cal.size() != NRefTDCElem ) {
-    Error( Here(here), "Inconsistent number of reftdc.cal specified. Expected "
-	   "%d but got %d",NRefTDCElem,int(reftdc_cal.size()));
-    return kInitError;
-  }
+  if (!fDisableRefTDC) {
+    if(reftdc_offset.empty()) { // set all offset to zero
+      ResetVector(reftdc_offset,Double_t(0.0),NRefTDCElem);
+    } else if(reftdc_offset.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=reftdc_offset[0];
+      ResetVector(reftdc_offset,temp,NRefTDCElem);    
+    } else if ( (int)reftdc_offset.size() != NRefTDCElem ) {
+      Error( Here(here), "Inconsistent number of reftdc.offset  specified. Expected "
+	     "%d but got %d",NRefTDCElem,int(reftdc_offset.size()));
+      return kInitError;
     }
     //
-    if (!fDisableRefADC) {
-  if(refadc_ped.empty()) { // set all ped to zero
-    ResetVector(refadc_ped,Double_t(0.0),NRefADCElem);
-  } else if(refadc_ped.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=refadc_ped[0];
-    ResetVector(refadc_ped,temp,NRefADCElem);    
-  } else if ( (int)refadc_ped.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
-	   "%d but got %d",NRefADCElem,int(refadc_ped.size()));
-    return kInitError;
-  }
-
-  if(refadc_gain.empty()) { // set all gain to 1
-     ResetVector(refadc_gain,Double_t(1.0),NRefADCElem);
-  } else if(refadc_gain.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=refadc_gain[0];
-    ResetVector(refadc_gain,temp,NRefADCElem);    
-  } else if ( (int)refadc_gain.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of adc.gain specified. Expected "
-        "%d but got %d",int(refadc_gain.size()),NRefADCElem);
-    return kInitError;
-  }
-
-  if(refadc_thres.empty()) { // expand vector to specify calibration for all elements
-    ResetVector(refadc_thres,Double_t(1.0),NRefADCElem);    
-  } else if(refadc_thres.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=refadc_thres[0];
-    ResetVector(refadc_thres,temp,NRefADCElem);    
-    std::cout << "set all elements  thres = " << refadc_thres[0] << std::endl;
-  } else if ( (int)refadc_thres.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of refadc.thres specified. Expected "
-        "%d but got %d",int(refadc_thres.size()),NRefADCElem);
-    return kInitError;
-  }
-
-  if(refadc_conv.empty()) { // expand vector to specify calibration for all elements
-    ResetVector(refadc_conv,Double_t(1.0),NRefADCElem);    
-  } else if(refadc_conv.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=refadc_conv[0];
-    ResetVector(refadc_conv,temp,NRefADCElem);    
-    std::cout << "set all elements  conv = " << refadc_conv[0] << std::endl;
-  } else if ( (int)refadc_conv.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of refadc.conv specified. Expected "
-        "%d but got %d",int(refadc_conv.size()),NRefADCElem);
-    return kInitError;
-  }
-
-  if(refadc_AmpToIntRatio.empty()) { // expand vector to specify calibration for all elements
-    ResetVector(refadc_AmpToIntRatio,Double_t(1.0),NRefADCElem);    
-  } else if(refadc_AmpToIntRatio.size() == 1) { // expand vector to specify calibration for all elements
-    Double_t temp=refadc_AmpToIntRatio[0];
-    ResetVector(refadc_AmpToIntRatio,temp,NRefADCElem);    
-    std::cout << "set all elements  AmpToIntRatio = " << refadc_AmpToIntRatio[0] << std::endl;
-  } else if ( (int)refadc_AmpToIntRatio.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of refadc.AmpToIntRatio specified. Expected "
-        "%d but got %d",int(refadc_AmpToIntRatio.size()),NRefADCElem);
-    return kInitError;
-  }
-
-  if(refadc_NSB.empty()) { // expand vector to specify calibration for all elements
-    ResetVector(refadc_NSB,3,NRefADCElem);    
-  } else if(refadc_NSB.size() == 1) { // expand vector to specify calibration for all elements
-    Int_t temp=refadc_NSB[0];
-    ResetVector(refadc_NSB,temp,NRefADCElem);    
-    std::cout << "set all elements  NSB = " << refadc_NSB[0] << std::endl;
-  } else if ( (int)refadc_NSB.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of refadc.NSB specified. Expected "
-        "%d but got %d",int(refadc_NSB.size()),NRefADCElem);
-    return kInitError;
-  }
-
-  if(refadc_NSA.empty()) { // expand vector to specify calibration for all elements
-    ResetVector(refadc_NSA,10,NRefADCElem);    
-  } else if(refadc_NSA.size() == 1) { // expand vector to specify calibration for all elements
-    Int_t temp=refadc_NSA[0];
-    ResetVector(refadc_NSA,temp,NRefADCElem);    
-    std::cout << "set all elements  NSA = " << refadc_NSA[0] << std::endl;
-  } else if ( (int)refadc_NSA.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of refadc.NSA specified. Expected "
-        "%d but got %d",int(refadc_NSA.size()),NRefADCElem);
-    return kInitError;
-  }
-
-  if(refadc_NPedBin.empty()) { // expand vector to specify calibration for all elements
-    ResetVector(refadc_NPedBin,4,NRefADCElem);    
-  } else if(refadc_NPedBin.size() == 1) { // expand vector to specify calibration for all elements
-    Int_t temp=refadc_NPedBin[0];
-    ResetVector(refadc_NPedBin,temp,NRefADCElem);    
-    std::cout << "set all elements  NPedBin = " << refadc_NPedBin[0] << std::endl;
-  } else if ( (int)refadc_NPedBin.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of adc.NPedBin specified. Expected "
-        "%d but got %d",int(refadc_NPedBin.size()),NRefADCElem);
-    return kInitError;
-  }
-
-  if(refadc_FixThresBin.empty()) { // expand vector to specify calibration for all elements
-    ResetVector(refadc_FixThresBin,10,NRefADCElem);    
-  } else if(refadc_FixThresBin.size() == 1) { // expand vector to specify calibration for all elements
-    Int_t temp=refadc_FixThresBin[0];
-    ResetVector(refadc_FixThresBin,temp,NRefADCElem);    
-    std::cout << "set all elements  FixThresBin = " << refadc_FixThresBin[0] << std::endl;
-  } else if ( (int)refadc_FixThresBin.size() != NRefADCElem ) {
-    Error( Here(here), "Inconsistent number of adc.FixThresBin specified. Expected "
-        "%d but got %d",int(refadc_FixThresBin.size()),NRefADCElem);
-    return kInitError;
-  }
+    if(reftdc_GoodTimeCut.empty()) { // set all GoodTimeCut to zero
+      ResetVector(reftdc_GoodTimeCut,Double_t(0.0),NRefTDCElem);
+    } else if(reftdc_GoodTimeCut.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=reftdc_GoodTimeCut[0];
+      ResetVector(reftdc_GoodTimeCut,temp,NRefTDCElem);    
+    } else if ( (int)reftdc_GoodTimeCut.size() != NRefTDCElem ) {
+      Error( Here(here), "Inconsistent number of reftdc.GoodTimeCut  specified. Expected "
+	     "%d but got %d",NRefTDCElem,int(reftdc_GoodTimeCut.size()));
+      return kInitError;
     }
+    //
+    if(reftdc_cal.empty()) { // set all cal to 0.1
+      ResetVector(reftdc_cal,Double_t(0.1),NRefTDCElem);
+    } else if(reftdc_cal.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=reftdc_cal[0];
+      ResetVector(reftdc_cal,temp,NRefTDCElem);    
+    } else if ( (int)reftdc_cal.size() != NRefTDCElem ) {
+      Error( Here(here), "Inconsistent number of reftdc.cal specified. Expected "
+	     "%d but got %d",NRefTDCElem,int(reftdc_cal.size()));
+      return kInitError;
+    }
+  }
+  //
+  if (!fDisableRefADC) {
+    if(refadc_ped.empty()) { // set all ped to zero
+      ResetVector(refadc_ped,Double_t(0.0),NRefADCElem);
+    } else if(refadc_ped.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=refadc_ped[0];
+      ResetVector(refadc_ped,temp,NRefADCElem);    
+    } else if ( (int)refadc_ped.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of adc.ped specified. Expected "
+	     "%d but got %d",NRefADCElem,int(refadc_ped.size()));
+      return kInitError;
+    }
+
+    if(refadc_gain.empty()) { // set all gain to 1
+      ResetVector(refadc_gain,Double_t(1.0),NRefADCElem);
+    } else if(refadc_gain.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=refadc_gain[0];
+      ResetVector(refadc_gain,temp,NRefADCElem);    
+    } else if ( (int)refadc_gain.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of adc.gain specified. Expected "
+	     "%d but got %d",int(refadc_gain.size()),NRefADCElem);
+      return kInitError;
+    }
+
+    if(refadc_thres.empty()) { // expand vector to specify calibration for all elements
+      ResetVector(refadc_thres,Double_t(1.0),NRefADCElem);    
+    } else if(refadc_thres.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=refadc_thres[0];
+      ResetVector(refadc_thres,temp,NRefADCElem);    
+      std::cout << "set all elements  thres = " << refadc_thres[0] << std::endl;
+    } else if ( (int)refadc_thres.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of refadc.thres specified. Expected "
+	     "%d but got %d",int(refadc_thres.size()),NRefADCElem);
+      return kInitError;
+    }
+
+    if(refadc_conv.empty()) { // expand vector to specify calibration for all elements
+      ResetVector(refadc_conv,Double_t(1.0),NRefADCElem);    
+    } else if(refadc_conv.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=refadc_conv[0];
+      ResetVector(refadc_conv,temp,NRefADCElem);    
+      std::cout << "set all elements  conv = " << refadc_conv[0] << std::endl;
+    } else if ( (int)refadc_conv.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of refadc.conv specified. Expected "
+	     "%d but got %d",int(refadc_conv.size()),NRefADCElem);
+      return kInitError;
+    }
+
+    if(refadc_AmpToIntRatio.empty()) { // expand vector to specify calibration for all elements
+      ResetVector(refadc_AmpToIntRatio,Double_t(1.0),NRefADCElem);    
+    } else if(refadc_AmpToIntRatio.size() == 1) { // expand vector to specify calibration for all elements
+      Double_t temp=refadc_AmpToIntRatio[0];
+      ResetVector(refadc_AmpToIntRatio,temp,NRefADCElem);    
+      std::cout << "set all elements  AmpToIntRatio = " << refadc_AmpToIntRatio[0] << std::endl;
+    } else if ( (int)refadc_AmpToIntRatio.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of refadc.AmpToIntRatio specified. Expected "
+	     "%d but got %d",int(refadc_AmpToIntRatio.size()),NRefADCElem);
+      return kInitError;
+    }
+
+    if(refadc_NSB.empty()) { // expand vector to specify calibration for all elements
+      ResetVector(refadc_NSB,3,NRefADCElem);    
+    } else if(refadc_NSB.size() == 1) { // expand vector to specify calibration for all elements
+      Int_t temp=refadc_NSB[0];
+      ResetVector(refadc_NSB,temp,NRefADCElem);    
+      std::cout << "set all elements  NSB = " << refadc_NSB[0] << std::endl;
+    } else if ( (int)refadc_NSB.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of refadc.NSB specified. Expected "
+	     "%d but got %d",int(refadc_NSB.size()),NRefADCElem);
+      return kInitError;
+    }
+
+    if(refadc_NSA.empty()) { // expand vector to specify calibration for all elements
+      ResetVector(refadc_NSA,10,NRefADCElem);    
+    } else if(refadc_NSA.size() == 1) { // expand vector to specify calibration for all elements
+      Int_t temp=refadc_NSA[0];
+      ResetVector(refadc_NSA,temp,NRefADCElem);    
+      std::cout << "set all elements  NSA = " << refadc_NSA[0] << std::endl;
+    } else if ( (int)refadc_NSA.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of refadc.NSA specified. Expected "
+	     "%d but got %d",int(refadc_NSA.size()),NRefADCElem);
+      return kInitError;
+    }
+
+    if(refadc_NPedBin.empty()) { // expand vector to specify calibration for all elements
+      ResetVector(refadc_NPedBin,4,NRefADCElem);    
+    } else if(refadc_NPedBin.size() == 1) { // expand vector to specify calibration for all elements
+      Int_t temp=refadc_NPedBin[0];
+      ResetVector(refadc_NPedBin,temp,NRefADCElem);    
+      std::cout << "set all elements  NPedBin = " << refadc_NPedBin[0] << std::endl;
+    } else if ( (int)refadc_NPedBin.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of adc.NPedBin specified. Expected "
+	     "%d but got %d",int(refadc_NPedBin.size()),NRefADCElem);
+      return kInitError;
+    }
+
+    if(refadc_FixThresBin.empty()) { // expand vector to specify calibration for all elements
+      ResetVector(refadc_FixThresBin,10,NRefADCElem);    
+    } else if(refadc_FixThresBin.size() == 1) { // expand vector to specify calibration for all elements
+      Int_t temp=refadc_FixThresBin[0];
+      ResetVector(refadc_FixThresBin,temp,NRefADCElem);    
+      std::cout << "set all elements  FixThresBin = " << refadc_FixThresBin[0] << std::endl;
+    } else if ( (int)refadc_FixThresBin.size() != NRefADCElem ) {
+      Error( Here(here), "Inconsistent number of adc.FixThresBin specified. Expected "
+	     "%d but got %d",int(refadc_FixThresBin.size()),NRefADCElem);
+      return kInitError;
+    }
+  }
 
   if(refadc_GoodTimeCut.empty()) { //
     ResetVector(refadc_GoodTimeCut,Double_t(0.0),fNelem);
@@ -743,25 +751,25 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   }
 
   if(adc_gain.empty()) { // set all gain to 1
-     ResetVector(adc_gain,Double_t(1.0),fNelem);
+    ResetVector(adc_gain,Double_t(1.0),fNelem);
   } else if(adc_gain.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_gain[0];
     ResetVector(adc_gain,temp,fNelem);    
   } else if ( (int)adc_gain.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.gain specified. Expected "
-        "%d but got %d",int(adc_gain.size()),fNelem);
+	   "%d but got %d",int(adc_gain.size()),fNelem);
     return kInitError;
   }
 
 
   if(adc_timeoffset.empty()) { // set all timeoffset to 0
-     ResetVector(adc_timeoffset,Double_t(0.0),fNelem);
+    ResetVector(adc_timeoffset,Double_t(0.0),fNelem);
   } else if(adc_timeoffset.size() == 1) { // expand vector to specify calibration for all elements
     Double_t temp=adc_timeoffset[0];
     ResetVector(adc_timeoffset,temp,fNelem);    
   } else if ( (int)adc_gain.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.gain specified. Expected "
-        "%d but got %d",int(adc_gain.size()),fNelem);
+	   "%d but got %d",int(adc_gain.size()),fNelem);
     return kInitError;
   }
 
@@ -773,7 +781,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     std::cout << "set all elements  thres = " << adc_thres[0] << std::endl;
   } else if ( (int)adc_thres.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.thres specified. Expected "
-        "%d but got %d",int(adc_thres.size()),fNelem);
+	   "%d but got %d",int(adc_thres.size()),fNelem);
     return kInitError;
   }
 
@@ -785,7 +793,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     std::cout << "set all elements  conv = " << adc_conv[0] << std::endl;
   } else if ( (int)adc_conv.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.conv specified. Expected "
-        "%d but got %d",int(adc_conv.size()),fNelem);
+	   "%d but got %d",int(adc_conv.size()),fNelem);
     return kInitError;
   }
 
@@ -798,7 +806,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     std::cout << "set all elements  AmpToIntRatio = " << adc_AmpToIntRatio[0] << std::endl;
   } else if ( (int)adc_AmpToIntRatio.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.AmpToIntRatio specified. Expected "
-        "%d but got %d",int(adc_AmpToIntRatio.size()),fNelem);
+	   "%d but got %d",int(adc_AmpToIntRatio.size()),fNelem);
     return kInitError;
   }
 
@@ -810,7 +818,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     std::cout << "set all elements  NSB = " << adc_NSB[0] << std::endl;
   } else if ( (int)adc_NSB.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.NSB specified. Expected "
-        "%d but got %d",int(adc_NSB.size()),fNelem);
+	   "%d but got %d",int(adc_NSB.size()),fNelem);
     return kInitError;
   }
 
@@ -822,7 +830,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     std::cout << "set all elements  NSA = " << adc_NSA[0] << std::endl;
   } else if ( (int)adc_NSA.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.NSA specified. Expected "
-        "%d but got %d",int(adc_NSA.size()),fNelem);
+	   "%d but got %d",int(adc_NSA.size()),fNelem);
     return kInitError;
   }
 
@@ -834,7 +842,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     std::cout << "set all elements  NPedBin = " << adc_NPedBin[0] << std::endl;
   } else if ( (int)adc_NPedBin.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.NPedBin specified. Expected "
-        "%d but got %d",int(adc_NPedBin.size()),fNelem);
+	   "%d but got %d",int(adc_NPedBin.size()),fNelem);
     return kInitError;
   }
 
@@ -846,7 +854,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     std::cout << "set all elements  FixThresBin = " << adc_FixThresBin[0] << std::endl;
   } else if ( (int)adc_FixThresBin.size() != fNelem ) {
     Error( Here(here), "Inconsistent number of adc.FixThresBin specified. Expected "
-        "%d but got %d",int(adc_FixThresBin.size()),fNelem);
+	   "%d but got %d",int(adc_FixThresBin.size()),fNelem);
     return kInitError;
   }
 
@@ -942,7 +950,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   if( mode == kDefine && fIsSetup ) return kOK;
   if( !( WithADC() || WithTDC() ) ) {
     Error( Here("DefineVariables"),
-        "GenericDetector %s defined with no data payload.",GetName());
+	   "GenericDetector %s defined with no data payload.",GetName());
     return kInitError;
   }
   fIsSetup = ( mode == kDefine );
@@ -986,13 +994,13 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     }
     
   }
-//
-//
+  //
+  //
   if(WithADC() && !fDisableRefADC) {
     ve.push_back({ "Ref.adcelemID", "Element ID for Ref ADC",  "fRefGood.ADCelemID" }),
-    ve.push_back({ "Ref.ped", "Pedestal for Ref ADC in data vectors",  "fRefGood.ped" }),
-     ve.push_back( {"Ref.a","Ref ADC integral", "fRefGood.a"} );
-     ve.push_back( {"Ref.a_mult","Ref ADC # hits in channel", "fRefGood.a_mult"} );
+      ve.push_back({ "Ref.ped", "Pedestal for Ref ADC in data vectors",  "fRefGood.ped" }),
+      ve.push_back( {"Ref.a","Ref ADC integral", "fRefGood.a"} );
+    ve.push_back( {"Ref.a_mult","Ref ADC # hits in channel", "fRefGood.a_mult"} );
     ve.push_back( {"Ref.a_p","Ref ADC integral - ped", "fRefGood.a_p"} );
     ve.push_back( {"Ref.a_c","Ref (ADC integral - ped)*gain", "fRefGood.a_c"} );
     if(fModeADC != SBSModeADC::kADCSimple) {
@@ -1012,12 +1020,12 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   if(WithADC()) {
     // Register variables in global list
     ve.push_back({ "adcrow", "Row for block in data vectors",  "fGood.ADCrow" }),
-    ve.push_back({ "adccol", "Col for block in data vectors",  "fGood.ADCcol" }),
-    ve.push_back({ "adcelemID", "Element ID for block in data vectors",  "fGood.ADCelemID" }),
-    ve.push_back({ "adclayer", "Layer for block in data vectors",  "fGood.ADClayer" }),
-    ve.push_back({ "ped", "Pedestal for block in data vectors",  "fGood.ped" }),
-     ve.push_back( {"a","ADC integral", "fGood.a"} );
-     ve.push_back( {"a_mult","ADC # hits in channel", "fGood.a_mult"} );
+      ve.push_back({ "adccol", "Col for block in data vectors",  "fGood.ADCcol" }),
+      ve.push_back({ "adcelemID", "Element ID for block in data vectors",  "fGood.ADCelemID" }),
+      ve.push_back({ "adclayer", "Layer for block in data vectors",  "fGood.ADClayer" }),
+      ve.push_back({ "ped", "Pedestal for block in data vectors",  "fGood.ped" }),
+      ve.push_back( {"a","ADC integral", "fGood.a"} );
+    ve.push_back( {"a_mult","ADC # hits in channel", "fGood.a_mult"} );
     ve.push_back( {"a_p","ADC integral - ped", "fGood.a_p"} );
     ve.push_back( {"a_c","(ADC integral - ped)*gain", "fGood.a_c"} );
     if(fModeADC != SBSModeADC::kADCSimple) {
@@ -1038,10 +1046,10 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   // Are we using TDCs? If so, define variables for TDCs
   if(WithTDC()) {
     ve.push_back({ "tdcrow", "Row for block in data vectors",  "fGood.TDCrow" }),
-    ve.push_back({ "tdccol", "Col for block in data vectors",  "fGood.TDCcol" }),
-    ve.push_back({ "tdcelemID", "Element ID for block in data vectors",  "fGood.TDCelemID" }),
-    ve.push_back({ "tdclayer", "Layer for block in data vectors",  "fGood.TDClayer" }),
-    ve.push_back({ "tdc", "Calibrated TDC value", "fGood.t" });
+      ve.push_back({ "tdccol", "Col for block in data vectors",  "fGood.TDCcol" }),
+      ve.push_back({ "tdcelemID", "Element ID for block in data vectors",  "fGood.TDCelemID" }),
+      ve.push_back({ "tdclayer", "Layer for block in data vectors",  "fGood.TDClayer" }),
+      ve.push_back({ "tdc", "Calibrated TDC value", "fGood.t" });
     ve.push_back({ "tdc_mult", "TDC # of hits per channel", "fGood.t_mult" });
     if(fModeTDC != SBSModeTDC::kTDCSimple) {
       // We have trailing edge and Time-Over-Threshold info to store
@@ -1067,18 +1075,18 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
   // Are we using multi-valued ADCs? Then define the samples variables
   if(fModeADC == SBSModeADC::kWaveform && fStoreRawHits) {
     ve.push_back({ "samps_idx", "Index in samples vector for given row-col module",
-        "fGood.sidx" });
+	  "fGood.sidx" });
     ve.push_back({ "nsamps" , "Number of samples for given row-col",
-        "fGood.nsamps"});
+	  "fGood.nsamps"});
     ve.push_back({ "samps", "Calibrated ADC samples",  "fGood.samps" });
     ve.push_back({ "samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
     if (!fDisableRefADC) {
-    ve.push_back({ "Ref.samps_idx", "Index in samples vector for given row-col module",
-        "fRefGood.sidx" });
-    ve.push_back({ "Ref.nsamps" , "Number of samples for given row-col",
-        "fRefGood.nsamps"});
-    ve.push_back({ "Ref.samps", "Calibrated ADC samples",  "fGood.samps" });
-    ve.push_back({ "Ref.samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
+      ve.push_back({ "Ref.samps_idx", "Index in samples vector for given row-col module",
+	    "fRefGood.sidx" });
+      ve.push_back({ "Ref.nsamps" , "Number of samples for given row-col",
+	    "fRefGood.nsamps"});
+      ve.push_back({ "Ref.samps", "Calibrated ADC samples",  "fGood.samps" });
+      ve.push_back({ "Ref.samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
     }
   }
 
@@ -1117,13 +1125,13 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
   blk = nullptr;
   for( UInt_t imod = 0; imod < fDetMap->GetSize(); imod++ ) {
     THaDetMap::Module *d = fDetMap->GetModule( imod );
-	for(UInt_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
+    for(UInt_t ihit = 0; ihit < evdata.GetNumChan( d->crate, d->slot ); ihit++) {
       // Get the next available channel, skipping the ones that do not belong
       // to our detector
       UInt_t chan = evdata.GetNextChan( d->crate, d->slot, ihit );
       if( chan > d->hi || chan < d->lo || fChanMap[imod][chan-d->lo] == -1 || fChanMap[imod][chan-d->lo] == -1000)
         continue;
-       fNhits++;
+      fNhits++;
       // Get the block index for this crate,slot,channel combo
       blk = fElements[ fChanMap[imod][chan-d->lo] ];
       if(d->IsADC()) {
@@ -1143,38 +1151,38 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
 }
 ////
 Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
-    SBSElement *blk, THaDetMap::Module *d, Int_t chan,Bool_t IsRef)
+				     SBSElement *blk, THaDetMap::Module *d, Int_t chan,Bool_t IsRef)
 {
   UInt_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   if(nhit == 0  || !WithADC() || !blk)    return 0;
   // If not a reference element then determine the reference time to use
   Double_t reftime=0; 
   if (!IsRef && !fDisableRefADC && d->refindex>=0) {
-     SBSElement *refblk = fRefElements[d->refindex];
-     if(fModeADC == SBSModeADC::kWaveform ) {
-        SBSData::Waveform *wave = refblk->Waveform();
-	//Now only one pulse found per sample 	
-       reftime = wave->GetTime().val;
-       wave->SetGoodHit(0);
+    SBSElement *refblk = fRefElements[d->refindex];
+    if(fModeADC == SBSModeADC::kWaveform ) {
+      SBSData::Waveform *wave = refblk->Waveform();
+      //Now only one pulse found per sample 	
+      reftime = wave->GetTime().val;
+      wave->SetGoodHit(0);
     } else if (fModeADC == SBSModeADC::kADC && refblk->ADC()->HasData()) {
-       Int_t nhits = refblk->ADC()->GetNHits(); 
-       Double_t MinDiff = 10000.;
-       Int_t HitIndex = 0;
-       Double_t RefCent = refblk->ADC()->GetGoodTimeCut();
-       for (Int_t ih=0;ih<nhits;ih++) {
-	 if (abs(refblk->ADC()->GetTime(ih).val-RefCent) < MinDiff) {
-           HitIndex = ih;
-	   MinDiff = abs(refblk->ADC()->GetTime(ih).val-RefCent);
-	 }
-       }      
+      Int_t nhits = refblk->ADC()->GetNHits(); 
+      Double_t MinDiff = 10000.;
+      Int_t HitIndex = 0;
+      Double_t RefCent = refblk->ADC()->GetGoodTimeCut();
+      for (Int_t ih=0;ih<nhits;ih++) {
+	if (abs(refblk->ADC()->GetTime(ih).val-RefCent) < MinDiff) {
+	  HitIndex = ih;
+	  MinDiff = abs(refblk->ADC()->GetTime(ih).val-RefCent);
+	}
+      }      
       reftime = refblk->ADC()->GetTime(HitIndex).val ;
       refblk->ADC()->SetGoodHit(HitIndex);       
-     }
+    }
   }
   if(fModeADC != SBSModeADC::kWaveform) {
     // Process all hits in this channel
     if(fModeADC == SBSModeADC::kADCSimple) { // Single ADC value 
-        blk->ADC()->Process( evdata.GetData(d->crate, d->slot, chan, 0));
+      blk->ADC()->Process( evdata.GetData(d->crate, d->slot, chan, 0));
     } else if (fModeADC == SBSModeADC::kADC) { // mode==7 in FADC250
       // here integral, time, peak, and pedestal are provided
       Double_t integral,time,peak,pedestal;
@@ -1203,11 +1211,13 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
 
 
 Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
-    SBSElement *blk, THaDetMap::Module *d, Int_t chan,Bool_t IsRef)
+				     SBSElement *blk, THaDetMap::Module *d, Int_t chan,Bool_t IsRef)
 {
   //
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   Double_t reftime  = 0;
+
+  
   // For VETROC the TDC hits are not in time order. Need to arrange in time order.
   std::vector<TDCHits> tdchit;
   if(fModeTDC == SBSModeTDC::kTDC )  {
@@ -1219,7 +1229,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   }
   //
   if(!IsRef && !fDisableRefTDC && d->refindex>=0) {
-     SBSElement *refblk = fRefElements[d->refindex];
+    SBSElement *refblk = fRefElements[d->refindex];
     if(!refblk->TDC()->HasData()) {
 
       //std::cout << "Error reference TDC channel has no hits! detector = " << GetApparatus()->GetName() << "." << GetName() << ", refindex = " << d->refindex << " num ref tot = " << fNRefhits << " size = " << fRefElements.size() << std::endl;
@@ -1232,22 +1242,27 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
       for (Int_t ih=0;ih<nhits;ih++) {
 	Double_t tempdata= refblk->TDC()->GetData(ih);
 	if (d->GetModel() == 6401) {
-	  //Does the following line make sense? GetDataRaw(ih) invokes GetLead(ih).raw
-	  //But what is in GetLead(ih).raw? At line 1211 below, we invoke blk->TDC()->ProcessSimple(id,rawdata-reftime,ihit,TrigTime), which sets hit->TrigTime to TrigTime and sets le.raw to evdata.GetData(crate,slot,chan,ihit) - reftime
+	  // At least in a representative GMN run, the ordering of signals in the absence of rollover appears to be:
+	  // F1 trig time < ref time (=BB trig time). Moreover, the BB trig time appears to arrive at a roughly fixed timing
+	  // relative to the F1 trig time (which makes sense since the L1A timing is based on BB, it is about 2200-2300 TDC counts or 
+	  // about 250-260 ns. OTOH, the raw signal appears to usually (but not always) arrive before the reference time
+	  // but after the F1 trigger time
+	  // Does the following line make sense? GetDataRaw(ih) invokes GetLead(ih).raw
+	  // But what is in GetLead(ih).raw? At line 1211 below, we invoke blk->TDC()->ProcessSimple(id,rawdata-reftime,ihit,TrigTime), which sets hit->TrigTime to TrigTime and sets le.raw to evdata.GetData(crate,slot,chan,ihit) - reftime
 	  // where reftime = 0 if this happens to be a reference channel,
 	  // it also sets le.val to (val-offset)*calib
 	  // Therefore tempdata contains the raw tdc value for the reference time for this channel,
 	  // and trigtime contains the F1 trigger time for the reference channel which, in principle, is the same
 	  // as for all the others on a given F1 chip
-	  tempdata= refblk->TDC()->GetDataRaw(ih);
-	  Int_t trigtime = refblk->TDC()->GetTrigTime(ih);
+	  tempdata= refblk->TDC()->GetDataRaw(ih); //Raw TDC value.
+	  Int_t trigtime = refblk->TDC()->GetTrigTime(ih); //F1 trigger time:
 
-	  // std::cout << "decoding F1 TDC reference time, (tempdata,trigtime,tempdata%128, trigtime%128)=("
-	  // 	    << tempdata << ", " << trigtime << ", " << fmod(tempdata,128.0) << ", "
-	  // 	    << fmod(trigtime,128) << ")" << std::endl;
+	  // std::cout << "decoding F1 TDC reference time, (tempdata,trigtime,tempdata%128, trigtime%128, tempdata-trigtime)=("
+	  //  	    << tempdata << ", " << trigtime << ", " << fmod(tempdata,128.0) << ", "
+	  //  	    << fmod(trigtime,128) << ", " << tempdata-trigtime << ")" << std::endl;
 	  if ( trigtime>tempdata) { //As far as I can see, this condition is NEVER satisfied because the rollover correction (if applicable) was already applied at line 1217 below. As such, these lines of code are unnecessary
 	    tempdata+=fF1_RollOver;
-	    std::cout << "Applying rollover correction to reference time, detector = " << GetApparatus()->GetName() << "." << GetName() << std::endl;
+	    //std::cout << "Applying rollover correction to reference time, detector = " << GetApparatus()->GetName() << "." << GetName() << std::endl;
 	  }
 	  Double_t cal=refblk->TDC()->GetCal();
 	  Double_t offset=refblk->TDC()->GetOffset();
@@ -1255,7 +1270,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 	  // std::cout << "decoding reference time for " << GetApparatus()->GetName() << "." << GetName()
 	  // 	    << ": (tempdata, trigtime, offset, cal)=(" << tempdata << ", " << trigtime << ", "
 	  // 	    << offset << ", " << cal << "), corrected ref. time = ";
-	  tempdata=(tempdata-trigtime-offset)*cal; //convert to a time so we can choose the correct hit if there are multiple hits in the ref channel.
+	  tempdata=(tempdata-trigtime-offset)*cal; //convert to a time so we can choose the correct hit if there are multiple hits in the ref channel. NOTE here the subtraction of F1 trigtime!
 
 	  //std::cout << tempdata << " ns" << std::endl;
 	}
@@ -1263,8 +1278,10 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 	  HitIndex = ih;
 	  MinDiff = abs(tempdata-RefCent);
 	}
-      }      
-      reftime = refblk->TDC()->GetDataRaw(HitIndex);
+      }
+
+      //let's try 
+      reftime = refblk->TDC()->GetDataRaw(HitIndex); //This does NOT have F1 trig. time subtracted!
       refblk->TDC()->SetGoodHit(HitIndex);
 
       // if( d->GetModel() == 6401 ){
@@ -1278,31 +1295,64 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   Int_t edge = 0;
   Int_t elemID=blk->GetID();
   for(Int_t ihit = 0; ihit < nhit; ihit++) {
-        if(fModeTDC == SBSModeTDC::kTDCSimple) {
-	  UInt_t rawdata = evdata.GetData(d->crate, d->slot, chan, ihit);
-	   if (!IsRef && d->GetModel() == 6401) { // F1 TDC
-	     if ( abs(rawdata-reftime) > fF1_TimeWindow) { //If abs(rawdata - reftime)>13000 (in raw TDC units, or ~13 us) 
-	       if (rawdata > reftime){ reftime+=fF1_RollOver; //Add fF1_RollOver to whichever time is smaller. Why?
-	       }else if(rawdata <= reftime){ rawdata+=fF1_RollOver;} 
-	     } 
-	   }
-	   UInt_t TrigTime = 0;
-	   Int_t LeadingEdge=0;
-	  if (d->GetModel() == 6401) {
-	    TrigTime = evdata.GetRawData(d->crate, d->slot, chan, ihit); // for F1 "raw" is trigger time
-	    if(IsRef && rawdata<TrigTime) rawdata+=fF1_RollOver; // rollvoer correction  Reftdc[i]
-	  } else {
-	    LeadingEdge=evdata.GetRawData(d->crate, d->slot, chan, ihit); // for other TDC "raw" is the leading edge bit
-	  }
-	  if (LeadingEdge ==0) blk->TDC()->ProcessSimple(elemID,rawdata - reftime,ihit,TrigTime);
-	} else {
-          edge = tdchit[ihit].edge;
+    if(fModeTDC == SBSModeTDC::kTDCSimple) {
+      UInt_t rawdata = evdata.GetData(d->crate, d->slot, chan, ihit);
+      if (!IsRef && d->GetModel() == 6401) { // F1 TDC
+	// We know that if we are talking about the BB trigger, the reference time is "always" later than
+	// the F1 trigger time; therefore the signature of rollover is a large absolute difference between
+	// the raw data and the reference time. We know to always correct the reference time for rollover when
+	// the F1 trigger time exceeds the reference time. However, how and when should we correct the regular signals?
+	// The good raw signals typically arrive after the F1 trigger but before the reference time (I think)
+	// Every reference channel (including both RF and trigger) will be corrected for rollover IFF the F1 trigger time exceeds
+	// the raw TDC signal;
+
+	//do this calculation before rollover correction:
+	fF1TDCminraw = (rawdata < fF1TDCminraw) ? rawdata : fF1TDCminraw;
+	fF1TDCmaxraw = (rawdata > fF1TDCmaxraw) ? rawdata : fF1TDCmaxraw;
+
+	if ( abs(rawdata-reftime) > fF1_TimeWindow) { //If abs(rawdata - reftime)>13000 (in raw TDC units, or ~1.3 us)
+	  //std::cout << "Rollover detected, (rawdata,reftime)=(" << rawdata << ", " << reftime << ")" << std::endl;
+	  if (rawdata > reftime){ //In practice it appears that this condition rarely (if ever) occurs; by the time we get to this point of the code, the reftime has already been corrected for rollover if it occurs.
+	    //std::cout << "Adding rollover correction to REF time" << std::endl;
+	    reftime+=fF1_RollOver; // reference time rolled over before arrival of signal
+	  } else if(rawdata <= reftime){
+	    rawdata+=fF1_RollOver;
+	    //std::cout << "Adding rollover correction to RAW DATA" << std::endl;
+	  } 
+	}
+
+
+	
+	// std::cout << "Decoding F1 TDC w/o rollover corrections, (rawdata,reftime,trigtime,rawdata-reftime,rawdata-trigtime)=(" << rawdata << ", "
+	// 	  << reftime << ", " << evdata.GetRawData(d->crate, d->slot, chan, ihit)
+	// 	  << ", " << Int_t(rawdata)-Int_t(reftime) << ", " << Int_t(rawdata)-Int_t(evdata.GetRawData(d->crate, d->slot, chan, ihit)) << ")" << std::endl;
+	// std::cout << "F1 TDC raw (min,max,max-min)=(" << fF1TDCminraw << ", " << fF1TDCmaxraw << ", "
+	// 	  << fF1TDCmaxraw-fF1TDCminraw << ")" << std::endl;
+	
+      }
+      UInt_t TrigTime = 0;
+      Int_t LeadingEdge=0;
+      if (d->GetModel() == 6401) {
+	TrigTime = evdata.GetRawData(d->crate, d->slot, chan, ihit); // for F1 "raw" is trigger time
+	if(IsRef && rawdata<TrigTime) rawdata+=fF1_RollOver; // rollover correction  Reftdc[i]
+	// if( blk->IsRFtime() && rawdata < TrigTime ){
+	//   //std::cout << "THE FOLLOWING IS RF TIME DATA: " << std::endl;
+	//   // std::cout << "Decoding F1 TDC w/o rollover corrections, (rawdata,reftime,trigtime,rawdata-reftime,rawdata-trigtime)=(" << rawdata << ", "
+	//   // 	    << reftime << ", " << evdata.GetRawData(d->crate, d->slot, chan, ihit)
+	//   // 	    << ", " << Int_t(rawdata)-Int_t(reftime) << ", " << Int_t(rawdata)-Int_t(evdata.GetRawData(d->crate, d->slot, chan, ihit)) << ")" << std::endl;
+	// }
+      } else {
+	LeadingEdge=evdata.GetRawData(d->crate, d->slot, chan, ihit); // for other TDC "raw" is the leading edge bit
+      }
+      if (LeadingEdge ==0) blk->TDC()->ProcessSimple(elemID,rawdata - reftime,ihit,TrigTime);
+    } else {
+      edge = tdchit[ihit].edge;
       //           std::cout << ihit << " " << evdata.GetData(d->crate, d->slot, chan, ihit) - reftime << " " << edge << std::endl;
-          if (edge ==1 && ihit ==0) continue; // skip first hit if trailing edge
-          if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
-          blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
-       }
-   }
+      if (edge ==1 && ihit ==0) continue; // skip first hit if trailing edge
+      if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
+      blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
+    }
+  }
 
   return nhit;
 }
@@ -1334,26 +1384,36 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
   // Make sure we haven't already been called in this event
   if(fCoarseProcessed) return 0;
 
+  //  std::cout << "Calling CoarseProcess for detector " << GetApparatus()->GetName() << "." << GetName() << std::endl;
   // Pack simple data for output to the tree, and call CoarseProcess on all elements
   SBSElement *blk = 0;
   size_t nsamples;
   size_t idx;
   // Reference time
+
+  Int_t F1TrigTime_refchan = -1;
+  Int_t F1TrigTime_RFchan = -1;
+  
   for(Int_t k = 0; k < fNRefElem; k++) {
     blk = fRefElements[k];
     if(!blk) continue;
     if(WithTDC() ) {
       if ( blk->TDC()->HasData()) {
-    fRefGood.TDCrow.push_back(blk->GetRow());
-    fRefGood.TDCcol.push_back(blk->GetCol());
-    fRefGood.TDClayer.push_back(blk->GetLayer());
-    fRefGood.TDCelemID.push_back(blk->GetID());
+	fRefGood.TDCrow.push_back(blk->GetRow());
+	fRefGood.TDCcol.push_back(blk->GetCol());
+	fRefGood.TDClayer.push_back(blk->GetLayer());
+	fRefGood.TDCelemID.push_back(blk->GetID());
         const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
 	Double_t tempval=hit.le.val;
         if(fModeTDC == SBSModeTDC::kTDCSimple) { // need to recalculate for F1 data
 	  Double_t cal=blk->TDC()->GetCal();
 	  Double_t offset=blk->TDC()->GetOffset();
 	  tempval= (hit.le.raw-hit.TrigTime-offset)*cal;
+	  // Why are we subtracting the F1 trigger time from the reference time here?
+	  // To be consistent, shouldn't we either not subtract it at all or
+	  // also subtract it from the "regular" hits (which HAVE been reference-time subtracted)? 
+	  // What's the motivation? This most likely explains the +/- 128 LSB (~14.3 ns)
+	  // sub-peaks in the trigger-corrected rf time differences between BB and HCAL
 	}
         fRefGood.t.push_back(tempval);
         fRefGood.t_mult.push_back(blk->TDC()->GetNHits());
@@ -1361,20 +1421,41 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fRefGood.t_te.push_back(hit.te.val);
           fRefGood.t_ToT.push_back(hit.ToT.val);
         }
-
+	
 	if( blk->IsRFtime() && fDecodeRFtime && fRFtimeIsRef ){
 	  fRFtime = tempval;
+
+	  if( fModeTDC == SBSModeTDC::kTDCSimple ){
+	    // std::cout << "F1 trigtime for RF channel for " << GetApparatus()->GetName() << "." << GetName()
+	    // 	      << " = " << hit.TrigTime << std::endl;
+	    F1TrigTime_RFchan = Int_t( hit.TrigTime );
+	  }
+	  
+	  for( int ihit=0; ihit<blk->TDC()->GetNHits(); ihit++ ){
+	    double T_i = blk->TDC()->GetLead(ihit).val;
+	    if( ihit>0 ){
+	      double Tprev = blk->TDC()->GetLead(ihit-1).val;
+	      hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
+	    }
+	  }
+	  
 	}
 
 	if( blk->IsTrigTime() && fDecodeTrigTime && fTrigTimeIsRef ){
 	  fTrigTime = tempval;
+
+	  if( fModeTDC == SBSModeTDC::kTDCSimple ){
+	    // std::cout << "F1 trigtime for trigger channel for " << GetApparatus()->GetName() << "." << GetName()
+	    // 	      << " = " << hit.TrigTime << std::endl;
+	    F1TrigTime_refchan = hit.TrigTime;
+	  }
 	}
 	
       } else if ( fStoreEmptyElements ) {
-    fRefGood.TDCrow.push_back(blk->GetRow());
-    fRefGood.TDCcol.push_back(blk->GetCol());
-    fRefGood.TDClayer.push_back(blk->GetLayer());
-    fRefGood.TDCelemID.push_back(blk->GetID());
+	fRefGood.TDCrow.push_back(blk->GetRow());
+	fRefGood.TDCcol.push_back(blk->GetCol());
+	fRefGood.TDClayer.push_back(blk->GetLayer());
+	fRefGood.TDCelemID.push_back(blk->GetID());
         fRefGood.t_mult.push_back(0);
         fRefGood.t.push_back(kBig);
         if(fModeTDC == SBSModeTDC::kTDC) {
@@ -1382,34 +1463,39 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fRefGood.t_ToT.push_back(kBig);
         }
       }
-        if(fStoreRawHits) {
-            const std::vector<SBSData::TDCHit> &hits = blk->TDC()->GetAllHits();
-            for( const auto &hit : hits) {
-              fRefRaw.TDCelemID.push_back(hit.elemID);
-	      Double_t tempval=hit.le.val;
-              if(fModeTDC == SBSModeTDC::kTDCSimple) { // need to recalculate for F1 data
-	         Double_t cal=blk->TDC()->GetCal();
-	         Double_t offset=blk->TDC()->GetOffset();
-	         tempval= (hit.le.raw-hit.TrigTime-offset)*cal;
-	      }
-	         fRefRaw.t.push_back(tempval);
-               if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
-              fRefRaw.t_te.push_back(hit.te.val);
-              fRefRaw.t_ToT.push_back(hit.ToT.val);
-	       }
-              }
+      if(fStoreRawHits) {
+	const std::vector<SBSData::TDCHit> &hits = blk->TDC()->GetAllHits();
+	for( const auto &hit : hits) {
+	  fRefRaw.TDCelemID.push_back(hit.elemID);
+	  Double_t tempval=hit.le.val;
+	  if(fModeTDC == SBSModeTDC::kTDCSimple) { // need to recalculate for F1 data
+	    Double_t cal=blk->TDC()->GetCal();
+	    Double_t offset=blk->TDC()->GetOffset();
+	    tempval= (hit.le.raw-hit.TrigTime-offset)*cal;
+	  }
+	  fRefRaw.t.push_back(tempval);
+	  if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
+	    fRefRaw.t_te.push_back(hit.te.val);
+	    fRefRaw.t_ToT.push_back(hit.ToT.val);
+	  }
 	}
+      }
+
+      if( F1TrigTime_refchan >= 0 && F1TrigTime_RFchan >= 0 &&
+	  F1TrigTime_refchan != F1TrigTime_RFchan ){
+	fRFtime += (F1TrigTime_RFchan - F1TrigTime_refchan)*blk->TDC()->GetCal();
+      }
     }
     //
     //   if(WithADC() && !fDisableRefADC ) {
     if( WithADC() && blk->HasADCData() ){
       if (fModeADC == SBSModeADC::kADC && blk->ADC()->HasData() ) {
-          if(blk->ADC()->HasData() && blk->ADC()->GetGoodHitIndex() >=0){
-             fRefGood.ADCrow.push_back(blk->GetRow());
-             fRefGood.ADCcol.push_back(blk->GetCol());
-             fRefGood.ADClayer.push_back(blk->GetLayer());
-             fRefGood.ADCelemID.push_back(blk->GetID());
-           Double_t ped=blk->ADC()->GetPed();
+	if(blk->ADC()->HasData() && blk->ADC()->GetGoodHitIndex() >=0){
+	  fRefGood.ADCrow.push_back(blk->GetRow());
+	  fRefGood.ADCcol.push_back(blk->GetCol());
+	  fRefGood.ADClayer.push_back(blk->GetLayer());
+	  fRefGood.ADCelemID.push_back(blk->GetID());
+	  Double_t ped=blk->ADC()->GetPed();
           fRefGood.ped.push_back(ped);
           const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
           fRefGood.a.push_back(hit.integral.raw);
@@ -1417,7 +1503,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           if (fModeADC == SBSModeADC::kADCSimple) fRefGood.a_p.push_back(hit.integral.raw-ped);
 	  if (fModeADC == SBSModeADC::kADC) {
 	    Double_t gain=blk->ADC()->GetGain();
-	      fRefGood.a_p.push_back(hit.integral.val/gain); // ped subtracted with Gain factor
+	    fRefGood.a_p.push_back(hit.integral.val/gain); // ped subtracted with Gain factor
 	  }
           fRefGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
@@ -1430,13 +1516,13 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
             fRefGood.a_amptrig_c.push_back(hit.amplitude.val*trigcal);
             fRefGood.a_time.push_back(hit.time.val);
           }
-	  } else if ( fStoreEmptyElements ) {
-             fRefGood.ADCrow.push_back(blk->GetRow());
-             fRefGood.ADCcol.push_back(blk->GetCol());
-             fRefGood.ADClayer.push_back(blk->GetLayer());
-             fRefGood.ADCelemID.push_back(blk->GetID());
-             fRefGood.ped.push_back(0.);
-	     fRefGood.a.push_back(0.);
+	} else if ( fStoreEmptyElements ) {
+	  fRefGood.ADCrow.push_back(blk->GetRow());
+	  fRefGood.ADCcol.push_back(blk->GetCol());
+	  fRefGood.ADClayer.push_back(blk->GetLayer());
+	  fRefGood.ADCelemID.push_back(blk->GetID());
+	  fRefGood.ped.push_back(0.);
+	  fRefGood.a.push_back(0.);
           fRefGood.a_mult.push_back(0);
           fRefGood.a_p.push_back(0.);
           fRefGood.a_c.push_back(0.);
@@ -1449,68 +1535,68 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
             fRefGood.a_time.push_back(0.);
           }
  	    
+	}
+	// Now store all the hits if specified the by user
+	if(fStoreRawHits) {
+	  const std::vector<SBSData::PulseADCData> &hits = blk->ADC()->GetAllHits();
+	  for( const auto &hit : hits) {
+	    fRefRaw.ADCelemID.push_back(blk->GetID());
+	    fRefRaw.a.push_back(hit.integral.val);
+	    fRefRaw.a_amp.push_back(hit.amplitude.val);
+	    fRefRaw.a_time.push_back(hit.time.val);
 	  }
-          // Now store all the hits if specified the by user
-          if(fStoreRawHits) {
-            const std::vector<SBSData::PulseADCData> &hits = blk->ADC()->GetAllHits();
-            for( const auto &hit : hits) {
-              fRefRaw.ADCelemID.push_back(blk->GetID());
-              fRefRaw.a.push_back(hit.integral.val);
-              fRefRaw.a_amp.push_back(hit.amplitude.val);
-              fRefRaw.a_time.push_back(hit.time.val);
-             }
-          }
-	  //    } else if  (fModeADC == SBSModeADC::kWaveform ){ // Waveform mode
+	}
+	//    } else if  (fModeADC == SBSModeADC::kWaveform ){ // Waveform mode
       } else if( fModeADC == SBSModeADC::kWaveform && blk->Waveform()->HasData()){
         SBSData::Waveform *wave = blk->Waveform();
 	if(wave->HasData()) {		
           if(fStoreRawHits) {
-           std::vector<Double_t> &s_r =wave->GetDataRaw();
-           std::vector<Double_t> &s_c = wave->GetData();
-           nsamples = s_r.size();
-           idx = fRefGood.samps.size();
-           fRefGood.sidx.push_back(idx);
-           fRefGood.samps_elemID.push_back(k);
-           fRefGood.nsamps.push_back(nsamples);
-           fRefGood.samps.resize(idx+nsamples);
-           for(size_t s = 0; s < nsamples; s++) {
-             fRefGood.samps[idx+s]   = s_c[s];
+	    std::vector<Double_t> &s_r =wave->GetDataRaw();
+	    std::vector<Double_t> &s_c = wave->GetData();
+	    nsamples = s_r.size();
+	    idx = fRefGood.samps.size();
+	    fRefGood.sidx.push_back(idx);
+	    fRefGood.samps_elemID.push_back(k);
+	    fRefGood.nsamps.push_back(nsamples);
+	    fRefGood.samps.resize(idx+nsamples);
+	    for(size_t s = 0; s < nsamples; s++) {
+	      fRefGood.samps[idx+s]   = s_c[s];
             }
 	  }
 	  if (wave->GetGoodHitIndex() >=0) {
-             fRefGood.ADCrow.push_back(blk->GetRow());
-             fRefGood.ADCcol.push_back(blk->GetCol());
-             fRefGood.ADClayer.push_back(blk->GetLayer());
-             fRefGood.ADCelemID.push_back(blk->GetID());
+	    fRefGood.ADCrow.push_back(blk->GetRow());
+	    fRefGood.ADCcol.push_back(blk->GetCol());
+	    fRefGood.ADClayer.push_back(blk->GetLayer());
+	    fRefGood.ADCelemID.push_back(blk->GetID());
 
-	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
+	    //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
 	 
-        fRefGood.ped.push_back(wave->GetPed());
-	fRefGood.a_mult.push_back(0);
-        if (wave->GetTime().val>0) fRefGood.a_mult.push_back(1);
-        fRefGood.a.push_back(wave->GetIntegral().raw);
-        Double_t gain= wave->GetGain();
-        fRefGood.a_p.push_back(wave->GetIntegral().val/gain);
-        fRefGood.a_c.push_back(wave->GetIntegral().val);
-        fRefGood.a_amp.push_back(wave->GetAmplitude().raw);
+	    fRefGood.ped.push_back(wave->GetPed());
+	    fRefGood.a_mult.push_back(0);
+	    if (wave->GetTime().val>0) fRefGood.a_mult.push_back(1);
+	    fRefGood.a.push_back(wave->GetIntegral().raw);
+	    Double_t gain= wave->GetGain();
+	    fRefGood.a_p.push_back(wave->GetIntegral().val/gain);
+	    fRefGood.a_c.push_back(wave->GetIntegral().val);
+	    fRefGood.a_amp.push_back(wave->GetAmplitude().raw);
 	    Double_t again=wave->GetAmpCal();	      
 	    Double_t trigcal=wave->GetTrigCal();	      
-        fRefGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
-        fRefGood.a_amp_c.push_back(wave->GetAmplitude().val);
-        fRefGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
-        fRefGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
-        fRefGood.a_time.push_back(wave->GetTime().val);
+	    fRefGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
+	    fRefGood.a_amp_c.push_back(wave->GetAmplitude().val);
+	    fRefGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
+	    fRefGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
+	    fRefGood.a_time.push_back(wave->GetTime().val);
 	  } else if (fStoreEmptyElements) {
-             fRefGood.ADCrow.push_back(blk->GetRow());
-             fRefGood.ADCcol.push_back(blk->GetCol());
-             fRefGood.ADClayer.push_back(blk->GetLayer());
-             fRefGood.ADCelemID.push_back(blk->GetID());
-        fRefGood.a_mult.push_back(0);
-        fRefGood.ped.push_back(wave->GetPed());
-        fRefGood.a.push_back(wave->GetIntegral().raw);
-        Double_t gain= wave->GetGain();
-        fRefGood.a_p.push_back(wave->GetIntegral().val/gain);
-        fRefGood.a_c.push_back(wave->GetIntegral().val);
+	    fRefGood.ADCrow.push_back(blk->GetRow());
+	    fRefGood.ADCcol.push_back(blk->GetCol());
+	    fRefGood.ADClayer.push_back(blk->GetLayer());
+	    fRefGood.ADCelemID.push_back(blk->GetID());
+	    fRefGood.a_mult.push_back(0);
+	    fRefGood.ped.push_back(wave->GetPed());
+	    fRefGood.a.push_back(wave->GetIntegral().raw);
+	    Double_t gain= wave->GetGain();
+	    fRefGood.a_p.push_back(wave->GetIntegral().val/gain);
+	    fRefGood.a_c.push_back(wave->GetIntegral().val);
             fRefGood.a_amp.push_back(0.0);
             fRefGood.a_amp_p.push_back(0.0);
             fRefGood.a_amp_c.push_back(0.0);
@@ -1536,13 +1622,15 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
     // to use re-implement the following function to find the good hit.
 
     // Skip blocks that have no new data (unless allowed by the user)
-     if(!blk->HasData() && !fStoreEmptyElements)
+    if(!blk->HasData() && !fStoreEmptyElements)
       continue;
 
     if(WithTDC() ) {
       if(blk->TDC()->HasData() && blk->TDC()->GetGoodHitIndex() != -1) {
         fNGoodTDChits++;
         const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
+	// Interestingly enough, for the regular hits we DON'T subtract the F1 trigger time
+	// (but maybe we did during decoding in addition to the reference time?)
         fGood.TDCrow.push_back(blk->GetRow());
         fGood.TDCcol.push_back(blk->GetCol());
         fGood.TDClayer.push_back(blk->GetLayer());
@@ -1554,15 +1642,33 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fGood.t_ToT.push_back(hit.ToT.val);
         }
 
-	if( blk->IsRFtime() ) fRFtime = hit.le.val;
-	if( blk->IsTrigTime() ) fTrigTime = hit.le.val;
+	// if( fModeTDC == SBSModeTDC::kTDCSimple && hit.TrigTime != 0 ) {
+	//   std::cout << "F1 TDC TrigTime, (thischan, refchan, RFchan, thischan-refchan)=("
+	// 	    << hit.TrigTime << ", " << F1TrigTime_refchan << ", " << F1TrigTime_RFchan
+	// 	    << ", " << Int_t(hit.TrigTime) - F1TrigTime_refchan << ")" << std::endl;
+	// }
+
+	if( blk->IsRFtime() && fDecodeRFtime && !fRFtimeIsRef ) {
+	  fRFtime = hit.le.val;
+
+	  for( int ihit=0; ihit<blk->TDC()->GetNHits(); ihit++ ){
+	    double T_i = blk->TDC()->GetLead(ihit).val;
+	    if( ihit>0 ){
+	      double Tprev = blk->TDC()->GetLead(ihit-1).val;
+	      hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
+	    }
+	  }
+
+	}
+	
+	if( blk->IsTrigTime() && fDecodeTrigTime && !fTrigTimeIsRef ) fTrigTime = hit.le.val;
 	
       } else if ( fStoreEmptyElements ) {
         fGood.TDCrow.push_back(blk->GetRow());
         fGood.TDCcol.push_back(blk->GetCol());
         fGood.TDClayer.push_back(blk->GetLayer());
         fGood.TDCelemID.push_back(blk->GetID());
-         fGood.t.push_back(kBig);
+	fGood.t.push_back(kBig);
         fGood.t_mult.push_back(0);
         if(fModeTDC == SBSModeTDC::kTDC) {
           fGood.t_te.push_back(kBig);
@@ -1570,27 +1676,27 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
         }
       }
       if(fStoreRawHits) {
-            const std::vector<SBSData::TDCHit> &hits = blk->TDC()->GetAllHits();
-            for( const auto &hit : hits) {
-              fRaw.TDCelemID.push_back(hit.elemID);
-              fRaw.t.push_back(hit.le.val);
-               if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
-              fRaw.t_te.push_back(hit.te.val);
-              fRaw.t_ToT.push_back(hit.ToT.val);
-	       }
-              }
+	const std::vector<SBSData::TDCHit> &hits = blk->TDC()->GetAllHits();
+	for( const auto &hit : hits) {
+	  fRaw.TDCelemID.push_back(hit.elemID);
+	  fRaw.t.push_back(hit.le.val);
+	  if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
+	    fRaw.t_te.push_back(hit.te.val);
+	    fRaw.t_ToT.push_back(hit.ToT.val);
+	  }
+	}
       }
     }
 
     if(WithADC()) {
       if(fModeADC != SBSModeADC::kWaveform) {
-          if(blk->ADC()->HasData() && blk->ADC()->GetGoodHitIndex() >=0){
-             fNGoodADChits++;
-             fGood.ADCrow.push_back(blk->GetRow());
-             fGood.ADCcol.push_back(blk->GetCol());
-             fGood.ADClayer.push_back(blk->GetLayer());
-             fGood.ADCelemID.push_back(blk->GetID());
-           Double_t ped=blk->ADC()->GetPed();
+	if(blk->ADC()->HasData() && blk->ADC()->GetGoodHitIndex() >=0){
+	  fNGoodADChits++;
+	  fGood.ADCrow.push_back(blk->GetRow());
+	  fGood.ADCcol.push_back(blk->GetCol());
+	  fGood.ADClayer.push_back(blk->GetLayer());
+	  fGood.ADCelemID.push_back(blk->GetID());
+	  Double_t ped=blk->ADC()->GetPed();
           fGood.ped.push_back(ped);
           const SBSData::PulseADCData &hit = blk->ADC()->GetGoodHit();
           fGood.a.push_back(hit.integral.raw);
@@ -1598,7 +1704,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           if (fModeADC == SBSModeADC::kADCSimple) fGood.a_p.push_back(hit.integral.raw-ped);
 	  if (fModeADC == SBSModeADC::kADC) {
 	    Double_t gain=blk->ADC()->GetGain();
-	      fGood.a_p.push_back(hit.integral.val/gain); // ped subtracted with Gain factor
+	    fGood.a_p.push_back(hit.integral.val/gain); // ped subtracted with Gain factor
 	  }
           fGood.a_c.push_back(hit.integral.val);
           if(fModeADC == SBSModeADC::kADC) { // Amplitude and time are also available
@@ -1611,13 +1717,13 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
             fGood.a_amptrig_c.push_back(hit.amplitude.val*trigcal);
             fGood.a_time.push_back(hit.time.val);
           }
-	  } else if ( fStoreEmptyElements ) {
-             fGood.ADCrow.push_back(blk->GetRow());
-             fGood.ADCcol.push_back(blk->GetCol());
-             fGood.ADClayer.push_back(blk->GetLayer());
-             fGood.ADCelemID.push_back(blk->GetID());
-             fGood.ped.push_back(0.);
-	     fGood.a.push_back(0.);
+	} else if ( fStoreEmptyElements ) {
+	  fGood.ADCrow.push_back(blk->GetRow());
+	  fGood.ADCcol.push_back(blk->GetCol());
+	  fGood.ADClayer.push_back(blk->GetLayer());
+	  fGood.ADCelemID.push_back(blk->GetID());
+	  fGood.ped.push_back(0.);
+	  fGood.a.push_back(0.);
           fGood.a_mult.push_back(0);
           fGood.a_p.push_back(0.);
           fGood.a_c.push_back(0.);
@@ -1630,74 +1736,74 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
             fGood.a_time.push_back(0.);
           }
  	    
+	}
+	// Now store all the hits if specified the by user
+	if(fStoreRawHits) {
+	  const std::vector<SBSData::PulseADCData> &hits = blk->ADC()->GetAllHits();
+	  for( const auto &hit : hits) {
+	    fRaw.a.push_back(hit.integral.val);
+	    fRaw.a_amp.push_back(hit.amplitude.val);
+	    fRaw.a_time.push_back(hit.time.val);
 	  }
-          // Now store all the hits if specified the by user
-          if(fStoreRawHits) {
-            const std::vector<SBSData::PulseADCData> &hits = blk->ADC()->GetAllHits();
-            for( const auto &hit : hits) {
-              fRaw.a.push_back(hit.integral.val);
-              fRaw.a_amp.push_back(hit.amplitude.val);
-              fRaw.a_time.push_back(hit.time.val);
-             }
-          }
+	}
       } else { // Waveform mode
         SBSData::Waveform *wave = blk->Waveform();
 	if(wave->HasData()) {		
           if(fStoreRawHits) {
-           std::vector<Double_t> &s_r =wave->GetDataRaw();
-           std::vector<Double_t> &s_c = wave->GetData();
-           nsamples = s_r.size();
-           idx = fGood.samps.size();
-           fGood.sidx.push_back(idx);
-           fGood.samps_elemID.push_back(k);
-           fGood.nsamps.push_back(nsamples);
-           fGood.samps.resize(idx+nsamples);
-           for(size_t s = 0; s < nsamples; s++) {
-             fGood.samps[idx+s]   = s_c[s];
+	    std::vector<Double_t> &s_r =wave->GetDataRaw();
+	    std::vector<Double_t> &s_c = wave->GetData();
+	    nsamples = s_r.size();
+	    idx = fGood.samps.size();
+	    fGood.sidx.push_back(idx);
+	    fGood.samps_elemID.push_back(k);
+	    fGood.nsamps.push_back(nsamples);
+	    fGood.samps.resize(idx+nsamples);
+	    for(size_t s = 0; s < nsamples; s++) {
+	      fGood.samps[idx+s]   = s_c[s];
             }
 	  }
 	  if (wave->GetGoodHitIndex() >=0) {
-             fNGoodADChits++;
-             fGood.ADCrow.push_back(blk->GetRow());
-             fGood.ADCcol.push_back(blk->GetCol());
-             fGood.ADClayer.push_back(blk->GetLayer());
-             fGood.ADCelemID.push_back(blk->GetID());
+	    fNGoodADChits++;
+	    fGood.ADCrow.push_back(blk->GetRow());
+	    fGood.ADCcol.push_back(blk->GetCol());
+	    fGood.ADClayer.push_back(blk->GetLayer());
+	    fGood.ADCelemID.push_back(blk->GetID());
 
-	     //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
+	    //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
 	 
-        fGood.ped.push_back(wave->GetPed());
-	fGood.a_mult.push_back(0);
-        if (wave->GetTime().val>0) fGood.a_mult.push_back(1);
-        fGood.a.push_back(wave->GetIntegral().raw);
-        Double_t gain= wave->GetGain();
-        fGood.a_p.push_back(wave->GetIntegral().val/gain);
-        fGood.a_c.push_back(wave->GetIntegral().val);
-        fGood.a_amp.push_back(wave->GetAmplitude().raw);
+	    fGood.ped.push_back(wave->GetPed());
+	    fGood.a_mult.push_back(0);
+	    if (wave->GetTime().val>0) fGood.a_mult.push_back(1);
+	    fGood.a.push_back(wave->GetIntegral().raw);
+	    Double_t gain= wave->GetGain();
+	    fGood.a_p.push_back(wave->GetIntegral().val/gain);
+	    fGood.a_c.push_back(wave->GetIntegral().val);
+	    fGood.a_amp.push_back(wave->GetAmplitude().raw);
 	    Double_t again=wave->GetAmpCal();	      
 	    Double_t trigcal=wave->GetTrigCal();	      
-        fGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
-        fGood.a_amp_c.push_back(wave->GetAmplitude().val);
-        fGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
-        fGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
-        fGood.a_time.push_back(wave->GetTime().val);
+	    fGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
+	    fGood.a_amp_c.push_back(wave->GetAmplitude().val);
+	    fGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
+	    fGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
+	    fGood.a_time.push_back(wave->GetTime().val);
 	  } else if (fStoreEmptyElements) {
-             fGood.ADCrow.push_back(blk->GetRow());
-             fGood.ADCcol.push_back(blk->GetCol());
-             fGood.ADClayer.push_back(blk->GetLayer());
-             fGood.ADCelemID.push_back(blk->GetID());
-        fGood.a_mult.push_back(0);
-        fGood.ped.push_back(wave->GetPed());
-        fGood.a.push_back(wave->GetIntegral().raw);
-        Double_t gain= wave->GetGain();
-        fGood.a_p.push_back(wave->GetIntegral().val/gain);
-        fGood.a_c.push_back(wave->GetIntegral().val);
+	    fGood.ADCrow.push_back(blk->GetRow());
+	    fGood.ADCcol.push_back(blk->GetCol());
+	    fGood.ADClayer.push_back(blk->GetLayer());
+	    fGood.ADCelemID.push_back(blk->GetID());
+	    fGood.a_mult.push_back(0);
+	    fGood.ped.push_back(wave->GetPed());
+	    fGood.a.push_back(wave->GetIntegral().raw);
+	    Double_t gain= wave->GetGain();
+	    fGood.a_p.push_back(wave->GetIntegral().val/gain);
+	    fGood.a_c.push_back(wave->GetIntegral().val);
             fGood.a_amp.push_back(0.0);
             fGood.a_amp_p.push_back(0.0);
             fGood.a_amp_c.push_back(0.0);
             fGood.a_amptrig_p.push_back(0.0);
             fGood.a_amptrig_c.push_back(0.0);
             fGood.a_time.push_back(0.0);
-	}
+	  }
 	}
       }
     }
@@ -1712,53 +1818,53 @@ Int_t SBSGenericDetector::FindGoodHit(SBSElement *blk)
 {
   Int_t GoodHit=0;  
   if (WithTDC()&& blk->TDC()->HasData()) {
-       Int_t nhits = blk->TDC()->GetNHits(); 
-       Double_t MinDiff = 10000.;
-       Int_t HitIndex = -1;
-       Double_t GoodTimeCut = blk->TDC()->GetGoodTimeCut();
-       for (Int_t ih=0;ih<nhits;ih++) {
-	 if (abs(blk->TDC()->GetData(ih)-GoodTimeCut) < MinDiff) {
-           HitIndex = ih;
-	   MinDiff = abs(blk->TDC()->GetData(ih)-GoodTimeCut);
-	 }
-       }      
-       blk->TDC()->SetGoodHit(HitIndex);
-      GoodHit=1;
+    Int_t nhits = blk->TDC()->GetNHits(); 
+    Double_t MinDiff = 10000.;
+    Int_t HitIndex = -1;
+    Double_t GoodTimeCut = blk->TDC()->GetGoodTimeCut();
+    for (Int_t ih=0;ih<nhits;ih++) {
+      if (abs(blk->TDC()->GetData(ih)-GoodTimeCut) < MinDiff) {
+	HitIndex = ih;
+	MinDiff = abs(blk->TDC()->GetData(ih)-GoodTimeCut);
+      }
+    }      
+    blk->TDC()->SetGoodHit(HitIndex);
+    GoodHit=1;
   }
   if (WithADC()) {		
     if (fModeADC == SBSModeADC::kADCSimple) {
-           blk->ADC()->SetGoodHit(-1);
-	   if (blk->ADC()->HasData() )   {
-	     blk->ADC()->SetGoodHit(0);
-            GoodHit=1;
-	   }
+      blk->ADC()->SetGoodHit(-1);
+      if (blk->ADC()->HasData() )   {
+	blk->ADC()->SetGoodHit(0);
+	GoodHit=1;
+      }
     } else if (fModeADC == SBSModeADC::kADC )  {
-           blk->ADC()->SetGoodHit(-1);
-	   if (blk->ADC()->HasData() )   {
-       Int_t nhits = blk->ADC()->GetNHits(); 
-       Double_t MinDiff = 10000.;
-       UInt_t HitIndex = -1;
-       Double_t GoodTimeCut = blk->ADC()->GetGoodTimeCut();
-       for (Int_t ih=0;ih<nhits;ih++) {
-	 Double_t ADCTime = blk->ADC()->GetTimeData(ih);
-	 if (ADCTime > 0 && abs(ADCTime-GoodTimeCut) < MinDiff) {
-           HitIndex = ih;
-	   MinDiff = abs(ADCTime-GoodTimeCut);
-	 }
-       }      
-      blk->ADC()->SetGoodHit(HitIndex);
-      GoodHit=1;
-	   }
+      blk->ADC()->SetGoodHit(-1);
+      if (blk->ADC()->HasData() )   {
+	Int_t nhits = blk->ADC()->GetNHits(); 
+	Double_t MinDiff = 10000.;
+	UInt_t HitIndex = -1;
+	Double_t GoodTimeCut = blk->ADC()->GetGoodTimeCut();
+	for (Int_t ih=0;ih<nhits;ih++) {
+	  Double_t ADCTime = blk->ADC()->GetTimeData(ih);
+	  if (ADCTime > 0 && abs(ADCTime-GoodTimeCut) < MinDiff) {
+	    HitIndex = ih;
+	    MinDiff = abs(ADCTime-GoodTimeCut);
+	  }
+	}      
+	blk->ADC()->SetGoodHit(HitIndex);
+	GoodHit=1;
+      }
 
     } else if (fModeADC == SBSModeADC::kWaveform) {
-         SBSData::Waveform *wave = blk->Waveform();
-         wave->SetGoodHit(-1);
-	 if (wave->HasData())  {
-         Int_t HitIndex = -1;
-	 if (wave->GetTime().raw > 0 ) HitIndex = 0;
-         wave->SetGoodHit(HitIndex);
-         GoodHit=1;
-	 }
+      SBSData::Waveform *wave = blk->Waveform();
+      wave->SetGoodHit(-1);
+      if (wave->HasData())  {
+	Int_t HitIndex = -1;
+	if (wave->GetTime().raw > 0 ) HitIndex = 0;
+	wave->SetGoodHit(HitIndex);
+	GoodHit=1;
+      }
     }
   }
   return GoodHit;
@@ -1786,7 +1892,27 @@ void SBSGenericDetector::ClearOutputVariables()
 ///////////////////////////////////////////////////////////////////////////////
 /// SBSGenericDetector constructor
 SBSElement* SBSGenericDetector::MakeElement(Double_t x, Double_t y, Double_t z,
-    Int_t row, Int_t col, Int_t layer, Int_t id)
+					    Int_t row, Int_t col, Int_t layer, Int_t id)
 {
   return new SBSElement(x,y,z,row,col,layer, id);
+}
+
+Int_t SBSGenericDetector::Begin( THaRunBase *run ){
+  UInt_t runnum = run->GetNumber();
+
+  if( fDecodeRFtime ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
+    TString histname;
+    histname.Form("hdTRF_%s_%s", GetApparatus()->GetName(), GetName() );
+    
+    hdTRF = new TH1D( histname.Data(), "Consecutive leading-edge RF hits; #Deltat (ns);", 4000, 0.0, 500.0);
+  }
+}
+
+Int_t SBSGenericDetector::End( THaRunBase *run ){
+  UInt_t runnum = run->GetNumber();
+
+  if( fDecodeRFtime ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
+    
+    hdTRF->Write(0,kOverwrite);
+  }
 }

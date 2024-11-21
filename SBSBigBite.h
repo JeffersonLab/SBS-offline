@@ -142,6 +142,10 @@ protected:
   std::vector<int> f_ol_ETOF;
   std::vector<int> f_om_ETOF;
   
+  TString fDetName_RFtime;
+  TString fDetName_TrigTime;
+  //This variable is going to hold the RF time modulo something. For BigBite, this will be tstart = tRF + vz/(beta * c). If we treat RF as the bunch crossing time. 
+  
   //Only relevant if downbending optics are defined via the DB:
   int fOpticsOrderDownbend;
   std::vector<double> fb_xptar_downbend;

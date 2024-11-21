@@ -86,7 +86,8 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     fclose(file);
     return err;
   }
-  
+
+  //NOTE: these parameters are irrelevant/not used
   DBRequest barquality_params[] = {
     { "horizposbarcut", &fHorizPosBarCut, kDouble, 0, true }, //parameter for bar horizontal position selection
     // what is below shall basically be redundant with fTDCWinMin and TDCWinMax
@@ -419,15 +420,18 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	const SBSData::TDCHit &hitL = elL->TDC()->GetGoodHit();
 	const SBSData::TDCHit &hitR = elR->TDC()->GetGoodHit();
 
-	Double_t Loffset = elL->TDC()->GetOffset();
-	Double_t Roffset = elR->TDC()->GetOffset();
-	
+	//These aren't actually used!
+	//Double_t Loffset = elL->TDC()->GetOffset();
+	//Double_t Roffset = elR->TDC()->GetOffset();
+
+	//"Raw" leading-edge times already include subtraction of TDC offset: le.val = (le.raw - offset)*cal (of course raw is also reference-time subtracted as applicable):
 	Double_t LEl = hitL.le.val;
 	Double_t LEr = hitR.le.val;
 
 	if(fTDCWinMin < LEl && LEl < fTDCWinMax && fTDCWinMin < LEr && LEr < fTDCWinMax
 	   && (hitL.te.val-hitL.le.val) > fTotMin && (hitR.te.val-hitR.le.val) > fTotMin 
 	   && (hitL.te.val-hitL.le.val) < fTotMax && (hitR.te.val-hitR.le.val) < fTotMax ) {
+	  //TOT min and TOT max cuts are potentially kind of dangerous
 
 	//Int_t bar = BarInc;// why redeclare the index?
 	// don't need to add offset to tdc since all readout simultaneously
@@ -894,6 +898,7 @@ Int_t SBSTimingHodoscope::ConstructHodoscope()
  * TimeWalk()
  */
 Double_t SBSTimingHodoscope::TimeWalk(Double_t time, Double_t tot, Double_t timewalk0, Double_t timewalk1){
+  //This defines another redundant offset! 
   // at the moment LE versus tot is fit with straight line in calibration
   // tc = LE + tcor
   // where tcor = [0]*TOT + [1], where [0] and [1] are from database

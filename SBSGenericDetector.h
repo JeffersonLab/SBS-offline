@@ -26,6 +26,8 @@
 #include "THaDetMap.h"
 #include "SBSElement.h"
 #include "Helper.h"
+#include "TH1D.h"
+#include "THaRunBase.h"
 
 namespace SBSModeADC {
   enum Mode{
@@ -138,6 +140,10 @@ public:
   Bool_t WithTDC() { return fModeTDC != SBSModeTDC::kNone; };
   Bool_t WithADC() { return fModeADC != SBSModeADC::kNone; };
 
+  //Let's add Begin and End methods to accumulate some useful hard-coded diagnostic histograms
+  virtual Int_t   Begin( THaRunBase* r=0 );
+  virtual Int_t   End( THaRunBase* r=0 );
+  
   // Standard apparatus re-implemented functions
   virtual Int_t      Decode( const THaEvData& );
   virtual Int_t      CoarseProcess(TClonesArray& tracks);
@@ -157,6 +163,9 @@ public:
   
   Double_t SizeRow() const { return fSizeRow; };
   Double_t SizeCol() const { return fSizeCol; };
+
+  Double_t GetRFtime() const { return fRFtime; };
+  Double_t GetTrigTime() const { return fTrigTime; };
   
 protected:
 
@@ -223,6 +232,8 @@ protected:
   //Are we attempting to decode RF and trigger time for this detector?
   Bool_t fDecodeRFtime;
   Bool_t fDecodeTrigTime;
+
+  TH1D *hdTRF; //histogram to hold RF time differences (for TDC calibration purposes):
   
   Double_t   fRFtime;    //Decoded accelerator RF time
   Double_t   fTrigTime;  //Decoded "trigger" time (for copy of "main" trigger (usually either BigBite singles or coincidence))
@@ -243,6 +254,8 @@ protected:
   
   // Flags for enabling and disabling various features
   Bool_t    fStoreRawHits; ///< Store the raw data in the root tree?
+  
+  UInt_t fF1TDCminraw, fF1TDCmaxraw;
 
 private:
   void ClearOutputVariables();

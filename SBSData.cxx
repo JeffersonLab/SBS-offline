@@ -9,7 +9,7 @@ namespace SBSData {
   /////////////////////////////////////////////////////////////////////////////
   // ADC data functions
   ADC::ADC(Double_t ped, Double_t gain, Double_t tcal) :
-      fHasData(false), fMode(SBS_ADC_MODE_SINGLE)
+    fHasData(false), fMode(SBS_ADC_MODE_SINGLE)
   {
     SetPed(ped);
     SetGain(gain);
@@ -67,14 +67,14 @@ namespace SBSData {
     Int_t size = fTDC.hits.size();
     TDCHit *hit = &fTDC.hits[size-1];
     hit->elemID = elemID;
-     hit->TrigTime = TrigTime;
-     hit->le.raw = val;
-      hit->le.val = (val-fTDC.offset)*fTDC.cal;
-      hit->te.raw = 0;
-      hit->te.val = 0;
-      hit->ToT.raw=0;
-      hit->ToT.val=0;
-      fHasData = true;
+    hit->TrigTime = TrigTime;
+    hit->le.raw = val;
+    hit->le.val = (val-fTDC.offset)*fTDC.cal;
+    hit->te.raw = 0;
+    hit->te.val = 0;
+    hit->ToT.raw=0;
+    hit->ToT.val=0;
+    fHasData = true;
   }
 
   void TDC::Process(Int_t elemID, Double_t val, Double_t fedge)
@@ -104,7 +104,7 @@ namespace SBSData {
     if(fEdgeIdx[0] == fEdgeIdx[1]) { // Both leading and trailing edges now found
       hit->ToT.raw = hit->te.raw - hit->le.raw;
       hit->ToT.val = hit->te.val - hit->le.val;
-   }
+    }
     if(fEdgeIdx[1] > fEdgeIdx[0]) fEdgeIdx[0] = fEdgeIdx[1]; // if TE found first force LE count to increase
     fHasData = true;
   }
@@ -167,9 +167,9 @@ namespace SBSData {
     UInt_t ThresCrossBin=TMath::Max(NPedsum-1,0);
     //    std::cout << " ped = " << fSamples.ped << " thres = " << ThresVal << std::endl ;
     while ( ThresCrossBin < vals.size() && fSamples.samples_raw[ThresCrossBin] < fSamples.ped+ThresVal ) {
-        ThresCrossBin++;
+      ThresCrossBin++;
     }
-     //
+    //
     // if threshold crossing found
     UInt_t NSB = GetNSB();
     UInt_t NSA = GetNSA();
@@ -180,9 +180,9 @@ namespace SBSData {
     Double_t sped = 0;
     
     Bool_t PeakFound= kFALSE;
-      UInt_t PeakBin= 0;
-      UInt_t IntMinBin= 0;
-      UInt_t IntMaxBin= vals.size();
+    UInt_t PeakBin= 0;
+    UInt_t IntMinBin= 0;
+    UInt_t IntMaxBin= vals.size();
     if (ThresCrossBin < vals.size()) {
       IntMinBin= TMath::Max(ThresCrossBin-NSB,IntMinBin);
       IntMaxBin= TMath::Min(ThresCrossBin+NSA-1,IntMaxBin);
@@ -194,16 +194,16 @@ namespace SBSData {
     Double_t pC_Conv = fSamples.tcal/50.;
     
     for(size_t i =IntMinBin ; i <IntMaxBin ; i++ ) {
-         sped+=fSamples.ped*pC_Conv;
-         sum+=fSamples.samples_raw[i]*pC_Conv;
-         if ( i >= ThresCrossBin && !PeakFound) {
-	   if (fSamples.samples_raw[i] > max) {
-	     max = fSamples.samples_raw[i];
-	   } else {
-             PeakFound= kTRUE;
-	     PeakBin = i-1;
-	   }
-	 }
+      sped+=fSamples.ped*pC_Conv;
+      sum+=fSamples.samples_raw[i]*pC_Conv;
+      if ( i >= ThresCrossBin && !PeakFound) {
+	if (fSamples.samples_raw[i] > max) {
+	  max = fSamples.samples_raw[i];
+	} else {
+	  PeakFound= kTRUE;
+	  PeakBin = i-1;
+	}
+      }
     }
     //
     //    std::cout << " Int = " << IntMinBin << " " << IntMaxBin<< " ThresCrossBin =   " << ThresCrossBin << " peak-found " << PeakFound << std::endl ;
@@ -212,15 +212,15 @@ namespace SBSData {
     if (PeakFound) {
       for(size_t i =IntMinBin ; i <PeakBin+1 ; i++ ) {
 	if (VMid >= fSamples.samples_raw[i]  && VMid < fSamples.samples_raw[i+1]) {
-	FineTime = i+(VMid-fSamples.samples_raw[i])/(fSamples.samples_raw[i+1]-fSamples.samples_raw[i]);
+	  FineTime = i+(VMid-fSamples.samples_raw[i])/(fSamples.samples_raw[i+1]-fSamples.samples_raw[i]);
 	}
       }
     }
     
     /*
-    if (ThresCrossBin==vals.size()) {
+      if (ThresCrossBin==vals.size()) {
       std::cout << " Threshold = " << fThresVal << " ped = " << fSamples.ped << " element = " << ThresCrossBin << " " << " Vmid = " << VMid << "  sum = " << sum << " max = " << max << " time = " << FineTime << " tcal = " << fSamples.tcal <<  std::endl;
-    }
+      }
     */
     fSamples.pulse.integral.raw = sum;
     fSamples.pulse.integral.val = (sum-sped)*fSamples.cal;
