@@ -65,6 +65,8 @@ struct SBSGenericOutputData {
   std::vector<Int_t> ADCcol;         //< [] col
   std::vector<Int_t> ADClayer;       //< [] layer
   std::vector<Int_t> ADCelemID;      //< [] element ID
+  std::vector<Double_t> ADCxpos;     //< [] x-position (m)
+  std::vector<Double_t> ADCypos;     //< [] y-position (m)
   // ADC variables
   std::vector<Int_t> ped;         //< [] pedestal
   std::vector<Int_t> a_mult;         //< [] ADC # of hits per channel
@@ -98,6 +100,8 @@ struct SBSGenericOutputData {
     ADCcol.clear();
     ADCelemID.clear();
     ADClayer.clear();
+    ADCxpos.clear();
+    ADCypos.clear();    
     ped.clear();
     a_mult.clear();
     a.clear();
