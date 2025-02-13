@@ -84,4 +84,5 @@
 #pragma link C++ class SBSScalerEvtHandler+; 
 #pragma link C++ class SBSScalerHelicity+;  
 #pragma link C++ class SBSScalerHelicityReader+;  
+#pragma link C++ class SBSVTP+;
 #endif
