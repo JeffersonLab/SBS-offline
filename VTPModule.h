@@ -43,15 +43,16 @@ public:
    inline virtual std::vector<UInt_t> GetTriggerType4() { return vtp_trigger_data.trigtype4; }
    inline virtual std::vector<UInt_t> GetTriggerType5() { return vtp_trigger_data.trigtype5; }
 
+   inline virtual UInt_t GetDetectorID() { return vtp_cluster_data.det_id; }
    inline virtual std::vector<UInt_t> GetClusterEnergy() { return vtp_cluster_data.energy; }
    inline virtual std::vector<UInt_t> GetClusterTime()   { return vtp_cluster_data.time; }
    inline virtual std::vector<UInt_t> GetClusterSize()   { return vtp_cluster_data.nblocks; }
    inline virtual std::vector<UInt_t> GetClusterX()      { return vtp_cluster_data.xcoord; }
    inline virtual std::vector<UInt_t> GetClusterY()      { return vtp_cluster_data.ycoord; }
 
- private:
+   enum DetType { HCAL = 11, ECAL = 12 }; // SBS specific
 
-  enum DetType { HCAL = 11, ECAL = 12 };
+ private:
 
    struct vtp_header_data_struct {
      uint32_t slot_blk_hdr, iblock_num, nblock_events;             // Block header objects
@@ -71,8 +72,10 @@ public:
    } __attribute__((aligned(128))) vtp_trigger_data;
    
    struct vtp_cluster_data_struct {
+     uint32_t det_id;
      std::vector<uint32_t> energy, time, nblocks, xcoord, ycoord;
      void clear() {
+       det_id = 0;
        energy.clear(); time.clear(); nblocks.clear(); xcoord.clear(); ycoord.clear();
      }
    } __attribute__((aligned(128))) vtp_cluster_data;

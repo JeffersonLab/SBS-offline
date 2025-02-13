@@ -333,11 +333,20 @@ void VTPModule::DecodeCluster( UInt_t pdat, uint32_t data_type_id )
   
   if( data_type_id )  { //  cluster word 1
     det_id = (pdat >> 23) & 0xF; // 12: ECAL 11: HCAL
+    vtp_cluster_data.det_id = det_id;
     if(det_id == HCAL)
       ce = (pdat >> 0) & 0xFFFF; //  cluster energy, mask 16 bits
     else // ECAL
       ce = (pdat >> 0) & 0x3FFF; //  cluster energy, mask 14 bits      
     vtp_cluster_data.energy.push_back( ce ); 
+
+#ifdef WITH_DEBUG
+    if( fDebugFile )
+      *fDebugFile << "VTPModule::Decode:: VTP  Cluster"
+                  << " >> data = " << hex << pdat << dec
+                  << " >> energy = " << ce << endl;
+#endif
+
   }
   else { //  ckuster word 2
     if(det_id == HCAL) {
@@ -350,25 +359,23 @@ void VTPModule::DecodeCluster( UInt_t pdat, uint32_t data_type_id )
       cx = (pdat >> 22) & 0x1F;   //  cluster x coordinate, mask 5 bits
       cy = (pdat >> 15) & 0x7F;   //  cluster y coordinate, mask 7 bits
       cn = (pdat >> 11) & 0xF;    //  cluster n blocks, mask 4 bits
-      ct = (pdat >> 0)  & 0x7FF;   //  cluster time, mask 11 bits
+      ct = (pdat >> 0)  & 0x7FF;  //  cluster time, mask 11 bits
     }
     vtp_cluster_data.time.push_back( ct );
     vtp_cluster_data.nblocks.push_back( cn );
     vtp_cluster_data.xcoord.push_back( cx );
     vtp_cluster_data.ycoord.push_back( cy );
-  }
-  
+
 #ifdef WITH_DEBUG
-  if( fDebugFile )
-    *fDebugFile << "VTPModule::Decode:: VTP  Cluster"
-                << " >> data = " << hex << pdat << dec
-                << " >> energy = " << ce
-                << " >> n blocks = " << cn
-                << " >> time  = " << ct
-                << " >> x coordinate = " << cx
-                << " >> y coordinate = " << cy
-                << endl;
+    if( fDebugFile )
+      *fDebugFile << "VTPModule::Decode:: VTP  Cluster"
+                  << " >> n blocks = " << cn
+                  << " >> time  = " << ct
+                  << " >> x coordinate = " << cx
+                  << " >> y coordinate = " << cy
+                  << endl;
 #endif
+  } 
 }
   
 //_____________________________________________________________________________
