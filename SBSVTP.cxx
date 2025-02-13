@@ -1,4 +1,5 @@
 #include "SBSVTP.h"
+#include "VTPModule.h"
 #include <iostream>
 
 using namespace std;
@@ -27,12 +28,13 @@ void SBSVTP::Clear( Option_t* opt )
 }
 
 //______________________________________________________________
-void SBSVTP::DefineVariables( EMode mode )
+Int_t SBSVTP::DefineVariables( EMode mode )
 {
-  if( mode == kDefine & fIsSetup ) return kOK;
+  if( mode == kDefine && fIsSetup ) return kOK;
   fIsSetup = (mode == kDefine );
 
   RVarDef vars[] = {
+    {"vtp.errflag",   "VTP Error Flag",                     "fVTPErrorFlag"},
     {"vtp.detid",     "VTP detector ID",                    "fVTPClusters.fDet"},
     {"vtp.clus.x",    "VTP clusters x coord",               "fVTPClusters.fX"},
     {"vtp.clus.y",    "VTP clusters y coord",               "fVTPClusters.fY"},
@@ -55,7 +57,7 @@ Int_t SBSVTP::Decode( const THaEvData& evdata )
     Decoder::VTPModule* vtp = dynamic_cast<Decoder::VTPModule*>(evdata.GetModule(d->crate, d->slot));
 
     if(vtp) {
-      if(evdataa.GetEvNum() != vtp->GetTriggerNum()) {
+      if(evdata.GetEvNum() != vtp->GetTriggerNum()) {
         fVTPErrorFlag = 1;
       }
       else {
@@ -65,7 +67,7 @@ Int_t SBSVTP::Decode( const THaEvData& evdata )
         // Cluster information
         fVTPClusters.fX.insert(fVTPClusters.fX.end(), vtp->GetClusterX().begin(), vtp->GetClusterX().end());
         fVTPClusters.fY.insert(fVTPClusters.fY.end(), vtp->GetClusterY().begin(), vtp->GetClusterY().end());
-        fVTPClusters.fE.insert(fVTPClusters.fE.end(), vtp->GetClusterE().begin(), vtp->GetClusterE().end());
+        fVTPClusters.fE.insert(fVTPClusters.fE.end(), vtp->GetClusterEnergy().begin(), vtp->GetClusterEnergy().end());
         fVTPClusters.fTime.insert(fVTPClusters.fTime.end(), vtp->GetClusterTime().begin(), vtp->GetClusterTime().end());
         fVTPClusters.fSize.insert(fVTPClusters.fSize.end(), vtp->GetClusterSize().begin(), vtp->GetClusterSize().end());
 
