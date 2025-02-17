@@ -81,8 +81,8 @@ protected:
   Double_t fHCALdir_z;
 
   TVector3 fGEMorigin;  //Absolute position of GEM origin relative to target center, in TARGET transport coordinates
-  Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
-  Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
+  //Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
+  //Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
 
   //X,Y,Z rotation angles (yaw,pitch,roll, resp.):
   Double_t fGEMax;
@@ -94,8 +94,8 @@ protected:
   
   Double_t fBdL; //define BdL (assumed units = T*m)
 
-  TRotation fGEM_Rtotal; //Total rotation;
-  TRotation fGEM_Rinverse; //Inverse rotation
+  // TRotation fGEM_Rpos; //Total rotation to apply to space coordinates;
+  // TRotation fGEM_Rdir; //Total rotation to apply to track direction
   
   TVector3 fGEMxaxis_global;
   TVector3 fGEMyaxis_global;
