@@ -8,7 +8,7 @@ ClassImp(SBSVTP);
 
 SBSVTP::SBSVTP( const char* name, const char* description, 
   THaApparatus* apparatus) :
-  THaDetector(name, description, apparatus)
+  THaNonTrackingDetector(name, description, apparatus)
 {
   // constructor
   fVTPErrorFlag = 0;
@@ -28,19 +28,49 @@ void SBSVTP::Clear( Option_t* opt )
 }
 
 //______________________________________________________________
+Int_t SBSVTP::ReadDatabase( const TDatime& date )
+{
+  const char*  here = "ReadDatabase";
+  vector<Int_t> detmap;
+
+  FILE* file = OpenFile( date );
+  if( !file ) return kFileError;
+
+  Int_t err = kOK;
+  DBRequest config_request[] = {
+    { "detmap", &detmap, kIntV },
+    { 0 }
+  };
+  err = LoadDB( file, date, config_request, fPrefix );
+
+  //  UInt_t flags = THaDetMap::kFillLogicalChannel | THaDetMap::kFillModel;
+  UInt_t flags = THaDetMap::kSkipLogicalChannel;
+  if( !err && FillDetMap(detmap, flags, here) <= 0 ) {
+    err = kInitError;
+  }
+
+  fclose(file);
+  if(err)
+    return err;
+
+  return kOK;  
+}
+
+//______________________________________________________________
 Int_t SBSVTP::DefineVariables( EMode mode )
 {
+
   if( mode == kDefine && fIsSetup ) return kOK;
   fIsSetup = (mode == kDefine );
 
   RVarDef vars[] = {
-    {"vtp.errflag",   "VTP Error Flag",                     "fVTPErrorFlag"},
-    {"vtp.detid",     "VTP detector ID",                    "fVTPClusters.fDet"},
-    {"vtp.clus.x",    "VTP clusters x coord",               "fVTPClusters.fX"},
-    {"vtp.clus.y",    "VTP clusters y coord",               "fVTPClusters.fY"},
-    {"vtp.clus.e",    "VTP clusters energy",                "fVTPClusters.fE"},
-    {"vtp.clus.time", "VTP clusters time",                  "fVTPClusters.fTime"},
-    {"vtp.clus.size", "VTP clusters size (number of hits)", "fVTPClusters.fSize"},
+    {"errflag",   "VTP Error Flag",                     "fVTPErrorFlag"},
+    {"detid",     "VTP detector ID",                    "fVTPClusters.fDet"},
+    {"clus.x",    "VTP clusters x coord",               "fVTPClusters.fX"},
+    {"clus.y",    "VTP clusters y coord",               "fVTPClusters.fY"},
+    {"clus.e",    "VTP clusters energy",                "fVTPClusters.fE"},
+    {"clus.time", "VTP clusters time",                  "fVTPClusters.fTime"},
+    {"clus.size", "VTP clusters size (number of hits)", "fVTPClusters.fSize"},
     {0}
   };
 
@@ -50,31 +80,56 @@ Int_t SBSVTP::DefineVariables( EMode mode )
 //______________________________________________________________
 Int_t SBSVTP::Decode( const THaEvData& evdata )
 {
+
   Int_t fNVTPClusters = 0;
+  Int_t Nvtpfound = 0;
   for(UInt_t i = 0; i < fDetMap->GetSize(); i++) {
     THaDetMap::Module* d = fDetMap->GetModule(i);
-    cout << "SBSVTP::Decode crate, slot: " << d->crate << " " << d->slot << endl;
+    // cout << "SBSVTP::Decode crate, slot: " << d->crate << " " << d->slot << endl;
     Decoder::VTPModule* vtp = dynamic_cast<Decoder::VTPModule*>(evdata.GetModule(d->crate, d->slot));
 
     if(vtp) {
+      Nvtpfound++;
       if(evdata.GetEvNum() != vtp->GetTriggerNum()) {
         fVTPErrorFlag = 1;
       }
       else {
-        // Detector ID HCAL or ECAL
-        fVTPClusters.fDet = vtp->GetDetectorID();
+	size_t ncluster = vtp->GetClusterX().size();
+	if(Nvtpfound == 1) {
+	  // Detector ID HCAL or ECAL
+	  fVTPClusters.fDet = vtp->GetDetectorID();
+	  // Cluster information
+	  fVTPClusters.fX = vtp->GetClusterX();
+	  fVTPClusters.fY = vtp->GetClusterY();
+	  fVTPClusters.fE = vtp->GetClusterEnergy();
+	  fVTPClusters.fTime = vtp->GetClusterTime();
+	  fVTPClusters.fSize = vtp->GetClusterSize();
+	}
+	else {
+	  for(auto& x : vtp->GetClusterX()) fVTPClusters.fX.emplace_back(x);
+	  for(auto& x : vtp->GetClusterY()) fVTPClusters.fY.emplace_back(x);
+	  for(auto& x : vtp->GetClusterEnergy()) fVTPClusters.fE.emplace_back(x);
+	  for(auto& x : vtp->GetClusterTime()) fVTPClusters.fTime.emplace_back(x);
+	  for(auto& x : vtp->GetClusterSize()) fVTPClusters.fSize.emplace_back(x);
+	}
 
-        // Cluster information
-        fVTPClusters.fX.insert(fVTPClusters.fX.end(), vtp->GetClusterX().begin(), vtp->GetClusterX().end());
-        fVTPClusters.fY.insert(fVTPClusters.fY.end(), vtp->GetClusterY().begin(), vtp->GetClusterY().end());
-        fVTPClusters.fE.insert(fVTPClusters.fE.end(), vtp->GetClusterEnergy().begin(), vtp->GetClusterEnergy().end());
-        fVTPClusters.fTime.insert(fVTPClusters.fTime.end(), vtp->GetClusterTime().begin(), vtp->GetClusterTime().end());
-        fVTPClusters.fSize.insert(fVTPClusters.fSize.end(), vtp->GetClusterSize().begin(), vtp->GetClusterSize().end());
+        fNVTPClusters += ncluster;
 
-        fNVTPClusters++;
-      }
+      }// EvNum and TrigNum match
     }// found vtp module
   }
 
   return fNVTPClusters;
+}
+
+//______________________________________________________________
+Int_t SBSVTP::CoarseProcess( TClonesArray& tracks )
+{
+  return 0;
+}
+
+//______________________________________________________________
+Int_t SBSVTP::FineProcess( TClonesArray& tracks )
+{
+  return 0;
 }

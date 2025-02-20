@@ -1,9 +1,7 @@
 /*
-
-// SBS HCAL/ECAL VTP data format
-// Based on the manual from B. Raydo (Jan. 28, 2025)
-// Modified from NPSlib/VTPModule.cxx 
-
+ SBS HCAL/ECAL VTP data format
+ Based on the manual from B. Raydo (Jan. 28, 2025)
+ Modified from NPSlib/VTPModule.cxx 
 
   Data Type list  
   0 Block header
@@ -339,7 +337,7 @@ void VTPModule::DecodeCluster( UInt_t pdat, uint32_t data_type_id )
     else // ECAL
       ce = (pdat >> 0) & 0x3FFF; //  cluster energy, mask 14 bits      
     vtp_cluster_data.energy.push_back( ce ); 
-
+    
 #ifdef WITH_DEBUG
     if( fDebugFile )
       *fDebugFile << "VTPModule::Decode:: VTP  Cluster"
@@ -349,6 +347,7 @@ void VTPModule::DecodeCluster( UInt_t pdat, uint32_t data_type_id )
 
   }
   else { //  ckuster word 2
+
     if(det_id == HCAL) {
       cx = (pdat >> 20) & 0xF;    //  cluster x (col) coordinate, mask 4 bits
       cy = (pdat >> 15) & 0x1F;   //  cluster y (row) coordinate, mask 5 bits
@@ -361,6 +360,7 @@ void VTPModule::DecodeCluster( UInt_t pdat, uint32_t data_type_id )
       cn = (pdat >> 11) & 0xF;    //  cluster n blocks, mask 4 bits
       ct = (pdat >> 0)  & 0x7FF;  //  cluster time, mask 11 bits
     }
+
     vtp_cluster_data.time.push_back( ct );
     vtp_cluster_data.nblocks.push_back( cn );
     vtp_cluster_data.xcoord.push_back( cx );
@@ -467,12 +467,6 @@ void VTPModule::UnsupportedType( UInt_t pdat, uint32_t data_type_id )
 #endif
 }
 
-
-
-
-
-
-
 //_____________________________________________________________________________
 UInt_t VTPModule::GetHeaderTriggerTime() 
 {
@@ -502,6 +496,7 @@ void VTPModule::LoadTHaSlotDataObj( THaSlotData* sldat )
     sldat->loadData("scaler", 0, vtp_trigger_data.trigtime[itrig], vtp_trigger_data.trigtime[itrig]);
 
   // cluster data
+  sldat->loadData("scaler", 0, vtp_cluster_data.det_id, vtp_cluster_data.det_id);
   for( vsiz_t iclus = 0; iclus < vtp_cluster_data.energy.size(); iclus++ )
     sldat->loadData("scaler", 0, vtp_cluster_data.energy[iclus], vtp_cluster_data.energy[iclus]);
   for( vsiz_t iclus = 0; iclus < vtp_cluster_data.time.size(); iclus++ )
