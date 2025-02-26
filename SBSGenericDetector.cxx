@@ -1149,6 +1149,12 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
     SBSElement *tblk = fElements[k];  
     FindGoodHit(tblk);
   }
+
+  //Override default behavior with custom decode method for RF and trigger time:
+  if( fDecodeTrigTime || fDecodeRFtime ){
+    DecodeRFandTriggerTime( evdata );
+  }
+  
   //
   return fNhits;
 }
@@ -1394,8 +1400,8 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
   size_t idx;
   // Reference time
 
-  Int_t F1TrigTime_refchan = -1;
-  Int_t F1TrigTime_RFchan = -1;
+  // Int_t F1TrigTime_refchan = -1;
+  // Int_t F1TrigTime_RFchan = -1;
   
   for(Int_t k = 0; k < fNRefElem; k++) {
     blk = fRefElements[k];
@@ -1425,36 +1431,36 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fRefGood.t_ToT.push_back(hit.ToT.val);
         }
 	
-	if( blk->IsRFtime() && fDecodeRFtime && fRFtimeIsRef ){
-	  fRFtime = tempval;
+	// if( blk->IsRFtime() && fDecodeRFtime && fRFtimeIsRef ){
+	//   fRFtime = tempval;
 
-	  if( fModeTDC == SBSModeTDC::kTDCSimple ){
-	    // std::cout << "F1 trigtime for RF channel for " << GetApparatus()->GetName() << "." << GetName()
-	    // 	      << " = " << hit.TrigTime << std::endl;
-	    F1TrigTime_RFchan = Int_t( hit.TrigTime );
-	  }
+	//   if( fModeTDC == SBSModeTDC::kTDCSimple ){
+	//     // std::cout << "F1 trigtime for RF channel for " << GetApparatus()->GetName() << "." << GetName()
+	//     // 	      << " = " << hit.TrigTime << std::endl;
+	//     F1TrigTime_RFchan = Int_t( hit.TrigTime );
+	//   }
 	  
-	  for( int ihit=0; ihit<blk->TDC()->GetNHits(); ihit++ ){
-	    double T_i = blk->TDC()->GetLead(ihit).val;
-	    if( ihit>0 ){
-	      double Tprev = blk->TDC()->GetLead(ihit-1).val;
-	      if( hdTRF != nullptr ){
-		hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
-	      }
-	    }
-	  }
+	//   for( int ihit=0; ihit<blk->TDC()->GetNHits(); ihit++ ){
+	//     double T_i = blk->TDC()->GetLead(ihit).val;
+	//     if( ihit>0 ){
+	//       double Tprev = blk->TDC()->GetLead(ihit-1).val;
+	//       if( hdTRF != nullptr ){
+	// 	hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
+	//       }
+	//     }
+	//   }
 	  
-	}
+	// }
 
-	if( blk->IsTrigTime() && fDecodeTrigTime && fTrigTimeIsRef ){
-	  fTrigTime = tempval;
+	// if( blk->IsTrigTime() && fDecodeTrigTime && fTrigTimeIsRef ){
+	//   fTrigTime = tempval;
 
-	  if( fModeTDC == SBSModeTDC::kTDCSimple ){
-	    // std::cout << "F1 trigtime for trigger channel for " << GetApparatus()->GetName() << "." << GetName()
-	    // 	      << " = " << hit.TrigTime << std::endl;
-	    F1TrigTime_refchan = hit.TrigTime;
-	  }
-	}
+	//   if( fModeTDC == SBSModeTDC::kTDCSimple ){
+	//     // std::cout << "F1 trigtime for trigger channel for " << GetApparatus()->GetName() << "." << GetName()
+	//     // 	      << " = " << hit.TrigTime << std::endl;
+	//     F1TrigTime_refchan = hit.TrigTime;
+	//   }
+	// }
 	
       } else if ( fStoreEmptyElements ) {
 	fRefGood.TDCrow.push_back(blk->GetRow());
@@ -1486,10 +1492,10 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	}
       }
 
-      if( F1TrigTime_refchan >= 0 && F1TrigTime_RFchan >= 0 &&
-	  F1TrigTime_refchan != F1TrigTime_RFchan ){
-	fRFtime += (F1TrigTime_RFchan - F1TrigTime_refchan)*blk->TDC()->GetCal();
-      }
+      // if( F1TrigTime_refchan >= 0 && F1TrigTime_RFchan >= 0 &&
+      // 	  F1TrigTime_refchan != F1TrigTime_RFchan ){
+      // 	fRFtime += (F1TrigTime_RFchan - F1TrigTime_refchan)*blk->TDC()->GetCal();
+      // }
     }
     //
     //   if(WithADC() && !fDisableRefADC ) {
@@ -1661,20 +1667,20 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	// 	    << ", " << Int_t(hit.TrigTime) - F1TrigTime_refchan << ")" << std::endl;
 	// }
 
-	if( blk->IsRFtime() && fDecodeRFtime && !fRFtimeIsRef ) {
-	  fRFtime = hit.le.val;
+	// if( blk->IsRFtime() && fDecodeRFtime && !fRFtimeIsRef ) {
+	//   fRFtime = hit.le.val;
 
-	  for( int ihit=0; ihit<blk->TDC()->GetNHits(); ihit++ ){
-	    double T_i = blk->TDC()->GetLead(ihit).val;
-	    if( ihit>0 ){
-	      double Tprev = blk->TDC()->GetLead(ihit-1).val;
-	      hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
-	    }
-	  }
+	//   for( int ihit=0; ihit<blk->TDC()->GetNHits(); ihit++ ){
+	//     double T_i = blk->TDC()->GetLead(ihit).val;
+	//     if( ihit>0 ){
+	//       double Tprev = blk->TDC()->GetLead(ihit-1).val;
+	//       hdTRF->Fill( T_i-Tprev ); //This assumes the hits are in chronological order
+	//     }
+	//   }
 
-	}
+	// }
 	
-	if( blk->IsTrigTime() && fDecodeTrigTime && !fTrigTimeIsRef ) fTrigTime = hit.le.val;
+	//	if( blk->IsTrigTime() && fDecodeTrigTime && !fTrigTimeIsRef ) fTrigTime = hit.le.val;
 	
       } else if ( fStoreEmptyElements ) {
         fGood.TDCrow.push_back(blk->GetRow());
@@ -1947,4 +1953,158 @@ Int_t SBSGenericDetector::End( THaRunBase *run ){
   }
 
   return kOK;
+}
+
+// Moving the specialized decoding of RF and trigger times here to simplify
+// and enforce a uniform behavior for decoding these variables: "simple" analysis mode for RF and trigger time regardless of
+// the module (main application here is hodoscope and/or HCAL RF corrections for the
+// neutron FF experiments):
+
+void SBSGenericDetector::DecodeRFandTriggerTime( const THaEvData &evdata ){
+
+  // What are the two main use cases here and what are the behaviors we want?
+  // In both cases we want to decode the trigger and RF time and subtract the trigger time from the RF time
+  // In all cases, take the leading-edge hit closest to "GoodTimeCut"
+  
+  fTrigTime = kBig;
+  fRFtime = kBig;
+
+  //Only relevant for F1 TDC:
+  Int_t F1TrigTime_trigchan = -1;
+  Int_t F1TrigTime_RFchan = -1;
+
+  Int_t RawTDC_trigchan = -1;
+  Int_t RawTDC_RFchan = -1;
+
+  bool goodtrig = false, goodRF = false;
+  
+  if( fDecodeTrigTime ){
+    THaDetMap::Module *modTrig = fDetMap->Find( fCrate_TrigTime, fSlot_TrigTime, fChan_TrigTime );
+
+    //Implementing the equivalent of the "good time cut" here:
+    double offset = 0.0, cal=0.1, goodtimecut = 0.0;
+    if( fTrigTimeIsRef ){
+      offset = fRefElements[fElemID_TrigTime]->TDC()->GetOffset();
+      goodtimecut = fRefElements[fElemID_TrigTime]->TDC()->GetGoodTimeCut();
+      cal = fRefElements[fElemID_TrigTime]->TDC()->GetCal();
+    } else {
+      offset = fElements[fElemID_TrigTime]->TDC()->GetOffset();
+      goodtimecut = fElements[fElemID_TrigTime]->TDC()->GetGoodTimeCut();
+      cal = fElements[fElemID_TrigTime]->TDC()->GetCal();
+    }
+    
+    Int_t nhits = evdata.GetNumHits(fCrate_TrigTime, fSlot_TrigTime, fChan_TrigTime );
+
+    Int_t besthit = -1;
+    double mintdiff = kBig;
+    for( int ihit=0; ihit<nhits; ihit++ ){
+    
+      Int_t F1TrigTime = 0;
+      Int_t RawTDC = Int_t(evdata.GetData( fCrate_TrigTime, fSlot_TrigTime, fChan_TrigTime, ihit ));
+      UInt_t LeadingEdgeBit = 0;
+
+      if( modTrig->GetModel() == 6401 ){
+	F1TrigTime = Int_t(evdata.GetRawData( fCrate_TrigTime, fSlot_TrigTime, fChan_TrigTime, ihit ));
+	// Rollover correction:
+	if( F1TrigTime > RawTDC ) RawTDC += fF1_RollOver;
+      } else {
+	LeadingEdgeBit = evdata.GetRawData( fCrate_TrigTime, fSlot_TrigTime, fChan_TrigTime, ihit );
+      }
+      
+      double ttemp = (RawTDC-F1TrigTime-offset)*cal;
+      double tdiff = ttemp - goodtimecut;
+      if( LeadingEdgeBit == 0 && ( besthit < 0 || fabs(tdiff) < mintdiff ) ){
+	besthit = ihit;
+	mintdiff = fabs(tdiff);
+	fTrigTime = ttemp;
+	F1TrigTime_trigchan = F1TrigTime;
+	RawTDC_trigchan = Int_t( RawTDC );
+	goodtrig = true;
+      }
+    }    
+  }
+
+  // At this point, fTrigTime is the raw trigger time (leading edge) in ns,
+  // with offset subtracted, and F1 trigger time also subtracted with rollover correction if
+  // applicable, but NO reference time subtraction. For RF time we will treat the trigger time as reference
+  // for both hodo and HCAL, and if there
+  // is any difference in F1 trigger time between RF channel and trigger channel, we'll correct
+  // for that too
+  
+  if( fDecodeRFtime ){
+    THaDetMap::Module *modRF = fDetMap->Find( fCrate_RFtime, fSlot_RFtime, fChan_RFtime );
+    //Implementing the equivalent of the "good time cut" here:
+    double offset = 0.0, cal=0.1, goodtimecut = 0.0;
+    if( fRFtimeIsRef ){
+      offset = fRefElements[fElemID_RFtime]->TDC()->GetOffset();
+      goodtimecut = fRefElements[fElemID_RFtime]->TDC()->GetGoodTimeCut();
+      cal = fRefElements[fElemID_RFtime]->TDC()->GetCal();
+    } else {
+      offset = fElements[fElemID_RFtime]->TDC()->GetOffset();
+      goodtimecut = fElements[fElemID_RFtime]->TDC()->GetGoodTimeCut();
+      cal = fElements[fElemID_RFtime]->TDC()->GetCal();
+    }
+
+    Int_t nhits = evdata.GetNumHits(fCrate_RFtime, fSlot_RFtime, fChan_RFtime );
+
+    Int_t besthit = -1;
+    double mintdiff = kBig;
+
+    double tprev = kBig;
+
+    Int_t nlead=0;
+    
+    for( int ihit=0; ihit<nhits; ihit++ ){
+      Int_t F1TrigTime = 0;
+      Int_t RawTDC = Int_t(evdata.GetData( fCrate_RFtime, fSlot_RFtime, fChan_RFtime, ihit ));
+      UInt_t LeadingEdgeBit = 0;
+
+      if( modRF->GetModel() == 6401 ){
+	F1TrigTime = Int_t(evdata.GetRawData( fCrate_RFtime, fSlot_RFtime, fChan_RFtime, ihit ));
+	// Rollover correction:
+	// How are rollover corrections handled for F1 TDC RF time? This depends on whether we
+	// are talking about sbs.hcal.Ref.* or sbs.hcal.rftime or sbs.tdctrig.rftime
+	
+	// For F1, our intended behavior is to subtract the ref time from the RF time at the raw TDC level:
+	if( !fRFtimeIsRef ){ //then correct for rollover the way we do for normal F1 TDC channels:
+	  if( abs(RawTDC-RawTDC_trigchan) > fF1_TimeWindow ){
+	    if( RawTDC > RawTDC_trigchan ){ //In practice this should never happen
+	      RawTDC_trigchan += fF1_RollOver;
+	    } else if( RawTDC <= RawTDC_trigchan ){
+	      RawTDC += fF1_RollOver;
+	    }
+	  }
+	} else { // RF is defined as a ref chan:
+	  if( F1TrigTime > RawTDC ){
+	    RawTDC += fF1_RollOver;
+	  }
+	}
+      } else {
+	LeadingEdgeBit = evdata.GetRawData( fCrate_RFtime, fSlot_RFtime, fChan_RFtime, ihit );
+      }
+      
+      //      double ttemp = (RawTDC-F1TrigTime-(RawTDC_trigchan-F1TrigTime_trigchan)-offset)*cal;
+
+      // trigger TDC has F1 trigger time subtracted, RawTDC here doesn't
+      // So perhaps 
+
+      
+      double ttemp = (RawTDC-RawTDC_trigchan-offset)*cal;
+      
+      if( LeadingEdgeBit == 0 ){
+	if( nlead > 0 ) hdTRF->Fill( fabs(ttemp - tprev) );
+	tprev = ttemp;
+	nlead++;
+      }
+      
+      double tdiff = ttemp - goodtimecut;
+      if( LeadingEdgeBit == 0 && ( besthit < 0 || fabs(tdiff) < mintdiff ) ){
+	besthit = ihit;
+	mintdiff = fabs(tdiff);
+	F1TrigTime_RFchan = F1TrigTime;
+	RawTDC_RFchan = RawTDC;
+	fRFtime = ttemp;
+      }
+    }     
+  }
 }

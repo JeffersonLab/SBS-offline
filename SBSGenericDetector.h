@@ -170,6 +170,8 @@ public:
 
   Double_t GetRFtime() const { return fRFtime; };
   Double_t GetTrigTime() const { return fTrigTime; };
+
+  void DecodeRFandTriggerTime( const THaEvData & );
   
 protected:
 
