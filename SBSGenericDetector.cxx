@@ -325,7 +325,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fRefChanMap.resize(nmodules);
     fRefChanLo.resize(nmodules);
     fRefChanHi.resize(nmodules);
-    WithDefaultTZ(Long64_t tloc = date.Convert());
+    //WithDefaultTZ(Long64_t tloc = date.Convert());
+    Long64_t tloc = date.Convert();
     Decoder::THaCrateMap *cratemap = SBSManager::GetInstance()->GetCrateMap(tloc);
     Int_t kr = 0,ka = 0, kt = 0, km = 0, k = 0;
     for( Int_t i = 0; i < nmodules && !err; i++) {
