@@ -25,6 +25,7 @@ public:
   Double_t GetAgain() const {return fAgain;}
   Double_t GetAtime() const {return fAtime;}
   Double_t GetTDCtime() const {return fTDCtime;}
+  Double_t GetTDCtimeTW() const {return fTDCtimeTW;}
   Double_t GetEblk() const {return fEblk;}
   Int_t   GetMult() const {return fMult;}
   Int_t   GetRow()  const {return fRow; }
@@ -39,6 +40,7 @@ public:
   Double_t GetAtimeMean() const { return fAtimeMean; }
   Double_t GetE_GoodTDC() const { return fE_GoodTDC; }
   Double_t GetTDCtimeMean() const { return fTDCtimeMean; }
+  Double_t GetTDCtimeMeanTW() const { return fTDCtimeMeanTW; }
   Double_t GetEblk_GoodTDC() const { return fEblk_GoodTDC; }
   Int_t GetNgoodTDChits() const { return fNgoodTDChits; }
   Int_t GetRowGoodTDC() const { return fRowGoodTDC; }
@@ -62,6 +64,7 @@ public:
   SBSElement* GetElement(UInt_t i);
   std::vector<SBSElement*>& GetElements() {return fElements;}
 
+  
   Int_t GetSize() const {return fMult;}
 
   void AddElement(SBSElement* block);
@@ -78,9 +81,11 @@ private:
   Double_t fAgain;   // ADC gain coefficient (GeV/pC)
   Double_t fAtime;       // ADC time  of block with highest E
   Double_t fTDCtime;       // TDC time  of block with highest E
+  Double_t fTDCtimeTW;    // Walk corrected TDC time of block with highest E
   Double_t fEblk;    // Energy of block with highest E
   Double_t fAtimeMean; //Energy-weighted mean ADC time of all blocks
   Double_t fTDCtimeMean; //Energy-weighted mean TDC time of all blocks in the cluster with good TDC hits
+  Double_t fTDCtimeMeanTW;    // Energy-weighted mean TDC time of all Walk corrected blocks in the cluster with good TDC hits
   Double_t fEblk_GoodTDC; //Energy of block with highest E subject to the requirement of a good TDC hit;
   Int_t   fRow;     // Row of block with highest E
   Int_t   fCol;     // Row of block with highest E

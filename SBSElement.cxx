@@ -15,9 +15,10 @@ ClassImp(SBSElement);
 // Constructor for generic Element (no-data)
 SBSElement::SBSElement(Double_t x, Double_t y,
     Double_t z, Int_t row, Int_t col, Int_t layer, Int_t id) :
-  fX(x), fY(y), fZ(z), fE(0), fAgain(0), fAtime(kBig), fTDCtime(kBig), fRow(row), fCol(col), fLayer(layer),
+  fX(x), fY(y), fZ(z), fE(0), fAgain(0), fAtime(kBig), fTDCtime(kBig), fTDCtimeTW(kBig), fRow(row), fCol(col), fLayer(layer),
   fStat(0), fID(id), fADC(nullptr), fTDC(nullptr), fWaveform(nullptr)
 {
+  //fTDCtimeTW = -1000;
   fIsRFtime = false;
   fIsTrigTime = false;
 }
@@ -63,6 +64,7 @@ void SBSElement::Clear( Option_t* opt )
     fWaveform->Clear();
   fAtime = kBig;
   fTDCtime = kBig;
+  fTDCtimeTW = kBig;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

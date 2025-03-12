@@ -31,6 +31,8 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block)
   fAtimeMean = fAtime;
   
   fTDCtime  = -1000.0; //Assign a default of -1000 ns for TDC time unless we have actual data!
+  fTDCtimeTW  = -1000.0; //Assign a default of -1000 ns for TDC time unless we have actual data!
+    
   fRow  = block->GetRow();
   fCol  = block->GetCol();
   fElemID  = block->GetID();
@@ -39,6 +41,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block)
   
   fNgoodTDChits = 0;
   fTDCtimeMean = 0.0;
+  fTDCtimeMeanTW = 0.0;
   
   fEblk_GoodTDC = 0.0;
   fE_GoodTDC = 0.0;
@@ -50,8 +53,9 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block)
   if( block->HasTDCData() ){
     fNgoodTDChits = 1;
     fTDCtime = block->GetTDCtime();
+    fTDCtimeTW = block->GetTDCtimeTW();
     fTDCtimeMean = block->GetTDCtime();
-    fEblk_GoodTDC = block->GetE();
+    fTDCtimeMeanTW = block->GetTDCtimeTW();
     fE_GoodTDC = block->GetE();
     fRowGoodTDC = block->GetRow();
     fColGoodTDC = block->GetCol();
@@ -75,6 +79,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk)
   fAgain = 0.;
   fAtime = 0;
   fTDCtime = 0;
+  fTDCtimeTW = 0;
   fRow  = -1;
   fCol  = -1;
   fElemID  = -1;
@@ -82,6 +87,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk)
   
   fNgoodTDChits = 0;
   fTDCtimeMean = 0.0;
+  fTDCtimeMeanTW = 0.0;
   fAtimeMean = 0.0;
   fEblk_GoodTDC = 0.0;
   fE_GoodTDC = 0.0;
@@ -102,6 +108,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster() {
   fAgain = 0.;
   fAtime = 0;
   fTDCtime = 0;
+  fTDCtimeTW = 0;
   fRow  = -1;
   fCol  = -1;
   fElemID  = -1;
@@ -111,6 +118,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster() {
   
   fNgoodTDChits = 0;
   fTDCtimeMean = 0.0;
+  fTDCtimeMeanTW = 0.0;
   fAtimeMean = 0.0;
   fEblk_GoodTDC = 0.0;
   fE_GoodTDC = 0.0;
@@ -140,8 +148,6 @@ void SBSCalorimeterCluster::AddElement(SBSElement* block) {
       fEblk = block->GetE();
       fAtime = block->GetAtime();
       fAgain = block->GetAgain();
-      //fTDCtime = block->GetTDCtime();
-      //if( block->HasTDCData() ) fTDCtime = block->GetTDCtime();
       fRow = block->GetRow();
       fCol = block->GetCol();
       fElemID = block->GetID();
@@ -149,9 +155,11 @@ void SBSCalorimeterCluster::AddElement(SBSElement* block) {
 
     if( block->HasTDCData() ){
       fTDCtimeMean = (fTDCtimeMean*fE_GoodTDC + block->GetTDCtime() * block->GetE())/(fE_GoodTDC + block->GetE());
+      fTDCtimeMeanTW = (fTDCtimeMeanTW*fE_GoodTDC + block->GetTDCtimeTW() * block->GetE())/(fE_GoodTDC + block->GetE());
       fE_GoodTDC += block->GetE();
       if( block->GetE() > fEblk_GoodTDC ){
 	fTDCtime = block->GetTDCtime();
+	fTDCtimeTW = block->GetTDCtimeTW();
 	fEblk_GoodTDC = block->GetE();
 	fRowGoodTDC = block->GetRow();
 	fColGoodTDC = block->GetCol();
@@ -178,12 +186,14 @@ void SBSCalorimeterCluster::Clear( Option_t* opt ) {
   fAgain=0.;
   fAtime=0;
   fTDCtime=0;
+  fTDCtimeTW=0;
   fRow=fCol=fElemID-1;
   fMaxElement = 0;
   fElements.clear();
   fNgoodTDChits = 0;
   fAtimeMean = 0.0;
   fTDCtimeMean = 0.0;
+  fTDCtimeMeanTW = 0.0;
   fEblk_GoodTDC = 0.0;
   fE_GoodTDC = 0.0;
   fRowGoodTDC=fColGoodTDC=fElemIDGoodTDC=-1;

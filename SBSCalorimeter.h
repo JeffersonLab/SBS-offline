@@ -29,6 +29,7 @@ struct SBSBlockSet {
   Int_t col;
   Int_t id;
   Double_t TDCTime;
+  Double_t TDCTimeTW;
   Double_t ADCTime;
   Bool_t InCluster;
   Bool_t GoodTDC; 
@@ -37,6 +38,7 @@ struct SBSBlockSet {
 struct SBSCalBlocks {
   std::vector<Double_t> e;   //< []
   std::vector<Double_t> TDCTime;   //< [] 
+  std::vector<Double_t> TDCTimeTW;   //< [] 
   std::vector<Double_t> ADCTime;   //< [] 
   std::vector<Int_t> row; //< []
   std::vector<Int_t> col; //< []
@@ -54,6 +56,7 @@ struct SBSCalBlocks {
     row.clear();
     col.clear();
     TDCTime.clear();
+    TDCTimeTW.clear();
     ADCTime.clear();
     GoodTDC.clear();
   }
@@ -64,6 +67,7 @@ struct SBSCalorimeterOutput {
   std::vector<Double_t> again;   //< []
   std::vector<Double_t> atime;   //< []
   std::vector<Double_t> tdctime;   //< []
+  std::vector<Double_t> tdctime_tw;   //< []
   //std::vector<Double_t> e_c;   //< []
   std::vector<Double_t> x;   //< []
   std::vector<Double_t> y;   //< []
@@ -77,6 +81,7 @@ struct SBSCalorimeterOutput {
   std::vector<Double_t> atime_mean;
   std::vector<Double_t> e_goodtdc;
   std::vector<Double_t> tdctime_mean;
+  std::vector<Double_t> tdctime_mean_tw;
   std::vector<Double_t> blk_e_goodtdc;
   std::vector<Int_t> ngoodtdc;
   std::vector<Int_t> rowgoodtdc;
@@ -99,11 +104,13 @@ public:
 
   virtual Int_t SelectBestCluster();
 
+  Double_t TimeWalk(Double_t time, Double_t eblk, Int_t ID);
   // Get information from the main cluster
   Double_t GetE();             //< Main cluster energy
   Double_t GetAgain();         //< Pedestal subtracted ADC integral (pC)
   Double_t GetAtime();         //< Main cluster ADC time of max block
-  Double_t GetTDCtime();         //< Main cluster ADC time of max block
+  Double_t GetTDCtime();         //< Main cluster TDC time of max block
+  Double_t GetTDCtimeTW();         //< Main cluster TW corr TDC time of max block
   /* Double_t GetECorrected();    //< Main cluster corrected energy */
   Double_t GetX();             //< Main cluster energy average x
   Double_t GetY();             //< Main cluster energy average y
@@ -112,6 +119,7 @@ public:
   Double_t GetAtimeMean();
   Double_t GetEGoodTDC();
   Double_t GetTDCtimeMean();
+  Double_t GetTDCtimeMeanTW();
   Double_t GetEBlkGoodTDC();
 
   /* Double_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster */
@@ -185,6 +193,11 @@ protected:
   Double_t   fSlope;     // slope for gain correction
   Double_t   fAccCharge; // accumulated charge
 
+  //walk corrections
+  std::vector<Double_t> fmeantime_offset; //hcal meantime offset
+  std::vector<Double_t> ftw0; //zeroth walk param (tw0*eblk)
+  std::vector<Double_t> ftw1; //1st walk param (tw1/sqrt(eblk))
+  
   // ROOTFile output level
   Int_t fDataOutputLevel;   //  0: default only main cluster info, 1: include also blocks in main cluster, 2: all clusters,  3: all blocks regardless if they are in a cluster or not
 
@@ -229,6 +242,10 @@ inline Double_t SBSCalorimeter::GetTDCtime() {
   return GetVVal(fMainclus.tdctime);
 }
 
+inline Double_t SBSCalorimeter::GetTDCtimeTW() {
+  return GetVVal(fMainclus.tdctime_tw);
+}
+
 /* inline Double_t SBSCalorimeter::GetECorrected() { */
 /*   return GetVVal(fMainclus.e_c); */
 /* } */
@@ -259,6 +276,9 @@ inline Double_t SBSCalorimeter::GetEGoodTDC() {
 
 inline Double_t SBSCalorimeter::GetTDCtimeMean() {
   return GetVVal(fMainclus.tdctime_mean);
+}
+inline Double_t SBSCalorimeter::GetTDCtimeMeanTW() {
+  return GetVVal(fMainclus.tdctime_mean_tw);
 }
 
 inline Double_t SBSCalorimeter::GetEBlkGoodTDC() {
