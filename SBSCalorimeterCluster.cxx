@@ -56,6 +56,7 @@ SBSCalorimeterCluster::SBSCalorimeterCluster(Int_t nmaxblk, SBSElement* block)
     fTDCtimeTW = block->GetTDCtimeTW();
     fTDCtimeMean = block->GetTDCtime();
     fTDCtimeMeanTW = block->GetTDCtimeTW();
+    fEblk_GoodTDC = block->GetE();
     fE_GoodTDC = block->GetE();
     fRowGoodTDC = block->GetRow();
     fColGoodTDC = block->GetCol();
