@@ -29,6 +29,7 @@ public:
   Double_t GetAgain()     const { return fAgain; }
   Double_t GetAtime()     const { return fAtime; }
   Double_t GetTDCtime()     const { return fTDCtime; }
+  Double_t GetTDCtimeTW()     const { return fTDCtimeTW; }
   Int_t   GetRow()   const { return fRow; }
   Int_t   GetCol()   const { return fCol; }
   Int_t   GetLayer() const { return fLayer; }
@@ -48,6 +49,7 @@ public:
   void SetAgain(Double_t var)    { fAgain = var; }
   void SetAtime(Double_t var)    { fAtime = var; }
   void SetTDCtime(Double_t var)    { fTDCtime = var; }
+  void SetTDCtimeTW(Double_t var)    { fTDCtimeTW = var; }
   void SetRow(Int_t var)    { fRow = var; }
   void SetCol(Int_t var)    { fCol = var; }
   void SetLayer(Int_t var)  { fLayer = var; }
@@ -82,6 +84,7 @@ protected:
   Double_t fAgain;   ///< ADC gain coefficient (GeV/pC)
   Double_t fAtime;       ///< ADC time of event in this block
   Double_t fTDCtime;       ///< TDC time of event in this block
+  Double_t fTDCtimeTW;       ///< TDC time of event in this block
 
   Int_t   fRow;     ///< Row of the block
   Int_t   fCol;     ///< Column of the block
