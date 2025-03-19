@@ -103,6 +103,9 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
     { "slope", &fSlope, kDouble, 0, true }, ///< slope for gain correction 
     { "Rmax_dis", &fRmax_dis, kDouble, 0, true }, ///< slope for gain correction 
     { "acc_charge", &fAccCharge, kDouble, 0, true }, ///< accumulated charge
+    { "meantime_offset", &fmeantime_offset, kDoubleV, 0, true}, //< 
+    { "tw0", &ftw0, kDoubleV, 0, true}, //< 
+    { "tw1", &ftw1, kDoubleV, 0, true},
     { 0 } ///< Request must end in a NULL
   };
   err = LoadDB( file, date, config_request, fPrefix );
@@ -128,6 +131,23 @@ Int_t SBSCalorimeter::ReadDatabase( const TDatime& date )
   fNclubc = TMath::Min( cluster_dim[1], fNcols[0] );
   fNclublk = fNclubr*fNclubc;
 
+  //new walk/offset calibration variables
+  if(fmeantime_offset.size() != (UInt_t)fNelem){
+    std::cout << " fmeantime_offset vector too small " << fmeantime_offset.size() << " # of channels=" << fNelem << std::endl;
+    fmeantime_offset.resize((UInt_t)fNelem);
+    std::fill(fmeantime_offset.begin(), fmeantime_offset.end(), 0); // ns;
+  }
+  if(ftw0.size() != (UInt_t)fNelem){
+    std::cout << " ftw0 vector too small " << ftw0.size() << " # of channels=" << fNelem << std::endl;
+    ftw0.resize((UInt_t)fNelem);
+    std::fill(ftw0.begin(), ftw0.end(), 0); // ns;
+  }
+  if(ftw1.size() != (UInt_t)fNelem){
+    std::cout << " ftw1 vector too small " << ftw1.size() << " # of channels=" << fNelem << std::endl;
+    ftw1.resize((UInt_t)fNelem);
+    std::fill(ftw1.begin(), ftw1.end(), 0); // ns;
+  }
+  
   //
   std::vector<Double_t> xpos,ypos;
   std::vector<Double_t> trigtoFADCratio;
@@ -205,6 +225,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     { "againblk",    "ADC gain coeff. of highest energy block in the largest cluster",  "GetAgain()" },
     { "atimeblk", "ADC time of highest energy block in the largest cluster", "GetAtime()" },
     { "tdctimeblk", "TDC time of highest energy block in the largest cluster", "GetTDCtime()" },
+    { "tdctimeblk_tw", "Walk corrected TDC time of highest energy block in the largest cluster", "GetTDCtimeTW()" },
     { "eblk",   "Energy (MeV) of highest energy block in the largest cluster",    "GetEBlk()" },
     //{ "eblk_c", "Corrected Energy (MeV) of highest energy block in the largest cluster",    "GetEBlkCorrected()" },
     { "rowblk", "Row of block with highest energy in the largest cluster",    "GetRow()" },
@@ -215,6 +236,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     { "idblk",  "Logic number of block with highest energy in cluster",    "GetBlkID()" },
     { "index", "Index of best cluster in the array of all clusters", "fBestClusterIndex" },
     { "tdctime", "Energy-weighted mean TDC time, main cluster", "GetTDCtimeMean()" },
+    { "tdctime_tw", "Walk corr, Energy-weighted mean TDC time, main cluster", "GetTDCtimeMeanTW()" },
     { "adctime", "Energy-weighted mean ADC time, main cluster", "GetAtimeMean()" },
     { "e_goodtdc", "Energy sum in blocks with good TDC, main cluster", "GetEGoodTDC()" },
     { "eblk_goodtdc", "Energy in highest-energy block with good TDC, main cluster", "GetEBlkGoodTDC()" },
@@ -232,7 +254,8 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
     { "goodblock.e", "Energy of good blocks", "fGoodBlocks.e"},
     //     { "goodblock.tdc", "TDC time of good blocks", "fGoodBlocks.TDCTime"},
     { "goodblock.atime", "Energy of good blocks", "fGoodBlocks.ADCTime"},
-    { "goodblock.tdctime", "Energy of good blocks", "fGoodBlocks.TDCTime"},
+    { "goodblock.tdctime", "TDC time of good blocks", "fGoodBlocks.TDCTime"},
+    { "goodblock.tdctime_tw", "Walk corrected TDC time of good blocks", "fGoodBlocks.TDCTimeTW"},
     { "goodblock.row", "Row of good blocks", "fGoodBlocks.row"},
     { "goodblock.col", "Col of good blocks", "fGoodBlocks.col"},
     { "goodblock.x", "x pos (m) of good blocks", "fGoodBlocks.x"},
@@ -258,6 +281,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       { "clus_blk.row","block row in main cluster",    "fMainclusblk.row" },
       { "clus_blk.atime","block ADC time in main cluster",    "fMainclusblk.atime" },
       { "clus_blk.tdctime","block TDC time in main cluster",    "fMainclusblk.tdctime" },
+      { "clus_blk.tdctime_tw","walk corrected block TDC time in main cluster", "fMainclusblk.tdctime_tw" },
       { "clus_blk.col","block col in main cluster",    "fMainclusblk.col" },
       { "clus_blk.id","block number in main cluster",    "fMainclusblk.id" },
       { 0 }
@@ -273,6 +297,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       { "clus.e", "Energy of cluster", "fOutclus.e"},
       { "clus.atimeblk", "ADC time of highest energy blk in the cluster", "fOutclus.atime"},
       { "clus.tdctimeblk", "TDC time of highest energy blk in the cluster", "fOutclus.tdctime"},
+      { "clus.tdctimeblk_tw", "Walk corrected TDC time of highest energy blk in the cluster", "fOutclus.tdctime_tw"},
       //{ "clus.e_c","Energy calibrated of cluster", "fOutclus.e_c"},
       { "clus.again","ADC gain coeff. of cluster", "fOutclus.again"},
       { "clus.x", "x-position of cluster", "fOutclus.x"},
@@ -284,6 +309,7 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       { "clus.eblk", "Energy of block with highest energy in cluster", "fOutclus.blk_e"},
       { "clus.adctime", "Energy-weighted mean ADC time", "fOutclus.atime_mean" },
       { "clus.tdctime", "Energy-weighted mean TDC time", "fOutclus.tdctime_mean" },
+      { "clus.tdctime_tw", "Energy-weighted mean walk corrected TDC time", "fOutclus.tdctime_mean_tw" },
       { "clus.e_goodtdc", "sum of energy in blocks with good TDC", "fOutclus.e_goodtdc" },
       { "clus.eblk_goodtdc", "highest single-block energy with good TDC in cluster", "fOutclus.blk_e_goodtdc" },
       { "clus.nblk_goodtdc", "number of blocks with good tdc in cluster", "fOutclus.ngoodtdc" },
@@ -298,6 +324,25 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
       return err;
   }
   return err;
+}
+
+Double_t SBSCalorimeter::TimeWalk(Double_t time, Double_t eblk, Int_t ID){
+
+  //this logic probably won't matter since bbcal calorimeters are not
+  //read out by TDCs anyway
+  //but might be necessary in some form in the future.
+  int ipar;
+  if(strcmp(GetName(), "hcal")){
+    //strcmp returns false if strcmp matches GetName with "hcal"
+    //this means we are in a calorimetmer where the indicing starts
+    //at zero.
+    ipar=ID;
+  }else{
+    //else minus 1 since hcal numbering starts at 1 instead of 0.
+    ipar=ID-1;
+  }
+  Double_t tcorr = time - fmeantime_offset[ipar] - ftw0[ipar]*eblk - ftw1[ipar]/sqrt(eblk);
+  return tcorr;
 }
 
 //_____________________________________________________________________________
@@ -358,12 +403,16 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	if (WithTDC() && blk->TDC()->HasData() ) { 
 	  const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
 	  fGoodBlocks.TDCTime.push_back(hit.le.val);
+	  fGoodBlocks.TDCTimeTW.push_back(TimeWalk(hit.le.val,fGoodBlocks.e.back(),fGoodBlocks.id.back()));
 	  fGoodBlocks.GoodTDC.push_back( true );
 	  blk->SetTDCtime(hit.le.val); //Is this line necessary? 
+	  blk->SetTDCtimeTW(TimeWalk(hit.le.val,fGoodBlocks.e.back(),fGoodBlocks.id.back())); //this line IS necessary since the walk corrected times arent inherintely done in SBSElement
 	} else {
 	  fGoodBlocks.GoodTDC.push_back( false );
 	  fGoodBlocks.TDCTime.push_back(-1000.);
+	  fGoodBlocks.TDCTimeTW.push_back(-1000.);
 	  blk->SetTDCtime(-1000.);
+	  blk->SetTDCtimeTW(-1000.);
 	}
 	//	 std::cout << blk->GetID() << " set tdc time = " << blk->GetTDCtime() << " set adc time = " << blk->GetAtime() << std::endl;
       }
@@ -557,7 +606,9 @@ Int_t SBSCalorimeter::FindClusters()
     //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
     fMainclus.again.push_back(clus->GetAgain());
     fMainclus.atime.push_back(clus->GetAtime());
+
     fMainclus.tdctime.push_back(clus->GetTDCtime());
+    fMainclus.tdctime_tw.push_back(clus->GetTDCtimeTW());
     fMainclus.x.push_back(clus->GetX());
     fMainclus.y.push_back(clus->GetY());
     fMainclus.n.push_back(clus->GetMult());
@@ -570,6 +621,7 @@ Int_t SBSCalorimeter::FindClusters()
     fMainclus.atime_mean.push_back(clus->GetAtimeMean());
     fMainclus.e_goodtdc.push_back(clus->GetE_GoodTDC());
     fMainclus.tdctime_mean.push_back(clus->GetTDCtimeMean());
+    fMainclus.tdctime_mean_tw.push_back(clus->GetTDCtimeMeanTW());
     fMainclus.blk_e_goodtdc.push_back(clus->GetEblk_GoodTDC());
     fMainclus.ngoodtdc.push_back(clus->GetNgoodTDChits());
     fMainclus.rowgoodtdc.push_back(clus->GetRowGoodTDC());
@@ -600,12 +652,14 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     if(fDataOutputLevel > 0 ) {
       for(Int_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
+	
         fMainclusblk.e.push_back(blk->GetE());
         //fMainclusblk.e_c.push_back(blk->GetE()*(fConst + fSlope*fAccCharge));
 	fMainclusblk.again.push_back(blk->GetAgain());
         fMainclusblk.atime.push_back(blk->GetAtime());        
-        fMainclusblk.tdctime.push_back(blk->GetTDCtime());        
-        fMainclusblk.x.push_back(blk->GetX());
+        fMainclusblk.tdctime.push_back(blk->GetTDCtime());
+	fMainclusblk.tdctime_tw.push_back(blk->GetTDCtimeTW());
+	fMainclusblk.x.push_back(blk->GetX());
         fMainclusblk.y.push_back(blk->GetY());
         fMainclusblk.row.push_back(blk->GetRow());
         fMainclusblk.col.push_back(blk->GetCol());
@@ -623,6 +677,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     fOutclus.again.reserve(nres);
     fOutclus.atime.reserve(nres);
     fOutclus.tdctime.reserve(nres);
+    fOutclus.tdctime_tw.reserve(nres);
     fOutclus.x.reserve(nres);
     fOutclus.y.reserve(nres);
     fOutclus.n.reserve(nres);
@@ -635,6 +690,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     fOutclus.atime_mean.reserve(nres);
     fOutclus.e_goodtdc.reserve(nres);
     fOutclus.tdctime_mean.reserve(nres);
+    fOutclus.tdctime_mean_tw.reserve(nres);
     fOutclus.blk_e_goodtdc.reserve(nres);
     fOutclus.ngoodtdc.reserve(nres);
     fOutclus.rowgoodtdc.reserve(nres);
@@ -649,6 +705,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
         fOutclus.again.push_back(cluster->GetAgain());
         fOutclus.atime.push_back(cluster->GetAtime());
         fOutclus.tdctime.push_back(cluster->GetTDCtime());
+        fOutclus.tdctime_tw.push_back(cluster->GetTDCtimeTW());
         fOutclus.x.push_back(cluster->GetX());
         fOutclus.y.push_back(cluster->GetY());
         fOutclus.n.push_back(cluster->GetMult());
@@ -661,6 +718,7 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
 	fOutclus.atime_mean.push_back(cluster->GetAtimeMean());
 	fOutclus.e_goodtdc.push_back(cluster->GetE_GoodTDC());
 	fOutclus.tdctime_mean.push_back(cluster->GetTDCtimeMean());
+	fOutclus.tdctime_mean_tw.push_back(cluster->GetTDCtimeMeanTW());
 	fOutclus.blk_e_goodtdc.push_back(cluster->GetEblk_GoodTDC());
 	fOutclus.ngoodtdc.push_back(cluster->GetNgoodTDChits());
 	fOutclus.rowgoodtdc.push_back(cluster->GetRowGoodTDC());
@@ -694,6 +752,7 @@ void SBSCalorimeter::ClearCaloOutput(SBSCalorimeterOutput &out)
   out.again.clear();
   out.atime.clear();
   out.tdctime.clear();
+  out.tdctime_tw.clear();
   out.x.clear();
   out.y.clear();
   out.row.clear();
@@ -706,6 +765,7 @@ void SBSCalorimeter::ClearCaloOutput(SBSCalorimeterOutput &out)
   out.atime_mean.clear();
   out.e_goodtdc.clear();
   out.tdctime_mean.clear();
+  out.tdctime_mean_tw.clear();
   out.blk_e_goodtdc.clear();
   out.ngoodtdc.clear();
   out.rowgoodtdc.clear();

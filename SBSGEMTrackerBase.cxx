@@ -321,6 +321,14 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitTSchi2MaxVstrip.clear();
   fHitTSprobMaxUstrip.clear();
   fHitTSprobMaxVstrip.clear();
+
+  fHitCrate_U.clear();
+  fHitMPD_U.clear();
+  fHitADCID_U.clear();
+
+  fHitCrate_V.clear();
+  fHitMPD_V.clear();
+  fHitADCID_V.clear();
   
   fclustering_done = false;
   ftracking_done = false;
@@ -2384,6 +2392,13 @@ void SBSGEMTrackerBase::fill_good_hit_arrays() { //this gets called at the end o
       fHitVstripLo.push_back( vclustinfo->istriplo );
       fHitVstripHi.push_back( vclustinfo->istriphi );
 
+      fHitCrate_U.push_back( fModules[module]->fStripCrate[hitidx_umax] );
+      fHitCrate_V.push_back( fModules[module]->fStripCrate[hitidx_vmax] );
+      fHitMPD_U.push_back( fModules[module]->fStripMPD[hitidx_umax] );
+      fHitMPD_V.push_back( fModules[module]->fStripMPD[hitidx_vmax] );
+      fHitADCID_U.push_back( fModules[module]->fStripADC_ID[hitidx_umax] );
+      fHitADCID_V.push_back( fModules[module]->fStripADC_ID[hitidx_vmax] );
+      
       fHitTSchi2MaxUstrip.push_back( fModules[module]->fStripTSchi2[hitidx_umax] );
       fHitTSchi2MaxVstrip.push_back( fModules[module]->fStripTSchi2[hitidx_vmax] );
       fHitTSprobMaxUstrip.push_back( fModules[module]->fStripTSprob[hitidx_umax] );

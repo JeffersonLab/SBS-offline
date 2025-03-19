@@ -36,6 +36,8 @@ public:
   //virtual Int_t   Begin( THaRunBase* r=0 );
   //virtual Int_t   End( THaRunBase* r=0 );
 
+  Double_t GetETOF_avg() const { return fETOF_avg; }
+  
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
   virtual Int_t ReadRunDatabase( const TDatime& date );

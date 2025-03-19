@@ -70,7 +70,7 @@ THaSpectrometer( name, description )
   // fBackConstraintY0 = 0.0;
   fGEMorigin.SetXYZ(0,0,0);
 
-  fGEM_Rtotal = TRotation();
+  //  fGEM_Rtotal = TRotation();
   
   fMagDist = 2.25; //This is a required parameter from ReadRunDatabase
   fHCALdist = 17.0; //default 17 m (GEN setting). But mandatory in readrundb
@@ -82,8 +82,8 @@ THaSpectrometer( name, description )
   fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 1.855 );
   InitOpticsAxes( fOpticsAngle );
 
-  fGEMtheta = fOpticsAngle;
-  fGEMphi   = 0.0*TMath::DegToRad();
+  //  fGEMtheta = fOpticsAngle;
+  //fGEMphi   = 0.0*TMath::DegToRad();
   fGEMorigin = fOpticsOrigin; 
 
   //  InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
@@ -92,6 +92,9 @@ THaSpectrometer( name, description )
   fGEMay = 0.0;
   fGEMaz = 0.0;
 
+  //  fGEM_Rpos = TRotation();
+  //  fGEM_Rdir = TRotation();
+  
   InitGEMAxes( fGEMax, fGEMay, fGEMaz );
   
   fPrecon_flag = 0;
@@ -189,8 +192,8 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
   std::vector<Double_t> optics_origin;
   std::vector<Double_t> optics_param;
   
-  double gemthetadeg = fGEMtheta * TMath::RadToDeg();
-  double gemphideg   = fGEMphi * TMath::RadToDeg();
+  //  double gemthetadeg = fGEMtheta * TMath::RadToDeg();
+  // double gemphideg   = fGEMphi * TMath::RadToDeg();
   double opticsthetadeg = fOpticsAngle * TMath::RadToDeg();
 
   int polarimetermode = fPolarimeterMode ? 1 : 0;
@@ -207,8 +210,6 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "backconstraint_y0", &fBackConstraintY0, kDoubleV, 0, 1, 0},
     { "gemorigin_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
     { "gemangles_xyz",  &gem_angles, kDoubleV, 0, 1, 1},
-    { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
-    { "gemphi", &gemphideg, kDouble, 0, 1, 1},
     { "opticstheta", &opticsthetadeg, kDouble, 0, 1, 1},
     { "optics_origin", &optics_origin, kDoubleV, 0, 1, 1},
     { "optics_order",    &fOpticsOrder, kInt,  0, 1, 1},
@@ -254,8 +255,8 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
 
   InitOpticsAxes( fOpticsAngle );
 
-  fGEMtheta = gemthetadeg * TMath::DegToRad();
-  fGEMphi = gemphideg * TMath::DegToRad();
+  // fGEMtheta = gemthetadeg * TMath::DegToRad();
+  // fGEMphi = gemphideg * TMath::DegToRad();
   
   if( firstgem_offset.size() == 3 ){
     fGEMorigin.SetXYZ( firstgem_offset[0],
@@ -263,7 +264,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
 		       firstgem_offset[2] );
   }
 
-  InitGEMAxes( fGEMtheta, fGEMphi );
+  //  InitGEMAxes( fGEMtheta, fGEMphi );
 
   //If GEM x,y,z angles are given, override the version based on theta, phi:
   if( gem_angles.size() == 3 ){
@@ -437,10 +438,10 @@ void SBSEArm::CalcOpticsCoords( THaTrack* track )
 
   // TrackDirLocal_GEM.Print();
 
-  //TVector3 TrackDirGlobal_GEM = TrackDirLocal_GEM.X() * fGEMxaxis_global + TrackDirLocal_GEM.Y() * fGEMyaxis_global + TrackDirLocal_GEM.Z() * fGEMzaxis_global;
-  //TrackDirGlobal_GEM = TrackDirGlobal_GEM.Unit(); //Likely unnecessary, but safer (I guess)
+  TVector3 TrackDirGlobal_GEM = TrackDirLocal_GEM.X() * fGEMxaxis_global + TrackDirLocal_GEM.Y() * fGEMyaxis_global + TrackDirLocal_GEM.Z() * fGEMzaxis_global;
+  TrackDirGlobal_GEM = TrackDirGlobal_GEM.Unit(); //Likely unnecessary, but safer (I guess)
 
-  TVector3 TrackDirGlobal_GEM = fGEM_Rinverse * TrackDirLocal_GEM;
+  //  TVector3 TrackDirGlobal_GEM = fGEM_Rdir * TrackDirLocal_GEM;
 
   //fGEM_Rinverse.Print();
 
@@ -1113,32 +1114,33 @@ void SBSEArm::InitOpticsAxes(double BendAngle ){
   fOpticsXaxis_global.SetXYZ(cos(BendAngle), 0, sin(BendAngle) );
 }
 
-void SBSEArm::InitGEMAxes( double theta, double phi, const TVector3 &Origin ){
-  fGEMorigin = Origin;
-  fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
-  fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
-  fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
+// Commenting obsolete methods for initializing GEM coordinate transformations:
+// void SBSEArm::InitGEMAxes( double theta, double phi, const TVector3 &Origin ){
+//   fGEMorigin = Origin;
+//   fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
+//   fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
+//   fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
 
-  //For the total rotation, consistent with the alignment formalism, the total rotation has the x,y,z axes as the COLUMNS:
-  fGEM_Rtotal.SetXAxis( fGEMxaxis_global );
-  fGEM_Rtotal.SetYAxis( fGEMyaxis_global );
-  fGEM_Rtotal.SetZAxis( fGEMzaxis_global );
+//   //For the total rotation, consistent with the alignment formalism, the total rotation has the x,y,z axes as the COLUMNS:
+//   fGEM_Rpos.SetXAxis( fGEMxaxis_global );
+//   fGEM_Rpos.SetYAxis( fGEMyaxis_global );
+//   fGEM_Rpos.SetZAxis( fGEMzaxis_global );
 
-  fGEM_Rinverse = fGEM_Rtotal.Inverse();
-}
+//   //fGEM_Rinverse = fGEM_Rtotal.Inverse();
+// }
 
-void SBSEArm::InitGEMAxes( double theta, double phi ){
-  //fGEMorigin = Origin;
-  fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
-  fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
-  fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
+// void SBSEArm::InitGEMAxes( double theta, double phi ){
+//   //fGEMorigin = Origin;
+//   fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
+//   fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
+//   fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
 
-  fGEM_Rtotal.SetXAxis( fGEMxaxis_global );
-  fGEM_Rtotal.SetYAxis( fGEMyaxis_global );
-  fGEM_Rtotal.SetZAxis( fGEMzaxis_global );
+//   fGEM_Rtotal.SetXAxis( fGEMxaxis_global );
+//   fGEM_Rtotal.SetYAxis( fGEMyaxis_global );
+//   fGEM_Rtotal.SetZAxis( fGEMzaxis_global );
 
-  fGEM_Rinverse = fGEM_Rtotal.Inverse();
-}
+//   fGEM_Rinverse = fGEM_Rtotal.Inverse();
+// }
 
 void SBSEArm::CheckConstraintOffsetsAndWidths(){
   //Initialize these with sensible defaults in case the user hasn't defined something sensible:
@@ -1194,61 +1196,48 @@ void SBSEArm::SetPolarimeterMode( Bool_t ispol ){
 void SBSEArm::InitGEMAxes( double ax, double ay, double az, const TVector3 &Origin ){
   fGEMorigin = Origin;
 
-  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
-  TRotation Rtot;
-  Rtot.RotateZ(az);
-  Rtot.RotateX(ax);
-  Rtot.RotateY(ay);
-
-  fGEM_Rtotal = Rtot;
-
-  fGEM_Rinverse = Rtot.Inverse();
-
-  std::cout << "| Rinv_xx, Rinv_xy, Rinv_xz | = | "
-	    << fGEM_Rinverse.XX() << ", " << fGEM_Rinverse.XY() << ", " << fGEM_Rinverse.XZ() << " |" << endl
-	    << "| Rinv_yx, Rinv_yy, Rinv_yz | = | "
-	    << fGEM_Rinverse.YX() << ", " << fGEM_Rinverse.YY() << ", " << fGEM_Rinverse.YZ() << " |" << endl
-	    << "| Rinv_zx, Rinv_zy, Rinv_zz | = | "
-	    << fGEM_Rinverse.ZX() << ", " << fGEM_Rinverse.ZY() << ", " << fGEM_Rinverse.ZZ() << " |" << std::endl;
-  
-  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
-  fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
-  fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
-
-  std::cout << GetName() << ": GEM global X axis: ";
-  fGEMxaxis_global.Print();
-
-  std::cout << GetName() << ": GEM global Y axis: ";
-  fGEMyaxis_global.Print();
-
-  std::cout << GetName() << ": GEM global Z axis: ";
-  fGEMzaxis_global.Print();
-  
+  InitGEMAxes(ax,ay,az);
   
 }
 
 void SBSEArm::InitGEMAxes( double ax, double ay, double az ){
 
-  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
-  TRotation Rtot;
-  Rtot.RotateZ(az);
-  Rtot.RotateX(ax);
-  Rtot.RotateY(ay);
+  //version with three arguments only initializes rotation matrices:
+  fGEMax = ax;
+  fGEMay = ay;
+  fGEMaz = az;
 
-  fGEM_Rtotal = Rtot;
+  TRotation R; 
 
-  fGEM_Rinverse = Rtot.Inverse();
-
-  std::cout << "| Rinv_xx, Rinv_xy, Rinv_xz | = | "
-	    << fGEM_Rinverse.XX() << ", " << fGEM_Rinverse.XY() << ", " << fGEM_Rinverse.XZ() << " |" << endl
-	    << "| Rinv_yx, Rinv_yy, Rinv_yz | = | "
-	    << fGEM_Rinverse.YX() << ", " << fGEM_Rinverse.YY() << ", " << fGEM_Rinverse.YZ() << " |" << endl
-	    << "| Rinv_zx, Rinv_zy, Rinv_zz | = | "
-	    << fGEM_Rinverse.ZX() << ", " << fGEM_Rinverse.ZY() << ", " << fGEM_Rinverse.ZZ() << " |" << std::endl;
+  R.RotateX(ax);
+  R.RotateY(ay);
+  R.RotateZ(az);
   
-  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
-  fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
-  fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
+  //  fGEM_Rpos = TRotation();
+  //  fGEM_Rdir = TRotation();
+  
+  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
+  //fGEM_Rpos.RotateZ(az);
+  //fGEM_Rpos.RotateX(ax);
+  //fGEM_Rpos.RotateY(ay);
+
+  //z-axis rotation for track track direction is opposite the z axis rotation for the track position (active vs passive? Still don't fully "grok" this result):
+  //fGEM_Rdir.RotateZ(-az);
+  //fGEM_Rdir.RotateX(ax);
+  //fGEM_Rdir.RotateY(ay);
+  
+  // std::cout << "| Rdir_xx, Rdir_xy, Rdir_xz | = | "
+  // 	    << fGEM_Rdir.XX() << ", " << fGEM_Rdir.XY() << ", " << fGEM_Rdir.XZ() << " |" << endl
+  // 	    << "| Rdir_yx, Rdir_yy, Rdir_yz | = | "
+  // 	    << fGEM_Rdir.YX() << ", " << fGEM_Rdir.YY() << ", " << fGEM_Rdir.YZ() << " |" << endl
+  // 	    << "| Rdir_zx, Rdir_zy, Rdir_zz | = | "
+  // 	    << fGEM_Rdir.ZX() << ", " << fGEM_Rdir.ZY() << ", " << fGEM_Rdir.ZZ() << " |" << std::endl;
+
+  //GEM axes are the columns of the rotation matrix:
+  
+  fGEMxaxis_global.SetXYZ( R.XX(), R.YX(), R.ZX() );
+  fGEMyaxis_global.SetXYZ( R.XY(), R.YY(), R.ZY() );
+  fGEMzaxis_global.SetXYZ( R.XZ(), R.YZ(), R.ZZ() );
 
   std::cout << GetName() << ": GEM global X axis: ";
   fGEMxaxis_global.Print();
@@ -1258,6 +1247,7 @@ void SBSEArm::InitGEMAxes( double ax, double ay, double az ){
 
   std::cout << GetName() << ": GEM global Z axis: ";
   fGEMzaxis_global.Print();
+
 }
 
 //_____________________________________________________________________________

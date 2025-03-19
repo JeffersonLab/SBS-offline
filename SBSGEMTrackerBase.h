@@ -521,7 +521,14 @@ protected:
   std::vector<double> fHitTSchi2MaxVstrip;
   std::vector<double> fHitTSprobMaxUstrip;
   std::vector<double> fHitTSprobMaxVstrip;
-  
+
+  std::vector<double> fHitCrate_U; //Crate/ROC number of max U strip
+  std::vector<double> fHitMPD_U; // MPD/fiber number of max U strip
+  std::vector<double> fHitADCID_U; // ADC channel number of APV containing max U strip;
+
+  std::vector<double> fHitCrate_V; //Crate/ROC number of max U strip
+  std::vector<double> fHitMPD_V; // MPD/fiber number of max U strip
+  std::vector<double> fHitADCID_V; // ADC channel number of APV containing max U strip;
   
   //And I THINK that's all we need to get started!
   std::vector<UInt_t> fHitU_ENABLE_CM; //this is set based on the value for the MAX strip. Except for clusters at the border straddling APV card edges, it should be the same for all strips in a cluster:
