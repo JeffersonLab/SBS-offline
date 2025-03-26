@@ -15,6 +15,7 @@
 #pragma link C++ class Decoder::MPDModule+;
 #pragma link C++ class Decoder::VETROCModule+;
 #pragma link C++ class Decoder::MPDModuleVMEv4+;
+#pragma link C++ class Decoder::VTPModule+;
 #pragma link C++ class SBSBigBite+;
 #pragma link C++ class SBSGEMSpectrometerTracker+;
 #pragma link C++ class SBSGEMPolarimeterTracker+;
@@ -83,4 +84,5 @@
 #pragma link C++ class SBSScalerEvtHandler+; 
 #pragma link C++ class SBSScalerHelicity+;  
 #pragma link C++ class SBSScalerHelicityReader+;  
+#pragma link C++ class SBSVTP+;
 #endif
