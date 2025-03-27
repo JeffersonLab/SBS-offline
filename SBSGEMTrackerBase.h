@@ -28,6 +28,8 @@ class SBSGEMTrackerBase {
 public:
   void Clear(); //clear out all the event-specific data structures
 
+  void ClearConstraints(); //clear out constraint point arrays and reset the "initialized" flags
+  
   void SetFrontConstraintPoint( TVector3 fcp );
   void SetBackConstraintPoint( TVector3 bcp );
   void SetFrontConstraintWidth( TVector2 fcw );
@@ -88,6 +90,12 @@ public:
   double GetYTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fYtrack[itrack] : 1.e20; };
   double GetXpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXptrack[itrack] : 1.e20; };
   double GetYpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fYptrack[itrack] : 1.e20; };
+
+  //How to check whether the use of multiple constraint points is enabled
+  bool MultiTracksEnabled() const { return fMultiTrackSearch; };
+
+  double GetZminLayer() const { return fZminLayer; };
+  double GetZmaxLayer() const { return fZmaxLayer; };
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -214,6 +222,7 @@ protected:
   std::map<int, std::vector<std::vector<int> > > fLayerCombinations; //key = minimum hit requirement to form a track. Mapped value = 2D array of layer combinations at a given minimum hit requirement, with outer index a dummy index for looping over combinations, and the inner index the list of layers in each combo
 
   std::map<int, double> fZavgLayer; //Average z position of the modules in a logical tracking layer. This IS used when projecting candidate tracks to each layer
+  double fZminLayer, fZmaxLayer; //Might as well carry these around
   // to decide which grid bins to search for hits.
   // But NOTE: the z positions of individual modules are not, in general, identical to the average z position of the layer. If too fine a grid is used and the
   // variations of module z positions within a layer are too big, the "grid search" track-finding algorithm may not work too well!

@@ -32,6 +32,7 @@ THaSpectrometer( name, description )
   //fDetectorStackYaw = 0;
   //fDetectorStackRoll = 0;
   fOpticsOrder = -1;
+  fOpticsNterms = -1;
   fFrontConstraintWidthX = 1.5;
   fFrontConstraintWidthY = 1.5;
   fBackConstraintWidthX = 1.5;
@@ -126,7 +127,11 @@ THaSpectrometer( name, description )
     
   fUseForwardOptics = false;
   fForwardOpticsOrder = -1;
+  fForwardOpticsNterms = -1;
 
+  fOpticsOrderDownbend = -1;
+  fOpticsNtermsDownbend = -1;
+  
   fETOF_avg = (fMagDist + 3.0)/3.0e8*1.e9;
 
 }
@@ -354,7 +359,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
       }
     }
     cout << nterms << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
-        
+
+    fOpticsNterms = nterms;
+    
     //int n_elem = TMath::FloorNint(optics_param.size()/nparam);
         
     //we expect 9 parameters per line: four coefficients plus five exponents:
@@ -421,6 +428,7 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 	}
       }
     }
+    
     cout << nterms << " lines of parameters expected for TOF of order " << fETOF_order << endl;
     unsigned int nparams = 6 * nterms;
 
@@ -464,7 +472,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
       }
     }
     cout << nterms << " lines of parameters expected for optics of order " << fForwardOpticsOrder << endl;
-        
+
+    fForwardOpticsNterms = nterms;
+    
     unsigned int nparams = 9*nterms;
     if(nparams!=foptics_param.size()){
       std::cerr << "Warning: mismatch between " << foptics_param.size()
@@ -515,6 +525,9 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 	  }
 	}
       }
+
+      fOpticsNtermsDownbend = nterms;
+      
       cout << nterms << " lines of parameters expected for optics of order " << fOpticsOrderDownbend << endl;
             
       unsigned int nparams = 9*nterms;
@@ -1344,33 +1357,42 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
     yptar_fit = 0.0;
     ytar_fit = 0.0;
     pthetabend_fit = 0.0;
-    for(int i=0; i<=fOpticsOrder; i++){
-      for(int j=0; j<=fOpticsOrder-i; j++){
-	for(int k=0; k<=fOpticsOrder-i-j; k++){
-	  for(int l=0; l<=fOpticsOrder-i-j-k; l++){
-	    for(int m=0; m<=fOpticsOrder-i-j-k-l; m++){
-	      double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
-	      
-	      if( !fDownBendingMode ){
-		xptar_fit += fb_xptar[ipar]*term;
-		yptar_fit += fb_yptar[ipar]*term;
-		ytar_fit += fb_ytar[ipar]*term;
-		pthetabend_fit += fb_pinv[ipar]*term;
-	      } else {
-		xptar_fit += fb_xptar_downbend[ipar]*term;
-		yptar_fit += fb_yptar_downbend[ipar]*term;
-		ytar_fit += fb_ytar_downbend[ipar]*term;
-		pthetabend_fit += fb_pinv_downbend[ipar]*term;
-	      }
-
-	      //pinv_fit += b_pinv(ipar)*term;
-	      // cout << ipar << " " << term << " "
-	      //      << b_xptar(ipar) << " " << b_yptar(ipar) << " "
-	      //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
-	      ipar++;
-	    }
-	  }
-	}
+    // rewrite to actually use the exponents loaded from the database, in case
+    // they are provided in a non-standard order:
+    int nterms = fOpticsNterms;
+    if( fDownBendingMode ) nterms = fOpticsNtermsDownbend;
+    for(int iterm=0; iterm<nterms; iterm++ ){
+      int i = f_oi[iterm],
+	j = f_oj[iterm],
+	k = f_ok[iterm],
+	l = f_ol[iterm],
+	m = f_om[iterm];
+      
+      if( fDownBendingMode ){
+	i = f_oi_downbend[iterm];
+	j = f_oj_downbend[iterm];
+	k = f_ok_downbend[iterm];
+	l = f_ol_downbend[iterm];
+	m = f_om_downbend[iterm];
+      }
+      
+      double term = pow(x_fp, m) *
+	pow(y_fp, l) *
+	pow(xp_fp, k) *
+	pow(yp_fp, j) *
+	pow(xtar, i);
+      //	      double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
+      
+      if( !fDownBendingMode ){
+	xptar_fit += fb_xptar[iterm]*term;
+	yptar_fit += fb_yptar[iterm]*term;
+	ytar_fit += fb_ytar[iterm]*term;
+	pthetabend_fit += fb_pinv[iterm]*term;
+      } else {
+	xptar_fit += fb_xptar_downbend[iterm]*term;
+	yptar_fit += fb_yptar_downbend[iterm]*term;
+	ytar_fit += fb_ytar_downbend[iterm]*term;
+	pthetabend_fit += fb_pinv_downbend[iterm]*term;
       }
     } // End loop over matrix
   
@@ -1436,22 +1458,11 @@ void SBSBigBite::CalcTargetCoords( THaTrack* track )
   //Let's also calculate electron TOF (AFTER reconstructing xtar, etc):
   double ETOF = fETOF_avg;
   
-  int ipar=0;
-  
-  for( int i=0; i<=fETOF_order; i++){
-    for( int j=0; j<=fETOF_order-i; j++ ){
-      for( int k=0; k<=fETOF_order-i-j; k++ ){
-	for( int l=0; l<=fETOF_order-i-j-k; l++ ){
-	  for( int m=0; m<=fETOF_order-i-j-k-l; m++ ){
-	    double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
-	    
-	    ETOF += fb_ETOF[ipar] * term;
+  for( int ipar=0; ipar<fb_ETOF.size(); ipar++ ){
+    double term = pow(x_fp,f_om_ETOF[ipar])*pow(y_fp,f_ol_ETOF[ipar])*pow(xp_fp,f_ok_ETOF[ipar])*pow(yp_fp,f_oj_ETOF[ipar])*pow(xtar,f_oi_ETOF[ipar]);
+    
+    ETOF += fb_ETOF[ipar] * term;
 
-	    ipar++;
-	  }
-	}
-      }
-    }
   }
 
   double pathlength = 0.299792458*ETOF; //ETOF is already calculated in ns, so 0.3 m/ns (or 1 foot/ns)
@@ -1487,23 +1498,14 @@ void SBSBigBite::CalcFpCoords( THaTrack *track ){
 
     //xtar = 0.0;
     
-    int ipar=0;
-    //forward optics expansion is (xfp, yfp, xpfp, ypfp) = sum_ijklm C_(xyxpyp)^ijklm * xptar^i yptar^j ytar^k (1/p)^l (xtar)^m:
-    for( int i=0; i<=fForwardOpticsOrder; i++ ){
-      for( int j=0; j<=fForwardOpticsOrder-i; j++ ){
-	for( int k=0; k<=fForwardOpticsOrder-i-j; k++ ){
-	  for( int l=0; l<=fForwardOpticsOrder-i-j-k; l++ ){
-	    for( int m=0; m<=fForwardOpticsOrder-i-j-k-l; m++ ){
-	      double term = pow( xptar, m )*pow( yptar, l )*pow( ytar, k ) * pow( 1.0/p, j ) * pow( xtar, i );
-	      xfp_fit += fb_xfp[ipar] * term;
-	      yfp_fit += fb_yfp[ipar] * term;
-	      xpfp_fit += fb_xpfp[ipar] * term;
-	      ypfp_fit += fb_ypfp[ipar] * term;
-	      ipar++;
-	    }
-	  }
-	}
-      }
+    for( int ipar=0; ipar<fForwardOpticsNterms; ipar++ ){
+      //forward optics expansion is (xfp, yfp, xpfp, ypfp) = sum_ijklm C_(xyxpyp)^ijklm * xptar^i yptar^j ytar^k (1/p)^l (xtar)^m:
+    
+      double term = pow( xptar, f_fom[ipar] )*pow( yptar, f_fol[ipar] )*pow( ytar, f_fok[ipar] ) * pow( 1.0/p, f_foj[ipar] ) * pow( xtar, f_foi[ipar] );
+      xfp_fit += fb_xfp[ipar] * term;
+      yfp_fit += fb_yfp[ipar] * term;
+      xpfp_fit += fb_xpfp[ipar] * term;
+      ypfp_fit += fb_ypfp[ipar] * term;
     }
         
     // std::cout << "(xptar, yptar, xtar, ytar, p (GeV) ) = (" << xptar << ", " << yptar << ", " << xtar << ", " << ytar << ", " << p << ")" << std::endl;

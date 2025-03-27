@@ -85,4 +85,5 @@
 #pragma link C++ class SBSScalerHelicity+;  
 #pragma link C++ class SBSScalerHelicityReader+;  
 #pragma link C++ class SBSVTP+;
+#pragma link C++ class SBSGEPRegionOfInterestModule+;
 #endif

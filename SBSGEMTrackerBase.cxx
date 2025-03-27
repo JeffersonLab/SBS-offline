@@ -132,6 +132,10 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fNonTrackingMode = false;
   fNonTrackingMode_DBoverride = false;
+
+  fZminLayer = 0.0;
+  fZmaxLayer = 0.0;
+  
 }
 
 SBSGEMTrackerBase::~SBSGEMTrackerBase(){
@@ -333,6 +337,9 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fclustering_done = false;
   ftracking_done = false;
 
+  //  fConstraintPoint_Front.clear();
+  //  fConstraintPoint_Back.clear();
+  
   //fTrigTime = 0.0;
   
 }
@@ -953,6 +960,9 @@ void SBSGEMTrackerBase::InitGridBins() {
 
     fZavgLayer[layer] = zsum/double( modlist_layer.size() );
 
+    if( ilayer == 0 || fZavgLayer[layer] > fZmaxLayer ) fZmaxLayer = fZavgLayer[layer];
+    if( ilayer == 0 || fZavgLayer[layer] < fZminLayer ) fZminLayer = fZavgLayer[layer];
+    
     fGridXmin_layer[layer] = fXmin_layer[layer] - 0.5*fGridBinWidthX;
     int nbinsx = 0;
     while( fGridXmin_layer[layer] + nbinsx * fGridBinWidthX < fXmax_layer[layer] + 0.5*fGridBinWidthX ){
@@ -1207,6 +1217,8 @@ Double_t SBSGEMTrackerBase::InitFreeHitList(){
 
 void SBSGEMTrackerBase::hit_reconstruction(){
 
+  //  std::cout << "Starting hit reconstruction..." << std::endl;
+  
   fclustering_done = true;
 
   fNlayers_hit = 0;
@@ -1489,6 +1501,8 @@ void SBSGEMTrackerBase::find_tracks(){
 	  //  for( int jbin=0; jbin<(int)binswithfreehits_layer[maxlayer].size(); jbin++ ){
 
 	  //range-based for-loop syntax that I'm still learning... hopefully nothing after this needs to be changed
+
+	  //Here it's worth noting that all 2D hits will 
 	  for( auto ibin : binswithfreehits_layer[minlayer] ){
 	    //HERE in the outer loop is where we can improve the speed. Calculate the 
 	    //straight-line projection from the bin center at the front layer to the 
@@ -1596,6 +1610,8 @@ void SBSGEMTrackerBase::find_tracks(){
 	    //Declare a reference to either "goodbins_maxlayer" which is at most a subset of binswithfreehits_maxlayer, or 
 	    //binswithfreehits_maxlayer, depending on value of fUseConstraint
 	    std::set<int> &binstocheck_maxlayer = fUseConstraint ? goodbins_maxlayer : binswithfreehits_layer[maxlayer];
+
+	    //	    std::set<int> &binstocheck_maxlayer = fUseConstraint ? goodbins_maxlayer : binswithfreehits_layer[maxlayer];
 
 	    //	    std::cout << "Minlayer = " << minlayer << ", bin = " << ibin << ", maxlayer = " << maxlayer << ", nbins to check = " 
 	    //	      << binstocheck_maxlayer.size() << ", " << ", total bins with free hits = " << binswithfreehits_layer[maxlayer].size() << std::endl;
@@ -3451,10 +3467,19 @@ bool SBSGEMTrackerBase::CheckConstraint( double xtr, double ytr, double xptr, do
       slopecheck = true;
     }
 
-    passed_any = constraint_check && (slopecheck || !fUseSlopeConstraint);
+    if( constraint_check && (slopecheck || !fUseSlopeConstraint) ) passed_any = true;
+    //This now-commented line leads to incorrect logic with the multiple constraint points:
+    //passed_any = constraint_check && (slopecheck || !fUseSlopeConstraint);
   }
   
   return passed_any;
+}
+
+void SBSGEMTrackerBase::ClearConstraints(){
+  fConstraintPoint_Front.clear();
+  fConstraintPoint_Back.clear();
+  fConstraintPoint_Front_IsInitialized = false;
+  fConstraintPoint_Back_IsInitialized = false;
 }
 
 void SBSGEMTrackerBase::SetFrontConstraintPoint( TVector3 fcp ){
