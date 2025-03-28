@@ -58,7 +58,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSScintPartialHit.cxx SBSCherenkovDetector.cxx SBSCherenkov_ClusterList.cxx
   SBSGRINCH.cxx
   SBSScintPlane.cxx SBSEArm.cxx SBSGEPEArm.cxx
-  SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx SBSGenericDetector.cxx
+  SBSECal.cxx SBSHCal.cxx SBSDecodeF1TDCModule.cxx SBSCalorimeter.cxx SBSGenericDetector.cxx
   SBSData.cxx SBSElement.cxx
   SBSCalorimeterCluster.cxx SBSSimDataDecoder.cxx 
   SBSSimDecoder.cxx SBSSimADC.cxx SBSSimTDC.cxx
@@ -69,7 +69,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSBPM.cxx SBSRaster.cxx SBSRasteredBeam.cxx 
   LHRSScalerEvtHandler.cxx SBSScalerEvtHandler.cxx
   SBSScalerHelicity.cxx SBSScalerHelicityReader.cxx
-  gmn_tree_digitized.cxx genrp_tree_digitized.cxx gep_tree_digitized.cxx VETROC.cxx
+  gmn_tree_digitized.cxx genrp_tree_digitized.cxx gep_tree_digitized.cxx VETROC.cxx VTPModule.cxx SBSVTP.cxx SBSGEPRegionOfInterestModule.cxx
   )
 #gmn_tree_digitized.C
 #g4sbs_data.cxx g4sbs_tree.cxx

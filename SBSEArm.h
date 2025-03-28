@@ -5,7 +5,9 @@
 
 class TList;
 class THaTrack;
-
+class TVector3;
+class TLorentzVector;
+  
 class SBSEArm : public THaSpectrometer {
 
 public:
@@ -24,15 +26,40 @@ public:
   virtual Int_t	Track();
   virtual Int_t CalcPID();
 
+  //Override/extend THaAnalysisObject::Begin method:
+  virtual Int_t   Begin( THaRunBase* r=0 );
+  
   void SetPolarimeterMode( Bool_t ispol );
+
+  //Change these methods to public access so other classes can use them:
+  void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
+  void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords  
+  void CalcFpCoords( THaTrack* the_track ); //Calculate fp coords from
+
+  //Add public methods to add diagnostic output variables for constraint points:
+  // NOTE! These methods do not modify constraint points for SBSGEMTrackerBase or its derived classes,
+  // that has to be done using the tracker methods. 
+  void AddFrontConstraintPoint( TVector3 cpoint );
+  void AddFrontConstraintPoint( double x, double y, double z );
+  void AddBackConstraintPoint( TVector3 cpoint );
+  void AddBackConstraintPoint( double x, double y, double z );
+
+  Double_t GetFrontConstraintWidthX(int icp=0);
+  Double_t GetFrontConstraintWidthY(int icp=0);
+  Double_t GetBackConstraintWidthX(int icp=0);
+  Double_t GetBackConstraintWidthY(int icp=0);
+  Double_t GetFrontConstraintX0(int icp=0);
+  Double_t GetFrontConstraintY0(int icp=0);
+  Double_t GetBackConstraintX0(int icp=0);
+  Double_t GetBackConstraintY0(int icp=0);
+				
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
   virtual Int_t ReadRunDatabase( const TDatime& date );
   virtual Int_t DefineVariables( EMode mode = kDefine );
 
-  void CalcOpticsCoords( THaTrack* the_track );//calculate optics coords from det coords
-  void CalcTargetCoords( THaTrack* the_track );//calculate target coords from optics coords
+  //target coords using forward optics model
   
   void InitOpticsAxes(double, const TVector3 & );
   void InitOpticsAxes(double); //version with only bend angle argument
@@ -81,8 +108,8 @@ protected:
   Double_t fHCALdir_z;
 
   TVector3 fGEMorigin;  //Absolute position of GEM origin relative to target center, in TARGET transport coordinates
-  Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
-  Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
+  //Double_t fGEMtheta; //Polar angle of GEM stack Z axis relative to SBS Z axis
+  //Double_t fGEMphi; //Azimuthal angle of GEM stack Z axis relative to SBS Z axis
 
   //X,Y,Z rotation angles (yaw,pitch,roll, resp.):
   Double_t fGEMax;
@@ -94,8 +121,8 @@ protected:
   
   Double_t fBdL; //define BdL (assumed units = T*m)
 
-  TRotation fGEM_Rtotal; //Total rotation;
-  TRotation fGEM_Rinverse; //Inverse rotation
+  // TRotation fGEM_Rpos; //Total rotation to apply to space coordinates;
+  // TRotation fGEM_Rdir; //Total rotation to apply to track direction
   
   TVector3 fGEMxaxis_global;
   TVector3 fGEMyaxis_global;
@@ -112,7 +139,10 @@ protected:
 
   UInt_t fPrecon_flag; //Indicate which momentum reconstruction formalism we are using:
 
+  Bool_t fUseBeamPosInOptics;
+  
   int fOpticsOrder;
+  int fOpticsNterms;
   std::vector<double> fb_xptar;
   std::vector<double> fb_yptar;
   std::vector<double> fb_ytar;
@@ -131,6 +161,8 @@ protected:
   
   //Also include (optional) forward optics model to aid in false track rejection. 
   int fForwardOpticsOrder;
+  int fForwardOpticsNterms;
+  
   std::vector<double> fb_xfp;
   std::vector<double> fb_yfp;
   std::vector<double> fb_xpfp;
@@ -141,6 +173,10 @@ protected:
   std::vector<int> f_fok;
   std::vector<int> f_fol;
   std::vector<int> f_fom;
+
+  Bool_t fGEPtrackingMode; //Flag to turn on GEP tracking mode. 
+
+  
   
   ClassDef(SBSEArm,0) // BigBite spectrometer
 

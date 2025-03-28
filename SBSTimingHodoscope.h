@@ -29,6 +29,8 @@ struct SBSTimingHodoscopeOutput {
   std::vector<Double_t> tright; //< "raw" tright with no corrections
   std::vector<Double_t> totleft; //< "raw" tleft with no corrections
   std::vector<Double_t> totright; //< "raw" tright with no corrections
+  std::vector<Double_t> tRFcorr; // mean time with RF corrections applied
+  std::vector<Double_t> etof; // time-of-flight assuming electron
   std::vector<Int_t> trackindex;
 };
 
@@ -104,9 +106,13 @@ public:
   // n = 1.58 => n=c/v =>v=c/n
   //  Double_t n=1.58;
 
+  //New mean time and RF time offsets:
+  std::vector<Double_t> fMeanTimeOffset;
+  std::vector<Double_t> fRFtimeOffset;
+  
   std::vector<Double_t> fvScint; 
   std::vector<Double_t> ftDiff0;
-
+  
   //  Double_t fvScint; //default to 0.454c, later we might want to define separately for different bars?
   //  Double_t ftDiff0; //offset of time difference to align horizontal position from time difference with horizontal projection of tracks
   Double_t fTrackMatchCutX;
@@ -166,6 +172,7 @@ public:
   // maps of time walk parameters - in row, col, lay
   std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar0;
   std::vector<std::vector<std::vector<Double_t>>> fTimeWalkPar1;
+  
   
   SBSTimingHodoscopeOutput fMainClus;
   SBSTimingHodoscopeOutput fMainClusBars;

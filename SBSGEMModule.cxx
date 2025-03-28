@@ -2742,6 +2742,8 @@ void SBSGEMModule::find_2Dhits(){
     find_clusters_1D(SBSGEM::kUaxis, ucenter, 0.5*(umax-umin) ); //u strips
     find_clusters_1D(SBSGEM::kVaxis, vcenter, 0.5*(vmax-vmin) ); //v strips
   } else { //use the default wide-open limits!
+    // std::cout << "Calling 1D cluster finding with storage of ALL 1D clusters, num. constraints = "
+    // 	      << fxcmin.size() << std::endl;
     find_clusters_1D(SBSGEM::kUaxis);
     find_clusters_1D(SBSGEM::kVaxis);
   }
@@ -4218,6 +4220,7 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   //been called, if that is NOT the case, then this routine will just do nothing:
   bool maxhits_exceeded = false;
 
+  //std::cout << "Starting 2D hit finding..." << std::endl;
   for( UInt_t iu=0; iu<fNclustU; iu++ ){
     for( UInt_t iv=0; iv<fNclustV; iv++ ){
       //Check that this is a "good" cluster and that it was not already used in track formation:
@@ -4259,6 +4262,10 @@ void SBSGEMModule::fill_2D_hit_arrays(){
 	    if( fxcmin[icp] <= hittemp.xhit && hittemp.xhit <= fxcmax[icp] &&
 		fycmin[icp] <= hittemp.yhit && hittemp.yhit <= fycmax[icp] ){
 	      passed_any_constraint = true;
+	      // std::cout << "2D hit candidate passed constraint icp = " << icp
+	      // 		<< ", (mod,layer,xhit,yhit,xcmin,xcmax,ycmin,ycmax)=(" << fModule << ", " << fLayer
+	      // 		<< ", " << hittemp.xhit << ", " << hittemp.yhit << ", " << fxcmin[icp] << ", " << fxcmax[icp] << ", "
+	      // 		<< fycmin[icp] << ", " << fycmax[icp] << ")" << std::endl;
 	    }
 	  }
 	

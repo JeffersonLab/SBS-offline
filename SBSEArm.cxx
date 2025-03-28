@@ -26,8 +26,13 @@ THaSpectrometer( name, description )
 {
   // Constructor. Defines standard detectors
 
-  fOpticsOrder = -1; //default to zero for optics order. Not sure if this causes a seg fault, but safer.
-
+  fGEPtrackingMode = false;
+  
+  fOpticsOrder = -1; //default to -1 for optics order. 
+  fForwardOpticsOrder = -1; //default to -1.
+  fOpticsNterms = -1;
+  fForwardOpticsNterms = -1;
+  
   SetPID( false );
 
   fFrontConstraintWidthX.clear();
@@ -70,7 +75,7 @@ THaSpectrometer( name, description )
   // fBackConstraintY0 = 0.0;
   fGEMorigin.SetXYZ(0,0,0);
 
-  fGEM_Rtotal = TRotation();
+  //  fGEM_Rtotal = TRotation();
   
   fMagDist = 2.25; //This is a required parameter from ReadRunDatabase
   fHCALdist = 17.0; //default 17 m (GEN setting). But mandatory in readrundb
@@ -79,11 +84,14 @@ THaSpectrometer( name, description )
   fOpticsAngle = 0.0;
   //Default to GEN-RP settings; in GEN-RP the first GEM plane is 4.105 m from the target for SBS magnet distance of 2.25 m
   //  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.025 ); //In g4sbs, the front tracker first plane starts (by default) at 2.025 m downstream of the SBS magnet front face by default (actually I'm not sure that's still true).
-  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 1.855 );
+
+  // Default to GEP setting for optics origin; first GEM layer 2.085 m
+  // downstream of magnet
+  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.085 );
   InitOpticsAxes( fOpticsAngle );
 
-  fGEMtheta = fOpticsAngle;
-  fGEMphi   = 0.0*TMath::DegToRad();
+  //  fGEMtheta = fOpticsAngle;
+  //fGEMphi   = 0.0*TMath::DegToRad();
   fGEMorigin = fOpticsOrigin; 
 
   //  InitGEMAxes( fGEMtheta, fGEMphi, fGEMorigin );
@@ -92,6 +100,9 @@ THaSpectrometer( name, description )
   fGEMay = 0.0;
   fGEMaz = 0.0;
 
+  //  fGEM_Rpos = TRotation();
+  //  fGEM_Rdir = TRotation();
+  
   InitGEMAxes( fGEMax, fGEMay, fGEMaz );
   
   fPrecon_flag = 0;
@@ -158,7 +169,7 @@ Int_t SBSEArm::ReadRunDatabase( const TDatime &date ){
   if( err )
     return kInitError;
   
-  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.025 );
+  fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.085 );
   
   return kOK;
 }
@@ -188,15 +199,18 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
   std::vector<Double_t> gem_angles;
   std::vector<Double_t> optics_origin;
   std::vector<Double_t> optics_param;
+  std::vector<Double_t> foptics_param;
   
-  double gemthetadeg = fGEMtheta * TMath::RadToDeg();
-  double gemphideg   = fGEMphi * TMath::RadToDeg();
+  //  double gemthetadeg = fGEMtheta * TMath::RadToDeg();
+  // double gemphideg   = fGEMphi * TMath::RadToDeg();
   double opticsthetadeg = fOpticsAngle * TMath::RadToDeg();
 
   int polarimetermode = fPolarimeterMode ? 1 : 0;
   int usedynamicconstraint = fUseDynamicConstraint ? 1 : 0;
+  int geptrackingmode = fGEPtrackingMode ? 1 : 0;
   
   const DBRequest request[] = {
+    { "geptrackingmode", &geptrackingmode, kInt, 0, 1, 0},
     { "frontconstraintwidth_x", &fFrontConstraintWidthX, kDoubleV, 0, 1, 0},
     { "frontconstraintwidth_y", &fFrontConstraintWidthY, kDoubleV, 0, 1, 0},
     { "backconstraintwidth_x", &fBackConstraintWidthX, kDoubleV, 0, 1, 0},
@@ -207,8 +221,6 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "backconstraint_y0", &fBackConstraintY0, kDoubleV, 0, 1, 0},
     { "gemorigin_xyz",    &firstgem_offset, kDoubleV,  0, 1, 1},
     { "gemangles_xyz",  &gem_angles, kDoubleV, 0, 1, 1},
-    { "gemtheta", &gemthetadeg, kDouble, 0, 1, 1},
-    { "gemphi", &gemphideg, kDouble, 0, 1, 1},
     { "opticstheta", &opticsthetadeg, kDouble, 0, 1, 1},
     { "optics_origin", &optics_origin, kDoubleV, 0, 1, 1},
     { "optics_order",    &fOpticsOrder, kInt,  0, 1, 1},
@@ -222,6 +234,8 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "dynamicth0", &fDynamicConstraintOffsetX, kDouble, 0, 1, 1},
     { "dynamicphslope", &fDynamicConstraintSlopeY, kDouble, 0, 1, 1},
     { "dynamicph0", &fDynamicConstraintOffsetY, kDouble, 0, 1, 1},
+    { "forwardoptics_order", &fForwardOpticsOrder, kInt, 0, 1, 1 },
+    { "forwardoptics_parameters", &foptics_param, kDoubleV, 0, 1, 1 },
     {0}
   };
 
@@ -237,6 +251,10 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
   // std::cout << "SBSEArm::ReadDatabase: polarimeter mode = " << fPolarimeterMode
   // 	    << std::endl;
   
+  fGEPtrackingMode = (geptrackingmode != 0);
+  //GEP tracking mode supersedes the polarimeter mode; GEP tracking is always in polarimeter mode
+  if( fGEPtrackingMode ) fPolarimeterMode = true; 
+
   //Once we parse the database, we need to check whether the constraint centering and width parameters
   //wered defined sensibly. This method checks, and if any are not sensibly initialized, ALL are
   //initialized with sensible default values:
@@ -254,8 +272,8 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
 
   InitOpticsAxes( fOpticsAngle );
 
-  fGEMtheta = gemthetadeg * TMath::DegToRad();
-  fGEMphi = gemphideg * TMath::DegToRad();
+  // fGEMtheta = gemthetadeg * TMath::DegToRad();
+  // fGEMphi = gemphideg * TMath::DegToRad();
   
   if( firstgem_offset.size() == 3 ){
     fGEMorigin.SetXYZ( firstgem_offset[0],
@@ -263,7 +281,7 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
 		       firstgem_offset[2] );
   }
 
-  InitGEMAxes( fGEMtheta, fGEMphi );
+  //  InitGEMAxes( fGEMtheta, fGEMphi );
 
   //If GEM x,y,z angles are given, override the version based on theta, phi:
   if( gem_angles.size() == 3 ){
@@ -297,6 +315,8 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
       }
     }
     cout << nterms << " lines of parameters expected for optics of order " << fOpticsOrder << endl;
+
+    fOpticsNterms = nterms;
     
     //int n_elem = TMath::FloorNint(optics_param.size()/nparam);
     
@@ -333,6 +353,61 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
       f_ok[i] = int(optics_param[9*i+6]);
       f_oj[i] = int(optics_param[9*i+7]);
       f_oi[i] = int(optics_param[9*i+8]);
+    }
+  }
+
+  //This code for forward optics modeling is yet-another a copy-paste job from SBSBigBite!
+  //We still eventually want to consolidate the BigBite and SBS codes under a common
+  // base class to avoid some of the duplicative code.
+  if( fForwardOpticsOrder >= 0 ){
+    unsigned int nterms=0;
+    for(int i = 0; i<=fForwardOpticsOrder; i++){ //x
+      for( int j=0; j<=fForwardOpticsOrder-i; j++){ //y
+	for( int k=0; k<=fForwardOpticsOrder-i-j; k++){
+	  for( int l=0; l<=fForwardOpticsOrder-i-j-k; l++){
+	    for( int m=0; m<=fForwardOpticsOrder-i-j-k-l; m++ ){
+	      nterms++;
+	    }
+	  }
+	}
+      }
+    }
+    cout << nterms << " lines of parameters expected for optics of order " << fForwardOpticsOrder << endl;
+
+    fForwardOpticsNterms = nterms;
+    
+    unsigned int nparams = 9*nterms;
+    if(nparams!=foptics_param.size()){
+      std::cerr << "Warning: mismatch between " << foptics_param.size()
+		<< " forward optics parameters provided and " << nterms*9
+		<< " forward optics parameters expected!" << std::endl;
+      std::cerr << " Fix database! " << std::endl;
+      return kInitError;
+    }
+        
+    //I seem to be able to write anything except a std::cout
+        
+    fb_xfp.resize( nterms );
+    fb_yfp.resize( nterms );
+    fb_xpfp.resize( nterms );
+    fb_ypfp.resize( nterms );
+        
+    f_foi.resize(nterms);
+    f_foj.resize(nterms);
+    f_fok.resize(nterms);
+    f_fol.resize(nterms);
+    f_fom.resize(nterms);
+        
+    for(unsigned int i=0; i<nterms; i++){
+      fb_xfp[i] = foptics_param[9*i];
+      fb_yfp[i] = foptics_param[9*i+1];
+      fb_xpfp[i] = foptics_param[9*i+2];
+      fb_ypfp[i] = foptics_param[9*i+3];
+      f_fom[i] = int(foptics_param[9*i+4]);
+      f_fol[i] = int(foptics_param[9*i+5]);
+      f_fok[i] = int(foptics_param[9*i+6]);
+      f_foj[i] = int(foptics_param[9*i+7]);
+      f_foi[i] = int(foptics_param[9*i+8]);
     }
   }
   
@@ -385,7 +460,12 @@ Int_t SBSEArm::FindVertices( TClonesArray &tracks )
     auto* theTrack = static_cast<THaTrack*>( tracks.At(t) );
     CalcOpticsCoords(theTrack);
     
-    if(fOpticsOrder>=0)CalcTargetCoords(theTrack);
+    if(fOpticsOrder>=0){
+      CalcTargetCoords(theTrack);
+      if( fForwardOpticsOrder>=0 ){
+	CalcFpCoords( theTrack );
+      }
+    }
   }
 
   if( GetNTracks() > 0 ) {
@@ -437,10 +517,10 @@ void SBSEArm::CalcOpticsCoords( THaTrack* track )
 
   // TrackDirLocal_GEM.Print();
 
-  //TVector3 TrackDirGlobal_GEM = TrackDirLocal_GEM.X() * fGEMxaxis_global + TrackDirLocal_GEM.Y() * fGEMyaxis_global + TrackDirLocal_GEM.Z() * fGEMzaxis_global;
-  //TrackDirGlobal_GEM = TrackDirGlobal_GEM.Unit(); //Likely unnecessary, but safer (I guess)
+  TVector3 TrackDirGlobal_GEM = TrackDirLocal_GEM.X() * fGEMxaxis_global + TrackDirLocal_GEM.Y() * fGEMyaxis_global + TrackDirLocal_GEM.Z() * fGEMzaxis_global;
+  TrackDirGlobal_GEM = TrackDirGlobal_GEM.Unit(); //Likely unnecessary, but safer (I guess)
 
-  TVector3 TrackDirGlobal_GEM = fGEM_Rinverse * TrackDirLocal_GEM;
+  //  TVector3 TrackDirGlobal_GEM = fGEM_Rdir * TrackDirLocal_GEM;
 
   //fGEM_Rinverse.Print();
 
@@ -551,26 +631,17 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
   ytar_fit = 0.0;
   pthetabend_fit = 0.0;
   
-  int ipar = 0;
-  for(int i=0; i<=fOpticsOrder; i++){
-    for(int j=0; j<=fOpticsOrder-i; j++){
-      for(int k=0; k<=fOpticsOrder-i-j; k++){
-	for(int l=0; l<=fOpticsOrder-i-j-k; l++){
-	  for(int m=0; m<=fOpticsOrder-i-j-k-l; m++){
-	    double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
-	    xptar_fit += fb_xptar[ipar]*term;
-	    yptar_fit += fb_yptar[ipar]*term;
-	    ytar_fit += fb_ytar[ipar]*term;
-	    pthetabend_fit += fb_pinv[ipar]*term;
-	    //pinv_fit += b_pinv(ipar)*term;
-	    // cout << ipar << " " << term << " " 
-	    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " " 
-	    //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
-	    ipar++;
-	  }
-	}
-      }
-    }
+  for( int ipar = 0; ipar<fOpticsNterms; ipar++ ){
+    double term = pow(x_fp, f_om[ipar])*pow(y_fp, f_ol[ipar])*pow(xp_fp, f_ok[ipar])*pow(yp_fp,f_oj[ipar])*pow(xtar,f_oi[ipar]);
+    //double term = pow(x_fp,m)*pow(y_fp,l)*pow(xp_fp,k)*pow(yp_fp,j)*pow(xtar,i);
+    xptar_fit += fb_xptar[ipar]*term;
+    yptar_fit += fb_yptar[ipar]*term;
+    ytar_fit += fb_ytar[ipar]*term;
+    pthetabend_fit += fb_pinv[ipar]*term;
+    //pinv_fit += b_pinv(ipar)*term;
+    // cout << ipar << " " << term << " " 
+    //      << b_xptar(ipar) << " " << b_yptar(ipar) << " " 
+    //      << b_ytar(ipar) << " " << b_pinv(ipar) << endl;
   }
 
   TVector3 phat_tgt_fit(xptar_fit, yptar_fit, 1.0 );
@@ -629,6 +700,8 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
 
   //We should move this to before the optics calculations in case we want to actually correct the optics for the beam position:
   double ybeam=0.0,xbeam=0.0;
+
+  xtar = -cos(th_sbs) * vz_fit * xptar_fit;
   
   //retrieve beam position, if available, to calculate xtar.
   TIter aiter(gHaApps);
@@ -639,7 +712,11 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
       //double xbeam = RasterBeam->GetPosition().X();
       ybeam = RasterBeam->GetPosition().Y()/1000.0; //if this is given in mm, we need to convert to meters (also for BB)
       xbeam = RasterBeam->GetPosition().X()/1000.0;
-      xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
+      //xtar = - ybeam - cos(GetThetaGeo()) * vz_fit * xptar_fit;
+      // For now let's exclude the vertical beam position from the calculation
+      // if the "use beam position" flag is turned on, then the user
+      // has presumably calibrated the BPM and/or raster reconstruction:
+      if( fUseBeamPosInOptics ) xtar += -ybeam;
     }
     //cout << var->GetName() << endl;
   }
@@ -656,6 +733,67 @@ void SBSEArm::CalcTargetCoords( THaTrack* track )
   
   //std::cout << "Done." << std::endl;
 }
+
+void SBSEArm::CalcFpCoords( THaTrack *track ){
+  if( track->HasTarget() ){
+    
+    double xtar = track->GetTX();
+    double ytar = track->GetTY();
+    double xptar = track->GetTTheta();
+    double yptar = track->GetTPhi();
+    double p = track->GetP();
+        
+    double xfp_fit = 0.0;
+    double yfp_fit = 0.0;
+    double xpfp_fit = 0.0;
+    double ypfp_fit = 0.0;
+
+    //xtar = 0.0;
+    
+    for( int ipar=0; ipar<fForwardOpticsNterms; ipar++ ){
+      // Standard order of exponents is xptar^m yptar^l ytar^k (1/p)^j xtar^i
+      double term = pow( xptar, f_fom[ipar] ) * pow( yptar, f_fol[ipar] ) *
+	pow( ytar, f_fok[ipar] ) * pow( 1.0/p, f_foj[ipar] ) *
+	pow( xtar, f_foi[ipar] );
+
+      xfp_fit += fb_xfp[ipar]*term;
+      yfp_fit += fb_yfp[ipar]*term;
+      xpfp_fit += fb_xpfp[ipar]*term;
+      ypfp_fit += fb_ypfp[ipar]*term;
+    }
+
+    //NEXT: transform to "detector" coordinate system (same definition as in BigBite):
+    TVector3 pos_optics( xfp_fit, yfp_fit, 0.0 );
+    TVector3 dir_optics( xpfp_fit, ypfp_fit, 1.0 );
+    dir_optics = dir_optics.Unit();
+
+    TVector3 posglobal_optics = fOpticsOrigin +
+      pos_optics.X() * fOpticsXaxis_global +
+      pos_optics.Y() * fOpticsYaxis_global +
+      pos_optics.Z() * fOpticsZaxis_global;
+
+    TVector3 dirglobal_optics =
+      dir_optics.X() * fOpticsXaxis_global +
+      dir_optics.Y() * fOpticsYaxis_global +
+      dir_optics.Z() * fOpticsZaxis_global;
+
+    //intersection of track with first GEM plane:
+    double sintersect = ( fGEMorigin - posglobal_optics ).Dot( fGEMzaxis_global ) /
+      ( dirglobal_optics.Dot( fGEMzaxis_global ) );
+
+    TVector3 TrackGEMintersect_global = posglobal_optics + sintersect * dirglobal_optics;
+
+    double xGEM = (TrackGEMintersect_global - fGEMorigin).Dot( fGEMxaxis_global );
+    double yGEM = (TrackGEMintersect_global - fGEMorigin).Dot( fGEMyaxis_global );
+
+    double xpGEM = dirglobal_optics.Dot( fGEMxaxis_global ) / dirglobal_optics.Dot( fGEMzaxis_global );
+    double ypGEM = dirglobal_optics.Dot( fGEMyaxis_global ) / dirglobal_optics.Dot( fGEMzaxis_global );
+
+    track->SetD( xGEM, yGEM, xpGEM, ypGEM );
+  }
+  return;
+}
+  
 
 //_____________________________________________________________________________
 Int_t SBSEArm::TrackCalc()
@@ -707,10 +845,12 @@ Int_t SBSEArm::CoarseReconstruct()
 
   Double_t x_fcp = 0, y_fcp = 0, z_fcp = 0;
   Double_t x_bcp = 0, y_bcp = 0, z_bcp = 0;
- 
 
   TIter next( fNonTrackingDetectors );
 
+  //Modifications for GEP: if we're in the GEP tracking mode, we want to prevent any attempts to do any tracking in this method, we'll wait for the
+  //outcome of the region-of-interest module; but we DO want to set the back constraint point (or points) for the back tracker at least:
+  
   //Loop on non-tracking detectors and grab pointers to HCAL and PolarimeterTracker (if it exists):
   SBSHCal *HCal = nullptr;
   SBSGEMPolarimeterTracker *BackTracker = nullptr;
@@ -721,11 +861,11 @@ Int_t SBSEArm::CoarseReconstruct()
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {
     if(theNonTrackDetector->InheritsFrom("SBSHCal")){
-      HCal = reinterpret_cast<SBSHCal*>(theNonTrackDetector);
+      HCal = static_cast<SBSHCal*>(theNonTrackDetector);
     }
 
     if(theNonTrackDetector->InheritsFrom("SBSGEMPolarimeterTracker")){
-      BackTracker = reinterpret_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
+      BackTracker = static_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
     }
   }
   
@@ -733,7 +873,7 @@ Int_t SBSEArm::CoarseReconstruct()
   while( auto* theTrackDetector =
 	 static_cast<THaTrackingDetector*>( next2() )) {
     if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
-      FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+      FrontTracker = static_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
       // std::cout << "Got front tracker, name = " << FrontTracker->GetName()
       // 		<< std::endl;
     }
@@ -743,16 +883,16 @@ Int_t SBSEArm::CoarseReconstruct()
   
   std::vector<SBSCalorimeterCluster*> HCalClusters = HCal->GetClusters();
   
-  int i_max = 0;
-  double E_max = 0;
+  int i_max = HCal->SelectBestCluster();
+  double E_max = HCalClusters[i_max]->GetE();
   
-  for(unsigned int i = 0; i<HCalClusters.size(); i++){
+  // for(unsigned int i = 0; i<HCalClusters.size(); i++){
     
-    if(HCalClusters[i]->GetE() > E_max){
-      i_max = i;
-      E_max = HCalClusters[i]->GetE();
-    }
-  }
+  //   if(HCalClusters[i]->GetE() > E_max){
+  //     i_max = i;
+  //     E_max = HCalClusters[i]->GetE();
+  //   }
+  // }
 
   x_bcp = HCalClusters[i_max]->GetX() + HCal->GetOrigin().X();
   y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
@@ -769,6 +909,43 @@ Int_t SBSEArm::CoarseReconstruct()
   fHCALdir_y = HCALdir_global.Y();
   fHCALdir_z = HCALdir_global.Z();
 
+  if( fGEPtrackingMode && BackTracker != nullptr ){ //We can set the BACK constraint point for the BACK tracker based on HCAL:
+    BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1],
+					 y_bcp + fBackConstraintY0[1],
+					 z_bcp );
+
+    BackTracker->SetBackConstraintWidth( fBackConstraintWidthX[1],
+					 fBackConstraintWidthY[1] );
+
+    // This code block will almost certainly never be executed, but let's add the capability for completeness anyway:
+    // If for some reason the front tracking is done in CoarseTrack, but the back tracking isn't, this
+    // block of code could be useful:
+    if( FrontTracker != nullptr ){
+      if( FrontTracker->GetNtracks() > 0 ){ // tracking is done
+	BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
+				    FrontTracker->GetYTrack( 0 ),
+				    FrontTracker->GetXpTrack( 0 ),
+				    FrontTracker->GetYpTrack( 0 ) );
+
+	x_fcp = FrontTracker->GetXTrack(0) + fAnalyzerZ0 * FrontTracker->GetXpTrack(0);
+	y_fcp = FrontTracker->GetYTrack(0) + fAnalyzerZ0 * FrontTracker->GetYpTrack(0);
+	BackTracker->SetFrontConstraintPoint( x_fcp, y_fcp, fAnalyzerZ0 );
+
+	BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1],
+					      fFrontConstraintWidthY[1] );
+      }
+    }
+
+    //Let's at least add the HCAL back constraint point to the diagnostic output variables:
+    fBackConstraintX.push_back( x_bcp + fBackConstraintX0[1] );
+    fBackConstraintY.push_back( y_bcp + fBackConstraintY0[1] );
+    fBackConstraintZ.push_back( z_bcp );
+    
+    //With the GEP region-of-interest module, this is all we need CoarseReconstruct() to do for GEP tracking mode;
+    
+    return 0;
+  }
+  
   //x_fcp = fGEMorigin.X();
   //y_fcp = fGEMorigin.Y();
   //z_fcp = fGEMorigin.Z();
@@ -876,6 +1053,8 @@ Int_t SBSEArm::CoarseReconstruct()
     
   } //End if (!Polarimeter mode     )
 
+  //these are for output only:
+  
   fFrontConstraintX.push_back( x_fcp );
   fFrontConstraintY.push_back( y_fcp );
   fFrontConstraintZ.push_back( z_fcp );
@@ -913,7 +1092,7 @@ Int_t SBSEArm::Track()
       
       
       if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
-	FrontTracker = reinterpret_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+	FrontTracker = static_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
 	//std::cout << "Got Front tracker, name = " << FrontTracker->GetName() << std::endl;
       }
     }
@@ -934,67 +1113,107 @@ Int_t SBSEArm::Track()
 	//If the back tracker is set to use the constraints, then this
 	//will initiate tracking.
 	//Otherwise, it does nothing:
-	theNonTrackDetector->FineProcess( *fTracks );
+	// The default (GEN-RP) behavior is to process the back tracker first:
 
-	//grab pointer to Back Tracker for initialization of front tracking:
-	BackTracker = reinterpret_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
+	if( !fGEPtrackingMode ){
+	  theNonTrackDetector->FineProcess( *fTracks );
+	}
+	//grab pointer to Back Tracker for initialization of front tracking (or, in the GEP case, for eventual back tracking)
+	BackTracker = static_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
       }
-    } 
+    }
 
     //Only attempt tracking in FT if we got a track in back tracker:
     
     if( BackTracker != nullptr && FrontTracker != nullptr ){ //Use the back tracker to initialize constraints for front tracker:
       // std::cout << "Back tracker n tracks found = " << BackTracker->GetNtracks()
       // 		<< std::endl;
-      if( BackTracker->GetNtracks() > 0 ){
-	//Initially, let's set up a front constraint using only the "best" (first) track found in the back tracker
-	//Later, we may consider multiple tracks pointing to multiple clusters in HCAL:
-	// std::cout << "Back tracker has tracks, initializing front tracker: "
-	// 	  << std::endl;
-	
-	double xback = BackTracker->GetXTrack( 0 );
-	double yback = BackTracker->GetYTrack( 0 );
-	double xpback = BackTracker->GetXpTrack( 0 );
-	double ypback = BackTracker->GetYpTrack( 0 );
-	
-	double x_bcp = xback + xpback * fAnalyzerZ0 + fBackConstraintX0[0];
-	double y_bcp = yback + ypback * fAnalyzerZ0 + fBackConstraintY0[0];
+      if( fGEPtrackingMode ){ //Do front tracker first: 
+	//	std::cout << "Calling FrontTracker->FineTrack in GEP tracking mode..."
+	//	  << std::endl;
 
-	// std::cout << "(xbcp,ybcp,zbcp)=(" << x_bcp << ", " << y_bcp
-	// 	  << ", " << fAnalyzerZ0 << ")" << std::endl; 
-	
-	FrontTracker->SetBackConstraintPoint( x_bcp, y_bcp, fAnalyzerZ0 );
+	//we set the front constraint widths in the region of interest module
+	//for now
 
-	//Set front constraint point to position of back track at front layer:
-	double x_fcp = xback + fFrontConstraintX0[0];
-	double y_fcp = yback + fFrontConstraintY0[0];
+	//Now the constraint widths should have been properly set in SBSGEMSpectrometerTracker::Begin()
 	
-	FrontTracker->SetFrontConstraintPoint( x_fcp, y_fcp, 0.0 );
-
-	// std::cout << "(xfcp,yfcp,zfcp)=(" << x_fcp << ", " << y_fcp << ",0)"
-	// 	  << std::endl;
-	
-	FrontTracker->SetBackConstraintWidth( fBackConstraintWidthX[0], fBackConstraintWidthY[0] );
-	FrontTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[0], fFrontConstraintWidthY[0] );
-	
-	//NOTE: if constraints aren't being used by the front tracker,
-	//then the following line has no effect (as intended!)
 	FrontTracker->FineTrack( *fTracks );
-	
+
 	if( FrontTracker->GetNtracks() > 0 ){
-	  //If we found a front track, then set the "front track" for the back tracker
-	  //for the purpose of scattering angle/closest-approach reconstruction:
-	  BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
-				      FrontTracker->GetYTrack( 0 ),
-				      FrontTracker->GetXpTrack( 0 ),
-				      FrontTracker->GetYpTrack( 0 ) );
-	  // Technically, we could also call BackTracker->CalcScatteringParameters here,
-	  // But given the current structure of the SBSEArm code, it is unnecessary
-	  // since BackTracker->FineProcess will get called again in SBSEArm::Reconstruct();
+	  double xFT, yFT, xpFT, ypFT;
+
+	  FrontTracker->GetTrack( 0, xFT, yFT, xpFT, ypFT );
 	  
+	  BackTracker->SetFrontTrack( xFT,
+				      yFT,
+				      xpFT,
+				      ypFT );
+
+	  BackTracker->SetFrontConstraintPoint( xFT + xpFT * fAnalyzerZ0 + fFrontConstraintX0[1],
+						yFT + ypFT * fAnalyzerZ0 + fFrontConstraintY0[1],
+						fAnalyzerZ0 );
+	  BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1],
+						fFrontConstraintWidthY[1] );
+	  
+	  fFrontConstraintX.push_back( xFT + xpFT * fAnalyzerZ0 );
+	  fFrontConstraintY.push_back( yFT + ypFT * fAnalyzerZ0 );
+	  fFrontConstraintZ.push_back( fAnalyzerZ0 );
+	  
+	  //In the GEP tracking mode, the polarimeter tracking will be invoked during FineProcess, no need to do it twice
 	}
-      }
-    }
+	
+      } else { //GEN-RP mode: back tracker will have been done in CoarseReconstruct: 
+	
+	if( BackTracker->GetNtracks() > 0 ){
+	  //Initially, let's set up a front constraint using only the "best" (first) track found in the back tracker
+	  //Later, we may consider multiple tracks pointing to multiple clusters in HCAL:
+	  // std::cout << "Back tracker has tracks, initializing front tracker: "
+	  // 	  << std::endl;
+	  
+	  double xback = BackTracker->GetXTrack( 0 );
+	  double yback = BackTracker->GetYTrack( 0 );
+	  double xpback = BackTracker->GetXpTrack( 0 );
+	  double ypback = BackTracker->GetYpTrack( 0 );
+	  
+	  double x_bcp = xback + xpback * fAnalyzerZ0 + fBackConstraintX0[0];
+	  double y_bcp = yback + ypback * fAnalyzerZ0 + fBackConstraintY0[0];
+	  
+	  // std::cout << "(xbcp,ybcp,zbcp)=(" << x_bcp << ", " << y_bcp
+	  // 	  << ", " << fAnalyzerZ0 << ")" << std::endl; 
+	  
+	  FrontTracker->SetBackConstraintPoint( x_bcp, y_bcp, fAnalyzerZ0 );
+	  
+	  //Set front constraint point to position of back track at front layer:
+	  double x_fcp = xback + fFrontConstraintX0[0];
+	  double y_fcp = yback + fFrontConstraintY0[0];
+	  
+	  FrontTracker->SetFrontConstraintPoint( x_fcp, y_fcp, 0.0 );
+	  
+	  // std::cout << "(xfcp,yfcp,zfcp)=(" << x_fcp << ", " << y_fcp << ",0)"
+	  // 	  << std::endl;
+	  
+	  FrontTracker->SetBackConstraintWidth( fBackConstraintWidthX[0], fBackConstraintWidthY[0] );
+	  FrontTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[0], fFrontConstraintWidthY[0] );
+	  
+	  //NOTE: if constraints aren't being used by the front tracker,
+	  //then the following line has no effect (as intended!)
+	  FrontTracker->FineTrack( *fTracks );
+	  
+	  if( FrontTracker->GetNtracks() > 0 ){
+	    //If we found a front track, then set the "front track" for the back tracker
+	    //for the purpose of scattering angle/closest-approach reconstruction:
+	    BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
+					FrontTracker->GetYTrack( 0 ),
+					FrontTracker->GetXpTrack( 0 ),
+					FrontTracker->GetYpTrack( 0 ) );
+	    // Technically, we could also call BackTracker->CalcScatteringParameters here,
+	    // But given the current structure of the SBSEArm code, it is unnecessary
+	    // since BackTracker->FineProcess will get called again in SBSEArm::Reconstruct(); 
+	  }
+	} //end check if back tracker has any tracks
+      } //end check if GEP tracking mode  
+    } //end check if Front and Back trackers were found
+    
     // Don't forget to call FindVertices regardless! This is NOT done automatically
     // in the polarimeter mode, for which we override the standard
     // THaSpectrometer::Track();
@@ -1018,7 +1237,7 @@ Int_t SBSEArm::Reconstruct()
   THaSpectrometer::Reconstruct();
 
   //Note that the call to THaSpectrometer::Reconstruct() above can lead
-  //to a SECOND call to SBSGEMPolarimeter::FineProcess for the back tracker
+  //to a SECOND call to SBSGEMPolarimeterTracker::FineProcess for the back tracker
 
   // If we are in the polarimeter mode, we know at this stage that
   // back tracking and front tracking are DONE.
@@ -1098,7 +1317,56 @@ Int_t SBSEArm::CalcPID(){
   return 0;
 }
 //_______________________
+Int_t SBSEArm::Begin( THaRunBase *run ){
+  THaSpectrometer::Begin(run);
+  //Initialize constraint widths for detectors inheriting SBSGEMSpectrometerTracker or SBSGEMPolarimeterTracker:
+  TIter next(fTrackingDetectors);
+  while( auto *theTrackDetector = static_cast<THaTrackingDetector*>( next() )) {
+    if( theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
+      SBSGEMSpectrometerTracker *theGEMtracker = static_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+      if( theGEMtracker ){
 
+	std::cout << "Setting constraint widths for front tracker name "
+		  << theGEMtracker->GetName() << std::endl;
+	
+	if( fFrontConstraintWidthX.size()>0 && fFrontConstraintWidthY.size()>0 &&
+	    fBackConstraintWidthX.size()>0 && fBackConstraintWidthY.size()>0 ){
+	  theGEMtracker->SetFrontConstraintWidth( fFrontConstraintWidthX[0], fFrontConstraintWidthY[0] );
+	  theGEMtracker->SetBackConstraintWidth( fBackConstraintWidthX[0], fBackConstraintWidthY[0] );
+	}
+      }
+    }
+  }
+
+  TIter next2(fNonTrackingDetectors);
+
+  while( auto *theNonTrackDetector = static_cast<THaNonTrackingDetector*>( next2() )) {
+    if( theNonTrackDetector->InheritsFrom("SBSGEMPolarimeterTracker")){
+      SBSGEMPolarimeterTracker *theGEMtracker = static_cast<SBSGEMPolarimeterTracker*>(theNonTrackDetector);
+
+      if( theGEMtracker ){
+	std::cout << "Setting constraint widths for back tracker name = "
+		  << theGEMtracker->GetName() << std::endl;
+	
+	int idx = fPolarimeterMode ? 1 : 0;
+
+	std::cout << "idx = " << idx << std::endl;
+	
+	if( fFrontConstraintWidthX.size() >= idx && fFrontConstraintWidthY.size() >= idx &&
+	    fBackConstraintWidthX.size() >= idx && fBackConstraintWidthY.size() >= idx ){
+	  std::cout << "about to set constraint widths..." << std::endl;
+	  theGEMtracker->SetFrontConstraintWidth( fFrontConstraintWidthX[idx], fFrontConstraintWidthY[idx] );
+	  std::cout << "set front..." << std::endl;
+	  theGEMtracker->SetBackConstraintWidth( fBackConstraintWidthX[idx], fBackConstraintWidthY[idx] );
+	  std::cout << "set back..." << std::endl;
+	}
+      }
+    }
+  }
+  std::cout << "Why do we seg fault here?" << std::endl;
+  return kOK;
+}
+//_______________________
 void SBSEArm::InitOpticsAxes(double BendAngle, const TVector3 &Origin ){
   fOpticsOrigin = Origin;
   fOpticsYaxis_global.SetXYZ(0,1,0);
@@ -1113,32 +1381,33 @@ void SBSEArm::InitOpticsAxes(double BendAngle ){
   fOpticsXaxis_global.SetXYZ(cos(BendAngle), 0, sin(BendAngle) );
 }
 
-void SBSEArm::InitGEMAxes( double theta, double phi, const TVector3 &Origin ){
-  fGEMorigin = Origin;
-  fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
-  fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
-  fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
+// Commenting obsolete methods for initializing GEM coordinate transformations:
+// void SBSEArm::InitGEMAxes( double theta, double phi, const TVector3 &Origin ){
+//   fGEMorigin = Origin;
+//   fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
+//   fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
+//   fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
 
-  //For the total rotation, consistent with the alignment formalism, the total rotation has the x,y,z axes as the COLUMNS:
-  fGEM_Rtotal.SetXAxis( fGEMxaxis_global );
-  fGEM_Rtotal.SetYAxis( fGEMyaxis_global );
-  fGEM_Rtotal.SetZAxis( fGEMzaxis_global );
+//   //For the total rotation, consistent with the alignment formalism, the total rotation has the x,y,z axes as the COLUMNS:
+//   fGEM_Rpos.SetXAxis( fGEMxaxis_global );
+//   fGEM_Rpos.SetYAxis( fGEMyaxis_global );
+//   fGEM_Rpos.SetZAxis( fGEMzaxis_global );
 
-  fGEM_Rinverse = fGEM_Rtotal.Inverse();
-}
+//   //fGEM_Rinverse = fGEM_Rtotal.Inverse();
+// }
 
-void SBSEArm::InitGEMAxes( double theta, double phi ){
-  //fGEMorigin = Origin;
-  fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
-  fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
-  fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
+// void SBSEArm::InitGEMAxes( double theta, double phi ){
+//   //fGEMorigin = Origin;
+//   fGEMzaxis_global.SetXYZ( sin(theta)*cos(phi), sin(theta)*sin(phi), cos(theta) );
+//   fGEMxaxis_global = (fOpticsYaxis_global.Cross( fGEMzaxis_global) ).Unit(); // check to make sure this is consistent with definition in the zero-field alignment code
+//   fGEMyaxis_global = (fGEMzaxis_global.Cross(fGEMxaxis_global)).Unit();
 
-  fGEM_Rtotal.SetXAxis( fGEMxaxis_global );
-  fGEM_Rtotal.SetYAxis( fGEMyaxis_global );
-  fGEM_Rtotal.SetZAxis( fGEMzaxis_global );
+//   fGEM_Rtotal.SetXAxis( fGEMxaxis_global );
+//   fGEM_Rtotal.SetYAxis( fGEMyaxis_global );
+//   fGEM_Rtotal.SetZAxis( fGEMzaxis_global );
 
-  fGEM_Rinverse = fGEM_Rtotal.Inverse();
-}
+//   fGEM_Rinverse = fGEM_Rtotal.Inverse();
+// }
 
 void SBSEArm::CheckConstraintOffsetsAndWidths(){
   //Initialize these with sensible defaults in case the user hasn't defined something sensible:
@@ -1171,6 +1440,7 @@ void SBSEArm::CheckConstraintOffsetsAndWidths(){
 		      fBackConstraintX0.size() < 2 || fBackConstraintY0.size() < 2 );
 
     if( any_incorrect ){ //initialize constraints with defaults:
+      std::cout << "constraint width and/or offset initialization incorrect, going with defaults..." << std::endl;
       for( int icp=0; icp<2; icp++ ){
 	fFrontConstraintWidthX.push_back( xwidth_front_default[icp] );
 	fFrontConstraintWidthY.push_back( ywidth_front_default[icp] );
@@ -1194,61 +1464,48 @@ void SBSEArm::SetPolarimeterMode( Bool_t ispol ){
 void SBSEArm::InitGEMAxes( double ax, double ay, double az, const TVector3 &Origin ){
   fGEMorigin = Origin;
 
-  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
-  TRotation Rtot;
-  Rtot.RotateZ(az);
-  Rtot.RotateX(ax);
-  Rtot.RotateY(ay);
-
-  fGEM_Rtotal = Rtot;
-
-  fGEM_Rinverse = Rtot.Inverse();
-
-  std::cout << "| Rinv_xx, Rinv_xy, Rinv_xz | = | "
-	    << fGEM_Rinverse.XX() << ", " << fGEM_Rinverse.XY() << ", " << fGEM_Rinverse.XZ() << " |" << endl
-	    << "| Rinv_yx, Rinv_yy, Rinv_yz | = | "
-	    << fGEM_Rinverse.YX() << ", " << fGEM_Rinverse.YY() << ", " << fGEM_Rinverse.YZ() << " |" << endl
-	    << "| Rinv_zx, Rinv_zy, Rinv_zz | = | "
-	    << fGEM_Rinverse.ZX() << ", " << fGEM_Rinverse.ZY() << ", " << fGEM_Rinverse.ZZ() << " |" << std::endl;
-  
-  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
-  fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
-  fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
-
-  std::cout << GetName() << ": GEM global X axis: ";
-  fGEMxaxis_global.Print();
-
-  std::cout << GetName() << ": GEM global Y axis: ";
-  fGEMyaxis_global.Print();
-
-  std::cout << GetName() << ": GEM global Z axis: ";
-  fGEMzaxis_global.Print();
-  
+  InitGEMAxes(ax,ay,az);
   
 }
 
 void SBSEArm::InitGEMAxes( double ax, double ay, double az ){
 
-  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
-  TRotation Rtot;
-  Rtot.RotateZ(az);
-  Rtot.RotateX(ax);
-  Rtot.RotateY(ay);
+  //version with three arguments only initializes rotation matrices:
+  fGEMax = ax;
+  fGEMay = ay;
+  fGEMaz = az;
 
-  fGEM_Rtotal = Rtot;
+  TRotation R; 
 
-  fGEM_Rinverse = Rtot.Inverse();
-
-  std::cout << "| Rinv_xx, Rinv_xy, Rinv_xz | = | "
-	    << fGEM_Rinverse.XX() << ", " << fGEM_Rinverse.XY() << ", " << fGEM_Rinverse.XZ() << " |" << endl
-	    << "| Rinv_yx, Rinv_yy, Rinv_yz | = | "
-	    << fGEM_Rinverse.YX() << ", " << fGEM_Rinverse.YY() << ", " << fGEM_Rinverse.YZ() << " |" << endl
-	    << "| Rinv_zx, Rinv_zy, Rinv_zz | = | "
-	    << fGEM_Rinverse.ZX() << ", " << fGEM_Rinverse.ZY() << ", " << fGEM_Rinverse.ZZ() << " |" << std::endl;
+  R.RotateX(ax);
+  R.RotateY(ay);
+  R.RotateZ(az);
   
-  fGEMxaxis_global.SetXYZ( Rtot.XX(), Rtot.YX(), Rtot.ZX() );
-  fGEMyaxis_global.SetXYZ( Rtot.XY(), Rtot.YY(), Rtot.ZY() );
-  fGEMzaxis_global.SetXYZ( Rtot.XZ(), Rtot.YZ(), Rtot.ZZ() );
+  //  fGEM_Rpos = TRotation();
+  //  fGEM_Rdir = TRotation();
+  
+  //For SBS, we do the rotations in the order x,y,z (unlike for BB, where the order is y,z,x consistent with the fit procedure)
+  //fGEM_Rpos.RotateZ(az);
+  //fGEM_Rpos.RotateX(ax);
+  //fGEM_Rpos.RotateY(ay);
+
+  //z-axis rotation for track track direction is opposite the z axis rotation for the track position (active vs passive? Still don't fully "grok" this result):
+  //fGEM_Rdir.RotateZ(-az);
+  //fGEM_Rdir.RotateX(ax);
+  //fGEM_Rdir.RotateY(ay);
+  
+  // std::cout << "| Rdir_xx, Rdir_xy, Rdir_xz | = | "
+  // 	    << fGEM_Rdir.XX() << ", " << fGEM_Rdir.XY() << ", " << fGEM_Rdir.XZ() << " |" << endl
+  // 	    << "| Rdir_yx, Rdir_yy, Rdir_yz | = | "
+  // 	    << fGEM_Rdir.YX() << ", " << fGEM_Rdir.YY() << ", " << fGEM_Rdir.YZ() << " |" << endl
+  // 	    << "| Rdir_zx, Rdir_zy, Rdir_zz | = | "
+  // 	    << fGEM_Rdir.ZX() << ", " << fGEM_Rdir.ZY() << ", " << fGEM_Rdir.ZZ() << " |" << std::endl;
+
+  //GEM axes are the columns of the rotation matrix:
+  
+  fGEMxaxis_global.SetXYZ( R.XX(), R.YX(), R.ZX() );
+  fGEMyaxis_global.SetXYZ( R.XY(), R.YY(), R.ZY() );
+  fGEMzaxis_global.SetXYZ( R.XZ(), R.YZ(), R.ZZ() );
 
   std::cout << GetName() << ": GEM global X axis: ";
   fGEMxaxis_global.Print();
@@ -1258,7 +1515,81 @@ void SBSEArm::InitGEMAxes( double ax, double ay, double az ){
 
   std::cout << GetName() << ": GEM global Z axis: ";
   fGEMzaxis_global.Print();
+
 }
 
 //_____________________________________________________________________________
+// The following methods are for populating diagnostic output variables ONLY! 
+//_____________________________________________________________________________
+void SBSEArm::AddFrontConstraintPoint( TVector3 cpoint ){
+  fFrontConstraintX.push_back( cpoint.X() );
+  fFrontConstraintY.push_back( cpoint.Y() );
+  fFrontConstraintZ.push_back( cpoint.Z() );
+}
+//_____________________________________________________________________________
+void SBSEArm::AddFrontConstraintPoint( double x, double y, double z ){
+  fFrontConstraintX.push_back( x );
+  fFrontConstraintY.push_back( y );
+  fFrontConstraintZ.push_back( z );
+}
+//_____________________________________________________________________________
+void SBSEArm::AddBackConstraintPoint( TVector3 cpoint ){
+  fBackConstraintX.push_back( cpoint.X() );
+  fBackConstraintY.push_back( cpoint.Y() );
+  fBackConstraintZ.push_back( cpoint.Z() );
+}
+//_____________________________________________________________________________
+void SBSEArm::AddBackConstraintPoint( double x, double y, double z ){
+  fBackConstraintX.push_back( x );
+  fBackConstraintY.push_back( y );
+  fBackConstraintZ.push_back( z );
+}
+
+Double_t SBSEArm::GetFrontConstraintWidthX(int icp){
+  if( icp >= 0 && icp < fFrontConstraintWidthX.size() ){
+    return fFrontConstraintWidthX[icp];
+  } else return kBig;
+}
+
+Double_t SBSEArm::GetFrontConstraintWidthY(int icp){
+  if( icp >= 0 && icp < fFrontConstraintWidthY.size() ){
+    return fFrontConstraintWidthY[icp];
+  } else return kBig;
+}
+
+Double_t SBSEArm::GetBackConstraintWidthX(int icp){
+  if( icp >= 0 && icp < fBackConstraintWidthX.size() ){
+    return fBackConstraintWidthX[icp];
+  } else return kBig;
+}
+
+Double_t SBSEArm::GetBackConstraintWidthY(int icp){
+  if( icp >= 0 && icp < fBackConstraintWidthY.size() ){
+    return fBackConstraintWidthY[icp];
+  } else return kBig;
+}
+
+Double_t SBSEArm::GetFrontConstraintX0(int icp){
+  if( icp >= 0 && icp < fFrontConstraintX0.size() ){
+    return fFrontConstraintX0[icp];
+  } else return kBig;
+}
+
+Double_t SBSEArm::GetFrontConstraintY0(int icp){
+  if( icp >= 0 && icp < fFrontConstraintY0.size() ){
+    return fFrontConstraintY0[icp];
+  } else return kBig;
+}
+
+Double_t SBSEArm::GetBackConstraintX0(int icp){
+  if( icp >= 0 && icp < fBackConstraintX0.size() ){
+    return fBackConstraintX0[icp];
+  } else return kBig;
+}
+
+Double_t SBSEArm::GetBackConstraintY0(int icp){
+  if( icp >= 0 && icp < fBackConstraintY0.size() ){
+    return fBackConstraintY0[icp];
+  } else return kBig;
+}
 

@@ -36,6 +36,8 @@ public:
   //virtual Int_t   Begin( THaRunBase* r=0 );
   //virtual Int_t   End( THaRunBase* r=0 );
 
+  Double_t GetETOF_avg() const { return fETOF_avg; }
+  
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
   virtual Int_t ReadRunDatabase( const TDatime& date );
@@ -119,6 +121,7 @@ protected:
   bool fUseBeamPosInOptics; //default false;
   
   int fOpticsOrder;
+  int fOpticsNterms;
   std::vector<double> fb_xptar;
   std::vector<double> fb_yptar;
   std::vector<double> fb_ytar;
@@ -148,6 +151,7 @@ protected:
   
   //Only relevant if downbending optics are defined via the DB:
   int fOpticsOrderDownbend;
+  int fOpticsNtermsDownbend;
   std::vector<double> fb_xptar_downbend;
   std::vector<double> fb_yptar_downbend;
   std::vector<double> fb_ytar_downbend;
@@ -164,6 +168,7 @@ protected:
   bool fUseForwardOptics; //default to false: turning this on will enable forward optics-based track search constraints
   
   int fForwardOpticsOrder;
+  int fForwardOpticsNterms;
   std::vector<double> fb_xfp;
   std::vector<double> fb_yfp;
   std::vector<double> fb_xpfp;
