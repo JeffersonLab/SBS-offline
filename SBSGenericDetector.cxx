@@ -339,9 +339,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       // in from the crate map
       if(!model_in_detmap) {
         d->SetModel(cratemap->getModel(d->crate,d->slot));
+	if (d->GetModel() == 1984 || d->GetModel() == 526) d->MakeTDC();
       }
       if( model_in_detmap) {
-	if (d->GetModel() == 526) {
+	if (d->GetModel() == 1984 || d->GetModel() == 526) {
 	  d->MakeTDC(); 
 	} else {
           Error( Here(here), "Need to modify SBSGenericDetector to specify whether TDC or ADC for module %d.", i);   
