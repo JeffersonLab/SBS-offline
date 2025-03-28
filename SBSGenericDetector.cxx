@@ -325,7 +325,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     fRefChanMap.resize(nmodules);
     fRefChanLo.resize(nmodules);
     fRefChanHi.resize(nmodules);
-    WithDefaultTZ(Long64_t tloc = date.Convert());
+    //WithDefaultTZ(Long64_t tloc = date.Convert());
+    Long64_t tloc = date.Convert();
     Decoder::THaCrateMap *cratemap = SBSManager::GetInstance()->GetCrateMap(tloc);
     Int_t kr = 0,ka = 0, kt = 0, km = 0, k = 0;
     for( Int_t i = 0; i < nmodules && !err; i++) {
@@ -338,9 +339,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
       // in from the crate map
       if(!model_in_detmap) {
         d->SetModel(cratemap->getModel(d->crate,d->slot));
+	if (d->GetModel() == 1984 || d->GetModel() == 526) d->MakeTDC();
       }
       if( model_in_detmap) {
-	if (d->GetModel() == 526) {
+	if (d->GetModel() == 1984 || d->GetModel() == 526) {
 	  d->MakeTDC(); 
 	} else {
           Error( Here(here), "Need to modify SBSGenericDetector to specify whether TDC or ADC for module %d.", i);   
