@@ -53,7 +53,7 @@ endif()
 set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSGEMTrackerBase.cxx SBSGEMSpectrometerTracker.cxx SBSGEMModule.cxx SBSGEMPolarimeterTracker.cxx
   SBSBBShower.cxx SBSBBTotalShower.cxx 
-  SBSCDet.cxx SBSScintHit.cxx SBSScintPMT.cxx 
+  SBSCDet.cxx SBSCDet_Hit.cxx SBSScintHit.cxx SBSScintPMT.cxx 
   SBSTimingHodoscope.cxx SBSScintBar.cxx SBSTdcHit.cxx SBSAdcHit.cxx
   SBSScintPartialHit.cxx SBSCherenkovDetector.cxx SBSCherenkov_ClusterList.cxx
   SBSGRINCH.cxx

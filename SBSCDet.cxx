@@ -30,14 +30,66 @@ Int_t SBSCDet::ReadDatabase( const TDatime& date )
 
   // If we want to add any new variables, uncomment the following and add
   // the new variables we want to read from the database
-  FILE* file = OpenFile( date );
-  if( !file ) return kFileError;
+  FILE* fi = OpenFile( date );
+  if( !fi ) return kFileError;
   //Int_t err;
 
-  //std::cout<<"ReadDatabase method"<<std::endl;
+  std::cout<<"SBSCDet::ReadDatabase method"<<std::endl;
+  
+  Int_t err = SBSGenericDetector::ReadDatabase(date);
+  if(err) {
+    return err;
+  }
+  fIsInit = false;
+
+  std::vector<Double_t> xpos,ypos,zpos;
+
+  DBRequest config_request[] = {
+    { "xpos", &xpos,    kDoubleV, 0, 1 },
+    { "ypos", &ypos,    kDoubleV, 0, 1 },
+    { "zpos", &ypos,    kDoubleV, 0, 1 },
+    { 0 } ///< Request must end in a NULL
+  };
+  err = LoadDB( fi, date, config_request, fPrefix );
+
+  if (!xpos.empty()) {
+    if ((int)xpos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+        fElements[ne]->SetX(xpos[ne]);
+      }
+    } else {
+      std::cout << "  vector too small " << xpos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
+
+  if (!ypos.empty()) {
+    if ((int)ypos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+        fElements[ne]->SetY(ypos[ne]);
+      }
+    } else {
+      std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
+  
+  if (!zpos.empty()) {
+    if ((int)zpos.size() == fNelem) {
+      for (Int_t ne=0;ne<fNelem;ne++) {
+        fElements[ne]->SetZ(ypos[ne]);
+      }
+    } else {
+      std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
+    }
+  }
+
+  fIsInit = true;
+
+  fclose(fi);
+  return kOK;
 
   // Make sure to call parent class so that the generic variables can be read
-  return SBSGenericDetector::ReadDatabase(date);
+  //return SBSGenericDetector::ReadDatabase(date);
+
 }
 
 //_____________________________________________________________________________
@@ -54,19 +106,21 @@ Int_t SBSCDet::DefineVariables( EMode mode )
 
   RVarDef vars[] = {
    //{ "nhits",       " number of PMT hits", "GetNumHits()"  },
-   //{ "hit.pmtnum",  " Hit PMT num",        "fHits.SBSCDet.GetPMTNum()"},
-   //{ "hit.xhit",    " PMT hit X",          "fHits.SBSCDet.GetX()"     },
-   //{ "hit.yhit",    " PMT hit Y",          "fHits.SBSCDet.GetY()"     },
-   //{ "hit.row",     " PMT hit row",        "fHits.SBSCDet.GetRow()"   },
-   //{ "hit.col",     " PMT hit column",     "fHits.SBSCDet.GetCol()"   },
-   //{ "hit.adc_r",   " PMT hit ADC right",  "fHits.SBSCDet.GetADC_r()" },
-   //{ "hit.adc_l",   " PMT hit ADC left",   "fHits.SBSCDet.GetADC_l()" },
-   //{ "hit.tdc_r",   " PMT hit TDC right",  "fHits.SBSCDet.GetTDC_r()" },
-   //{ "hit.tdc_l",   " PMT hit TDC left",   "fHits.SBSCDet.GetTDC_l()" },
+   { "hit.pmtnum",  " Hit PMT num",        "fHits.SBSCDet_Hit.GetPMTNum()"},
+   { "hit.row",     " PMT hit row",        "fHits.SBSCDet_Hit.GetRow()"   },
+   { "hit.col",     " PMT hit column",     "fHits.SBSCDet_Hit.GetCol()"   },
+   { "hit.layer",     " PMT hit layer",     "fHits.SBSCDet_Hit.GetLayer()"   },
+   { "hit.xhit",    " PMT hit X",          "fHits.SBSCDet_Hit.GetX()"     },
+   { "hit.yhit",    " PMT hit Y",          "fHits.SBSCDet_Hit.GetY()"     },
+   { "hit.zhit",    " PMT hit Z",          "fHits.SBSCDet_Hit.GetZ()"     },
+   { "hit.tdc_le",   " PMT hit TDC LE",  "fHits.SBSCDet_Hit.GetTDC_LE()" },
+   { "hit.tdc_te",   " PMT hit TDC TE",   "fHits.SBSCDet_Hit.GetTDC_LE()" },
+   { "hit.tdc_tot",   " PMT hit TDC TOT",   "fHits.SBSCDet_Hit.GetToT()" },
    { 0 }
   };
   err = DefineVarsFromList( vars, mode );
-  
+ 
+ 
   // Finally go back
   return err;
 }
@@ -116,6 +170,8 @@ Int_t SBSCDet::CoarseProcess( TClonesArray& tracks )
 {
   if(fCoarseProcessed)
     return 0;
+
+  std::cout << "SBSCDet::CoarseProcess ... " << std::endl;
 
   // Call the parent class so that it can prepare the data structure on the
   // event it just read from file
