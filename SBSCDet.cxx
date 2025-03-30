@@ -195,7 +195,10 @@ Int_t SBSCDet::CoarseProcess( TClonesArray& tracks )
 
   // Call the parent class so that it can prepare the data structure on the
   // event it just read from file
+
+  //std::cout << "fNGoodTDChits = " << fNGoodTDChits << std::endl;
   SBSGenericDetector::CoarseProcess(tracks);
+  //std::cout << "Back SBSGenericDetector::CoarseProcess ... fNGoodTDChits = " << fNGoodTDChits << std::endl;
 
   double x, y, z;
   //double tmin, tmax;
@@ -219,7 +222,7 @@ Int_t SBSCDet::CoarseProcess( TClonesArray& tracks )
       the_hit->SetPMTNum(fGood.TDCelemID[k]);
       the_hit->SetRow(fGood.TDCrow[k]);
       the_hit->SetCol(fGood.TDCcol[k]);
-      the_hit->SetLayer(fGood.TDCcol[k]);
+      the_hit->SetLayer(fGood.TDClayer[k]);
       the_hit->SetTDC_LE(fGood.t[k]);
       the_hit->SetTDC_TE(fGood.t_te[k]);
       the_hit->SetToT(fGood.t_ToT[k]);
