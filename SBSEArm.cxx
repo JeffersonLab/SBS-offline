@@ -1085,6 +1085,7 @@ Int_t SBSEArm::Track()
     TIter next2( fTrackingDetectors );
     while( auto* theTrackDetector =
 	   static_cast<THaTrackingDetector*>( next2() )) {
+      //What is the purpose of the line below?
       assert(dynamic_cast<THaTrackingDetector*>(theTrackDetector));
       // std::cout << "Got tracking detector, name = "
       // 		<< theTrackDetector->GetName() << std::endl;
@@ -1114,7 +1115,8 @@ Int_t SBSEArm::Track()
 	//will initiate tracking.
 	//Otherwise, it does nothing:
 	// The default (GEN-RP) behavior is to process the back tracker first:
-
+	// In GEP we will always process the front tracker first:
+	
 	if( !fGEPtrackingMode ){
 	  theNonTrackDetector->FineProcess( *fTracks );
 	}
@@ -1155,8 +1157,8 @@ Int_t SBSEArm::Track()
 	  BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1],
 						fFrontConstraintWidthY[1] );
 	  
-	  fFrontConstraintX.push_back( xFT + xpFT * fAnalyzerZ0 );
-	  fFrontConstraintY.push_back( yFT + ypFT * fAnalyzerZ0 );
+	  fFrontConstraintX.push_back( xFT + xpFT * fAnalyzerZ0 + fFrontConstraintX0[1] );
+	  fFrontConstraintY.push_back( yFT + ypFT * fAnalyzerZ0 + fFrontConstraintY0[1] );
 	  fFrontConstraintZ.push_back( fAnalyzerZ0 );
 	  
 	  //In the GEP tracking mode, the polarimeter tracking will be invoked during FineProcess, no need to do it twice
@@ -1363,7 +1365,7 @@ Int_t SBSEArm::Begin( THaRunBase *run ){
       }
     }
   }
-  std::cout << "Why do we seg fault here?" << std::endl;
+  //  std::cout << "Why do we seg fault here?" << std::endl;
   return kOK;
 }
 //_______________________

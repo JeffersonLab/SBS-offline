@@ -52,6 +52,9 @@ public:
   Double_t GetFrontConstraintY0(int icp=0);
   Double_t GetBackConstraintX0(int icp=0);
   Double_t GetBackConstraintY0(int icp=0);
+
+  Bool_t IsPolarimeter() const { return fPolarimeterMode; }
+  
 				
   
 protected:
@@ -158,6 +161,7 @@ protected:
   Bool_t fPolarimeterMode_DBoverride; //flag to override DB value
   
   Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
+  Double_t fAnalyzerThick; //Total thickness of analyzer
   
   //Also include (optional) forward optics model to aid in false track rejection. 
   int fForwardOpticsOrder;
