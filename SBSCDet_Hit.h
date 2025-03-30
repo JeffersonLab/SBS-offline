@@ -52,7 +52,7 @@ class SBSCDet_Hit : public TObject {
   void       SetPMTNum( Int_t pmtnum ) {fPMTNum = pmtnum;}
   void       SetRow( Int_t i )         {fRow = i;}
   void       SetCol( Int_t j )         {fCol = j;}
-  void       SetLayer( Int_t k )         {fLayer = k;}
+  void       SetLayer( Int_t k )       {fLayer = k;}
 
 
   //void SetClustIndex( Int_t icl ){ fClustIndex = icl; }
