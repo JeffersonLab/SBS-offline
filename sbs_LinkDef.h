@@ -40,6 +40,7 @@
 #pragma link C++ class SBSData::Waveform+;
 #pragma link C++ class SBSData+;
 #pragma link C++ class SBSCDet+;
+#pragma link C++ class SBSCDet_Hit+;
 #pragma link C++ class SBSTimingHodoscope+;
 #pragma link C++ class SBSBBShower+;
 #pragma link C++ class SBSBBTotalShower+;
