@@ -24,7 +24,7 @@ namespace Decoder {
   const UInt_t MAXHIT = 100;
 
   Module::TypeIter_t VETROCcdetModule::fgThisType =
-    DoRegister( ModuleType( "Decoder::VETROCcdetModule" , 1984 ));
+    DoRegister( ModuleType( "Decoder::VETROCcdetModule" , 527 ));
 
   VETROCcdetModule::VETROCcdetModule(Int_t crate, Int_t slot)
     : VmeModule(crate, slot), fNumHits(NTDCCHAN), fTdcData(NTDCCHAN*MAXHIT),
