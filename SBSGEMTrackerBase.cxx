@@ -3550,3 +3550,23 @@ void SBSGEMTrackerBase::GetTrack(int itrack, double &x, double &y, double &xp, d
   }
   return;
 }
+
+TVector3 SBSGEMTrackerBase::GetFrontConstraintPoint( int icp ){
+  if( icp >= 0 && icp < fConstraintPoint_Front.size() ){
+    return fConstraintPoint_Front[icp];
+  } else {
+    std::cout << "Warning in SBSGEMTrackerBase::GetFrontConstraintPoint(int icp): index " << icp
+	      << " is out-of-bounds." << std::endl;
+    return TVector3(kBig,kBig,kBig);
+  }
+}
+
+TVector3 SBSGEMTrackerBase::GetBackConstraintPoint( int icp ){
+  if( icp >= 0 && icp < fConstraintPoint_Back.size() ){
+    return fConstraintPoint_Back[icp];
+  } else {
+    std::cout << "Warning in SBSGEMTrackerBase::GetBackConstraintPoint(int icp): index " << icp
+	      << " is out-of-bounds." << std::endl;
+    return TVector3(kBig,kBig,kBig);
+  }
+}

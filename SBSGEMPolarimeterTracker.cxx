@@ -320,6 +320,8 @@ void SBSGEMPolarimeterTracker::Clear( Option_t *opt ){
 
   SBSGEMTrackerBase::Clear();
 
+  ClearConstraints(); //hopefully this doesn't screw up constraint point settings;
+
   //fTrigTime = 0.0;
   
   for( auto& module: fModules ) {

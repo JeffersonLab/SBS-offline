@@ -46,7 +46,7 @@ class SBSGEMPolarimeterTracker : public THaNonTrackingDetector, public SBSGEMTra
   void SetFrontTrack( TVector3 track_origin, TVector3 track_direction );
   void SetFrontTrack( double x, double y, double theta, double phi );
 
-  bool HasFrontTrack() const { return fFrontTrackIsSet; }
+  bool HasFrontTrack() const { return fFrontTrackIsSet; };
   
  private:
   // std::vector <SBSGEMModule *> fPlanes; storing the modules moved to SBSGEMTrackerBase
@@ -61,6 +61,8 @@ class SBSGEMPolarimeterTracker : public THaNonTrackingDetector, public SBSGEMTra
 
   //Add additional track properties we want to store:
 
+  
+  
   //For the time being, we will only consider one possible "front track":
   double fFrontTrackX;
   double fFrontTrackY;

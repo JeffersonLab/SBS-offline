@@ -348,6 +348,8 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
 
   SBSGEMTrackerBase::Clear();
 
+  ClearConstraints();
+  
   //fTrigTime = 0.0;
   
   for( auto& module: fModules ) {

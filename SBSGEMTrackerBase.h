@@ -29,6 +29,10 @@ public:
   void Clear(); //clear out all the event-specific data structures
 
   void ClearConstraints(); //clear out constraint point arrays and reset the "initialized" flags
+
+  //Need to add some public "get" methods for constraint point information:
+  TVector3 GetFrontConstraintPoint(int icp=0);
+  TVector3 GetBackConstraintPoint(int icp=0);
   
   void SetFrontConstraintPoint( TVector3 fcp );
   void SetBackConstraintPoint( TVector3 bcp );
@@ -91,11 +95,18 @@ public:
   double GetXpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fXptrack[itrack] : 1.e20; };
   double GetYpTrack( int itrack=0 ) const { return (itrack>=0&&itrack<fNtracks_found) ? fYptrack[itrack] : 1.e20; };
 
+  inline void SetMultiTracks( bool b ) { fMultiTrackSearch = b; };
+  
   //How to check whether the use of multiple constraint points is enabled
   bool MultiTracksEnabled() const { return fMultiTrackSearch; };
 
   double GetZminLayer() const { return fZminLayer; };
   double GetZmaxLayer() const { return fZmaxLayer; };
+
+  //We need to be able to check that front and back constraint points are initialized:
+  bool FrontConstraintIsIinitialized() const { return fConstraintPoint_Front_IsInitialized; };
+  bool BackConstraintIsInitialized() const { return fConstraintPoint_Back_IsInitialized; };
+  bool ConstraintIsInitialized() const { return fConstraintInitialized; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.

@@ -55,7 +55,7 @@ public:
 
   Bool_t IsPolarimeter() const { return fPolarimeterMode; }
   
-				
+  
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
@@ -162,6 +162,8 @@ protected:
   
   Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
   Double_t fAnalyzerThick; //Total thickness of analyzer
+
+  int fNbinsZBackTrackerConstraint; // we'll divide the analyzer thickness for the back polarimeter tracker into bins for the constraint definition
   
   //Also include (optional) forward optics model to aid in false track rejection. 
   int fForwardOpticsOrder;

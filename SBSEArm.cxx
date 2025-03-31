@@ -142,6 +142,9 @@ THaSpectrometer( name, description )
   fAnalyzerZ0 = 0.0;
 
   fUseDynamicConstraint = false;
+
+  fAnalyzerThick = 0.5588; //meters
+  fNbinsZBackTrackerConstraint = 1;
   
 }
 
@@ -236,6 +239,8 @@ Int_t SBSEArm::ReadDatabase( const TDatime& date )
     { "dynamicph0", &fDynamicConstraintOffsetY, kDouble, 0, 1, 1},
     { "forwardoptics_order", &fForwardOpticsOrder, kInt, 0, 1, 1 },
     { "forwardoptics_parameters", &foptics_param, kDoubleV, 0, 1, 1 },
+    { "analyzerthick", &fAnalyzerThick, kDouble, 0, 1, 1 },
+    { "nbinsz_fcp", &fNbinsZBackTrackerConstraint, kInt, 0, 1, 1 },
     {0}
   };
 
@@ -910,36 +915,49 @@ Int_t SBSEArm::CoarseReconstruct()
   fHCALdir_z = HCALdir_global.Z();
 
   if( fGEPtrackingMode && BackTracker != nullptr ){ //We can set the BACK constraint point for the BACK tracker based on HCAL:
-    BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1],
-					 y_bcp + fBackConstraintY0[1],
-					 z_bcp );
 
     BackTracker->SetBackConstraintWidth( fBackConstraintWidthX[1],
 					 fBackConstraintWidthY[1] );
 
+    BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1],
+					  fFrontConstraintWidthY[1] );
+
+    //Initialize Back Constraint Points with appropriate size regardless of whether front tracking is already done: 
+
+    for( int ibin=0; ibin<fNbinsZBackTrackerConstraint; ibin++ ){
+      BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1],
+					   y_bcp + fBackConstraintY0[1],
+					   z_bcp );
+    }
+      
     // This code block will almost certainly never be executed, but let's add the capability for completeness anyway:
     // If for some reason the front tracking is done in CoarseTrack, but the back tracking isn't, this
     // block of code could be useful:
     if( FrontTracker != nullptr ){
-      if( FrontTracker->GetNtracks() > 0 ){ // tracking is done
+      if( FrontTracker->GetNtracks() > 0 ){ // tracking is already done for FT:
+	
 	BackTracker->SetFrontTrack( FrontTracker->GetXTrack( 0 ),
 				    FrontTracker->GetYTrack( 0 ),
 				    FrontTracker->GetXpTrack( 0 ),
 				    FrontTracker->GetYpTrack( 0 ) );
-
-	x_fcp = FrontTracker->GetXTrack(0) + fAnalyzerZ0 * FrontTracker->GetXpTrack(0);
-	y_fcp = FrontTracker->GetYTrack(0) + fAnalyzerZ0 * FrontTracker->GetYpTrack(0);
-	BackTracker->SetFrontConstraintPoint( x_fcp, y_fcp, fAnalyzerZ0 );
-
-	BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1],
-					      fFrontConstraintWidthY[1] );
+	
+	for( int ibin=0; ibin<fNbinsZBackTrackerConstraint; ibin++ ){
+	 
+	  double ztemp = fAnalyzerZ0 - fAnalyzerThick/2.0 + (ibin+0.5) * fAnalyzerThick/(double(fNbinsZBackTrackerConstraint));
+	  
+	  x_fcp = FrontTracker->GetXTrack(0) + ztemp * FrontTracker->GetXpTrack(0);
+	  y_fcp = FrontTracker->GetYTrack(0) + ztemp * FrontTracker->GetYpTrack(0);
+	  BackTracker->SetFrontConstraintPoint( x_fcp, y_fcp, ztemp );
+	  
+	  
+	}
       }
     }
 
     //Let's at least add the HCAL back constraint point to the diagnostic output variables:
-    fBackConstraintX.push_back( x_bcp + fBackConstraintX0[1] );
-    fBackConstraintY.push_back( y_bcp + fBackConstraintY0[1] );
-    fBackConstraintZ.push_back( z_bcp );
+    // fBackConstraintX.push_back( x_bcp + fBackConstraintX0[1] );
+    // fBackConstraintY.push_back( y_bcp + fBackConstraintY0[1] );
+    // fBackConstraintZ.push_back( z_bcp );
     
     //With the GEP region-of-interest module, this is all we need CoarseReconstruct() to do for GEP tracking mode;
     
@@ -1151,16 +1169,34 @@ Int_t SBSEArm::Track()
 				      xpFT,
 				      ypFT );
 
-	  BackTracker->SetFrontConstraintPoint( xFT + xpFT * fAnalyzerZ0 + fFrontConstraintX0[1],
-						yFT + ypFT * fAnalyzerZ0 + fFrontConstraintY0[1],
-						fAnalyzerZ0 );
 	  BackTracker->SetFrontConstraintWidth( fFrontConstraintWidthX[1],
 						fFrontConstraintWidthY[1] );
+
+	  //	  std::cout << "initializing back tracker constraints, nbins = " << fNbinsZBackTrackerConstraint << std::endl;
 	  
-	  fFrontConstraintX.push_back( xFT + xpFT * fAnalyzerZ0 + fFrontConstraintX0[1] );
-	  fFrontConstraintY.push_back( yFT + ypFT * fAnalyzerZ0 + fFrontConstraintY0[1] );
-	  fFrontConstraintZ.push_back( fAnalyzerZ0 );
+	  for( int ibin=0; ibin<fNbinsZBackTrackerConstraint; ibin++ ){
+	    double ztemp = fAnalyzerZ0 - fAnalyzerThick/2.0 + (ibin+0.5)*fAnalyzerThick/(double(fNbinsZBackTrackerConstraint));
 	  
+	    BackTracker->SetFrontConstraintPoint( xFT + xpFT * ztemp + fFrontConstraintX0[1],
+						  yFT + ypFT * ztemp + fFrontConstraintY0[1],
+						  ztemp );
+   
+	    
+	    fFrontConstraintX.push_back( xFT + xpFT * ztemp + fFrontConstraintX0[1] );
+	    fFrontConstraintY.push_back( yFT + ypFT * ztemp + fFrontConstraintY0[1] );
+	    fFrontConstraintZ.push_back( ztemp );
+
+	    if( BackTracker->BackConstraintIsInitialized() ){
+	      TVector3 bcp = BackTracker->GetBackConstraintPoint( ibin );
+	      
+	      fBackConstraintX.push_back( bcp.X() );
+	      fBackConstraintY.push_back( bcp.Y() );
+	      fBackConstraintZ.push_back( bcp.Z() );
+	    }
+	  }
+
+	  // std::cout << "Number of constraint points, (nfront,nback)=( " << fFrontConstraintX.size() << ", " << fBackConstraintX.size() << ")"
+	  // 	    << std::endl;
 	  //In the GEP tracking mode, the polarimeter tracking will be invoked during FineProcess, no need to do it twice
 	}
 	
@@ -1362,6 +1398,11 @@ Int_t SBSEArm::Begin( THaRunBase *run ){
 	  theGEMtracker->SetBackConstraintWidth( fBackConstraintWidthX[idx], fBackConstraintWidthY[idx] );
 	  std::cout << "set back..." << std::endl;
 	}
+
+	if( fNbinsZBackTrackerConstraint > 1 ){
+	  theGEMtracker->SetMultiTracks( true );
+	}
+	
       }
     }
   }
