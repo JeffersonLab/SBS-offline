@@ -1665,6 +1665,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
           fGood.t_te.push_back(hit.te.val);
           fGood.t_ToT.push_back(hit.ToT.val);
         }
+	//std::cout << "LE time = " << hit.le.val << "     TE time = " << hit.te.val << "     Tot = " << hit.ToT.val << std::endl;
 
 	// if( fModeTDC == SBSModeTDC::kTDCSimple && hit.TrigTime != 0 ) {
 	//   std::cout << "F1 TDC TrigTime, (thischan, refchan, RFchan, thischan-refchan)=("
