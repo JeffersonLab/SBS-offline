@@ -148,7 +148,7 @@ namespace Decoder {
 
         tdc_data.opt = edgeD;
         tdc_data.chan = (group*32 + chan);
-        tdc_data.raw = coarse*4000 + two_ns*2000 + fine;
+        tdc_data.raw = coarse*4000 + two_ns*2000 + fine*2000/109.59; // this should be the time in ps (from Tritium code)
 	
 	tdc_data.status = slot_data->loadData("tdc", tdc_data.chan, tdc_data.raw, tdc_data.opt);
 #ifdef WITH_DEBUG
