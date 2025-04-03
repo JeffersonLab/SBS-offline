@@ -165,7 +165,8 @@ namespace Decoder {
 	//	      << tdc_data.chan << " >> slot = " << tdc_data.glb_hdr_slno << " >> edge = "
 	//	      << tdc_data.opt  << " >> raw time = "
 	//	      << tdc_data.raw << " >> status = "
-	//	      << tdc_data.status << std::endl;
+	//	      << tdc_data.status << " >> trigtime = "
+	//	      << tdc_data.trig_time << std::endl;
         if(tdc_data.chan < NTDCCHAN &&
            fNumHits[tdc_data.chan] < MAXHIT) {
           fTdcData[tdc_data.chan * MAXHIT + fNumHits[tdc_data.chan]] = tdc_data.raw;
