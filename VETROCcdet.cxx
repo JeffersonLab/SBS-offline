@@ -199,11 +199,10 @@ namespace Decoder {
     if( idx > MAXHIT * NTDCCHAN ) return 0;
     return fTdcOpt[idx];
   }
-
+  
   void VETROCcdetModule::Clear( Option_t* ) {
     fNumHits.assign(NTDCCHAN, 0);
     fTdcData.assign(NTDCCHAN * MAXHIT, 0);
-    fTdcOpt.assign(NTDCCHAN * MAXHIT, 0);
   }
 }
 
