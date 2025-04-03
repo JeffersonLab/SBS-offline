@@ -26,7 +26,8 @@ class SBSCDet_Hit : public TObject {
  public:
   SBSCDet_Hit(); 
   SBSCDet_Hit( Int_t pmtnum, Int_t i, Int_t j, Int_t k,//Int_t TDC, Int_t ToT
-		    Double_t x, Double_t y, Double_t z, Double_t le, Double_t te, Double_t tot );
+		    Double_t x, Double_t y, Double_t z, 
+		    Double_t le, Double_t te, Double_t tot );
   virtual ~SBSCDet_Hit() {}
   
   virtual void    Clear( Option_t* opt);

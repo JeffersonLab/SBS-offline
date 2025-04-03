@@ -133,7 +133,7 @@ Int_t SBSCDet::DefineVariables( EMode mode )
    { "hit.yhit",    " PMT hit Y",          "fHits.SBSCDet_Hit.GetY()"     },
    { "hit.zhit",    " PMT hit Z",          "fHits.SBSCDet_Hit.GetZ()"     },
    { "hit.tdc_le",   " PMT hit TDC LE",  "fHits.SBSCDet_Hit.GetTDC_LE()" },
-   { "hit.tdc_te",   " PMT hit TDC TE",   "fHits.SBSCDet_Hit.GetTDC_LE()" },
+   { "hit.tdc_te",   " PMT hit TDC TE",   "fHits.SBSCDet_Hit.GetTDC_TE()" },
    { "hit.tdc_tot",   " PMT hit TDC TOT",   "fHits.SBSCDet_Hit.GetToT()" },
    { 0 }
   };
@@ -215,7 +215,8 @@ Int_t SBSCDet::CoarseProcess( TClonesArray& tracks )
     //double t0 = fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
 
     //    if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
-    //std::cout << "Processing good hit " << k << " fHit_tmin = " << fHit_tmin << " fHit_tmax = " << fHit_tmax << " time = " << fGood.t[k] << std::endl; 
+    //std::cout << "Processing good hit " << k << " fHit_tmin = " << fHit_tmin << " fHit_tmax = " << 
+    //	fHit_tmax << " le time = " << fGood.t[k] << " te time = " << fGood.t_te[k] << std::endl; 
     if( fHit_tmin <= fGood.t[k] && fGood.t[k] <= fHit_tmax ){
       the_hit = new( (*fHits)[nHit++] ) SBSCDet_Hit();
 

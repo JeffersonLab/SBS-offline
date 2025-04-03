@@ -148,7 +148,7 @@ namespace Decoder {
 
         tdc_data.opt = edgeD;
         tdc_data.chan = (group*32 + chan);
-        tdc_data.raw = coarse*4000 + two_ns*2000 + fine;
+        tdc_data.raw = coarse*4000 + two_ns*2000 + fine*2000/109.59; // this should be the time in ps (from Tritium code)
 	
 	tdc_data.status = slot_data->loadData("tdc", tdc_data.chan, tdc_data.raw, tdc_data.opt);
 #ifdef WITH_DEBUG
@@ -165,7 +165,8 @@ namespace Decoder {
 	//	      << tdc_data.chan << " >> slot = " << tdc_data.glb_hdr_slno << " >> edge = "
 	//	      << tdc_data.opt  << " >> raw time = "
 	//	      << tdc_data.raw << " >> status = "
-	//	      << tdc_data.status << std::endl;
+	//	      << tdc_data.status << " >> trigtime = "
+	//	      << tdc_data.trig_time << std::endl;
         if(tdc_data.chan < NTDCCHAN &&
            fNumHits[tdc_data.chan] < MAXHIT) {
           fTdcData[tdc_data.chan * MAXHIT + fNumHits[tdc_data.chan]] = tdc_data.raw;
@@ -199,11 +200,10 @@ namespace Decoder {
     if( idx > MAXHIT * NTDCCHAN ) return 0;
     return fTdcOpt[idx];
   }
-
+  
   void VETROCcdetModule::Clear( Option_t* ) {
     fNumHits.assign(NTDCCHAN, 0);
     fTdcData.assign(NTDCCHAN * MAXHIT, 0);
-    fTdcOpt.assign(NTDCCHAN * MAXHIT, 0);
   }
 }
 

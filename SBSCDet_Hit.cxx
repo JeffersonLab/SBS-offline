@@ -32,7 +32,8 @@ SBSCDet_Hit::SBSCDet_Hit():
 
 //_____________________________________________________________________________
 SBSCDet_Hit::SBSCDet_Hit( Int_t pmtnum, Int_t i, Int_t j, Int_t k,
-				    Double_t x, Double_t y, Double_t z, Double_t le, Double_t te, Double_t tot ):
+				    Double_t x, Double_t y, Double_t z, Double_t le, 
+				    Double_t te, Double_t tot ):
   fPMTNum(pmtnum), fRow(i), fCol(j), fLayer(k),
   fX(x), fY(y), fZ(z), fTDC_LE(le), fTDC_TE(te), fToT(tot)
   //fFlag(0), fVeto(0), tdcr_set(false), tdcf_set(false) 
