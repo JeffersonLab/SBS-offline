@@ -1234,8 +1234,10 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   // For VETROC the TDC hits are not in time order. Need to arrange in time order.
   std::vector<TDCHits> tdchit;
   if(fModeTDC == SBSModeTDC::kTDC )  {
+   // std::cout << "**** time ordering hits *****" << std::endl;
     for(Int_t ihit = 0; ihit < nhit; ihit++) {
       TDCHits c1 = {evdata.GetRawData(d->crate, d->slot, chan, ihit),evdata.GetData(d->crate, d->slot, chan, ihit)};
+      //std::cout << "slot = " << d->slot << " chan = " << chan << " hit = " << ihit << " crate = " << d->crate << " rawtime = " << c1.rawtime << std::endl;
       tdchit.push_back(c1);
     }
     std::sort(tdchit.begin(), tdchit.end(), [](const TDCHits& c1, const TDCHits& c2) {return c1.rawtime < c2.rawtime;});
@@ -1658,14 +1660,17 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
         fGood.TDCcol.push_back(blk->GetCol());
         fGood.TDClayer.push_back(blk->GetLayer());
         fGood.TDCelemID.push_back(blk->GetID());
-	//std::cout << "PMT = " << blk->GetID() << "  Row = " << blk->GetRow() << "  Col = " << blk->GetCol() << "  Layer = " << blk->GetLayer() << "  LE = " << hit.le.val << std::endl;   
-        fGood.t.push_back(hit.le.val);
+	if (blk->GetCol() >= 672) {
+		std::cout << "PMT = " << blk->GetID() << "  Row = " << blk->GetRow() << "  Col = " << 
+		blk->GetCol() << "  Layer = " << blk->GetLayer() << "  LE = " << hit.le.val << std::endl;   
+        }
+	fGood.t.push_back(hit.le.val);
         fGood.t_mult.push_back(blk->TDC()->GetNHits());
         if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
           fGood.t_te.push_back(hit.te.val);
           fGood.t_ToT.push_back(hit.ToT.val);
         }
-	//std::cout << "LE time = " << hit.le.val << "     TE time = " << hit.te.val << "     Tot = " << hit.ToT.val << std::endl;
+	//td::cout << "LE time = " << hit.le.val << "     TE time = " << hit.te.val << "     Tot = " << hit.ToT.val << std::endl;
 
 	// if( fModeTDC == SBSModeTDC::kTDCSimple && hit.TrigTime != 0 ) {
 	//   std::cout << "F1 TDC TrigTime, (thischan, refchan, RFchan, thischan-refchan)=("

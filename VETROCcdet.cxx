@@ -104,6 +104,7 @@ namespace Decoder {
 
     switch(type_current) {
     case 0: // block header
+	//std::cout << "Block header word = " << std::hex << *p << " shifted = " << std::hex << ((*p>>22)&0x1F) << std::endl; 
       	tdc_data.glb_hdr_slno = (*p >> 22) & 0x1F; // 
 	//	tdc_data.glb_hdr_slno = (*p >> 8) & 0x3FF;       // bits 
 	if (tdc_data.glb_hdr_slno == fSlot) {
@@ -120,6 +121,8 @@ namespace Decoder {
       glbl_trl=1;
        break;
     case 2: // event header
+	//std::cout << "Event header word = " << std::hex << *p << " shifted = " << std::hex << ((*p>>22)&0x1F) << std::endl; 
+        tdc_data.ev_hdr_slno = (*p >> 22) & 0x1F; // 
         tdc_data.evh_trig_num = *p & 0x7FFFFF;  // Event header trigger number
 	break;
     case 3: // trigger time low 24
@@ -133,9 +136,12 @@ namespace Decoder {
       }
        break;
     case 7: // TDC hit
-      //cout << "Slot number = " << tdc_data.glb_hdr_slno << endl;
+      //cout << "Global Header Slot number = " << tdc_data.glb_hdr_slno << endl;
+      //cout << "Event Header Slot number = " << tdc_data.ev_hdr_slno << endl;
       
-      if (tdc_data.glb_hdr_slno == fSlot) {
+      
+      //if (tdc_data.glb_hdr_slno == fSlot) {
+      if (tdc_data.ev_hdr_slno == fSlot) {
 	//tdc_data.chan   = (*p & 0x0ff0000)>>16; // bits 23-16
 	//tdc_data.raw    =  *p & 0x000ffff;      // bits 15-0
 	//tdc_data.opt    = (*p & 0x04000000)>>26;      // bit 26
@@ -160,13 +166,15 @@ namespace Decoder {
 		      << tdc_data.raw << " >> status = "
 		      << tdc_data.status << endl;
 #endif
-	 //std::cout << "VETROCcdetModule:: MEASURED DATA >> data = " 
-	//	      << hex << *p << " >> channel = " << dec
-	//	      << tdc_data.chan << " >> slot = " << tdc_data.glb_hdr_slno << " >> edge = "
-	//	      << tdc_data.opt  << " >> raw time = "
-	//	      << tdc_data.raw << " >> status = "
-	//	      << tdc_data.status << " >> trigtime = "
-	//	      << tdc_data.trig_time << std::endl;
+	 if (tdc_data.ev_hdr_slno == 10 && tdc_data.chan >= 96 && tdc_data.chan <= 127) {
+		 std::cout << "VETROCcdetModule:: MEASURED DATA >> data = " 
+	 	      << hex << *p << " >> channel = " << dec
+	 	      << tdc_data.chan << " >> slot = " << tdc_data.ev_hdr_slno << " >> edge = "
+	 	      << tdc_data.opt  << " >> raw time = "
+		      << tdc_data.raw << " >> status = "
+		      << tdc_data.status << " >> trigtime = "
+		      << tdc_data.trig_time << std::endl;
+	}
         if(tdc_data.chan < NTDCCHAN &&
            fNumHits[tdc_data.chan] < MAXHIT) {
           fTdcData[tdc_data.chan * MAXHIT + fNumHits[tdc_data.chan]] = tdc_data.raw;
