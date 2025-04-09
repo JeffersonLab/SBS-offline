@@ -55,7 +55,8 @@ public:
 
   Bool_t IsPolarimeter() const { return fPolarimeterMode; }
   
-  
+  Double_t GetAtimeHCAL() const { return fHCALtime_ADC; }
+  Double_t GetTDCtimeHCAL() const { return fHCALtime_TDC; }
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
@@ -103,6 +104,11 @@ protected:
   std::vector<double> fBackConstraintY;
   std::vector<double> fBackConstraintZ;
 
+  //I know this is lazy, but I'm going to store HCAL ADC and TDC times for the "best" cluster as data members here to make the "coincidence module" easier to writ:
+
+  Double_t fHCALtime_ADC;
+  Double_t fHCALtime_TDC;
+  
   Double_t fHCALtheta_n; //xHCAL/HCALdist
   Double_t fHCALphi_n; //yHCAL/HCALdist
 

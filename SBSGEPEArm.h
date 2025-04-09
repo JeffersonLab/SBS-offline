@@ -25,8 +25,10 @@ public:
   virtual Int_t CalcPID();
 
   inline Double_t GetECalDist() const { return fECALdist; };
-  
+
+  Double_t GetAtimeECAL() const { return fECALtime_ADC; };
   // void SetPolarimeterMode( Bool_t ispol );
+  Double_t GetTDCtimeCDET() const { return fCDETtime_TDC; } //to be implemented
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
@@ -42,10 +44,14 @@ protected:
   Double_t fECALdir_y;
   Double_t fECALdir_z;
 
+  //Lazily store some ECAL timing variables here:
+  Double_t fECALtime_ADC;
+  Double_t fCDETtime_TDC; //to be implemented
+  
   //Distance to ECAL
   Double_t fECALdist; //add to run database (this only changes when kinematics change). But should it be optional or mandatory? 
   
-
+  
   
   ClassDef(SBSGEPEArm,0) // BigBite spectrometer
 
