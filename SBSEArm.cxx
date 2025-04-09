@@ -186,6 +186,9 @@ void SBSEArm::Clear( Option_t *opt )
   fBackConstraintX.clear();
   fBackConstraintY.clear();
   fBackConstraintZ.clear();
+
+  fHCALtime_ADC = kBig;
+  fHCALtime_TDC = kBig;
 }
 
 
@@ -899,6 +902,9 @@ Int_t SBSEArm::CoarseReconstruct()
   //   }
   // }
 
+  fHCALtime_ADC = HCalClusters[i_max]->GetAtime();
+  fHCALtime_TDC = HCalClusters[i_max]->GetTDCtime();
+  
   x_bcp = HCalClusters[i_max]->GetX() + HCal->GetOrigin().X();
   y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
   z_bcp = HCal->GetOrigin().Z();

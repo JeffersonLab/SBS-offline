@@ -30,7 +30,8 @@ SBSGEPRegionOfInterestModule::SBSGEPRegionOfInterestModule( const char *name, co
   fParmDetName = "gemFT";
 
   fTestTracks = new TClonesArray("THaTrack",1);
-  
+
+  fDataValid = false; 
 }
 //_____________________________________________________________________________
 SBSGEPRegionOfInterestModule::~SBSGEPRegionOfInterestModule()

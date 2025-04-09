@@ -84,7 +84,7 @@ Int_t SBSGEPEArm::ReadDatabase( const TDatime& date )
     std::cerr << "SBSGEPEArm::ReadDatabase(): database not found!"<< std::endl;
     return kFileError;
   }
-      
+     
   fIsInit = true;
   
   return kOK;
@@ -181,6 +181,8 @@ Int_t SBSGEPEArm::CoarseReconstruct()
     double yclust = ECal->GetY();
     double eclust = ECal->GetE();
 
+    fECALtime_ADC = ECal->GetAtime();
+    
     fECALtheta_n = xclust/fECALdist;
     fECALphi_n = yclust/fECALdist;
 
@@ -202,7 +204,13 @@ Int_t SBSGEPEArm::CoarseReconstruct()
     Ttemp->SetMomentum( eclust );
     Ttemp->SetEnergy( eclust );
     Ttemp->SetPvect( eclust * ECALdir_global );
+    Ttemp->SetVertex( TVector3() );
 
+    // We will need to update the kinematics of this track. One issue is can we do this in
+    // the "Reconstruct()" method? Can we get the front tracker reconstructed vertex info?
+   
+    
+    SetGoldenTrack( Ttemp );
     //TO-DO: Add CDET
     
   }
