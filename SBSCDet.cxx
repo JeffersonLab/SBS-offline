@@ -215,10 +215,10 @@ Int_t SBSCDet::CoarseProcess( TClonesArray& tracks )
     //double t0 = fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
 
     //    if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
-    if (fGood.TDCelemID[k] >= 2688) {
-	std::cout << "Processing good hit " << k << " fHit_tmin = " << fHit_tmin << " fHit_tmax = " << 
-    	fHit_tmax << " le time = " << fGood.t[k] << " te time = " << fGood.t_te[k] << " PMT = " << fGood.TDCelemID[k] << std::endl; 
-    }
+    //if (fGood.TDCelemID[k] >= 2688) {
+	//std::cout << "Processing good hit " << k << " fHit_tmin = " << fHit_tmin << " fHit_tmax = " << 
+    	//fHit_tmax << " le time = " << fGood.t[k] << " te time = " << fGood.t_te[k] << " PMT = " << fGood.TDCelemID[k] << std::endl; 
+    //}
     if( fHit_tmin <= fGood.t[k] && fGood.t[k] <= fHit_tmax ){
       the_hit = new( (*fHits)[nHit++] ) SBSCDet_Hit();
 
