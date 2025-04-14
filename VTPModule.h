@@ -50,7 +50,7 @@ public:
    inline virtual std::vector<UInt_t> GetClusterX()      { return vtp_cluster_data.xcoord; }
    inline virtual std::vector<UInt_t> GetClusterY()      { return vtp_cluster_data.ycoord; }
 
-   enum DetType { HCAL = 11, ECAL = 12 }; // SBS specific
+   enum DetType { HCAL = 13, ECAL = 12 }; // SBS specific
 
  private:
 
