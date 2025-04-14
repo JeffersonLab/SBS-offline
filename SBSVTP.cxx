@@ -106,6 +106,7 @@ Int_t SBSVTP::Decode( const THaEvData& evdata )
 	  fVTPClusters.fSize = vtp->GetClusterSize();
 	}
 	else {
+	  fVTPClusters.fDet = vtp->GetDetectorID();
 	  for(auto& x : vtp->GetClusterX()) fVTPClusters.fX.emplace_back(x);
 	  for(auto& x : vtp->GetClusterY()) fVTPClusters.fY.emplace_back(x);
 	  for(auto& x : vtp->GetClusterEnergy()) fVTPClusters.fE.emplace_back(x);
