@@ -78,8 +78,8 @@ namespace Decoder {
     UInt_t data_type_cont =(*p >> 31) & 0x1; 
     UInt_t data_type_def =(*p >> 27) & 0xF; 
     //std::cout << data_type_cont << " " << data_type_def << std::endl; 
-    if (data_type_def ==0 && data_type_cont==0) data_type_def = 3; // trigger time continuatio 
-    //std::cout << data_type_cont << " " << data_type_def << std::endl; 
+    if (data_type_def ==0 && data_type_cont==0) data_type_def = 3; // trigger time continuation 
+    //std::cout << "data_type_cont = " << data_type_cont << " data_type_def = " << data_type_def << std::endl; 
     
     static uint32_t type_last = 15;
     static uint32_t time_last = 0;
@@ -88,6 +88,8 @@ namespace Decoder {
     generic_data_word_t gword;
 
     gword.raw = *p;
+
+    //std::cout << "data_type_defining = " << gword.bf.data_type_defining << std::endl;
 
    if(gword.bf.data_type_defining) /* data type defining word */
      {
@@ -100,7 +102,9 @@ namespace Decoder {
        type_current = type_last;
      }
 
+    //std::cout << std::endl;
     //std::cout << "type_current = " << type_current << std::endl;
+    if (data_type_def ==3 && data_type_cont==0) type_current = 3; // trigger time continuation 
 
     switch(type_current) {
     case 0: // block header
@@ -121,18 +125,26 @@ namespace Decoder {
       glbl_trl=1;
        break;
     case 2: // event header
+        //std::cout << std::endl;
 	//std::cout << "Event header word = " << std::hex << *p << " shifted = " << std::hex << ((*p>>22)&0x1F) << std::endl; 
         tdc_data.ev_hdr_slno = (*p >> 22) & 0x1F; // 
         tdc_data.evh_trig_num = *p & 0x7FFFFF;  // Event header trigger number
 	break;
     case 3: // trigger time low 24
-      if (tdc_data.glb_hdr_slno == fSlot) {
-      if (data_type_cont==1) {
-        tdc_data.trig_time_l = *p & 0x7FFFFF;  // Event header trigger time low 24
-      } else {
-        tdc_data.trig_time_h = *p & 0x7FFFFF;  // Event header trigger time high 24
-	tdc_data.trig_time = (tdc_data.trig_time_h << 24) | tdc_data.trig_time_l;
-      }
+        //cout << std::endl;
+      //std::cout << "Trigger time word = " << std::hex << *p << std::endl;
+      //std::cout << "Slot = " << tdc_data.glb_hdr_slno << "  fSlot = " << fSlot << std::endl;
+      if (tdc_data.ev_hdr_slno == fSlot) {
+        if (data_type_cont==1) {
+          tdc_data.trig_time_l = *p & 0xFFFFFF;  // Event header trigger time low 24
+	  //std::cout << "Low Trigger: Slot = " << tdc_data.glb_hdr_slno << "  Trigger Time L = " << tdc_data.trig_time_l << endl;
+          //std::cout << std::endl;
+        } else {
+          tdc_data.trig_time_h = *p & 0xFFFFFF;  // Event header trigger time high 24
+	  //std::cout << "High Trigger: Slot = " << tdc_data.glb_hdr_slno << "  Trigger Time H = " << tdc_data.trig_time_h << endl;
+	  tdc_data.trig_time = (((tdc_data.trig_time_h << 24) | tdc_data.trig_time_l)%1024)*4000 ;
+	  //std::cout << "Trigger: Slot = " << tdc_data.glb_hdr_slno << "  Trigger Time = " << dec << tdc_data.trig_time << endl;
+        }
       }
        break;
     case 7: // TDC hit
@@ -140,7 +152,7 @@ namespace Decoder {
       //cout << "Event Header Slot number = " << tdc_data.ev_hdr_slno << endl;
       
       
-      //if (tdc_data.glb_hdr_slno == fSlot) {
+      //if (tdc_data.ev_hdr_slno == fSlot) {
       if (tdc_data.ev_hdr_slno == fSlot) {
 	//tdc_data.chan   = (*p & 0x0ff0000)>>16; // bits 23-16
 	//tdc_data.raw    =  *p & 0x000ffff;      // bits 15-0
@@ -155,6 +167,13 @@ namespace Decoder {
         tdc_data.opt = edgeD;
         tdc_data.chan = (group*32 + chan);
         tdc_data.raw = coarse*4000 + two_ns*2000 + fine*2000/109.59; // this should be the time in ps (from Tritium code)
+	// subtract off rolling trigger time
+	//cout << "Corrected TDC raw = " << tdc_data.raw << endl;
+	ULong64_t original_raw = tdc_data.raw;
+	if (tdc_data.raw < tdc_data.trig_time) {
+		tdc_data.raw = tdc_data.raw + 1024*4000;
+	}
+	tdc_data.raw = tdc_data.raw - tdc_data.trig_time;
 	
 	tdc_data.status = slot_data->loadData("tdc", tdc_data.chan, tdc_data.raw, tdc_data.opt);
 #ifdef WITH_DEBUG
@@ -166,15 +185,20 @@ namespace Decoder {
 		      << tdc_data.raw << " >> status = "
 		      << tdc_data.status << endl;
 #endif
-	 if (tdc_data.ev_hdr_slno == 10 && tdc_data.chan >= 96 && tdc_data.chan <= 127) {
+	 //if (tdc_data.ev_hdr_slno == 10 && tdc_data.chan >= 96 && tdc_data.chan <= 112) {
+	 if (tdc_data.ev_hdr_slno == 8 && tdc_data.chan == 60) {
+        	 std::cout << std::endl;
 		 std::cout << "VETROCcdetModule:: MEASURED DATA >> data = " 
 	 	      << hex << *p << " >> channel = " << dec
 	 	      << tdc_data.chan << " >> slot = " << tdc_data.ev_hdr_slno << " >> edge = "
-	 	      << tdc_data.opt  << " >> raw time = "
-		      << tdc_data.raw << " >> status = "
-		      << tdc_data.status << " >> trigtime = "
+	 	      << tdc_data.opt  << " >> status = "
+		      << tdc_data.status << " >> raw time = "
+		      << tdc_data.raw << " original raw = "
+		      << original_raw << " >> trigtime = "
 		      << tdc_data.trig_time << std::endl;
 	}
+
+
         if(tdc_data.chan < NTDCCHAN &&
            fNumHits[tdc_data.chan] < MAXHIT) {
           fTdcData[tdc_data.chan * MAXHIT + fNumHits[tdc_data.chan]] = tdc_data.raw;

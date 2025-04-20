@@ -52,7 +52,9 @@ namespace Decoder {
         status(0) {}
       void clear() { memset(this, 0, sizeof(tdcData)); }
       UInt_t glb_hdr_evno, glb_hdr_slno, evh_trig_num, ev_hdr_slno;
-      UInt_t chan, raw , opt ,trig_time_l,trig_time_h, trig_time;
+      UInt_t chan, raw , opt; 
+      ULong64_t trig_time_l,trig_time_h;
+      ULong64_t trig_time;
       Int_t status;
     } tdc_data;
 
