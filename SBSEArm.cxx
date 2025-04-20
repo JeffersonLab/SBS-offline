@@ -908,7 +908,11 @@ Int_t SBSEArm::CoarseReconstruct()
   x_bcp = HCalClusters[i_max]->GetX() + HCal->GetOrigin().X();
   y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
   z_bcp = HCal->GetOrigin().Z();
-          
+
+  //Constraint "slopes" for dynamic constraint point calculation:
+  double thcp = HCalClusters[i_max]->GetX() * fDynamicConstraintSlopeX + fDynamicConstraintOffsetX;
+  double phcp = HCalClusters[i_max]->GetY() * fDynamicConstraintSlopeY + fDynamicConstraintOffsetY;    
+  
   fHCALtheta_n = HCalClusters[i_max]->GetX()/fHCALdist;
   fHCALphi_n = HCalClusters[i_max]->GetY()/fHCALdist;
 
@@ -984,20 +988,22 @@ Int_t SBSEArm::CoarseReconstruct()
   if( !fPolarimeterMode && FrontTracker != nullptr ){
     //std::cout << "setting constraints for tracks" << std::endl;
 
-    x_bcp += fBackConstraintX0[0];
-    y_bcp += fBackConstraintY0[0];
+
     
-    FrontTracker->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
+    FrontTracker->SetBackConstraintPoint(x_bcp + fBackConstraintX0[0], y_bcp + fBackConstraintY0[0], z_bcp);
 
     if ( fUseDynamicConstraint ){
-      double thcp = fDynamicConstraintSlopeX * (x_bcp) + fDynamicConstraintOffsetX;
-      double phcp = fDynamicConstraintSlopeY * (y_bcp) + fDynamicConstraintOffsetY;
+      //double thcp = fDynamicConstraintSlopeX * (x_bcp) + fDynamicConstraintOffsetX;
+      //double phcp = fDynamicConstraintSlopeY * (y_bcp) + fDynamicConstraintOffsetY;
 
       x_fcp = x_bcp + thcp * (z_fcp - z_bcp);
       y_fcp = y_bcp + phcp * (z_fcp - z_bcp);
       
     }
 
+    x_bcp += fBackConstraintX0[0];
+    y_bcp += fBackConstraintY0[0];
+    
     x_fcp += fFrontConstraintX0[0];
     y_fcp += fFrontConstraintY0[0];
     
@@ -1026,20 +1032,27 @@ Int_t SBSEArm::CoarseReconstruct()
   } else if( fPolarimeterMode && BackTracker != nullptr ){ //Polarimeter mode: look for NonTrackingDetectors inheriting SBSGEMPolarimeterTracker
     z_fcp = fAnalyzerZ0; 
 
-    x_bcp += fBackConstraintX0[1];
-    y_bcp += fBackConstraintY0[1];
+    //at this 
     
-    BackTracker->SetBackConstraintPoint( x_bcp, y_bcp, z_bcp);
+    // x_bcp += fBackConstraintX0[1];
+    // y_bcp += fBackConstraintY0[1];
+    
+    BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1], y_bcp + fBackConstraintY0[1], z_bcp);
 
     if ( fUseDynamicConstraint ){
-      double thcp = fDynamicConstraintSlopeX * (x_bcp) + fDynamicConstraintOffsetX;
-      double phcp = fDynamicConstraintSlopeY * (y_bcp) + fDynamicConstraintOffsetY;
+      //double thcp = fDynamicConstraintSlopeX * (x_bcp) + fDynamicConstraintOffsetX;
+      //double phcp = fDynamicConstraintSlopeY * (y_bcp) + fDynamicConstraintOffsetY;
 
+      //thcp was set above:
+      
       x_fcp = x_bcp + thcp * (z_fcp - z_bcp);
       y_fcp = y_bcp + phcp * (z_fcp - z_bcp);
       
     }
 
+    x_bcp += fBackConstraintX0[1];
+    y_bcp += fBackConstraintY0[1];
+    
     x_fcp += fFrontConstraintX0[1];
     y_fcp += fFrontConstraintY0[1];
     
