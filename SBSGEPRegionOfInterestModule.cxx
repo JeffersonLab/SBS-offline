@@ -16,6 +16,7 @@
 #include "SBSEArm.h" //For the proton arm
 #include "SBSECal.h"
 #include "SBSGEMSpectrometerTracker.h"
+#include "SBSGEMPolarimeterTracker.h"
 #include "TClonesArray.h"
 #include "THaTrack.h"
 #include "TMath.h"
@@ -29,6 +30,8 @@ SBSGEPRegionOfInterestModule::SBSGEPRegionOfInterestModule( const char *name, co
   fEarmDetName = "ecal";
   fParmDetName = "gemFT";
 
+  fParmDetNamePol = "gemFPP";
+  
   fTestTracks = new TClonesArray("THaTrack",1);
 
   fDataValid = false; 
@@ -129,6 +132,7 @@ Int_t SBSGEPRegionOfInterestModule::ReadDatabase( const TDatime &date ){
     { "parm_name", &fParmName, kString, 0, 1, 1 },
     { "edet_name", &fEarmDetName, kString, 0, 1, 1 },
     { "pdet_name", &fParmDetName, kString, 0, 1, 1 },
+    { "pdetpol_name", &fParmDetNamePol, kString, 0, 1, 1 },
     { nullptr }
   };
   
@@ -153,6 +157,7 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   bool gotParm = false;
   bool gotEdet = false;
   bool gotPdet = false;
+  bool gotPdetPol = false;
   
   TIter aiter(gHaApps);
 
@@ -161,6 +166,8 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
   SBSECal *Edet = nullptr;
   SBSGEMSpectrometerTracker *Pdet = nullptr;
+
+  SBSGEMPolarimeterTracker *PdetPol = nullptr;
   
   while( (app = (THaApparatus*) aiter()) ){
     std::string appname = app->GetName();
@@ -181,6 +188,8 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
 	Pdet = dynamic_cast<SBSGEMSpectrometerTracker*>(Parm->GetDetector(fParmDetName.c_str()));
 	if( Pdet ) gotPdet = true;
+
+	PdetPol = dynamic_cast<SBSGEMPolarimeterTracker*>(Parm->GetDetector(fParmDetNamePol.c_str()));
       }
     }
   }

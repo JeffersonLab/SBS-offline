@@ -57,6 +57,8 @@ protected:
 
   std::string fEarmDetName;
   std::string fParmDetName;
+
+  std::string fParmDetNamePol;
   
   //We might as well store spectrometer 3-vectors here, or would that be redundant with the ones in the spectrometer classes? 
 
