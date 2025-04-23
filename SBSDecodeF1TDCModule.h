@@ -27,6 +27,7 @@ public:
 
    virtual void Init() = 0;
    virtual void CommonInit();
+  //virtual void CommonInit(const char *configstr="");
    virtual void Clear(const Option_t *opt="");
    virtual Bool_t IsSlot(UInt_t rdata);
    virtual Int_t GetData(Int_t chan, Int_t hit) const;
@@ -66,6 +67,14 @@ private:
    Int_t nF1;
    std::vector<Int_t> F1slots;
 
+protected:
+  
+  Bool_t fSuppressWarningHitFIFOoverflow;
+
+  UInt_t fMaxWarningsHitFIFOoverflow;
+  
+  std::vector<UInt_t> fnWarnHitFIFOoverflow; //count hit fifo overflow warnings by channel
+  
    ClassDef(SBSDecodeF1TDCModule,0)  //  JLab F1 TDC Module, test version
 
 };
@@ -76,6 +85,7 @@ public:
   SBSDecodeF1TDCLowResModule(Int_t crate, Int_t slot);
   virtual ~SBSDecodeF1TDCLowResModule();
   using SBSDecodeF1TDCModule::Init;
+  virtual void Init( const char * );
   virtual void Init();
 private:
    ClassDef(SBSDecodeF1TDCLowResModule,0)  //  JLab F1 TDC Module, test version
@@ -88,6 +98,7 @@ public:
   SBSDecodeF1TDCHighResModule(Int_t crate, Int_t slot);
   virtual ~SBSDecodeF1TDCHighResModule();
   using SBSDecodeF1TDCModule::Init;
+  virtual void Init( const char *);
   virtual void Init();
 private:
    ClassDef(SBSDecodeF1TDCHighResModule,0)  //  JLab F1 TDC Module, test version
