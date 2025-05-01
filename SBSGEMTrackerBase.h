@@ -655,6 +655,9 @@ protected:
   Bool_t fPurgeHitsFlag; //0 = normal behavior, purge only 2D hit combinations used on tracks. 1 = purge all 2D hit candidates containing the 1D cluster on track: 
 
   //Double_t fRefTime_offset;
+
+  Bool_t fUseConstraintPenaltyTerm; //Include "penalty term" for chi2 calculation based on constraint points:
+  Double_t fConstraintPenaltySigmaX,fConstraintPenaltySigmaY,fConstraintPenaltySigmaXp, fConstraintPenaltySigmaYp;
   
 };
 
