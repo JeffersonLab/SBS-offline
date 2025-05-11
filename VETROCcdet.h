@@ -51,10 +51,10 @@ namespace Decoder {
       glb_hdr_evno(0), glb_hdr_slno(0), evh_trig_num(0), ev_hdr_slno(0), chan(0), raw(0), opt(0),trig_time_l(0),trig_time_h(0), trig_time(0),
         status(0) {}
       void clear() { memset(this, 0, sizeof(tdcData)); }
-      UInt_t glb_hdr_evno, glb_hdr_slno, evh_trig_num, ev_hdr_slno;
-      UInt_t chan, raw , opt; 
-      ULong64_t trig_time_l,trig_time_h;
-      ULong64_t trig_time;
+      Int_t glb_hdr_evno, glb_hdr_slno, evh_trig_num, ev_hdr_slno;
+      Int_t chan, raw , opt; 
+      Long64_t trig_time_l,trig_time_h;
+      Long64_t trig_time;
       Int_t status;
     } tdc_data;
 
