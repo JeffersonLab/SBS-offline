@@ -32,6 +32,11 @@ public:
 
   //I don't think we need a custom Init method here:
   //virtual EStatus Init( const TDatime& date );
+
+  Double_t GetXfpCentral() const { return fxfp_central; }
+  Double_t GetYfpCentral() const { return fyfp_central; }
+  Double_t GetThfpCentral() const { return fxpfp_central; }
+  Double_t GetPhfpCentral() const { return fypfp_central; }
   
 protected:
 
@@ -76,6 +81,12 @@ protected:
   Double_t fpphi_central;
   Double_t fPp_central;
 
+  //Add variables to define the "central" elastically scattered proton ray (assuming point target at the origin):
+  Double_t fxfp_central;
+  Double_t fyfp_central;
+  Double_t fxpfp_central;
+  Double_t fypfp_central;
+  
   TClonesArray *fTestTracks;
   
   // We may want to add some CDET-related info here once we understand what's going on there:

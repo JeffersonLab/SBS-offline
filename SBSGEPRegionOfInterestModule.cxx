@@ -86,6 +86,10 @@ Int_t SBSGEPRegionOfInterestModule::DefineVariables( THaAnalysisObject::EMode mo
     { "ptheta", "proton expected polar angle (rad)", "fptheta_central" },
     { "pphi", "proton expected azimuthal angle (rad)", "fpphi_central" },
     { "pp", "proton expected momentum (GeV/c)", "fPp_central" },
+    { "xfp0", "predicted X at fp (assuming point target at origin)", "fxfp_central" },
+    { "yfp0", "predicted Y at fp (assuming point target at origin)", "fyfp_central" },
+    { "xpfp0", "predicted X' at fp (assuming point target at origin)", "fxpfp_central" },
+    { "ypfp0", "predicted Y' at fp (assuming point target at origin)", "fypfp_central" },
     { nullptr }
   };
 
@@ -380,6 +384,12 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
       double xpfp = Ttemp->GetTheta();
       double ypfp = Ttemp->GetPhi();
 
+      //set output variables:
+      fxfp_central = xfp;
+      fyfp_central = yfp;
+      fxpfp_central = xpfp;
+      fypfp_central = ypfp;
+      
       double zfront = 0.0;
       double zback = Pdet->GetZmaxLayer() + 0.05;
       
