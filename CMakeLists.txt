@@ -69,6 +69,7 @@ set(sources MPDModule.cxx MPDModuleVMEv4.cxx SBSBigBite.cxx
   SBSBPM.cxx SBSRaster.cxx SBSRasteredBeam.cxx 
   LHRSScalerEvtHandler.cxx SBSScalerEvtHandler.cxx
   SBSScalerHelicity.cxx SBSScalerHelicityReader.cxx
+  SBSHelicityDecoderBoard.cxx
   gmn_tree_digitized.cxx genrp_tree_digitized.cxx gep_tree_digitized.cxx VETROC.cxx VETROCcdet.cxx VTPModule.cxx SBSVTP.cxx SBSGEPRegionOfInterestModule.cxx
   )
 #gmn_tree_digitized.C

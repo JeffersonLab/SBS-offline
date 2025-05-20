@@ -5,32 +5,38 @@
 //
 // SBSHelicityDecoderBoard
 //
-// In-time helicity detector - both from ADC and G0 electronics 
-// (with delay=0).
-// Provides redundancy for cross-checks.
+// Decoding and processing of the helicity informaiton from the
+// Helicity Decoder board.
 //
 //////////////////////////////////////////////////////////////////////////
 
+#include "THaHelicityDet.h"
 
-
-class SBSHelicityDecoderBoard : public THaHelicity {
+class SBSHelicityDecoderBoard : public THaHelicityDet {
   
 public:
   SBSHelicityDecoderBoard( const char* name, const char* description, 
 	       THaApparatus* a = nullptr );
+  SBSHelicityDecoderBoard();  // For ROOT RTTI
   virtual ~SBSHelicityDecoderBoard();
 
+  virtual Int_t  Begin( THaRunBase* r=nullptr );
   virtual void   Clear( Option_t* opt = "" );
   virtual Int_t  Decode( const THaEvData& evdata );
+  virtual Int_t  End( THaRunBase* r=nullptr );
 
-  SBSHelicityDecoderBoard();  // For ROOT RTTI
+  void PrintEvent( UInt_t evtnum ){};
+
+  const char* GetDBFileName() const {return "heldecode.";};
+  
   
 protected:
-
+  virtual void  FillHisto(){};
+    
   //  Configuration
   Int_t ROC_ID;
   Int_t Bank_ID;
-  Int_t fHelicityDelay;   //Helicity delay in # of patterns
+  size_t fHelicityDelay;   //Helicity delay in # of patterns
     
   // Event-by-event data from the HD module
   UInt_t  fSeed_Reported;
@@ -59,12 +65,39 @@ protected:
 
   //  Calulated values
   UInt_t  fSeed_True;
-  UInt_t  fHelicity;
+  // fHelicity and fSign belong to the base class
+  //    EHelicity fHelicity;  // Beam helicity. fHelicity = fSign * decoded_helicity
+  //    Int_t     fSign;      // Overall sign of beam helicity, i.e. IHWP. Default 1.
+
+
+ 
 
   virtual Int_t DefineVariables( EMode mode = kDefine );
   virtual Int_t ReadDatabase( const TDatime& date );
 
-  ClassDef(SBSHelicityDecoderBoard,2)   // Helicity information from the Helicity Decoder module
+
+  Int_t  CheckPredictor(UInt_t& ranseed);
+  UInt_t GetRandbit30(UInt_t& ranseed);
+
+  
+  //  The following methods 
+  class BANKinfo {
+  public:
+    BANKinfo() : roc(kMaxUInt), bankid(0), index(0), length(0) {};
+    Bool_t valid() const;
+    UInt_t roc;
+    UInt_t bankid;
+    UInt_t index;
+    UInt_t length;
+  };
+
+  const UInt_t*  GetBankBuffer( const THaEvData& evdata, BANKinfo& info );
+  Bool_t DecodeBank(const UInt_t *lbuff, const BANKinfo& info);
+
+  static const Int_t  fNumDecoderWords;
+  void   FillHDVariables(uint32_t data, uint32_t index);
+
+  ClassDef(SBSHelicityDecoderBoard,0)   // Helicity information from the Helicity Decoder module
 
 };
 
