@@ -257,8 +257,45 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
     // std::cout << "SBSGEMRegionOfInterestModule: multi tracks enabled = "
     // 	      << Pdet->MultiTracksEnabled() << std::endl;
-
     //Get constraint point offsets for centering:
+
+    //Calculate "central" expected proton track regardless of whether we're using the z-vertex binning:
+
+    // This calculation assumes a point target at the origin:
+    TVector3 pnhat_central( sin(fptheta_central)*cos(fpphi_central),sin(fptheta_central)*sin(fpphi_central),cos(fptheta_central));
+    TVector3 ProtonMomentum = fPp_central * pnhat_central;
+    double raytemp[6];
+    
+    TVector3 vdummy(0,0,0);
+    TVector3 dummy;
+    Parm->LabToTransport( vdummy, ProtonMomentum, dummy, raytemp );
+    
+    double xptar = raytemp[1];
+    double yptar = raytemp[3];
+    double xtar = raytemp[0];
+    double ytar = raytemp[2];
+    
+    int itrack = fTestTracks->GetLast()+1;
+    THaTrack *Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
+    
+    Ttemp->SetTarget( xtar, ytar, xptar, yptar );
+    Ttemp->SetMomentum( fPp_central );
+    
+    Parm->CalcFpCoords( Ttemp );
+    
+    Ttemp->Set( Ttemp->GetDX(), Ttemp->GetDY(), Ttemp->GetDTheta(), Ttemp->GetDPhi() );
+    
+    double xfp = Ttemp->GetX();
+    double yfp = Ttemp->GetY();
+    double xpfp = Ttemp->GetTheta();
+    double ypfp = Ttemp->GetPhi();
+    
+    //set output variables:
+    fxfp_central = xfp;
+    fyfp_central = yfp;
+    fxpfp_central = xpfp;
+    fypfp_central = ypfp;
+    
     double x0fcp = Parm->GetFrontConstraintX0(0);
     double y0fcp = Parm->GetFrontConstraintY0(0);
     double x0bcp = Parm->GetBackConstraintX0(0);
@@ -296,10 +333,10 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 	//Proton direction (unit vector):
 	TVector3 pnhat(sin(ptheta)*cos(pphi),sin(ptheta)*sin(pphi),cos(ptheta));
 
-	TVector3 ProtonMomentum = pp*pnhat;
+	ProtonMomentum = pp*pnhat;
 	//Next we need to calculate this in SBS (Parm) transport coordinates:
 
-	double raytemp[6];
+	//	double raytemp[6];
 
 	TVector3 tvert; 
 	
@@ -308,17 +345,17 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 	//double xptar_p = pnhat_SBS.X()/pnhat_SBS.Z();
 	//double yptar_p = pnhat_SBS.Y()/pnhat_SBS.Z();
 
-	double xptar = raytemp[1];
-	double yptar = raytemp[3];
-	double xtar = raytemp[0];
-	double ytar = raytemp[2];
+	xptar = raytemp[1];
+	yptar = raytemp[3];
+	xtar = raytemp[0];
+	ytar = raytemp[2];
 
 	//Now with these quantities calculated, we are able to use the forward optics matrix to predict the FP track:
 	
-	int itrack = fTestTracks->GetLast() + 1;
+	itrack = fTestTracks->GetLast() + 1;
 
 	//Initialize with the default constructor (no arguments);
-	THaTrack *Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
+	Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
 
 	Ttemp->SetTarget( xtar, ytar, xptar, yptar );
 	Ttemp->SetMomentum( pp );
@@ -331,10 +368,10 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 	//After the line above, the "det" coordinates are the same as the "regular" coordinates.
 	//We could, of course, just grab the "det" coordinates directly:
 	
-	double xfp = Ttemp->GetX();
-	double yfp = Ttemp->GetY();
-	double xpfp = Ttemp->GetTheta();
-	double ypfp = Ttemp->GetPhi();
+	xfp = Ttemp->GetX();
+	yfp = Ttemp->GetY();
+	xpfp = Ttemp->GetTheta();
+	ypfp = Ttemp->GetPhi();
 
 	//Now we add front and back constraint points based on these calculated track parameters.
 	// What Z value should we assume for the back constraint point? For the front it's easy.
@@ -354,52 +391,18 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 	//Now, IF the multi-track search is enabled (and if the code is written correctly), this should be sufficient
       } //end loop over z vertex bins 
     } else { // end if multi-tracks enabled)
-      //Just do a single constraint point using the point-target assumption at the origin:
-
-      TVector3 pnhat( sin(fptheta_central)*cos(fpphi_central),sin(fptheta_central)*sin(fpphi_central),cos(fptheta_central));
-      TVector3 ProtonMomentum = fPp_central * pnhat;
-      double raytemp[6];
-
-      TVector3 vdummy(0,0,0);
-      TVector3 dummy;
-      Parm->LabToTransport( vdummy, ProtonMomentum, dummy, raytemp );
-
-      double xptar = raytemp[1];
-      double yptar = raytemp[3];
-      double xtar = raytemp[0];
-      double ytar = raytemp[2];
-
-      int itrack = fTestTracks->GetLast()+1;
-      THaTrack *Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
-
-      Ttemp->SetTarget( xtar, ytar, xptar, yptar );
-      Ttemp->SetMomentum( fPp_central );
-
-      Parm->CalcFpCoords( Ttemp );
-
-      Ttemp->Set( Ttemp->GetDX(), Ttemp->GetDY(), Ttemp->GetDTheta(), Ttemp->GetDPhi() );
-
-      double xfp = Ttemp->GetX();
-      double yfp = Ttemp->GetY();
-      double xpfp = Ttemp->GetTheta();
-      double ypfp = Ttemp->GetPhi();
-
-      //set output variables:
-      fxfp_central = xfp;
-      fyfp_central = yfp;
-      fxpfp_central = xpfp;
-      fypfp_central = ypfp;
       
       double zfront = 0.0;
       double zback = Pdet->GetZmaxLayer() + 0.05;
       
-      Pdet->SetFrontConstraintPoint(xfp + x0fcp, yfp + y0fcp, 0.0 );
-      Pdet->SetBackConstraintPoint( xfp+xpfp*zback + x0bcp, yfp+ypfp*zback + y0bcp, zback );
+      Pdet->SetFrontConstraintPoint(fxfp_central + x0fcp, fyfp_central + y0fcp, 0.0 );
+      Pdet->SetBackConstraintPoint( fxfp_central+fxpfp_central*zback + x0bcp, fyfp_central+fypfp_central*zback + y0bcp, zback );
 
       fDataValid = true;
       
     }
   }
+
   
   return 0;
 }
