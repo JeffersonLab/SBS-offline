@@ -90,10 +90,11 @@ Int_t SBSVTP::Decode( const THaEvData& evdata )
 
     if(vtp) {
       Nvtpfound++;
-      if(evdata.GetEvNum() != vtp->GetTriggerNum()) {
+      Int_t nover= evdata.GetEvNum()/TMath::Power(2.,22);
+      UInt_t temp_evnum = evdata.GetEvNum()-nover*TMath::Power(2.,22);
+      if(temp_evnum != vtp->GetTriggerNum()) {
         fVTPErrorFlag = 1;
-      }
-      else {
+      } else {
 	size_t ncluster = vtp->GetClusterX().size();
 	if(Nvtpfound == 1) {
 	  // Detector ID HCAL or ECAL
@@ -115,9 +116,8 @@ Int_t SBSVTP::Decode( const THaEvData& evdata )
 	}
 
         fNVTPClusters += ncluster;
-
-      }// EvNum and TrigNum match
-    }// found vtp module
+      } // evnum test
+     }// found vtp module
   }
 
   return fNVTPClusters;
