@@ -55,6 +55,8 @@ protected:
   Double_t fVertexZmin;
   Double_t fVertexZmax;
 
+  Double_t fTargZ0;
+  
   // Names of Earm and Parm: read from DB; I don't have a strong preference for
   // how to store these; might as well use std::string 
   std::string fEarmName;

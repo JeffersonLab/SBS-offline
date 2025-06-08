@@ -934,7 +934,13 @@ Int_t SBSEArm::CoarseReconstruct()
 
     //Initialize Back Constraint Points with appropriate size regardless of whether front tracking is already done: 
 
-    for( int ibin=0; ibin<fNbinsZBackTrackerConstraint; ibin++ ){
+    if( BackTracker->MultiTracksEnabled() ){
+      for( int ibin=0; ibin<fNbinsZBackTrackerConstraint; ibin++ ){
+	BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1],
+					     y_bcp + fBackConstraintY0[1],
+					     z_bcp );
+      }
+    } else { //If multitracksearch is not set, just set this once:
       BackTracker->SetBackConstraintPoint( x_bcp + fBackConstraintX0[1],
 					   y_bcp + fBackConstraintY0[1],
 					   z_bcp );

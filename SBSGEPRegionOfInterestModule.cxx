@@ -34,6 +34,8 @@ SBSGEPRegionOfInterestModule::SBSGEPRegionOfInterestModule( const char *name, co
   
   fTestTracks = new TClonesArray("THaTrack",1);
 
+  fTargZ0 = 0.0;
+  
   fDataValid = false; 
 }
 //_____________________________________________________________________________
@@ -137,6 +139,7 @@ Int_t SBSGEPRegionOfInterestModule::ReadDatabase( const TDatime &date ){
     { "edet_name", &fEarmDetName, kString, 0, 1, 1 },
     { "pdet_name", &fParmDetName, kString, 0, 1, 1 },
     { "pdetpol_name", &fParmDetNamePol, kString, 0, 1, 1 },
+    { "z0targ", &fTargZ0, kDouble, 0, 1, 1 },
     { nullptr }
   };
   
@@ -239,8 +242,11 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
     TVector3 ECALpos_global = xclust * Earm_xaxis + yclust * Earm_yaxis + ECALdist * Earm_zaxis;
 
     fECALclusterpos_global = ECALpos_global;
+
+    TVector3 vertex_central(0,0,fTargZ0);
+    
     // Central ECAL direction:
-    TVector3 ECALdir_global = ECALpos_global.Unit();
+    TVector3 ECALdir_global = (ECALpos_global - vertex_central).Unit();
 
     double ebeam = fBeam4Vect.E();
     double Mp = fmass_proton_GeV;
@@ -266,7 +272,7 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
     TVector3 ProtonMomentum = fPp_central * pnhat_central;
     double raytemp[6];
     
-    TVector3 vdummy(0,0,0);
+    TVector3 vdummy(0,0,fTargZ0);
     TVector3 dummy;
     Parm->LabToTransport( vdummy, ProtonMomentum, dummy, raytemp );
     
