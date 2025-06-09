@@ -918,10 +918,10 @@ bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, T
       TVector3 enhat = (fECALpos - vertextemp).Unit();
 
       //      std::cout << "Vertex = " << std::endl;
-      vertextemp.Print();
+      //vertextemp.Print();
 
       // std::cout << std::endl << "edir = " << std::endl;
-      enhat.Print();
+      //enhat.Print();
       
       double Mp = fProtonMass;
       double ebeam = fBeamE;
@@ -943,7 +943,7 @@ bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, T
 			cos(ptheta_eth) );
 
       //      std::cout << "pdir = " << std::endl;
-      pnhat_e.Print();
+      //pnhat_e.Print();
       
       TVector3 vdummy;
       double raytemp[6];
