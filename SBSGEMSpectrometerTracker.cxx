@@ -31,6 +31,10 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fNegSignalStudy = false;
   
   fIsSpectrometerTracker = true; //used by tracker base
+  //fIsGEPFrontTracker = false;
+  fUseElasticConstraint = false;
+  fElasticConstraintIsInitialized = false;
+
   fUseOpticsConstraint = false;
 
   fUseSlopeConstraint = false;
@@ -38,6 +42,14 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fTestTrackInitialized = false;
 
   fTestTracks = new TClonesArray("THaTrack",1);
+
+  //These are only used if fUseElasticConstraint is true;
+  fDPP0 = 0.0;
+  fDPPcut = 0.2;
+  fdthtar0 = 0.0;
+  fdthtarcut = 0.05;
+  fdphtar0 = 0.0;
+  fdphtarcut = 0.05;
 }
 
 SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
@@ -121,6 +133,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   int usetrigtime = fUseTrigTime ? 1 : 0;
 
+  int useelasticconstraint = fUseElasticConstraint ? 1 : 0;
+  
   int multitracksearch = fMultiTrackSearch ? 1 : 0;
 
   int nontrackmode = fNonTrackingMode ? 1 : 0;
@@ -190,6 +204,13 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "cuttrackt0", &fCutTrackT0, kDouble, 0, 1, 1 },
     { "multitracksearch", &multitracksearch, kInt, 0, 1, 1},
     { "nontrackingmode", &nontrackmode, kInt, 0, 1, 1},
+    { "useelasticconstraint", &useelasticconstraint, kInt, 0, 1, 1 },
+    { "dpp0", &fDPP0, kDouble, 0, 1, 1 },
+    { "dppcut", &fDPPcut, kDouble, 0, 1, 1},
+    { "dthtar0", &fdthtar0, kDouble, 0, 1, 1},
+    { "dhtarcut", &fdthtarcut, kDouble, 0, 1, 1},
+    { "dphtar0", &fdphtar0, kDouble, 0, 1, 1},
+    { "dphtarcut", &fdphtarcut, kDouble, 0, 1, 1},
     {0}
   };
 
@@ -303,6 +324,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     modcounter++;
   }
 
+  fUseElasticConstraint = useelasticconstraint > 0;
+  
   if( !fModulesInitialized ) fModulesInitialized = true;
 
   //Define the number of modules from the "modules" string:
@@ -885,7 +908,72 @@ bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, T
 	  fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut;
       }
     }
-    return goodtarget && goodtgtfp;
+
+    bool elastic_cut = true;
+    if( goodtarget && fUseElasticConstraint && fElasticConstraintIsInitialized && !coarsecheck ){ //This is the place to implement elastic ep constr; it is assumed here that we are detecting protons and this is the GEP front tracker:
+      //double thspec = spec->GetThetaGeo();
+
+      //Set x and y beam positions to zero since they aren't yet calibrated:
+      TVector3 vertextemp(0,0,trtemp->GetVertexZ());
+      TVector3 enhat = (fECALpos - vertextemp).Unit();
+
+      //      std::cout << "Vertex = " << std::endl;
+      vertextemp.Print();
+
+      // std::cout << std::endl << "edir = " << std::endl;
+      enhat.Print();
+      
+      double Mp = fProtonMass;
+      double ebeam = fBeamE;
+      double etheta = enhat.Theta();
+      double ephi = enhat.Phi();
+
+      //      std::cout << "beam energy = " << ebeam << std::endl;
+      
+      double Eprime_eth = ebeam/(1.0+ebeam/Mp*(1.0-cos(etheta)));
+      double nu_eth = ebeam-Eprime_eth;
+      double Q2_eth = 2.0*Mp*nu_eth;
+      double pp_eth = sqrt(pow(nu_eth,2)+Q2_eth);
+
+      double ptheta_eth = acos( (ebeam-Eprime_eth*cos(etheta))/pp_eth );
+      double pphi_eph = ephi + TMath::Pi();
+
+      TVector3 pnhat_e( sin(ptheta_eth)*cos(pphi_eph),
+			sin(ptheta_eth)*sin(pphi_eph),
+			cos(ptheta_eth) );
+
+      //      std::cout << "pdir = " << std::endl;
+      pnhat_e.Print();
+      
+      TVector3 vdummy;
+      double raytemp[6];
+      
+      spec->LabToTransport( vertextemp, pp_eth*pnhat_e, vdummy, raytemp );
+
+      double pthtar_e = raytemp[1];
+      double pphtar_e = raytemp[3];
+
+      // std::cout << "(pthtar_e, pphtar_e) = (" << pthtar_e <<
+      // 	", " << pphtar_e << ")" << std::endl;
+      
+      
+      double ptheta = trtemp->GetPvect().Theta();
+
+      double pp_ptheta = 2.0*Mp*ebeam*(Mp+ebeam)*cos(ptheta)/(pow(Mp,2)+2.0*Mp*ebeam + pow(ebeam*sin(ptheta),2));
+
+      double dpptest = trtemp->GetP()/pp_ptheta - 1.0;
+      double dthtartest = xptartemp - pthtar_e;
+      double dphtartest = yptartemp - pphtar_e;
+
+      elastic_cut = fabs( dpptest - fDPP0 ) <= fDPPcut &&
+	fabs( dthtartest - fdthtar0 ) <= fdthtarcut &&
+	fabs( dphtartest - fdphtar0 ) <= fdphtarcut;
+
+     
+      
+    }
+    
+    return goodtarget && goodtgtfp && elastic_cut;
   } else {
     return false;
   }

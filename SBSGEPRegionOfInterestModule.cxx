@@ -154,6 +154,7 @@ Int_t SBSGEPRegionOfInterestModule::ReadDatabase( const TDatime &date ){
   return kOK;
   
 }
+
 //_____________________________________________________________________________
 Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   //Okay here we go: we've written the code needed to start writing the code.
@@ -211,6 +212,7 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   //If we reached this point, then we can grab E arm and P arm info:
 
   //Always clear out proton arm constraint points before evaluating ROI:
+  
   Pdet->ClearConstraints();
   
   double ThetaEarm = Earm->GetThetaGeo(); //E arm is ordinarily on beam left, so this angle SHOULD be positive
@@ -243,6 +245,8 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
     fECALclusterpos_global = ECALpos_global;
 
+    Pdet->SetECALpos( ECALpos_global );
+    
     TVector3 vertex_central(0,0,fTargZ0);
     
     // Central ECAL direction:
@@ -250,6 +254,8 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
     double ebeam = fBeam4Vect.E();
     double Mp = fmass_proton_GeV;
+
+    Pdet->SetBeamE( ebeam );
     
     fetheta_central = ECALdir_global.Theta();
     fephi_central = ECALdir_global.Phi();

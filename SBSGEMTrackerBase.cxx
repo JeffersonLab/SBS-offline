@@ -162,7 +162,7 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   //fConstraintPoint_Back.clear();
   // fConstraintWidth_Front.clear();
   // fConstraintWidth_Back.clear();
-  //Don't clear constraint widths for "theta" and "phi" as these 
+  //Don't clear constraint widths for "theta" and "phi" as
   
   fNtracks_found = 0;
   fNhitsOnTrack.clear();
@@ -3486,6 +3486,9 @@ void SBSGEMTrackerBase::ClearConstraints(){
   fConstraintPoint_Back.clear();
   fConstraintPoint_Front_IsInitialized = false;
   fConstraintPoint_Back_IsInitialized = false;
+
+  fECALpos.SetXYZ(kBig,kBig,kBig);
+  fElasticConstraintIsInitialized = false;
 }
 
 void SBSGEMTrackerBase::SetFrontConstraintPoint( TVector3 fcp ){

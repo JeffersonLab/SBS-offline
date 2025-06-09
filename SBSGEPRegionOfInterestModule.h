@@ -44,12 +44,15 @@ protected:
   virtual Int_t  ReadDatabase( const TDatime& date );
   virtual Int_t  ReadRunDatabase( const TDatime& date ); //This is to load beam energy (redundant, I know, but whatever)
 
+  //no need for this yet
+  //  virtual Int_t   Begin( THaRunBase* r=0 );
+  
   //constant (per-run) parameters:
   //-----------------------------------------------------------------------------------------------------------------------
   //This should be loaded from gHaRun->GetParameters()->GetBeamE(); alternatively we could just load it from the database?  
   TLorentzVector fBeam4Vect; //Where is the most convenient place to get the beam energy from? --> Run database 
 
-  const double fmass_proton_GeV = 0.938272;
+  const double fmass_proton_GeV = 0.93827208816;
   //Define z vertex bins for scanning target extent (these should be loaded from regular DB):
   Int_t fNbinsVertexZ;
   Double_t fVertexZmin;

@@ -78,6 +78,8 @@ Int_t SBSGEPHeepCoinModule::DefineVariables( EMode mode ){
     { "eth_pth", "electron angle from proton angle", "feth_pth" },
     { "eprime_pp", "electron energy from proton momentum", "fEprime_pp" },
     { "eth_pp", "electron angle from proton momentum", "feth_pp" },
+    { "pthtar_e", "proton target dx/dz from electron angles", "fpthtar_e" },
+    { "pphtar_e", "proton target dy/dz from electron angles", "fpphtar_e" },
     { "Q2_pp", "Q^2 from proton momentum", "fQ2_pp" },
     { "Q2_eth", "Q^2 from electron angle", "fQ2_eth" },
     { "Q2_pth", "Q^2 from proton angle", "fQ2_pth" },
@@ -218,6 +220,9 @@ Int_t SBSGEPHeepCoinModule::Process( const THaEvData &evdata ){
   
   if( fPspectro->GetNTracks() >= 1 && fEspectro->GetNTracks() >= 1 ){
 
+    TVector3 vdummy;
+    double raytemp[6];
+    
     double &E = febeam; //short-hand;
     double &Mp = fProtonMass;
     
@@ -250,8 +255,7 @@ Int_t SBSGEPHeepCoinModule::Process( const THaEvData &evdata ){
     fephi = enhat_global.Phi();
     
     //We should also update the E arm "track" to reflect the new angles:
-    TVector3 vdummy;
-    double raytemp[6];
+    
     fEspectro->LabToTransport( fvertex, fEcalo * enhat_global, vdummy, raytemp );
 
     double extar = raytemp[0];
@@ -284,6 +288,15 @@ Int_t SBSGEPHeepCoinModule::Process( const THaEvData &evdata ){
     
     fPth_eth = acos( (E-fEprime_eth*cos(fetheta))/fPp_eth );
     fPph_eph = fephi + TMath::Pi();
+
+    TVector3 pnhat_e( sin(fPth_eth)*cos(fPph_eph),
+		      sin(fPth_eth)*sin(fPph_eph),
+		      cos(fPth_eth) );
+
+    fPspectro->LabToTransport( fvertex, fPp_eth * pnhat_e, vdummy, raytemp );
+
+    fpthtar_e = raytemp[1];
+    fpphtar_e = raytemp[3];
     
     fPp_pth = 2.0*Mp*E*(Mp+E)*cos(fPtheta)/(pow(Mp,2)+2.0*Mp*E + pow(E*sin(fPtheta),2));
 
