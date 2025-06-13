@@ -37,6 +37,7 @@ struct SBSBlockSet {
 
 struct SBSCalBlocks {
   std::vector<Double_t> e;   //< []
+  std::vector<Double_t> gain; 
   std::vector<Double_t> TDCTime;   //< [] 
   std::vector<Double_t> TDCTimeTW;   //< [] 
   std::vector<Double_t> ADCTime;   //< [] 
@@ -49,6 +50,7 @@ struct SBSCalBlocks {
   std::vector<Bool_t>  GoodTDC; 
   void clear() {
     e.clear();
+    gain.clear();
     x.clear();
     y.clear();
     id.clear();
@@ -122,6 +124,8 @@ public:
   Double_t GetTDCtimeMeanTW();
   Double_t GetEBlkGoodTDC();
 
+  Int_t GetBestClusterIndex() const { return fBestClusterIndex; }
+  
   /* Double_t GetEBlkCorrected(); //< Main cluster corrected energy of max block in cluster */
   Int_t GetNblk();            //< Number of blocks in main cluster
   Int_t GetBlkID();           //< ID/block number of max energy block in cluster

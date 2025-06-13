@@ -891,7 +891,7 @@ Int_t SBSEArm::CoarseReconstruct()
   
   std::vector<SBSCalorimeterCluster*> HCalClusters = HCal->GetClusters();
   
-  int i_max = HCal->SelectBestCluster();
+  int i_max = HCal->GetBestClusterIndex();
   double E_max = HCalClusters[i_max]->GetE();
   
   // for(unsigned int i = 0; i<HCalClusters.size(); i++){

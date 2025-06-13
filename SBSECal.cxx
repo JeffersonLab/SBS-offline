@@ -192,8 +192,8 @@ Int_t SBSECal::CoarseProcess(TClonesArray& tracks)
   }
   SBSCalorimeter::MakeGoodBlocks();
 
-  Int_t ClusSize = SBSCalorimeter::FindClusters();
-
+  Int_t ClusSize = SBSCalorimeter::FindClusters(); 
+  
   // Modify shower coordinates using shape corrections, if provided.
   if( fUseShowerShapeCorr ){
     CalcShowerCoord();
@@ -292,6 +292,7 @@ Int_t SBSECal::SelectBestCluster(){ //Default is just highest-energy cluster reg
 
   Tbest = fClusters[best]->GetAtime();
   Ebest = fClusters[best]->GetE();
+
   
   //if( best != oldindex ) {
     // std::cout << "Changed best cluster index from " << oldindex << " to " << best
