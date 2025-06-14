@@ -613,48 +613,48 @@ Int_t SBSCalorimeter::FindClusters()
   // I see no reason not to do the best cluster selection in CoarseProcess
   // given what I know about the behavior of all relevant SBS detectors inheriting SBSCalorimeter:
 
-  // std::cout << "SBSCalorimeter::FindClusters(), detector name = " << GetName() << ", before best cluster selection: (nclus,index)=(" << fNclus << ", " << fBestClusterIndex << ")" << std::endl; 
-  
-  SelectBestCluster();
+  fNclus = fClusters.size();
 
-  // std::cout << "SBSCalorimeter::FindClusters(), detector name = " << GetName() << ", after best cluster selection: (nclus,index)=(" << fNclus << ", " << fBestClusterIndex << ")" << std::endl; 
+  //SelectBestCluster() only works if fNclus is set!
+  SelectBestCluster();
+  
   
   //Fill main cluster variables here; this may get overridden by derived classes:
 
   //Let's move this to FineProcess for consistency (it shouldn't have any effect on
   //analysis
-  // if(!fClusters.empty() && fNclus >= 0 ) {
-  //   SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
-  //   fMainclus.e.push_back(clus->GetE());
-  //   //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
-  //   fMainclus.again.push_back(clus->GetAgain());
-  //   fMainclus.atime.push_back(clus->GetAtime());
+  if(!fClusters.empty() ) {
+    SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
+    fMainclus.e.push_back(clus->GetE());
+    //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+    fMainclus.again.push_back(clus->GetAgain());
+    fMainclus.atime.push_back(clus->GetAtime());
 
-  //   fMainclus.tdctime.push_back(clus->GetTDCtime());
-  //   fMainclus.tdctime_tw.push_back(clus->GetTDCtimeTW());
-  //   fMainclus.x.push_back(clus->GetX());
-  //   fMainclus.y.push_back(clus->GetY());
-  //   fMainclus.n.push_back(clus->GetMult());
-  //   fMainclus.blk_e.push_back(clus->GetEblk());
-  //   // fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
-  //   fMainclus.id.push_back(clus->GetElemID());
-  //   fMainclus.row.push_back(clus->GetRow());
-  //   fMainclus.col.push_back(clus->GetCol());
+    fMainclus.tdctime.push_back(clus->GetTDCtime());
+    fMainclus.tdctime_tw.push_back(clus->GetTDCtimeTW());
+    fMainclus.x.push_back(clus->GetX());
+    fMainclus.y.push_back(clus->GetY());
+    fMainclus.n.push_back(clus->GetMult());
+    fMainclus.blk_e.push_back(clus->GetEblk());
+    // fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
+    fMainclus.id.push_back(clus->GetElemID());
+    fMainclus.row.push_back(clus->GetRow());
+    fMainclus.col.push_back(clus->GetCol());
 
-  //   fMainclus.atime_mean.push_back(clus->GetAtimeMean());
-  //   fMainclus.e_goodtdc.push_back(clus->GetE_GoodTDC());
-  //   fMainclus.tdctime_mean.push_back(clus->GetTDCtimeMean());
-  //   fMainclus.tdctime_mean_tw.push_back(clus->GetTDCtimeMeanTW());
-  //   fMainclus.blk_e_goodtdc.push_back(clus->GetEblk_GoodTDC());
-  //   fMainclus.ngoodtdc.push_back(clus->GetNgoodTDChits());
-  //   fMainclus.rowgoodtdc.push_back(clus->GetRowGoodTDC());
-  //   fMainclus.colgoodtdc.push_back(clus->GetColGoodTDC());
-  //   fMainclus.idgoodtdc.push_back(clus->GetElemIDGoodTDC());
-  // }
+    fMainclus.atime_mean.push_back(clus->GetAtimeMean());
+    fMainclus.e_goodtdc.push_back(clus->GetE_GoodTDC());
+    fMainclus.tdctime_mean.push_back(clus->GetTDCtimeMean());
+    fMainclus.tdctime_mean_tw.push_back(clus->GetTDCtimeMeanTW());
+    fMainclus.blk_e_goodtdc.push_back(clus->GetEblk_GoodTDC());
+    fMainclus.ngoodtdc.push_back(clus->GetNgoodTDChits());
+    fMainclus.rowgoodtdc.push_back(clus->GetRowGoodTDC());
+    fMainclus.colgoodtdc.push_back(clus->GetColGoodTDC());
+    fMainclus.idgoodtdc.push_back(clus->GetElemIDGoodTDC());
+  }
 
   //
   //
-  fNclus = fClusters.size();
+  // fNclus = fClusters.size(); moved this earlier
   return fNclus;
 }
 //_____________________________________________________________________________
@@ -677,33 +677,39 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
     SBSCalorimeterCluster *clus = fClusters[best];
  
     if(fDataOutputLevel > 0 ) {
-      
-      fMainclus.e.push_back(clus->GetE());
-      //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
-      fMainclus.again.push_back(clus->GetAgain());
-      fMainclus.atime.push_back(clus->GetAtime());
-      
-      fMainclus.tdctime.push_back(clus->GetTDCtime());
-      fMainclus.tdctime_tw.push_back(clus->GetTDCtimeTW());
-      fMainclus.x.push_back(clus->GetX());
-      fMainclus.y.push_back(clus->GetY());
-      fMainclus.n.push_back(clus->GetMult());
-      fMainclus.blk_e.push_back(clus->GetEblk());
-      // fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
-      fMainclus.id.push_back(clus->GetElemID());
-      fMainclus.row.push_back(clus->GetRow());
-      fMainclus.col.push_back(clus->GetCol());
-      
-      fMainclus.atime_mean.push_back(clus->GetAtimeMean());
-      fMainclus.e_goodtdc.push_back(clus->GetE_GoodTDC());
-      fMainclus.tdctime_mean.push_back(clus->GetTDCtimeMean());
-      fMainclus.tdctime_mean_tw.push_back(clus->GetTDCtimeMeanTW());
-      fMainclus.blk_e_goodtdc.push_back(clus->GetEblk_GoodTDC());
-      fMainclus.ngoodtdc.push_back(clus->GetNgoodTDChits());
-      fMainclus.rowgoodtdc.push_back(clus->GetRowGoodTDC());
-      fMainclus.colgoodtdc.push_back(clus->GetColGoodTDC());
-      fMainclus.idgoodtdc.push_back(clus->GetElemIDGoodTDC());
-      
+
+      if( best != oldbest ){
+	std::cout << "Warning: best cluster index for detector " << GetName() << " changed between CoarseProcess and FineProcess, re-initializing main cluster variables: (best,oldbest)=(" << best << ", " << oldbest << ")" << std::endl;
+
+	ClearCaloOutput(fMainclus);
+	
+	fMainclus.e.push_back(clus->GetE());
+	//fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+	fMainclus.again.push_back(clus->GetAgain());
+	fMainclus.atime.push_back(clus->GetAtime());
+	
+	fMainclus.tdctime.push_back(clus->GetTDCtime());
+	fMainclus.tdctime_tw.push_back(clus->GetTDCtimeTW());
+	fMainclus.x.push_back(clus->GetX());
+	fMainclus.y.push_back(clus->GetY());
+	fMainclus.n.push_back(clus->GetMult());
+	fMainclus.blk_e.push_back(clus->GetEblk());
+	// fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
+	fMainclus.id.push_back(clus->GetElemID());
+	fMainclus.row.push_back(clus->GetRow());
+	fMainclus.col.push_back(clus->GetCol());
+	
+	fMainclus.atime_mean.push_back(clus->GetAtimeMean());
+	fMainclus.e_goodtdc.push_back(clus->GetE_GoodTDC());
+	fMainclus.tdctime_mean.push_back(clus->GetTDCtimeMean());
+	fMainclus.tdctime_mean_tw.push_back(clus->GetTDCtimeMeanTW());
+	fMainclus.blk_e_goodtdc.push_back(clus->GetEblk_GoodTDC());
+	fMainclus.ngoodtdc.push_back(clus->GetNgoodTDChits());
+	fMainclus.rowgoodtdc.push_back(clus->GetRowGoodTDC());
+	fMainclus.colgoodtdc.push_back(clus->GetColGoodTDC());
+	fMainclus.idgoodtdc.push_back(clus->GetElemIDGoodTDC());
+      }
+	
       for(Int_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
 	
