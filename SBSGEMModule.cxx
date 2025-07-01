@@ -1887,13 +1887,13 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      hcommonmode_mean_by_APV_V->Fill( it->pos, commonMode[isamp] );
 	    }
 	    
-	    //if( !CM_OUT_OF_RANGE ){
-	    UpdateRollingAverage( apvcounter, commonMode[isamp],
+	    if( !CM_OUT_OF_RANGE ){
+	      UpdateRollingAverage( apvcounter, commonMode[isamp],
 				  fCommonModeResultContainer_by_APV,
 				  fCommonModeRollingAverage_by_APV,
 				  fCommonModeRollingRMS_by_APV,
 				  fNeventsRollingAverage_by_APV ); 
-	    //}
+	    }
 	  } //loop over time samples
 	
 	  if( fCorrectCommonMode ){ //For full readout events we are mainly interested in monitoring the "bias" of the ONLINE calculation,
@@ -5468,12 +5468,12 @@ double SBSGEMModule::GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &ap
     //cm_rms = DBrms;
     
     //bin width/stepsize = 8 with these settings:
-    double stepsize = cm_rms*fCommonModeStepSize_Nsigma; //Default is 0.2 = rms/5
-    double binwidth = cm_rms*fCommonModeBinWidth_Nsigma; //Default is +/- 2 sigma, bin width / step size = 20 with these settings
+    double stepsize = DBrms*fCommonModeStepSize_Nsigma; //Default is 0.2 = rms/5
+    double binwidth = DBrms*fCommonModeBinWidth_Nsigma; //Default is +/- 2 sigma, bin width / step size = 20 with these settings
 
     //this will actually include all ADCs within +/- (ScanRange + BinWidth) sigma of the mean since range is bin center +/- 1*RMS.
-    double scan_min = cm_mean - fCommonModeScanRange_Nsigma*cm_rms; 
-    double scan_max = cm_mean + fCommonModeScanRange_Nsigma*cm_rms;
+    double scan_min = cm_mean - fCommonModeScanRange_Nsigma*DBrms; 
+    double scan_max = cm_mean + fCommonModeScanRange_Nsigma*DBrms;
 
     int nbins= int( (scan_max - scan_min)/stepsize ); //20 * RMS / (RMS/4) = 80
 
