@@ -15,6 +15,7 @@
 #include "SBSGEPEArm.h" //For the electron arm:
 #include "SBSEArm.h" //For the proton arm
 #include "SBSECal.h"
+#include "SBSHCal.h"
 #include "SBSGEMSpectrometerTracker.h"
 #include "SBSGEMPolarimeterTracker.h"
 #include "TClonesArray.h"
@@ -29,8 +30,8 @@ SBSGEPRegionOfInterestModule::SBSGEPRegionOfInterestModule( const char *name, co
   fParmName = "sbs";
   fEarmDetName = "ecal";
   fParmDetName = "gemFT";
-
   fParmDetNamePol = "gemFPP";
+  fParmDetNameCalo = "hcal";
   
   fTestTracks = new TClonesArray("THaTrack",1);
 
@@ -139,6 +140,7 @@ Int_t SBSGEPRegionOfInterestModule::ReadDatabase( const TDatime &date ){
     { "edet_name", &fEarmDetName, kString, 0, 1, 1 },
     { "pdet_name", &fParmDetName, kString, 0, 1, 1 },
     { "pdetpol_name", &fParmDetNamePol, kString, 0, 1, 1 },
+    { "pdetcalo_name", &fParmDetNameCalo, kString, 0, 1, 1 },
     { "z0targ", &fTargZ0, kDouble, 0, 1, 1 },
     { nullptr }
   };
@@ -166,6 +168,7 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   bool gotEdet = false;
   bool gotPdet = false;
   bool gotPdetPol = false;
+  bool gotPdetCalo = false;
   
   TIter aiter(gHaApps);
 
@@ -174,8 +177,9 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
   SBSECal *Edet = nullptr;
   SBSGEMSpectrometerTracker *Pdet = nullptr;
-
   SBSGEMPolarimeterTracker *PdetPol = nullptr;
+
+  SBSHCal *PdetCalo = nullptr;
   
   while( (app = (THaApparatus*) aiter()) ){
     std::string appname = app->GetName();
@@ -198,22 +202,41 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 	if( Pdet ) gotPdet = true;
 
 	PdetPol = dynamic_cast<SBSGEMPolarimeterTracker*>(Parm->GetDetector(fParmDetNamePol.c_str()));
+
+	if( PdetPol ) gotPdetPol = true;
+	
+	PdetCalo = dynamic_cast<SBSHCal*>(Parm->GetDetector(fParmDetNameCalo.c_str()));
+	if( PdetCalo ) gotPdetCalo = true;
+	
       }
     }
   }
 
-  if( !gotParm || !gotEarm || !gotEdet || !gotPdet ){
-    std::cout << "Error: missing Earm and/or Parm and/or Edet and/or Pdet! (gotEarm, gotParm, gotEdet, gotPdet)=(" << gotEarm << ", " << gotParm << ", "
-	      << gotEdet << ", " << gotPdet << ")" << std::endl;
+  if( !gotParm || !gotEarm || !gotEdet || !gotPdet || !gotPdetPol || !gotPdetCalo ){
+    std::cout << "Error: missing Earm and/or Parm and/or Edet and/or Pdet and/or PdetPol and/or PdetCalo! (gotEarm, gotParm, gotEdet, gotPdet, gotPdetPol, gotPdetCalo)=(" << gotEarm << ", " << gotParm << ", "
+	      << gotEdet << ", " << gotPdet << ", " << gotPdetPol
+	      << ", " << gotPdetCalo << ")" << std::endl;
     fDataValid = false;
     return 0;
   }
 
   //If we reached this point, then we can grab E arm and P arm info:
 
-  //Always clear out proton arm constraint points before evaluating ROI:
+  //Always clear out proton arm front tracker constraint points before evaluating ROI:
   
   Pdet->ClearConstraints();
+  PdetPol->ClearConstraints();
+
+  //First grab HCAL info:
+  if( PdetCalo->GetNclust() <= 0 ) return 0;
+
+  auto HCalClusters = PdetCalo->GetClusters();
+
+  int ibest_hcal = PdetCalo->GetBestClusterIndex();
+
+  double xHCAL = HCalClusters[ibest_hcal]->GetX() + PdetCalo->GetOrigin().X();
+  double yHCAL = HCalClusters[ibest_hcal]->GetY() + PdetCalo->GetOrigin().Y();
+  double zHCAL = PdetCalo->GetOrigin().Z();
   
   double ThetaEarm = Earm->GetThetaGeo(); //E arm is ordinarily on beam left, so this angle SHOULD be positive
   double ThetaParm = Parm->GetThetaGeo(); //P arm is ordinarily on beam right, so this angle SHOULD be negative
@@ -228,6 +251,11 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   TVector3 Parm_xaxis( 0, -1, 0 ); //TRANSPORT system; +x = down
   TVector3 Parm_yaxis = Parm_zaxis.Cross( Parm_xaxis ).Unit();
 
+  //Set HCAL global cluster position. Not yet clear whether and/or how we will use this:
+  fHCALclusterpos_global = Parm->GetHCALdist() * Parm_zaxis +
+    HCalClusters[ibest_hcal]->GetX() * Parm_xaxis +
+    HCalClusters[ibest_hcal]->GetY() * Parm_yaxis; 
+  
   //Grab the E arm "track" 
   if( Earm->GetNTracks() >= 1 ){
     TClonesArray *EarmTracks = Earm->GetTracks();

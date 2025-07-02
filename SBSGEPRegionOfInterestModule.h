@@ -47,7 +47,7 @@ protected:
   //no need for this yet
   //  virtual Int_t   Begin( THaRunBase* r=0 );
   
-  //constant (per-run) parameters:
+  //constant (per-run) parameters: 
   //-----------------------------------------------------------------------------------------------------------------------
   //This should be loaded from gHaRun->GetParameters()->GetBeamE(); alternatively we could just load it from the database?  
   TLorentzVector fBeam4Vect; //Where is the most convenient place to get the beam energy from? --> Run database 
@@ -67,15 +67,16 @@ protected:
 
   std::string fEarmDetName;
   std::string fParmDetName;
-
   std::string fParmDetNamePol;
+  std::string fParmDetNameCalo;
   
   //We might as well store spectrometer 3-vectors here, or would that be redundant with the ones in the spectrometer classes? 
 
   //variable (per-event) parameters:
   //------------------------------------------------------------------------------------------------------------------------------
   TVector3 fECALclusterpos_global; //ECAL cluster position in "global" Hall A Coordinates (+x to beam left, +y up, +z along beam) 
-
+  TVector3 fHCALclusterpos_global; //HCAL cluster position in "global" Hall A Coordinates (unclear as of yet whether and how we will directly use this)
+  
   Double_t fECAL_energy;
   
   //Electron and proton final-state kinematics from ECAL cluster pos for point-target assumption:

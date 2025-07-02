@@ -886,13 +886,13 @@ Int_t SBSEArm::CoarseReconstruct()
       // 		<< std::endl;
     }
   }
-
+  
   if(HCal->GetNclust() == 0 || HCal == nullptr) return 0; //If no HCAL clusters, we don't attempt tracking
   
   std::vector<SBSCalorimeterCluster*> HCalClusters = HCal->GetClusters();
   
   int i_max = HCal->GetBestClusterIndex();
-  double E_max = HCalClusters[i_max]->GetE();
+  //double E_max = HCalClusters[i_max]->GetE();
   
   // for(unsigned int i = 0; i<HCalClusters.size(); i++){
     
@@ -902,8 +902,14 @@ Int_t SBSEArm::CoarseReconstruct()
   //   }
   // }
 
+  // Experimental: test moving all constraint point initialization for both
+  // front and back trackers to the
+  // GEP region-of-interest module if the "GEP tracking mode" is set:
+  
   fHCALtime_ADC = HCalClusters[i_max]->GetAtime();
   fHCALtime_TDC = HCalClusters[i_max]->GetTDCtime();
+
+  if( fGEPtrackingMode ) return 0;
   
   x_bcp = HCalClusters[i_max]->GetX() + HCal->GetOrigin().X();
   y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
@@ -924,6 +930,8 @@ Int_t SBSEArm::CoarseReconstruct()
   fHCALdir_y = HCALdir_global.Y();
   fHCALdir_z = HCALdir_global.Z();
 
+  
+  
   if( fGEPtrackingMode && BackTracker != nullptr ){ //We can set the BACK constraint point for the BACK tracker based on HCAL:
 
     BackTracker->SetBackConstraintWidth( fBackConstraintWidthX[1],

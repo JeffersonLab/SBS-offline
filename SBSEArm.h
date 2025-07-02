@@ -57,6 +57,8 @@ public:
   
   Double_t GetAtimeHCAL() const { return fHCALtime_ADC; }
   Double_t GetTDCtimeHCAL() const { return fHCALtime_TDC; }
+
+  Double_t GetHCALdist() const { return fHCALdist; }
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
@@ -186,8 +188,8 @@ protected:
   std::vector<int> f_fol;
   std::vector<int> f_fom;
 
-  Bool_t fGEPtrackingMode; //Flag to turn on GEP tracking mode. 
-
+  Bool_t fGEPtrackingMode; //Boolean flag to turn on GEP tracking mode. 
+  Int_t fGEPtrackingFlag; //Integer flag to control the behavior of the GEP tracking algorithm
   
   
   ClassDef(SBSEArm,0) // BigBite spectrometer
