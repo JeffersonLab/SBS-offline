@@ -698,8 +698,15 @@ class SBSGEMModule : public THaSubDetector {
   TH1D *hpedestal_subtracted_ADCsU;
   TH1D *hpedestal_subtracted_ADCsV;
 
+  //Summed over all strips, pedestal-subtracted and  common-mode subtracted ADCs:
+  TH1D *hpedestal_subtracted_ADCsU_goodCM;
+  TH1D *hpedestal_subtracted_ADCsV_goodCM;
+
   TH1D *hdeconv_ADCsU; //full readout events only
   TH1D *hdeconv_ADCsV; //full readout events only
+
+  TH1D *hdeconv_ADCsU_goodCM; //full readout events only
+  TH1D *hdeconv_ADCsV_goodCM; //full readout events only
 
   //Raw ADC distribution by APV card:
   TH2D *hrawADCs_by_APV_U;
@@ -708,6 +715,9 @@ class SBSGEMModule : public THaSubDetector {
   //Pedestal and common-mode subtracted ADC distribution by APV card:
   TH2D *hADCs_by_APV_U;
   TH2D *hADCs_by_APV_V;
+
+  TH2D *hADCs_by_APV_U_goodCM;
+  TH2D *hADCs_by_APV_V_goodCM;
 
   //For all events, determine whether an APV threw a common-mode out-of-range condition:
   TH2D *hCM_OR_by_APV_U;

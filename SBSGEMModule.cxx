@@ -2179,6 +2179,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	      //These histograms will always be generated for full readout events for diagnostics:
 	      hpedestal_subtracted_ADCsU->Fill( ADCtemp[isamp] ); //1D distribution of ped-and-common-mode subtracted ADCs
+	      
 	      //  hcommonmode_mean_by_APV_U->Fill( iAPV, commonMode[isamp] );
 	      // ( (TH2D*) (*hrawADCs_by_strip_sampleU)[isamp] )->Fill( strip, rawADCtemp[isamp] );
 	      // //for this one, we add back in the pedestal:
@@ -2188,6 +2189,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      hrawADCs_by_APV_U->Fill( iAPV, rawADCtemp[isamp] );
 	      hADCs_by_APV_U->Fill( iAPV, ADCtemp[isamp] );
 
+	      if( !CM_OUT_OF_RANGE ) {
+		hpedestal_subtracted_ADCsU_goodCM->Fill( ADCtemp[isamp] );
+		hADCs_by_APV_U_goodCM->Fill( iAPV, ADCtemp[isamp] );
+		if( iSampMax != 0 ){
+		  hdeconv_ADCsU_goodCM->Fill( DeconvADCtemp[isamp] );
+		}
+	      }
+		
 	      if( iSampMax != 0 ){
 		hdeconv_ADCsU->Fill( DeconvADCtemp[isamp] );
 	      }
@@ -2210,12 +2219,20 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	      // //for this one, we add back in the pedestal:
 	      // ( (TH2D*) (*hcommonmode_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] + pedtemp );
 	      // ( (TH2D*) (*hpedestal_subtracted_ADCs_by_strip_sampleU)[isamp] )->Fill( strip, ADCtemp[isamp] );
-
+	      
 	      hrawADCs_by_APV_V->Fill( iAPV, rawADCtemp[isamp] );
 	      hADCs_by_APV_V->Fill( iAPV, ADCtemp[isamp] );
 	      
 	      if( iSampMax != 0 ){
 		hdeconv_ADCsV->Fill( DeconvADCtemp[isamp] );
+	      }
+
+	      if( !CM_OUT_OF_RANGE ) {
+		hpedestal_subtracted_ADCsV_goodCM->Fill( ADCtemp[isamp] );
+		hADCs_by_APV_V_goodCM->Fill( iAPV, ADCtemp[isamp] );
+		if( iSampMax != 0 ){
+		  hdeconv_ADCsV_goodCM->Fill( DeconvADCtemp[isamp] );
+		}
 	      }
 	      // ( (TH2D*) (*hrawADCs_by_strip_sampleV)[isamp] )->Fill( strip, rawADCtemp[isamp] );
 	      // ( (TH2D*) (*hcommonmode_subtracted_ADCs_by_strip_sampleV)[isamp] )->Fill( strip, ADCtemp[isamp] );
@@ -4624,11 +4641,19 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
   //There are certain histograms we always want to create (and fill using full readout events):
 
   if( !fPedDiagHistosInitialized ){
+
+    //Let's make versions of these for "all" events and "regular" full readout events only:
     hpedestal_subtracted_ADCsU = new TH1D( TString::Format( "hADCpedsubU_allstrips_%s", detname.Data() ), "full readout: ped-subtracted U strip ADCs w/common-mode correction; ADC - Common-mode - pedestal", 1250, -500.,4500. );
     hpedestal_subtracted_ADCsV = new TH1D( TString::Format( "hADCpedsubV_allstrips_%s", detname.Data() ), "full readout: ped-subtracted V strip ADCs w/common-mode correction; ADC - Common-mode - pedestal", 1250, -500.,4500. );
-    
+
+    hpedestal_subtracted_ADCsU_goodCM = new TH1D( TString::Format( "hADCpedsubU_allstrips_%s_goodCM", detname.Data() ), "full readout: ped-subtracted U strip ADCs w/common-mode correction; ADC - Common-mode - pedestal", 1250, -500.,4500. );
+    hpedestal_subtracted_ADCsV_goodCM = new TH1D( TString::Format( "hADCpedsubV_allstrips_%s_goodCM", detname.Data() ), "full readout: ped-subtracted V strip ADCs w/common-mode correction; ADC - Common-mode - pedestal", 1250, -500.,4500. );
+
     hdeconv_ADCsU = new TH1D( TString::Format( "hADCdeconvU_allstrips_%s", detname.Data() ), "Full readout events; Deconvoluted ADCs", 1250,-500.,4500. );
     hdeconv_ADCsV = new TH1D( TString::Format( "hADCdeconvV_allstrips_%s", detname.Data() ), "Full readout events; Deconvoluted ADCs", 1250,-500.,4500. );
+
+    hdeconv_ADCsU_goodCM = new TH1D( TString::Format( "hADCdeconvU_allstrips_%s_goodCM", detname.Data() ), "Full readout events; Deconvoluted ADCs", 1250,-500.,4500. );
+    hdeconv_ADCsV_goodCM = new TH1D( TString::Format( "hADCdeconvV_allstrips_%s_goodCM", detname.Data() ), "Full readout events; Deconvoluted ADCs", 1250,-500.,4500. );
     
     UInt_t nAPVs_U = fNstripsU/fN_APV25_CHAN;
     hcommonmode_mean_by_APV_U = new TH2D( TString::Format( "hCommonModeMean_by_APV_U_%s", detname.Data() ), "full readout events: common-mode means for U strips; APV card; Common-mode", nAPVs_U, -0.5, nAPVs_U-0.5, 1024, -0.5, 4095.5 );
@@ -4640,6 +4665,9 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     
     hCM_OR_by_APV_U = new TH2D( TString::Format( "hCM_OR_by_APV_U_%s", detname.Data() ), "U strip all events; APV; CM out of range?", nAPVs_U, -0.5, nAPVs_U-0.5, 2, -0.5, 1.5 );
 
+
+    hADCs_by_APV_U_goodCM = new TH2D( TString::Format( "hADCs_by_APV_U_%s_goodCM", detname.Data() ), "U strip Full readout events; APV; corrected ADC", nAPVs_U, -0.5, nAPVs_U-0.5, 1250,-500.,4500. );
+   
     
     
     UInt_t nAPVs_V = fNstripsV/fN_APV25_CHAN;
@@ -4649,6 +4677,8 @@ Int_t   SBSGEMModule::Begin( THaRunBase* r){ //Does nothing
     
     hrawADCs_by_APV_V = new TH2D( TString::Format( "hrawADCs_by_APV_V_%s", detname.Data() ), "V strip Full readout events; APV; raw ADC", nAPVs_V, -0.5, nAPVs_V-0.5, 1250,-500.,4500. );
     hADCs_by_APV_V = new TH2D( TString::Format( "hADCs_by_APV_V_%s", detname.Data() ), "V strip Full readout events; APV; corrected ADC", nAPVs_V, -0.5, nAPVs_V-0.5, 1250,-500.,4500. );
+
+    hADCs_by_APV_V_goodCM = new TH2D( TString::Format( "hADCs_by_APV_V_%s_goodCM", detname.Data() ), "V strip Full readout events; APV; corrected ADC", nAPVs_V, -0.5, nAPVs_V-0.5, 1250,-500.,4500. );
     
     hCM_OR_by_APV_V = new TH2D( TString::Format( "hCM_OR_by_APV_V_%s", detname.Data() ), "V strip all events; APV; CM out of range?", nAPVs_V, -0.5, nAPVs_V-0.5, 2, -0.5, 1.5 );
 
