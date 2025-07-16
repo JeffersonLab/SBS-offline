@@ -1668,6 +1668,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	// 	std::cout << "PMT = " << blk->GetID() << "  Row = " << blk->GetRow() << "  Col = " << 
 	// 	blk->GetCol() << "  Layer = " << blk->GetLayer() << "  LE = " << hit.le.val << std::endl;   
         // }
+
 	fGood.t.push_back(hit.le.val);
         fGood.t_mult.push_back(blk->TDC()->GetNHits());
         if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info

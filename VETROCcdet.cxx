@@ -164,6 +164,7 @@ namespace Decoder {
         Int_t two_ns = ((*p) & 0x00000080)>>7;
         Int_t fine   = ((*p) & 0x0000007F);
 
+
         tdc_data.opt = edgeD;
         //tdc_data.chan = (group*32 + chan); //this is the original cable map
         //
@@ -183,16 +184,29 @@ namespace Decoder {
 		tdc_data.chan = group*32 + chan;
 	}
 
-        tdc_data.raw = coarse*4000 + two_ns*2000 + fine*2000/109.59; // this should be the time in ps (from Tritium code)
+        tdc_data.raw = coarse*4000 + two_ns*2000 + fine*2000/124.87; // this should be the time in ps (from Tritium code)
 	// subtract off rolling trigger time
 	//cout << "Corrected TDC raw = " << tdc_data.raw << endl;
+	
 	Long64_t original_raw = tdc_data.raw;
 	if (tdc_data.raw < tdc_data.trig_time) {
 		tdc_data.raw = tdc_data.raw + 1024*4000;
 	}
 	tdc_data.raw = tdc_data.raw - tdc_data.trig_time;
 	
+	/*if (tdc_data.ev_hdr_slno == 20) {
+		if (tdc_data.chan == 40) {
+			std::cout << "Slot 20 Chan 40 fix!" << std::endl;
+			if (tdc_data.opt == 1) {
+				tdc_data.opt = 0;
+			} else {
+				tdc_data.opt = 1;
+			}
+		}
+	}*/
+	
 	tdc_data.status = slot_data->loadData("tdc", tdc_data.chan, tdc_data.raw, tdc_data.opt);
+
 #ifdef WITH_DEBUG
 	if (fDebugFile)
 	  *fDebugFile << "VETROCcdetModule:: MEASURED DATA >> data = " 
@@ -203,18 +217,18 @@ namespace Decoder {
 		      << tdc_data.status << endl;
 #endif
 	 //if (tdc_data.ev_hdr_slno == 10 && tdc_data.chan >= 96 && tdc_data.chan <= 112) {
-	 //if (tdc_data.ev_hdr_slno == 20 && tdc_data.chan >= 0) {
-        //	 //std::cout << std::endl;
-	//	 std::cout << "VETROCcdetModule:: MEASURED DATA >> data = " 
-	 //	      << hex << *p << " >> channel = " << dec
-	 //	      << tdc_data.chan << " >> slot = " << tdc_data.ev_hdr_slno << " >> edge = "
-	 //	      << tdc_data.opt  << " >> status = "
-	//	      << tdc_data.status << " >> raw time = "
-	//	      << tdc_data.raw << " original raw = "
-	//	      << original_raw << " >> trigtime = "
-	//	      << tdc_data.trig_time << std::endl;
-	 //}
-
+	 /*if (tdc_data.ev_hdr_slno >= 20) {
+        	 //std::cout << std::endl;
+		 std::cout << "VETROCcdetModule:: MEASURED DATA >> data = " 
+	 	      << hex << *p << " >> channel = " << dec
+	 	      << tdc_data.chan << " >> slot = " << tdc_data.ev_hdr_slno << " >> edge = "
+	 	      << tdc_data.opt  << " >> status = "
+		      << tdc_data.status << " >> raw time = "
+		      << tdc_data.raw << " original raw = "
+		      << original_raw << " >> trigtime = "
+		      << tdc_data.trig_time << std::endl;
+	 }
+	*/
 
         if(tdc_data.chan < NTDCCHAN &&
            fNumHits[tdc_data.chan] < MAXHIT) {
