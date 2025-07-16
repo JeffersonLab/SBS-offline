@@ -677,6 +677,8 @@ class SBSGEMModule : public THaSubDetector {
   
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;
+
+  bool fPedDiagHistosInitialized;
   
   TH2D *hrawADCs_by_stripU; //raw adcs by strip, no corrections, filled for each SAMPLE:
   TH2D *hrawADCs_by_stripV; //raw adcs by strip, no corrections, filled for each SAMPLE:
@@ -698,10 +700,25 @@ class SBSGEMModule : public THaSubDetector {
 
   TH1D *hdeconv_ADCsU; //full readout events only
   TH1D *hdeconv_ADCsV; //full readout events only
+
+  //Raw ADC distribution by APV card:
+  TH2D *hrawADCs_by_APV_U;
+  TH2D *hrawADCs_by_APV_V;
+
+  //Pedestal and common-mode subtracted ADC distribution by APV card:
+  TH2D *hADCs_by_APV_U;
+  TH2D *hADCs_by_APV_V;
+
+  //For all events, determine whether an APV threw a common-mode out-of-range condition:
+  TH2D *hCM_OR_by_APV_U;
+  TH2D *hCM_OR_by_APV_V;
   
-  //in pedestal-mode analysis, we 
+  //These histograms we MAY wish to make all the time (but probably not)
   TH2D *hcommonmode_mean_by_APV_U;
   TH2D *hcommonmode_mean_by_APV_V;
+
+  TH2D *hcommonmode_online_by_APV_U;
+  TH2D *hcommonmode_online_by_APV_V;
 
   TH1D *hpedrmsU_distribution;
   TH1D *hpedrmsU_by_strip;

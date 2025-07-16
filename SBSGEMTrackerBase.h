@@ -79,6 +79,8 @@ public:
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction, bool coarse=false );
 
+  
+  
   bool CheckConstraint( double xtr, double ytr, double xptr, double yptr, bool coarse=false );
   
   inline void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
@@ -107,6 +109,28 @@ public:
   bool FrontConstraintIsIinitialized() const { return fConstraintPoint_Front_IsInitialized; };
   bool BackConstraintIsInitialized() const { return fConstraintPoint_Back_IsInitialized; };
   bool ConstraintIsInitialized() const { return fConstraintInitialized; }
+
+  //bool IsGEPFrontTracker() const { return fIsGEPFrontTracker; }
+  bool UseElasticConstraint() const { return fUseElasticConstraint; }
+  bool ElasticConstraintIsInitialized() const { return fElasticConstraintIsInitialized; }
+
+  //  void SetGEPFrontTracker( bool b ){ fIsGEPFrontTracker = b; }
+  void SetUseElasticConstraint( bool b ){ fUseElasticConstraint = b; }
+  
+  void SetECALpos( TVector3 pos ){ fECALpos = pos; fElasticConstraintIsInitialized = true; }
+  
+  //void SetECALpos( TVector3 pos ){ fECALpos = pos; }
+  //These are constants to be set via database:
+  void SetBeamE( double E ){ fBeamE = E; }
+  void SetDpp0( double dpp0){ fDPP0 = dpp0; }
+  void SetDppCut( double dppcut ){ fDPPcut = dppcut; }
+  void SetDthtar0( double dthtar0 ){ fdthtar0 = dthtar0; }
+  void SetDthtarCut( double dthtarcut ){ fdthtarcut = dthtarcut; }
+  void SetDphtar0( double dphtar0 ){ fdphtar0 = dphtar0; }
+  void SetDphtarCut( double dphtarcut ){ fdphtarcut = dphtarcut; }
+  void SetDppCut( double dpp0, double dppcut ){ fDPP0 = dpp0; fDPPcut = dppcut; }
+  void SetDthtarCut( double dthtar0, double dthtarcut ){ fdthtar0 = dthtar0; fdthtarcut = dthtarcut; }
+  void SetDphtarCut( double dphtar0, double dphtarcut ){ fdphtar0 = dphtar0; fdphtarcut = dphtarcut; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -115,6 +139,9 @@ protected:
   bool fclustering_done;
   bool ftracking_done;
 
+  //  bool fIsGEPFrontTracker;
+  bool fUseElasticConstraint;
+  bool fElasticConstraintIsInitialized;
   bool fIsSpectrometerTracker; //default to true:
   bool fIsPolarimeterTracker;
   bool fMultiTrackSearch; //default to false!
@@ -658,6 +685,17 @@ protected:
 
   Bool_t fUseConstraintPenaltyTerm; //Include "penalty term" for chi2 calculation based on constraint points:
   Double_t fConstraintPenaltySigmaX,fConstraintPenaltySigmaY,fConstraintPenaltySigmaXp, fConstraintPenaltySigmaYp;
+
+  //Let's get a bit more direct about this:
+  TVector3 fECALpos; //electron cluster position in global Hall coordinates
+  Double_t fBeamE;
+
+  const Double_t fProtonMass = 0.93827208816; //PDG value as of 4/8/2025
+  // limits in exclusivity cut variables to select
+  // elastically scattered proton tracks in track-finding algorithm:
+  Double_t fDPP0, fDPPcut; //limits on p/pel(pth)-1
+  Double_t fdthtar0, fdthtarcut; 
+  Double_t fdphtar0, fdphtarcut; //limits on pphi - pphi(ephi)
   
 };
 

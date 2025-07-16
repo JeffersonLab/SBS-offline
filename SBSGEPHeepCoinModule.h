@@ -47,7 +47,8 @@ protected:
   //Various derived quantities:
   // Electron energy and proton scattering angles and momentum from electron angles and beam energy: 
   Double_t fEprime_eth, fPp_eth, fPth_eth, fPph_eph;
-
+  Double_t fpthtar_e, fpphtar_e;
+  
   // When using the proton kinematics to predict electron kinematics, we pretty much want to use
   // two methods:
   // 1. angles-only

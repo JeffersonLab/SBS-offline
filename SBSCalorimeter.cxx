@@ -253,7 +253,8 @@ Int_t SBSCalorimeter::DefineVariables( EMode mode )
   RVarDef vars_gb[] = {
     { "goodblock.e", "Energy of good blocks", "fGoodBlocks.e"},
     //     { "goodblock.tdc", "TDC time of good blocks", "fGoodBlocks.TDCTime"},
-    { "goodblock.atime", "Energy of good blocks", "fGoodBlocks.ADCTime"},
+    { "goodblock.again", "Gain factor applied to good blocks", "fGoodBlocks.gain"},
+    { "goodblock.atime", "ADC time of good blocks", "fGoodBlocks.ADCTime"},
     { "goodblock.tdctime", "TDC time of good blocks", "fGoodBlocks.TDCTime"},
     { "goodblock.tdctime_tw", "Walk corrected TDC time of good blocks", "fGoodBlocks.TDCTimeTW"},
     { "goodblock.row", "Row of good blocks", "fGoodBlocks.row"},
@@ -354,6 +355,7 @@ void SBSCalorimeter::Clear( Option_t* opt )
   fGoodBlocks.clear();
   fBlockSet.clear();
   fBestClusterIndex = -1;
+  fNclus = 0;
 }
 
 //_____________________________________________________________________________
@@ -390,6 +392,7 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	  blk->SetAgain(blk->ADC()->GetGain() / blk->ADC()->GetTrigCal());
 	  blk->SetAtime(ahit.time.val);
 	  fGoodBlocks.e.push_back(ahit.integral.val);
+	  fGoodBlocks.gain.push_back(blk->GetAgain());
 	  fGoodBlocks.ADCTime.push_back(ahit.time.val);
 	} else {
 	  SBSData::Waveform *wave = blk->Waveform();
@@ -398,6 +401,7 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	  blk->SetAgain(wave->GetGain() / wave->GetTrigCal());
 	  blk->SetAtime(wave->GetTime().val);
 	  fGoodBlocks.e.push_back(wave->GetIntegral().val);
+	  fGoodBlocks.gain.push_back(blk->GetAgain());
 	  fGoodBlocks.ADCTime.push_back(wave->GetTime().val);
 	}
 	if (WithTDC() && blk->TDC()->HasData() ) { 
@@ -422,11 +426,11 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
   //  fBlockSet.reserve(fGoodBlocks.e.size());
   fBlockSet.clear();
   for (UInt_t nb=0;nb< fGoodBlocks.e.size();nb++) {
-    SBSBlockSet c1 = {fGoodBlocks.e[nb],fGoodBlocks.x[nb],fGoodBlocks.y[nb],fGoodBlocks.row[nb],fGoodBlocks.col[nb],fGoodBlocks.id[nb],fGoodBlocks.TDCTime[nb],fGoodBlocks.ADCTime[nb],kFALSE,fGoodBlocks.GoodTDC[nb]};
+    SBSBlockSet c1 = {fGoodBlocks.e[nb],fGoodBlocks.x[nb],fGoodBlocks.y[nb],fGoodBlocks.row[nb],fGoodBlocks.col[nb],fGoodBlocks.id[nb],fGoodBlocks.TDCTime[nb],fGoodBlocks.TDCTimeTW[nb],fGoodBlocks.ADCTime[nb],kFALSE,fGoodBlocks.GoodTDC[nb]};
     if (fGoodBlocks.e[nb] > fEmin) fBlockSet.push_back(c1);
   }
   std::sort(fBlockSet.begin(), fBlockSet.end(), [](const SBSBlockSet& c1, const SBSBlockSet& c2) {
-      return c1.e > c2.e;});
+    return c1.e > c2.e;});
   //
   return fGoodBlocks.e.size();
 }
@@ -440,6 +444,11 @@ Int_t SBSCalorimeter::FindClusters()
   Int_t NSize = fBlockSet.size();
 
   fBestClusterIndex = -1;
+
+  //Also clear out all output variables (but not fGoodBlocks):
+  ClearCaloOutput(fMainclus);
+  ClearCaloOutput(fMainclusblk);
+  ClearCaloOutput(fOutclus);
 
   double Emax = 0.0;
 
@@ -599,8 +608,22 @@ Int_t SBSCalorimeter::FindClusters()
   // }
   //
 
+  //  Int_t oldbest = fBestClusterIndex;
+
+  // I see no reason not to do the best cluster selection in CoarseProcess
+  // given what I know about the behavior of all relevant SBS detectors inheriting SBSCalorimeter:
+
+  fNclus = fClusters.size();
+
+  //SelectBestCluster() only works if fNclus is set!
+  SelectBestCluster();
+  
+  
   //Fill main cluster variables here; this may get overridden by derived classes:
-  if(!fClusters.empty()) {
+
+  //Let's move this to FineProcess for consistency (it shouldn't have any effect on
+  //analysis
+  if(!fClusters.empty() ) {
     SBSCalorimeterCluster *clus = fClusters[fBestClusterIndex];
     fMainclus.e.push_back(clus->GetE());
     //fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
@@ -631,7 +654,7 @@ Int_t SBSCalorimeter::FindClusters()
 
   //
   //
-  fNclus = fClusters.size();
+  // fNclus = fClusters.size(); moved this earlier
   return fNclus;
 }
 //_____________________________________________________________________________
@@ -643,13 +666,50 @@ Int_t SBSCalorimeter::FineProcess(TClonesArray& array)//tracks)
   // Get information on the cluster with highest energy (useful even if
   // fMaxNclus is zero, i.e., storing no vector of clusters)
 
-  Int_t best = SelectBestCluster(); //by default this simply returns fBestClusterIndex, derived classes may override. 
+  Int_t oldbest = fBestClusterIndex;
   
-  if( !(fClusters.empty()) && best >= 0 && best < (Int_t)fClusters.size() ) {
+  // This is also called in CoarseProcess, which may be redundant 
+  Int_t best = SelectBestCluster(); //by default this simply returns fBestClusterIndex, derived classes may override.
+  
+  
+  if( !(fClusters.empty()) && best >= 0 && best < (Int_t)fClusters.size() && fNclus >= 0 ) {
     //if( !(fClusters.empty()) ) {
     SBSCalorimeterCluster *clus = fClusters[best];
  
     if(fDataOutputLevel > 0 ) {
+
+      if( best != oldbest ){
+	std::cout << "Warning: best cluster index for detector " << GetName() << " changed between CoarseProcess and FineProcess, re-initializing main cluster variables: (best,oldbest)=(" << best << ", " << oldbest << ")" << std::endl;
+
+	ClearCaloOutput(fMainclus);
+	
+	fMainclus.e.push_back(clus->GetE());
+	//fMainclus.e_c.push_back(clus->GetE()*(fConst + fSlope*fAccCharge));
+	fMainclus.again.push_back(clus->GetAgain());
+	fMainclus.atime.push_back(clus->GetAtime());
+	
+	fMainclus.tdctime.push_back(clus->GetTDCtime());
+	fMainclus.tdctime_tw.push_back(clus->GetTDCtimeTW());
+	fMainclus.x.push_back(clus->GetX());
+	fMainclus.y.push_back(clus->GetY());
+	fMainclus.n.push_back(clus->GetMult());
+	fMainclus.blk_e.push_back(clus->GetEblk());
+	// fMainclus.blk_e_c.push_back(clus->GetEblk()*(fConst + fSlope*fAccCharge));
+	fMainclus.id.push_back(clus->GetElemID());
+	fMainclus.row.push_back(clus->GetRow());
+	fMainclus.col.push_back(clus->GetCol());
+	
+	fMainclus.atime_mean.push_back(clus->GetAtimeMean());
+	fMainclus.e_goodtdc.push_back(clus->GetE_GoodTDC());
+	fMainclus.tdctime_mean.push_back(clus->GetTDCtimeMean());
+	fMainclus.tdctime_mean_tw.push_back(clus->GetTDCtimeMeanTW());
+	fMainclus.blk_e_goodtdc.push_back(clus->GetEblk_GoodTDC());
+	fMainclus.ngoodtdc.push_back(clus->GetNgoodTDChits());
+	fMainclus.rowgoodtdc.push_back(clus->GetRowGoodTDC());
+	fMainclus.colgoodtdc.push_back(clus->GetColGoodTDC());
+	fMainclus.idgoodtdc.push_back(clus->GetElemIDGoodTDC());
+      }
+	
       for(Int_t nc=0;nc<clus->GetMult();nc++ ) {
 	SBSElement *blk= clus->GetElement(nc);
 	
@@ -739,7 +799,7 @@ void SBSCalorimeter::ClearOutputVariables()
   ClearCaloOutput(fMainclus);
   ClearCaloOutput(fMainclusblk);
   ClearCaloOutput(fOutclus);
-  fBestClusterIndex = 0;
+  fBestClusterIndex = -1;
   fNclus = 0;
 }
 
