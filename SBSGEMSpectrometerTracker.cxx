@@ -147,6 +147,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
     { "cmfile",  &fcmfilename, kString, 0, 1 },
+    { "rawADCrangefile", &frawADCrangefilename, kString, 0, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
@@ -167,6 +168,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
+    { "dump_rawADCrange", &fDumpRawADCrange, kInt, 0, 1, 1 },
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
     { "xptar_min", &fxptarmin_track, kDouble, 0, 1, 1},
@@ -208,7 +210,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "dpp0", &fDPP0, kDouble, 0, 1, 1 },
     { "dppcut", &fDPPcut, kDouble, 0, 1, 1},
     { "dthtar0", &fdthtar0, kDouble, 0, 1, 1},
-    { "dhtarcut", &fdthtarcut, kDouble, 0, 1, 1},
+    { "dthtarcut", &fdthtarcut, kDouble, 0, 1, 1},
     { "dphtar0", &fdphtar0, kDouble, 0, 1, 1},
     { "dphtarcut", &fdphtarcut, kDouble, 0, 1, 1},
     {0}
@@ -372,8 +374,14 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
   SBSGEMTrackerBase::Clear();
 
   ClearConstraints();
+
+  //The following lines were moved here from ClearConstraints() called above so that these lines only get invoked once per event. In some use cases, the "ClearConstraints()" method above is invoked more than once per event (and potentially after the "ECALpos" gets initialized for the elastic constraint).
+  fECALpos.SetXYZ(kBig,kBig,kBig);
+  fElasticConstraintIsInitialized = false;
   
   //fTrigTime = 0.0;
+
+  fclustering_done = false;
   
   for( auto& module: fModules ) {
     module->Clear(opt);
@@ -588,6 +596,27 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
     
   }
+
+  if( fDumpRawADCrange ){ //Print out raw ADC min/max values by APV card;
+    TString fnametemp;
+    fnametemp.Form( "RawADCrange_%s_%s_run%d.txt",
+		    GetApparatus()->GetName(),
+		    GetName(), runnum );
+    
+    frawADCrangefile.open( fnametemp.Data() );
+
+    TString sdate = run->GetDate().AsString();
+    sdate.Prepend("#");
+    
+    frawADCrangefile << sdate << std::endl;
+    frawADCrangefile << "# copy into $DB_DIR/gemped to use these raw ADC min/max values in analysis of full readout events" << std::endl;
+    frawADCrangefile << "# Format = crate, slot, mpd/fiber, adc_ch, raw ADC min, raw ADC max" << std::endl;
+    
+    for( auto& module : fModules ){
+      module->PrintRawADCrange( frawADCrangefile );
+    }
+    frawADCrangefile.close();
+  }
   
   return 0;
 }
@@ -791,6 +820,9 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
     //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
+    //Add a separate call to "hit_reconstruction" here:
+    if( !fclustering_done ) hit_reconstruction();
+    
     if( !ftracking_done ) find_tracks();
 
     for( int itrack=0; itrack<fNtracks_found; itrack++ ){
@@ -826,6 +858,8 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
     if( fConstraintInitialized ){
       // std::cout << "[SBSGEMSpectrometerTracker::FineTrack()]: name = "
       // 		<< GetName() << std::endl;
+
+      if( !fclustering_done ) hit_reconstruction();
       
       if( !ftracking_done ) find_tracks();
 

@@ -968,6 +968,7 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     { "nrefhits", "Number of reference time hits",  "fNRefhits" },
     { "ngoodTDChits", "NGoodTDChits",  "fNGoodTDChits" },
     { "ngoodADChits", "NGoodADChits",  "fNGoodADChits" },
+    { "trigphase", "Trigger phase (event time stamp modulo 24 ns)", "fTrigPhase" },
     { 0 }
   };
 
@@ -1106,6 +1107,17 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
 {
   // Decode data
 
+  //Grab trigger phase;
+
+  ULong64_t evtime = evdata.GetEvTime();
+
+  //AFAIK this evtime is an integer multiple of 4 ns; so we should take the modulus of evtime and 6 (not 24)
+  
+  fTrigPhase = evtime % 6;
+
+  //test whether this works:
+  //  std::cout << "(evtime,trigphase)=(" << evtime << ", " << fTrigPhase << ")" << std::endl;
+  
   //static const char* const here = "Decode()";
   // Loop over modules for the reference time
   SBSElement *blk = nullptr;

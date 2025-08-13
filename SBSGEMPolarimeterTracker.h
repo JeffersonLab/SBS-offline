@@ -42,7 +42,7 @@ class SBSGEMPolarimeterTracker : public THaNonTrackingDetector, public SBSGEMTra
 
   //Loop on all found tracks and calculate sclose, zclose, theta, phi:
   void CalcScatteringParameters();
-
+  
   void SetFrontTrack( TVector3 track_origin, TVector3 track_direction );
   void SetFrontTrack( double x, double y, double theta, double phi );
 

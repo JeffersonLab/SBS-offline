@@ -661,7 +661,7 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
     { nullptr }
   };
   DefineVarsFromList( beamtrackvars, mode );
-    
+  
   RVarDef constraintvars[] = {
     { "x_fcp", "front track constraint x", "fFrontConstraintX" },
     { "y_fcp", "front track constraint y", "fFrontConstraintY" },

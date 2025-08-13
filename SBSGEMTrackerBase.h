@@ -33,6 +33,10 @@ public:
   //Need to add some public "get" methods for constraint point information:
   TVector3 GetFrontConstraintPoint(int icp=0);
   TVector3 GetBackConstraintPoint(int icp=0);
+  //We currently don't contemplate having different numbers of front and back constraint points; i.e., they are always
+  //stored in pairs, but let's define separate Get() methods for the sizes of both front and back constraint point arrays:
+  Int_t GetNumConstraintPointsFront() const { return fConstraintPoint_Front.size(); }
+  Int_t GetNumConstraintPointsBack() const { return fConstraintPoint_Back.size(); }
   
   void SetFrontConstraintPoint( TVector3 fcp );
   void SetBackConstraintPoint( TVector3 bcp );
@@ -88,6 +92,8 @@ public:
   inline void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
 
   inline void SetNonTrackingMode( int ntm=1 ){ fNonTrackingMode = ( ntm != 0 ); fNonTrackingMode_DBoverride = true; }
+
+  bool GetNonTrackingMode() const { return fNonTrackingMode; }
   
   //Need to add some public "getter" and "setter" methods for the polarimeter-mode analysis:
   int GetNtracks() const { return fNtracks_found; }
@@ -106,7 +112,7 @@ public:
   double GetZmaxLayer() const { return fZmaxLayer; };
 
   //We need to be able to check that front and back constraint points are initialized:
-  bool FrontConstraintIsIinitialized() const { return fConstraintPoint_Front_IsInitialized; };
+  bool FrontConstraintIsInitialized() const { return fConstraintPoint_Front_IsInitialized; };
   bool BackConstraintIsInitialized() const { return fConstraintPoint_Back_IsInitialized; };
   bool ConstraintIsInitialized() const { return fConstraintInitialized; }
 
@@ -131,6 +137,10 @@ public:
   void SetDppCut( double dpp0, double dppcut ){ fDPP0 = dpp0; fDPPcut = dppcut; }
   void SetDthtarCut( double dthtar0, double dthtarcut ){ fdthtar0 = dthtar0; fdthtarcut = dthtarcut; }
   void SetDphtarCut( double dphtar0, double dphtarcut ){ fdphtar0 = dphtar0; fdphtarcut = dphtarcut; }
+
+  //1D and 2D clustering (need to make this public): 
+  void hit_reconstruction();
+  bool ClusteringIsDone() const { return fclustering_done; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -149,8 +159,6 @@ protected:
   
   bool fNegSignalStudy;
 
-  //1D and 2D clustering: 
-  void hit_reconstruction();
   //track-finding: 
   void find_tracks();
 
@@ -657,13 +665,19 @@ protected:
   bool fEfficiencyInitialized;
   bool fMakeEfficiencyPlots; //default to TRUE
   bool fDumpGeometryInfo; //default to FALSE
+   //Flag to dump raw ADC range to file in format required by database:
+  Bool_t fDumpRawADCrange; //dump measured range of raw ADC values by APV card in full readout events to a file that can be copy-pasted in the database
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq, fCMbiasfile_dbase; 
-  // input files for (optional) loading of pedestals from database:
-
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq, fCMbiasfile_dbase;
+  //output file for writing raw ADC range information by APV card in the format required by the custom loading method:
+  std::ofstream frawADCrangefile;
+  
+  // input file names for (optional) loading of pedestals from database:
+  
   std::string fpedfilename;
   std::string fcmfilename;
+  std::string frawADCrangefilename;
 
   //Trigger time TDDC channel information to correct GEM hit times for trigger time (if applicable):
   Double_t fTrigTime; //trigger time 

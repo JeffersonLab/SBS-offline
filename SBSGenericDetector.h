@@ -263,6 +263,8 @@ protected:
   
   UInt_t fF1TDCminraw, fF1TDCmaxraw;
 
+  UInt_t fTrigPhase; 
+  
 private:
   void ClearOutputVariables();
 

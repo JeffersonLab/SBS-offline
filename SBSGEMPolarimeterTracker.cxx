@@ -139,6 +139,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
     { "cmfile",  &fcmfilename, kString, 0, 1 },
+    { "rawADCrangefile", &frawADCrangefilename, kString, 0, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
@@ -156,6 +157,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
+    { "dump_rawADCrange", &fDumpRawADCrange, kInt, 0, 1, 1 },
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
     { "usetrigtime", &usetrigtime, kInt, 0, 1, 1 },
@@ -322,6 +324,10 @@ void SBSGEMPolarimeterTracker::Clear( Option_t *opt ){
 
   ClearConstraints(); //hopefully this doesn't screw up constraint point settings;
 
+  //The following lines were moved here from ClearConstraints() called above so that these lines only get invoked once per event. In some use cases, the "ClearConstraints()" method above is invoked more than once per event (and potentially after the "ECALpos" gets initialized for the elastic constraint).
+  fECALpos.SetXYZ(kBig,kBig,kBig);
+  fElasticConstraintIsInitialized = false;
+  
   //fTrigTime = 0.0;
   
   for( auto& module: fModules ) {
@@ -334,6 +340,8 @@ void SBSGEMPolarimeterTracker::Clear( Option_t *opt ){
   fTrackZClose.clear();
 
   fFrontTrackIsSet = false;
+
+  fclustering_done = false;
   
 }
 
@@ -545,6 +553,27 @@ Int_t SBSGEMPolarimeterTracker::End( THaRunBase* run ){
 
     
   }
+
+  if( fDumpRawADCrange ){ //Print out raw ADC min/max values by APV card;
+    TString fnametemp;
+    fnametemp.Form( "RawADCrange_%s_%s_run%d.txt",
+		    GetApparatus()->GetName(),
+		    GetName(), runnum );
+    
+    frawADCrangefile.open( fnametemp.Data() );
+
+    TString sdate = run->GetDate().AsString();
+    sdate.Prepend("#");
+    
+    frawADCrangefile << sdate << std::endl;
+    frawADCrangefile << "# copy into $DB_DIR/gemped to use these raw ADC min/max values in analysis of full readout events" << std::endl;
+    frawADCrangefile << "# Format = crate, slot, mpd/fiber, adc_ch, raw ADC min, raw ADC max" << std::endl;
+    
+    for( auto& module : fModules ){
+      module->PrintRawADCrange( frawADCrangefile );
+    }
+    frawADCrangefile.close();
+  }
   
   return 0;
 }
@@ -752,9 +781,10 @@ Int_t SBSGEMPolarimeterTracker::CoarseProcess( TClonesArray& tracks ){
     //std::cout << "SBSGEMPolarimeterTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
+    
     if( !ftracking_done ) find_tracks();
 
-    if( fFrontTrackIsSet && fNtracks_found > 0 ){ //there is currently no scenario is SBSEArm/GEN-RP context in which this condition could evaluate to true
+    if( fFrontTrackIsSet && fNtracks_found > 0 ){ //there is currently no scenario in either GEN-RP or GEP in which this condition could evaluate to true
       CalcScatteringParameters();
     }
     
