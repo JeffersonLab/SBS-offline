@@ -14,7 +14,8 @@
 #pragma link C++ class Decoder::SBSDecodeF1TDCHighResModule+;
 #pragma link C++ class Decoder::MPDModule+;
 #pragma link C++ class Decoder::VETROCModule+;
-#pragma link C++ class Decoder::VETROCcdetModule+;
+//#pragma link C++ class Decoder::VETROCcdetModule+;
+#pragma link C++ class Decoder::vfTDCModule+;
 #pragma link C++ class Decoder::MPDModuleVMEv4+;
 #pragma link C++ class Decoder::VTPModule+;
 #pragma link C++ class SBSBigBite+;
