@@ -186,19 +186,84 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"bbgemhit_y",   "BBGEM MC hit transport Y",   "fBBGEMhit_y"},
     {"bbps_esum",   "BBPS total energy sum",   "fBBPS_esum"},
     {"bbsh_esum",   "BBSH total energy sum",   "fBBSH_esum"},
+    {"gep.nfttracks",   "number of FT MC tracks",   "fNFTtracks"},
+    {"gep.fttrack_nhits",   "FT MC track hit mult",   "fFTtrack_Nhits"},
+    {"gep.fttrack_tid",   "FT MC track TID",   "fFTtrack_TID"},
+    {"gep.fttrack_pid",   "FT MC track PID",   "fFTtrack_PID"},
+    {"gep.fttrack_mid",   "FT MC track MID",   "fFTtrack_MID"},
+    {"gep.fttrack_p",   "FT MC track momentum",   "fFTtrack_P"},
+    {"gep.fttrack_x",   "FT MC track transport X position",   "fFTtrack_X"},
+    {"gep.fttrack_y",   "FT MC track transport Y position",   "fFTtrack_Y"},
+    {"gep.fttrack_dx",   "FT MC track transport dX slope",   "fFTtrack_dX"},
+    {"gep.fttrack_dy",   "FT MC track transport dY slope",   "fFTtrack_dY"},
+    {"gep.nftgemhits",   "number of FTGEM MC hits",   "fNFTGEMhits"},
+    {"gep.ftgemhit_plane",   "FTGEM MC hit plane",   "fFTGEMhit_plane"},
+    {"gep.ftgemhit_tid",   "FTGEM MC hit TID",   "fFTGEMhit_TID"},
+    {"gep.ftgemhit_pid",   "FTGEM MC hit PID",   "fFTGEMhit_PID"},
+    {"gep.ftgemhit_mid",   "FTGEM MC hit MID",   "fFTGEMhit_MID"},
+    {"gep.ftgemhit_edep",   "FTGEM MC hit edep",   "fFTGEMhit_edep"},
+    {"gep.ftgemhit_x",   "FTGEM MC hit transport X",   "fFTGEMhit_x"},
+    {"gep.ftgemhit_y",   "FTGEM MC hit transport Y",   "fFTGEMhit_y"},
+    {"gep.nfpptracks",   "number of FPP MC tracks",   "fNFPPtracks"},
+    {"gep.fpptrack_nhits",   "FPP MC track hit mult",   "fFPPtrack_Nhits"},
+    {"gep.fpptrack_tid",   "FPP MC track TID",   "fFPPtrack_TID"},
+    {"gep.fpptrack_pid",   "FPP MC track PID",   "fFPPtrack_PID"},
+    {"gep.fpptrack_mid",   "FPP MC track MID",   "fFPPtrack_MID"},
+    {"gep.fpptrack_p",   "FPP MC track momentum",   "fFPPtrack_P"},
+    {"gep.fpptrack_x",   "FPP MC track transport X position",   "fFPPtrack_X"},
+    {"gep.fpptrack_y",   "FPP MC track transport Y position",   "fFPPtrack_Y"},
+    {"gep.fpptrack_dx",   "FPP MC track transport dX slope",   "fFPPtrack_dX"},
+    {"gep.fpptrack_dy",   "FPP MC track transport dY slope",   "fFPPtrack_dY"},
+    {"gep.nfppgemhits",   "number of FPPGEM MC hits",   "fNFPPGEMhits"},
+    {"gep.fppgemhit_plane",   "FPPGEM MC hit plane",   "fFPPGEMhit_plane"},
+    {"gep.fppgemhit_tid",   "FPPGEM MC hit TID",   "fFPPGEMhit_TID"},
+    {"gep.fppgemhit_pid",   "FPPGEM MC hit PID",   "fFPPGEMhit_PID"},
+    {"gep.fppgemhit_mid",   "FPPGEM MC hit MID",   "fFPPGEMhit_MID"},
+    {"gep.fppgemhit_edep",   "FPPGEM MC hit edep",   "fFPPGEMhit_edep"},
+    {"gep.fppgemhit_x",   "FPPGEM MC hit transport X",   "fFPPGEMhit_x"},
+    {"gep.fppgemhit_y",   "FPPGEM MC hit transport Y",   "fFPPGEMhit_y"},
+    {"hcal_esum",   "HCAL total energy sum",   "fHCAL_esum"},
+    {"gep.ecal_esum",   "ECAL total energy sum",   "fECAL_esum"},
+
     {"bbgemhit_ptridx",    "Primary track index for BBGEM SD",        "fBBGEMhit_ptridx"},
+    {"bbgemhit_otridx",    "Origin track index for BBGEM SD",         "fBBGEMhit_otridx"},
     {"bbgemhit_sdtridx",   "SD track index for BBGEM SD",             "fBBGEMhit_sdtridx"},
     {"bbgemtrack_ptridx",  "Primary track index for BBGEM Track SD",  "fBBGEMtrack_ptridx"},
+    {"bbgemtrack_otridx",  "Origin track index for BBGEM Track SD",   "fBBGEMtrack_otridx"},
     {"bbgemtrack_sdtridx", "SD track index for BBGEM Track SD",       "fBBGEMtrack_sdtridx"},
     {"bbhodohit_ptridx",   "Primary track index for BBHodo SD",       "fBBHODOhit_ptridx"},
+    {"bbhodohit_otridx",   "Origin track index for BBHodo SD",        "fBBHODOhit_otridx"},
     {"bbhodohit_sdtridx",  "SD track index for BBHodo SD",            "fBBHODOhit_sdtridx"},
     {"bbpshit_ptridx",   "Primary track index for BBPSTF1 SD",        "fBBPSTF1hit_ptridx"},
+    {"bbpshit_otridx",   "Origin track index for BBPSTF1 SD",         "fBBPSTF1hit_otridx"},
     {"bbpshit_sdtridx",  "SD track index for BBPSTF1 SD",             "fBBPSTF1hit_sdtridx"},
     {"bbshhit_ptridx",   "Primary track index for BBSHTF1 SD",        "fBBSHTF1hit_ptridx"},
+    {"bbshhit_otridx",   "Origin track index for BBSHTF1 SD",         "fBBSHTF1hit_otridx"},
     {"bbshhit_sdtridx",  "SD track index for BBSHTF1 SD",             "fBBSHTF1hit_sdtridx"},
     {"hcalhit_ptridx",   "Primary track index for HCalScint SD",      "fHCALhit_ptridx"},
+    {"hcalhit_otridx",   "Origin track index for HCalScint SD",       "fHCALhit_otridx"},
     {"hcalhit_sdtridx",  "SD track index for HCalScint SD",           "fHCALhit_sdtridx"},
-    {"ptrack_ntracks",   "Primary track ntracks", "fPTrack_ntacks"},
+    {"gep.ecalhit_ptridx",   "Primary track index for ECal TF1 SD",   "fECALhit_ptridx"},
+    {"gep.ecalhit_otridx",   "Origin track index for ECal TF1 SD",    "fECALhit_otridx"},
+    {"gep.ecalhit_sdtridx",  "SD track index for ECal TF1 SD",        "fECALhit_sdtridx"},
+    {"gep.cdethit_ptridx",   "Primary track index for CDETScint SD",  "fCDEThit_ptridx"},
+    {"gep.cdethit_otridx",   "Origin track index for CDETScint SD",   "fCDEThit_otridx"},
+    {"gep.cdethit_sdtridx",  "SD track index for CDETScint SD",       "fCDEThit_sdtridx"},
+    {"gep.fthit_ptridx",   "Primary track index for FT SD",           "fFThit_ptridx"},
+    {"gep.fthit_otridx",   "Origin track index for FT SD",            "fFThit_otridx"},
+    {"gep.fthit_sdtridx",  "SD track index for FT SD",                "fFThit_sdtridx"},
+    {"gep.fttrack_ptridx",   "Primary track index for FT Track SD",   "fFTtrack_ptridx"},
+    {"gep.fttrack_otridx",   "Origin track index for FT Track SD",    "fFTtrack_otridx"},
+    {"gep.fttrack_sdtridx",  "SD track index for FT Track SD",        "fFTtrack_sdtridx"},
+    {"gep.fpphit_ptridx",   "Primary track index for FPP SD",         "fFPPhit_ptridx"},
+    {"gep.fpphit_otridx",   "Origin track index for FPP SD",          "fFPPhit_otridx"},
+    {"gep.fpphit_sdtridx",  "SD track index for FPP SD",              "fFPPhit_sdtridx"},
+    {"gep.fpptrack_ptridx",   "Primary track index for FPP Track SD", "fFPPtrack_ptridx"},
+    {"gep.fpptrack_otridx",   "Origin track index for FPP Track SD",  "fFPPtrack_otridx"},
+    {"gep.fpptrack_sdtridx",  "SD track index for FPP Track SD",      "fFPPtrack_sdtridx"},
+    
+    
+    {"ptrack_ntracks",   "Primary track ntracks", "fPTrack_ntracks"},
     {"ptrack_tid",       "Primary track TID",     "fPTrack_TID"},
     {"ptrack_pid",       "Primary track PID",     "fPTrack_PID"},
     {"ptrack_posx",      "Primary track posx",    "fPTrack_posx"},
@@ -212,7 +277,21 @@ Int_t SBSSimDecoder::DefineVariables( THaAnalysisObject::EMode mode )
     {"ptrack_polz",      "Primary track polz",    "fPTrack_polz"},
     {"ptrack_etot",      "Primary track Etot",    "fPTrack_Etot"},
     {"ptrack_t",         "Primary track T",       "fPTrack_T"},
-    {"sdtrack_ntracks",  "SD track ntracks",      "fSDTrack_ntacks"},
+    {"otrack_ntracks",   "Origin track ntracks", "fOTrack_ntracks"},
+    {"otrack_tid",       "Origin track TID",     "fOTrack_TID"},
+    {"otrack_pid",       "Origin track PID",     "fOTrack_PID"},
+    {"otrack_posx",      "Origin track posx",    "fOTrack_posx"},
+    {"otrack_posy",      "Origin track posy",    "fOTrack_posy"},
+    {"otrack_posz",      "Origin track posz",    "fOTrack_posz"},
+    {"otrack_momx",      "Origin track momx",    "fOTrack_momx"},
+    {"otrack_momy",      "Origin track momy",    "fOTrack_momy"},
+    {"otrack_momz",      "Origin track momz",    "fOTrack_momz"},
+    {"otrack_polx",      "Origin track polx",    "fOTrack_polx"},
+    {"otrack_poly",      "Origin track poly",    "fOTrack_poly"},
+    {"otrack_polz",      "Origin track polz",    "fOTrack_polz"},
+    {"otrack_etot",      "Origin track Etot",    "fOTrack_Etot"},
+    {"otrack_t",         "Origin track T",       "fOTrack_T"},
+    {"sdtrack_ntracks",  "SD track ntracks",      "fSDTrack_ntracks"},
     {"sdtrack_tid",      "SD track TID",          "fSDTrack_TID"},
     {"sdtrack_mid",      "SD track MID",          "fSDTrack_MID"},
     {"sdtrack_pid",      "SD track PID",          "fSDTrack_PID"},
@@ -316,32 +395,32 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
   
   //simc variables
   if(simEvent->GetExperiment()==kGEp){
-    // fSigma_simc = simEvent->Tgep->simc_sigma;
-    // fWeight_simc = simEvent->Tgep->simc_Weight;
-    // fQ2_simc = simEvent->Tgep->simc_Q2;
-    // fXbj_simc = simEvent->Tgep->simc_xbj;
-    // fNu_simc = simEvent->Tgep->simc_nu;
-    // fW_simc = simEvent->Tgep->simc_W;
-    // fEpsilon_simc = simEvent->Tgep->simc_epsilon;
-    // fEbeam_simc = simEvent->Tgep->simc_Ebeam;
-    // fEp_simc = simEvent->Tgep->simc_p_e;
-    // fEtheta_simc = simEvent->Tgep->simc_theta_e;
-    // fEphi_simc = simEvent->Tgep->simc_phi_e;
-    // fEPx_simc = simEvent->Tgep->simc_px_e;
-    // fEPy_simc = simEvent->Tgep->simc_py_e;
-    // fEPz_simc = simEvent->Tgep->simc_pz_e;
-    // fFnucl_simc = simEvent->Tgep->simc_fnucl;
-    // fNp_simc = simEvent->Tgep->simc_p_n;
-    // fNtheta_simc = simEvent->Tgep->simc_theta_n;
-    // fNphi_simc = simEvent->Tgep->simc_phi_n;
-    // fNPx_simc = simEvent->Tgep->simc_px_n;
-    // fNPy_simc = simEvent->Tgep->simc_py_n;
-    // fNPz_simc = simEvent->Tgep->simc_pz_n;
-    // fVx_simc = simEvent->Tgep->simc_vx;
-    // fVy_simc = simEvent->Tgep->simc_vy;
-    // fVz_simc = simEvent->Tgep->simc_vz;
-    // fVeE_simc = simEvent->Tgep->simc_veE;
-    // fVetheta_simc = simEvent->Tgep->simc_vetheta;
+    fSigma_simc = simEvent->Tgep->simc_sigma;
+    fWeight_simc = simEvent->Tgep->simc_Weight;
+    fQ2_simc = simEvent->Tgep->simc_Q2;
+    fXbj_simc = simEvent->Tgep->simc_xbj;
+    fNu_simc = simEvent->Tgep->simc_nu;
+    fW_simc = simEvent->Tgep->simc_W;
+    fEpsilon_simc = simEvent->Tgep->simc_epsilon;
+    fEbeam_simc = simEvent->Tgep->simc_Ebeam;
+    fEp_simc = simEvent->Tgep->simc_p_e;
+    fEtheta_simc = simEvent->Tgep->simc_theta_e;
+    fEphi_simc = simEvent->Tgep->simc_phi_e;
+    fEPx_simc = simEvent->Tgep->simc_px_e;
+    fEPy_simc = simEvent->Tgep->simc_py_e;
+    fEPz_simc = simEvent->Tgep->simc_pz_e;
+    fFnucl_simc = simEvent->Tgep->simc_fnucl;
+    fNp_simc = simEvent->Tgep->simc_p_n;
+    fNtheta_simc = simEvent->Tgep->simc_theta_n;
+    fNphi_simc = simEvent->Tgep->simc_phi_n;
+    fNPx_simc = simEvent->Tgep->simc_px_n;
+    fNPy_simc = simEvent->Tgep->simc_py_n;
+    fNPz_simc = simEvent->Tgep->simc_pz_n;
+    fVx_simc = simEvent->Tgep->simc_vx;
+    fVy_simc = simEvent->Tgep->simc_vy;
+    fVz_simc = simEvent->Tgep->simc_vz;
+    fVeE_simc = simEvent->Tgep->simc_veE;
+    fVetheta_simc = simEvent->Tgep->simc_vetheta;
     //g4sbs variables
     fSigma = simEvent->Tgep->ev_sigma;
     fOmega = simEvent->Tgep->ev_solang;
@@ -358,6 +437,99 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
     fNp = simEvent->Tgep->ev_np;
     fNucl = simEvent->Tgep->ev_nucl;
     fFnucl = simEvent->Tgep->ev_fnucl;
+    fNFTtracks = simEvent->Tgep->Harm_FT_Track_ntracks;
+    fFTtrack_Nhits = *(simEvent->Tgep->Harm_FT_Track_NumHits);
+    fFTtrack_TID = *(simEvent->Tgep->Harm_FT_Track_TID);
+    fFTtrack_PID = *(simEvent->Tgep->Harm_FT_Track_PID);
+    fFTtrack_MID = *(simEvent->Tgep->Harm_FT_Track_MID);
+    fFTtrack_P = *(simEvent->Tgep->Harm_FT_Track_P);
+    fFTtrack_X = *(simEvent->Tgep->Harm_FT_Track_X);
+    fFTtrack_Y = *(simEvent->Tgep->Harm_FT_Track_Y);
+    fFTtrack_dX = *(simEvent->Tgep->Harm_FT_Track_Xp);
+    fFTtrack_dY = *(simEvent->Tgep->Harm_FT_Track_Yp);
+    fNFTGEMhits = simEvent->Tgep->Harm_FT_hit_nhits;
+    fFTGEMhit_plane = *(simEvent->Tgep->Harm_FT_hit_plane);
+    fFTGEMhit_TID = *(simEvent->Tgep->Harm_FT_hit_trid);
+    fFTGEMhit_PID = *(simEvent->Tgep->Harm_FT_hit_pid);
+    fFTGEMhit_MID = *(simEvent->Tgep->Harm_FT_hit_mid);
+    fFTGEMhit_edep = *(simEvent->Tgep->Harm_FT_hit_edep);
+    fFTGEMhit_x = *(simEvent->Tgep->Harm_FT_hit_tx);
+    fFTGEMhit_y = *(simEvent->Tgep->Harm_FT_hit_ty);
+    fNFPPtracks = simEvent->Tgep->Harm_FPP1_Track_ntracks;
+    fFPPtrack_Nhits = *(simEvent->Tgep->Harm_FPP1_Track_NumHits);
+    fFPPtrack_TID = *(simEvent->Tgep->Harm_FPP1_Track_TID);
+    fFPPtrack_PID = *(simEvent->Tgep->Harm_FPP1_Track_PID);
+    fFPPtrack_MID = *(simEvent->Tgep->Harm_FPP1_Track_MID);
+    fFPPtrack_P = *(simEvent->Tgep->Harm_FPP1_Track_P);
+    fFPPtrack_X = *(simEvent->Tgep->Harm_FPP1_Track_X);
+    fFPPtrack_Y = *(simEvent->Tgep->Harm_FPP1_Track_Y);
+    fFPPtrack_dX = *(simEvent->Tgep->Harm_FPP1_Track_Xp);
+    fFPPtrack_dY = *(simEvent->Tgep->Harm_FPP1_Track_Yp);
+    fNFPPGEMhits = simEvent->Tgep->Harm_FPP1_hit_nhits;
+    fFPPGEMhit_plane = *(simEvent->Tgep->Harm_FPP1_hit_plane);
+    fFPPGEMhit_TID = *(simEvent->Tgep->Harm_FPP1_hit_trid);
+    fFPPGEMhit_PID = *(simEvent->Tgep->Harm_FPP1_hit_pid);
+    fFPPGEMhit_MID = *(simEvent->Tgep->Harm_FPP1_hit_mid);
+    fFPPGEMhit_edep = *(simEvent->Tgep->Harm_FPP1_hit_edep);
+    fFPPGEMhit_x = *(simEvent->Tgep->Harm_FPP1_hit_tx);
+    fFPPGEMhit_y = *(simEvent->Tgep->Harm_FPP1_hit_ty);
+    
+    fHCAL_esum = simEvent->Tgep->Harm_HCalScint_det_esum;
+    fECAL_esum = simEvent->Tgep->Earm_ECalTF1_det_esum;
+    
+    fHCALhit_ptridx = *(simEvent->Tgep->Harm_HCalScint_hit_ptridx);
+    fHCALhit_otridx = *(simEvent->Tgep->Harm_HCalScint_hit_otridx);
+    fHCALhit_sdtridx = *(simEvent->Tgep->Harm_HCalScint_hit_sdtridx);
+    fPTrack_ntracks = simEvent->Tgep->PTrack_ntracks;
+    fPTrack_TID = *(simEvent->Tgep->PTrack_TID);
+    fPTrack_PID = *(simEvent->Tgep->PTrack_PID);
+    fPTrack_posx = *(simEvent->Tgep->PTrack_posx);
+    fPTrack_posy = *(simEvent->Tgep->PTrack_posy);
+    fPTrack_posz = *(simEvent->Tgep->PTrack_posz);
+    fPTrack_momx = *(simEvent->Tgep->PTrack_momx);
+    fPTrack_momy = *(simEvent->Tgep->PTrack_momy);
+    fPTrack_momz = *(simEvent->Tgep->PTrack_momz);
+    fPTrack_polx = *(simEvent->Tgep->PTrack_polx);
+    fPTrack_poly = *(simEvent->Tgep->PTrack_poly);
+    fPTrack_polz = *(simEvent->Tgep->PTrack_polz);
+    fPTrack_Etot = *(simEvent->Tgep->PTrack_Etot);
+    fPTrack_T = *(simEvent->Tgep->PTrack_T);
+    fOTrack_ntracks = simEvent->Tgep->OTrack_ntracks;
+    fOTrack_TID = *(simEvent->Tgep->OTrack_TID);
+    fOTrack_PID = *(simEvent->Tgep->OTrack_PID);
+    fOTrack_posx = *(simEvent->Tgep->OTrack_posx);
+    fOTrack_posy = *(simEvent->Tgep->OTrack_posy);
+    fOTrack_posz = *(simEvent->Tgep->OTrack_posz);
+    fOTrack_momx = *(simEvent->Tgep->OTrack_momx);
+    fOTrack_momy = *(simEvent->Tgep->OTrack_momy);
+    fOTrack_momz = *(simEvent->Tgep->OTrack_momz);
+    fOTrack_polx = *(simEvent->Tgep->OTrack_polx);
+    fOTrack_poly = *(simEvent->Tgep->OTrack_poly);
+    fOTrack_polz = *(simEvent->Tgep->OTrack_polz);
+    fOTrack_Etot = *(simEvent->Tgep->OTrack_Etot);
+    fOTrack_T = *(simEvent->Tgep->OTrack_T);
+    fSDTrack_ntracks = simEvent->Tgep->SDTrack_ntracks;
+    fSDTrack_TID = *(simEvent->Tgep->SDTrack_TID);
+    fSDTrack_MID = *(simEvent->Tgep->SDTrack_MID);
+    fSDTrack_PID = *(simEvent->Tgep->SDTrack_PID);
+    fSDTrack_posx = *(simEvent->Tgep->SDTrack_posx);
+    fSDTrack_posy = *(simEvent->Tgep->SDTrack_posy);
+    fSDTrack_posz = *(simEvent->Tgep->SDTrack_posz);
+    fSDTrack_momx = *(simEvent->Tgep->SDTrack_momx);
+    fSDTrack_momy = *(simEvent->Tgep->SDTrack_momy);
+    fSDTrack_momz = *(simEvent->Tgep->SDTrack_momz);
+    fSDTrack_polx = *(simEvent->Tgep->SDTrack_polx);
+    fSDTrack_poly = *(simEvent->Tgep->SDTrack_poly);
+    fSDTrack_polz = *(simEvent->Tgep->SDTrack_polz);
+    fSDTrack_Etot = *(simEvent->Tgep->SDTrack_Etot);
+    fSDTrack_T = *(simEvent->Tgep->SDTrack_T);
+    fSDTrack_vx = *(simEvent->Tgep->SDTrack_vx);
+    fSDTrack_vy = *(simEvent->Tgep->SDTrack_vy);
+    fSDTrack_vz = *(simEvent->Tgep->SDTrack_vz);
+    fSDTrack_vnx = *(simEvent->Tgep->SDTrack_vnx);
+    fSDTrack_vny = *(simEvent->Tgep->SDTrack_vny);
+    fSDTrack_vnz = *(simEvent->Tgep->SDTrack_vnz);
+    fSDTrack_vEkin = *(simEvent->Tgep->SDTrack_vEkin);
   }else{
     fSigma_simc = simEvent->Tgmn->simc_sigma;
     fWeight_simc = simEvent->Tgmn->simc_Weight;
@@ -422,16 +594,22 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
     fBBPS_esum = simEvent->Tgmn->Earm_BBPSTF1_det_esum;
     fBBSH_esum = simEvent->Tgmn->Earm_BBSHTF1_det_esum;
     fBBGEMhit_ptridx = *(simEvent->Tgmn->Earm_BBGEM_hit_ptridx);
+    fBBGEMhit_otridx = *(simEvent->Tgmn->Earm_BBGEM_hit_otridx);
     fBBGEMhit_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_hit_sdtridx);
     fBBGEMtrack_ptridx = *(simEvent->Tgmn->Earm_BBGEM_Track_ptridx);
+    fBBGEMtrack_otridx = *(simEvent->Tgmn->Earm_BBGEM_Track_otridx);
     fBBGEMtrack_sdtridx = *(simEvent->Tgmn->Earm_BBGEM_Track_sdtridx);
     fBBHODOhit_ptridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_ptridx);
+    fBBHODOhit_otridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_otridx);
     fBBHODOhit_sdtridx = *(simEvent->Tgmn->Earm_BBHodoScint_hit_sdtridx);
     fBBPSTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_ptridx);
+    fBBPSTF1hit_otridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_otridx);
     fBBPSTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBPSTF1_hit_sdtridx);
     fBBSHTF1hit_ptridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_ptridx);
+    fBBSHTF1hit_otridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_otridx);
     fBBSHTF1hit_sdtridx = *(simEvent->Tgmn->Earm_BBSHTF1_hit_sdtridx);
     fHCALhit_ptridx = *(simEvent->Tgmn->Harm_HCalScint_hit_ptridx);
+    fHCALhit_otridx = *(simEvent->Tgmn->Harm_HCalScint_hit_otridx);
     fHCALhit_sdtridx = *(simEvent->Tgmn->Harm_HCalScint_hit_sdtridx);
     fPTrack_ntracks = simEvent->Tgmn->PTrack_ntracks;
     fPTrack_TID = *(simEvent->Tgmn->PTrack_TID);
@@ -447,6 +625,20 @@ Int_t SBSSimDecoder::DoLoadEvent(const Int_t* evbuffer )
     fPTrack_polz = *(simEvent->Tgmn->PTrack_polz);
     fPTrack_Etot = *(simEvent->Tgmn->PTrack_Etot);
     fPTrack_T = *(simEvent->Tgmn->PTrack_T);
+    fOTrack_ntracks = simEvent->Tgmn->OTrack_ntracks;
+    fOTrack_TID = *(simEvent->Tgmn->OTrack_TID);
+    fOTrack_PID = *(simEvent->Tgmn->OTrack_PID);
+    fOTrack_posx = *(simEvent->Tgmn->OTrack_posx);
+    fOTrack_posy = *(simEvent->Tgmn->OTrack_posy);
+    fOTrack_posz = *(simEvent->Tgmn->OTrack_posz);
+    fOTrack_momx = *(simEvent->Tgmn->OTrack_momx);
+    fOTrack_momy = *(simEvent->Tgmn->OTrack_momy);
+    fOTrack_momz = *(simEvent->Tgmn->OTrack_momz);
+    fOTrack_polx = *(simEvent->Tgmn->OTrack_polx);
+    fOTrack_poly = *(simEvent->Tgmn->OTrack_poly);
+    fOTrack_polz = *(simEvent->Tgmn->OTrack_polz);
+    fOTrack_Etot = *(simEvent->Tgmn->OTrack_Etot);
+    fOTrack_T = *(simEvent->Tgmn->OTrack_T);
     fSDTrack_ntracks = simEvent->Tgmn->SDTrack_ntracks;
     fSDTrack_TID = *(simEvent->Tgmn->SDTrack_TID);
     fSDTrack_MID = *(simEvent->Tgmn->SDTrack_MID);
