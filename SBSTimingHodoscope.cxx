@@ -707,7 +707,7 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
       // and store it as a separate variable, but do not apply it!
       // (for now this calculation lazily ASSUMES we are detecting electrons):
       double TOFcorr = theTrack->GetPathLen()/0.299792458; 
-      fOutClus.etof[clus_idx] = TOFcorr - ETOF_avg;
+      fOutClus.etof[clus_idx] = TOFcorr;
 
       // For any track matched with a cluster, We ALSO want to refine the calculation of corrected times and mean times, etc:
       // But what is left to correct other than TOF? basically nothing, unless we want to calculate the individual PMT "corrected times"
@@ -920,7 +920,7 @@ Int_t SBSTimingHodoscope::DoClustering()
     
     int jmin = std::max(baridx-halfclussize, 0);
     //int jmax = std::min(localmax_idx[i]+halfclussize, int(fGoodBarIDsTDC.size()-1));
-    //jmax calculation is WRONG in this context:
+    //jmax calculation above is WRONG in this context. Correct calculation is below:
     int jmax = std::min(baridx+halfclussize, int(fBars.size())-1 );
     
     //A better way to do this:

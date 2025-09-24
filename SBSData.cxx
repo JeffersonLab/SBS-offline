@@ -59,6 +59,7 @@ namespace SBSData {
     SetOffset(offset);
     SetCal(cal);
     SetGoodTimeCut(GoodTimeCut);
+    fTrigPhaseCorr = 0.0; 
   }
 
   void TDC::ProcessSimple(Int_t elemID, Double_t val, Int_t nhit,UInt_t TrigTime)

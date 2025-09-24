@@ -170,7 +170,10 @@ public:
 
   Double_t GetRFtime() const { return fRFtime; };
   Double_t GetTrigTime() const { return fTrigTime; };
-
+  
+  Double_t GetTrigPhaseCorrection() const { return fTimeOffsetTrigPhase; }
+  Bool_t TrigPhaseCorrectionIsEnabled() const { return fCorrectTDCforTrigPhase; } 
+  
   void DecodeRFandTriggerTime( const THaEvData & );
   
 protected:
@@ -263,7 +266,12 @@ protected:
   
   UInt_t fF1TDCminraw, fF1TDCmaxraw;
 
+  //These corrections will have an effect iff the derived classes implement a way to use them:
   UInt_t fTrigPhase; 
+  Bool_t fCorrectTDCforTrigPhase; // Flag to enable correction of TDC data for "trigger phase" offset
+  UInt_t fTrigPhaseOffset; // value of trigger phase offset (should be the same for all detectors in an experiment)
+  UInt_t fTrigPhaseMultiple; // What is the ratio between the clock period of this module and that of the TS (4 ns)
+  Double_t fTimeOffsetTrigPhase; // Time offset to be applied to all TDC data (but WHERE to apply the correction, how to avoid double-counting, etc?) 
   
 private:
   void ClearOutputVariables();

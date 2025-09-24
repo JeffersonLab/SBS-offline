@@ -176,7 +176,8 @@ namespace SBSData {
       void SetCal(Double_t var) { fTDC.cal = var; }
       void SetGoodTimeCut(Double_t var) { fTDC.GoodTimeCut = var; }
       void SetGoodHit(Int_t i) { fTDC.good_hit = i; }
-      
+      void SetTrigPhaseCorr( Double_t var ){ fTrigPhaseCorr = var; }
+    
       // Process data sets raw value, ped-subtracted and calibrated data
       virtual void Process(Int_t elemID, Double_t var, Double_t edge = 0);
       virtual void ProcessSimple(Int_t elemID, Double_t var, Int_t nhit,UInt_t TrigTime);
@@ -191,6 +192,7 @@ namespace SBSData {
       TDCData fTDC; ///< TDC hit container
       Bool_t fHasData;
       size_t fEdgeIdx[2]; //< Current index of the next hit data
+    Double_t fTrigPhaseCorr; //default to zero in the constructor
   };
 
   ///////////////////////////////////////////////////////////////////////////////
