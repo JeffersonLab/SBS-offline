@@ -56,6 +56,8 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fCorrectTDCforTrigPhase = false;
   fTrigPhaseOffset = 0;
   fTimeOffsetTrigPhase = 0.0;
+
+  fTrigTimeCentral = 0.0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -148,6 +150,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "crate_trigtime",  &fCrate_TrigTime, kUInt, 0, 1, 1 },
     { "slot_trigtime", &fSlot_TrigTime, kUInt, 0, 1, 1 },
     { "chan_trigtime", &fChan_TrigTime, kUInt, 0, 1, 1 },
+    { "trigtime_central", &fTrigTimeCentral, kDouble, 0, 1, 1 },
     { "usetrigphasecorr", &usetrigphasecorr, kInt, 0, 1, 1 },
     { "trigphaseoffset", &fTrigPhaseOffset, kUInt, 0, 1, 1 },
     { "trigphasemultiple", &fTrigPhaseMultiple, kUInt, 0, 1, 1 },
