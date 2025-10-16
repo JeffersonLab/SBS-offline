@@ -708,10 +708,12 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
       //If trigger time is decoded and defined as a ref channel, add back in to get "raw" time (note that this ASSUMES that the trigger time has been defined as reference
       // in the database and subtracted from the raw TDC values! Interpretation won't be valid if this is NOT the case!)
       tcorrected += GetTrigTime() - GetTrigTimeCentral(); //If properly configured, this centers trigger time distribution near zero
+      RFcorr += GetTrigTime() - GetTrigTimeCentral();
     }
 
     if( TrigPhaseCorrectionIsEnabled() ){ //actually, we want to apply the trig phase correction regardless of whether the trigger time was subtracted as reference.
       tcorrected -= GetTrigPhaseCorrection(); 
+      RFcorr -= GetTrigPhaseCorrection();
     }
     
     fOutClus.tCorrected.push_back( tcorrected ); 
@@ -854,7 +856,7 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
 	
 	fMainClusBars.tCorrected.push_back( tcorrected );
 
-	fMainClusBars.tCorrected.push_back( tcorrected - RFcorr ); //NOTE: we don't need to correct the RF correction again because we already did it above (it's not bar-specific!)
+	fMainClusBars.tRFcorr.push_back( tcorrected - RFcorr ); //NOTE: we don't need to correct the RF correction again because we already did it above (it's not bar-specific!)
 	
       }
     }
