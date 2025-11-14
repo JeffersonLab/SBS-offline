@@ -1,5 +1,6 @@
 #include "SBSGEMTrackerBase.h"
 #include "SBSGEMModule.h"
+#include "THaApparatus.h"
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TRotation.h"
@@ -135,6 +136,12 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
 
   fZminLayer = 0.0;
   fZmaxLayer = 0.0;
+
+  fUseConstraintPenaltyTerm = false;
+  fConstraintPenaltySigmaX = 0.1;
+  fConstraintPenaltySigmaY = 0.1;
+  fConstraintPenaltySigmaXp = 0.1;
+  fConstraintPenaltySigmaYp = 0.1;
   
 }
 
@@ -156,7 +163,7 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   //fConstraintPoint_Back.clear();
   // fConstraintWidth_Front.clear();
   // fConstraintWidth_Back.clear();
-  //Don't clear constraint widths for "theta" and "phi" as these 
+  //Don't clear constraint widths for "theta" and "phi" as
   
   fNtracks_found = 0;
   fNhitsOnTrack.clear();
@@ -333,8 +340,9 @@ void SBSGEMTrackerBase::Clear(){ //Clear out any event-specific stuff
   fHitCrate_V.clear();
   fHitMPD_V.clear();
   fHitADCID_V.clear();
-  
-  fclustering_done = false;
+
+  //Moved this initialization to the derived classes
+  //  fclustering_done = false;
   ftracking_done = false;
 
   //  fConstraintPoint_Front.clear();
@@ -1275,10 +1283,17 @@ void SBSGEMTrackerBase::hit_reconstruction(){
 	//Note: It is assumed that the front and rear constraint points and widths will be defined to be just outside the entire physical z extent
 	//      of all the layers,
 	//      such that every module lies between the front and rear constraint points (along z) by definition, and therefore that
-	//      "interp_frac" below lies between zero and one in virtually all cases
-	//      
-      
-	double interp_frac = sintersect / (fConstraintPoint_Back[icp]-fConstraintPoint_Front[icp]).Mag();
+	//      "interp_frac" below lies between zero and one in virtually all cases      
+	// Since the denominator here is positive-definite, but the numerator could be positive or negative, we should rewrite these
+	// formulas to use a sign-agnostic linear interpolation:
+
+	// The constraint widths are always positive-definite;
+
+	//The modification below FORCES the interpolation fraction to be between 0 and 1 by definition, such that if
+	// sintersect is negative or greater than the distance between the two constraint points, the interpolation fraction will be forced to
+	// 0 or 1, respectively:
+	
+	double interp_frac = std::max(0.0, std::min(1.0,sintersect / (fConstraintPoint_Back[icp]-fConstraintPoint_Front[icp]).Mag()));
 	
 	TVector2 constraint_width_module( fConstraintWidth_Front.X() * (1.-interp_frac) + fConstraintWidth_Back.X() * interp_frac,
 					  fConstraintWidth_Front.Y() * (1.-interp_frac) + fConstraintWidth_Back.Y() * interp_frac );
@@ -1293,9 +1308,9 @@ void SBSGEMTrackerBase::hit_reconstruction(){
 	mod->add_constraint( constraint_center_module, constraint_width_module );
       
 	//mod->find_2Dhits( constraint_center_module, constraint_width_module ); //to allow for multiple constraint points, we probably need to modify the SBSGEMModule::find_2Dhits method
-      } //end loop on constraint points;
+      } //end loop on constraint point pairs
     } //end if block on fUseConstraint
-
+    
     mod->find_2Dhits();
     
     //now fill the strip, 1D cluster and 2D hit statistics by layer and/or module:
@@ -1311,11 +1326,20 @@ void SBSGEMTrackerBase::hit_reconstruction(){
     fNclustU_layer_neg[layerindex] += mod->fNclustV_neg;
     fNclustV_layer_neg[layerindex] += mod->fNclustV_neg;
     fN2Dhit_layer[layerindex] += mod->fN2Dhits;
+
+    // TString snametemp = Form( "%s.%s.%s",
+    // 			      (static_cast<THaDetector*>(mod->GetParent()))->GetApparatus()->GetName(),
+    // 			      mod->GetParent()->GetName(),
+    // 			      mod->GetName() );
     
+    // std::cout << "hit reconstruction done for module " << snametemp << ", (nstripU,nstripV)=("
+    // 	      << mod->fNstrips_hitU << ", " << mod->fNstrips_hitV << ")" << std::endl;
   }
+
+  
   
   for( int layerindex=0; layerindex<fNlayers; layerindex++ ){
-        if( fNstripsU_layer[layerindex] + fNstripsV_layer[layerindex] > 0 ) fNlayers_hit++;
+    if( fNstripsU_layer[layerindex] + fNstripsV_layer[layerindex] > 0 ) fNlayers_hit++;
     if( fNstripsU_layer[layerindex] > 0 ) fNlayers_hitU++;
     if( fNstripsV_layer[layerindex] > 0 ) fNlayers_hitV++;
     if( fN2Dhit_layer[layerindex] > 0 ) fNlayers_hitUV++;
@@ -3480,6 +3504,10 @@ void SBSGEMTrackerBase::ClearConstraints(){
   fConstraintPoint_Back.clear();
   fConstraintPoint_Front_IsInitialized = false;
   fConstraintPoint_Back_IsInitialized = false;
+
+  //The following lines were moved to the per-event "Clear()" methods of the derived classes
+  //  fECALpos.SetXYZ(kBig,kBig,kBig);
+  //  fElasticConstraintIsInitialized = false;
 }
 
 void SBSGEMTrackerBase::SetFrontConstraintPoint( TVector3 fcp ){

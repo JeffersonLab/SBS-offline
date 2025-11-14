@@ -31,7 +31,9 @@ struct SBSTimingHodoscopeOutput {
   std::vector<Double_t> totright; //< "raw" tright with no corrections
   std::vector<Double_t> tRFcorr; // mean time with RF corrections applied
   std::vector<Double_t> etof; // time-of-flight assuming electron
-  std::vector<Int_t> trackindex;
+  std::vector<Double_t> tCorrected; //final corrected time including ALL applicable corrections
+  std::vector<Int_t> trackindex; //track index of this bar (or cluster)
+  std::vector<Int_t> clustindex; // index of this bar (or cluster) in the cluster array. We need this to unambiguously associated bars with clusters in the output. 
 };
 
 class SBSTimingHodoscope : public SBSGenericDetector {

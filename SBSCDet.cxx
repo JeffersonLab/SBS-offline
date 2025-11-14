@@ -21,8 +21,10 @@ SBSCDet::SBSCDet( const char* name, const char* description,
   SetModeADC(SBSModeADC::kNone); // Default is No ADC, but can be re-enabled later
 
   fHits             = new TClonesArray("SBSCDet_Hit",200);
-  fHit_tmin 	    = -1000;
-  fHit_tmax	    = 1000000; // wide open for now!
+  fHit_tmin 	    = 1000;
+  fHit_tmax	    = 3000; // 10ns to 30ns  units of TDC are 10's of picoseconds?
+  fHit_totmin 	    = 1800;
+  fHit_totmax	    = 4500; // 10ns to 30ns  units of TDC are 10's of picoseconds?
 
   Clear();
 }
@@ -208,18 +210,20 @@ Int_t SBSCDet::CoarseProcess( TClonesArray& tracks )
 
   //fNtrackMatch = 0;
 
+  // Loop through all of the "good" hits coming out of SBSGenericDetector, which has time cuts wide open
   for(int k = 0; k<fNGoodTDChits; k++){
     //tmin = -fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
     //tmax = +fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
+    //std::cout << "GetGoodTimeCut() -> " << tmin << " " << tmax << std::endl;
 
     //double t0 = fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
 
     //    if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
-    if (fGood.TDCelemID[k] >= 2688) {
-	std::cout << "Processing good hit " << k << " fHit_tmin = " << fHit_tmin << " fHit_tmax = " << 
-    	fHit_tmax << " le time = " << fGood.t[k] << " te time = " << fGood.t_te[k] << " PMT = " << fGood.TDCelemID[k] << std::endl; 
-    }
-    if( fHit_tmin <= fGood.t[k] && fGood.t[k] <= fHit_tmax ){
+    //if (fGood.TDCelemID[k] >= 2688) {
+	//std::cout << "Processing good hit " << k << " fHit_tmin = " << fHit_tmin << " fHit_tmax = " << 
+    	//fHit_tmax << " le time = " << fGood.t[k] << " te time = " << fGood.t_te[k] << " PMT = " << fGood.TDCelemID[k] << std::endl; 
+    //}
+    if( fHit_tmin <= fGood.t[k] && fGood.t[k] <= fHit_tmax && fHit_totmin <= fGood.t_ToT[k] && fGood.t_ToT[k] <= fHit_totmax){
       the_hit = new( (*fHits)[nHit++] ) SBSCDet_Hit();
 
       the_hit->SetPMTNum(fGood.TDCelemID[k]);

@@ -50,6 +50,8 @@ protected:
   TClonesArray*		fHits;		// Array of hits for each event
   Double_t	fHit_tmin;
   Double_t 	fHit_tmax;
+  Double_t	fHit_totmin;
+  Double_t 	fHit_totmax;
 
   ClassDef(SBSCDet,5)  // Describes scintillator plane with F1TDC as a detector
 };

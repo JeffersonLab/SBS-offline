@@ -1,5 +1,6 @@
 #!/bin/sh
-rm -fr build
-cmake -DCMAKE_INSTALL_PREFIX=/home/brash/local/sbs-offline -B build -S .
-cmake --build build -j8
-cmake --install build
+cd ../build
+rm -fr *
+cmake -DCMAKE_INSTALL_PREFIX=../install ../SBS-offline
+make install
+cd ../SBS-offline

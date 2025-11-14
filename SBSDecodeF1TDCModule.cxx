@@ -48,7 +48,7 @@ namespace Decoder {
   }
 
   SBSDecodeF1TDCModule::~SBSDecodeF1TDCModule() = default;
-
+  
   void SBSDecodeF1TDCModule::CommonInit() {
     //fTdcData = new Int_t[NTDCCHAN*MAXHIT];
     //fNumHits = new Int_t[NTDCCHAN*MAXHIT];
@@ -61,11 +61,14 @@ namespace Decoder {
     for(int & F1slot : F1slots) {
       F1slot = 0;
     }
+
+    
+    
     //F1slots = new Int_t[50];
     //memset(F1slots, 0, 50*sizeof(Int_t));
     fWdcntMask=0;
   }
-
+      
 
   Bool_t SBSDecodeF1TDCModule::IsSlot(UInt_t rdata)
   {
@@ -232,18 +235,42 @@ namespace Decoder {
 	}
 	//cout << "f1slot: " << f1slot << " ";//endl;
 	if (f1slot!=30 && ((*loc) & DATA_CHK) != F1_RES_LOCK ) {
-	  cout << "\tWarning: F1 TDC " << hex << (*loc) << dec;
-	  cout << "\tSlot (Ch) = " << f1slot << "(" << chan << ")";
+	  
+	  
 	  if ( (*loc) & F1_HIT_OFLW ) {
-	    cout << "\tHit-FIFO overflow";
+	    fnWarnHitFIFOoverflow[chan]++;
+
+	    if( fnWarnHitFIFOoverflow[chan] == fMaxWarningsHitFIFOoverflow ){
+	      std::cout << "LAST WARNING in [SBSDecodeF1TDCModule::LoadSlot()]: reached maximum hit FIFO overflow warnings for F1 TDC (crate,slot,chan,nwarn)=("
+			<< GetCrate() << ", " << f1slot << ", " << chan << ", " << fnWarnHitFIFOoverflow[chan]
+			<< "), suppressing further warnings..." << std::endl;
+	    }
+	    if( !fSuppressWarningHitFIFOoverflow || fnWarnHitFIFOoverflow[chan] < fMaxWarningsHitFIFOoverflow ){
+	    
+	      cout << "\tWarning: F1 TDC " << hex << (*loc) << dec;
+	      cout << "\tSlot (Ch) = " << f1slot << "(" << chan << ")";
+	    
+	    
+	    
+	      cout << "\tHit-FIFO overflow";
+	      
+	      cout << endl;
+	    }
 	  }
 	  if ( (*loc) & F1_OUT_OFLW ) {
+	    cout << "\tWarning: F1 TDC " << hex << (*loc) << dec;
+	    cout << "\tSlot (Ch) = " << f1slot << "(" << chan << ")";
+	    
 	    cout << "\tOutput FIFO overflow";
+	    cout << endl;
 	  }
 	  if ( ! ((*loc) & F1_RES_LOCK ) ) {
+	    cout << "\tWarning: F1 TDC " << hex << (*loc) << dec;
+	    cout << "\tSlot (Ch) = " << f1slot << "(" << chan << ")";
+	    
 	    cout << "\tResolution lock failure!";
+	    cout << endl;
 	  }
-	  cout << endl;
 	}
 
 	Int_t raw= (*loc) & 0xffff;
@@ -278,16 +305,22 @@ namespace Decoder {
   SBSDecodeF1TDCLowResModule::SBSDecodeF1TDCLowResModule(Int_t crate, Int_t slot) :
     SBSDecodeF1TDCModule(crate,slot)
   {
+    //default to not suppressing the warning:
+    fSuppressWarningHitFIFOoverflow = false;
+    fMaxWarningsHitFIFOoverflow = 1000;
     SBSDecodeF1TDCLowResModule::Init();
   }
 
   SBSDecodeF1TDCHighResModule::SBSDecodeF1TDCHighResModule(Int_t crate, Int_t slot) :
     SBSDecodeF1TDCModule(crate,slot)
   {
+    fSuppressWarningHitFIFOoverflow = false;
+    fMaxWarningsHitFIFOoverflow = 1000;
+    
     SBSDecodeF1TDCHighResModule::Init();
   }
 
-
+  
 
   void SBSDecodeF1TDCLowResModule::Init() {
     fName = "My private F1 TDC 6401 (LoRes 64 Channels)";
@@ -296,12 +329,60 @@ namespace Decoder {
     CommonInit();
   };
 
+  void SBSDecodeF1TDCLowResModule::Init(const char *configstr){
+    Init();
+    UInt_t suppressFIFOwarnflag; 
+    
+    vector<ConfigStrReq> req = { {"suppress_hitFIFOwarn",fMaxWarningsHitFIFOoverflow} };
+
+    ParseConfigStr( configstr, req );
+    
+    fSuppressWarningHitFIFOoverflow = fMaxWarningsHitFIFOoverflow > 0 ? true : false;
+    //if( fSuppressWarningHitFIFOoverflow ){
+
+    //hard code until the parsing bug is understood.
+    //fMaxWarningsHitFIFOoverflow = 100;
+    
+    // if( fSuppressWarningHitFIFOoverflow ){
+    //   std::cout << "Will suppress F1 TDC hit FIFO warnings after the first " << suppressFIFOwarnflag
+    // 		<< " occurrences, (crate, slot)=(" << GetCrate() << ", " << GetSlot() << ")" << std::endl;
+    // }
+													    
+    //    fMaxWarningsHitFIFOoverflow = suppressFIFOwarnflag;
+    fnWarnHitFIFOoverflow.resize(fNumChan,0);
+  }
+
   void SBSDecodeF1TDCHighResModule::Init() {
     fName = "My private F1 TDC 3204 (HighRes 32 Channels)";
     SetResolution(1);
     fNumChan = 32;
     CommonInit();
   };
+
+  void SBSDecodeF1TDCHighResModule::Init(const char *configstr){
+    Init();
+
+    //UInt_t suppressFIFOwarnflag = fSuppressWarningHitFIFOoverflow ? 1 : 0;
+    
+    vector<ConfigStrReq> req = { {"suppress_hitFIFOwarn",fMaxWarningsHitFIFOoverflow} };
+
+    ParseConfigStr( configstr, req );
+    
+    fSuppressWarningHitFIFOoverflow = fMaxWarningsHitFIFOoverflow > 0 ? true : false;
+    //if( fSuppressWarningHitFIFOoverflow ){
+
+    // if( fSuppressWarningHitFIFOoverflow ){
+    //   std::cout << "Will suppress F1 TDC hit FIFO warnings after the first " << suppressFIFOwarnflag
+    // 		<< " occurrences, (crate, slot)=(" << GetCrate() << ", " << GetSlot() << ")" << std::endl;
+    // }
+
+    //hard code until this bug is understood.
+    //    fMaxWarningsHitFIFOoverflow = 100;
+    
+    //  fMaxWarningsHitFIFOoverflow = suppressFIFOwarnflag;
+    fnWarnHitFIFOoverflow.resize(fNumChan,0);
+   
+  }
 
   SBSDecodeF1TDCLowResModule::~SBSDecodeF1TDCLowResModule()
   {

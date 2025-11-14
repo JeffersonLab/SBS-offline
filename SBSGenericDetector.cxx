@@ -51,6 +51,13 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
 
   fF1TDCminraw = 67000;
   fF1TDCmaxraw = 0;
+
+  fTrigPhaseMultiple = 6;
+  fCorrectTDCforTrigPhase = false;
+  fTrigPhaseOffset = 0;
+  fTimeOffsetTrigPhase = 0.0;
+
+  fTrigTimeCentral = 0.0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -116,6 +123,8 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
   // Specify number of columns per row.  If less than nrows entries provided
   // the pattern will repeat to fill up nrows entries
   std::vector<Int_t> ncols;
+
+  Int_t usetrigphasecorr = fCorrectTDCforTrigPhase ? 1 : 0;
   
   Int_t is_mc = 0;
   
@@ -141,6 +150,10 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "crate_trigtime",  &fCrate_TrigTime, kUInt, 0, 1, 1 },
     { "slot_trigtime", &fSlot_TrigTime, kUInt, 0, 1, 1 },
     { "chan_trigtime", &fChan_TrigTime, kUInt, 0, 1, 1 },
+    { "trigtime_central", &fTrigTimeCentral, kDouble, 0, 1, 1 },
+    { "usetrigphasecorr", &usetrigphasecorr, kInt, 0, 1, 1 },
+    { "trigphaseoffset", &fTrigPhaseOffset, kUInt, 0, 1, 1 },
+    { "trigphasemultiple", &fTrigPhaseMultiple, kUInt, 0, 1, 1 },
     { 0 } ///< Request must end in a NULL
   };
 
@@ -158,6 +171,11 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     return err;
   }
 
+  fCorrectTDCforTrigPhase = (usetrigphasecorr > 0 ) ? true : false;
+
+  // Don't allow the user to define a trigger phase offset that isn't between 0 and fTrigPhaseMultiple - 1 (ordinarily 0-5)
+  fTrigPhaseOffset = fTrigPhaseOffset % fTrigPhaseMultiple;
+  
   if(is_mc){// if this is simulated data, we do not care about the reference channel
     fIsMC = true;
     fDisableRefADC = true;
@@ -968,6 +986,8 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
     { "nrefhits", "Number of reference time hits",  "fNRefhits" },
     { "ngoodTDChits", "NGoodTDChits",  "fNGoodTDChits" },
     { "ngoodADChits", "NGoodADChits",  "fNGoodADChits" },
+    { "trigphase", "Trigger phase (event time stamp modulo 24 ns)", "fTrigPhase" },
+    { "trigphasecorr", "Trigger phase correction (ns)", "GetTrigPhaseCorrection()" },
     { 0 }
   };
 
@@ -1106,7 +1126,21 @@ Int_t SBSGenericDetector::Decode( const THaEvData& evdata )
 {
   // Decode data
 
+  //Grab trigger phase;
+
+  ULong64_t evtime = evdata.GetEvTime();
+
+  //AFAIK this evtime is always an integer multiple of 4 ns; so we should take the modulus of evtime and fTrigPhaseMultiple
+  
+  fTrigPhase = evtime % fTrigPhaseMultiple;
+
+  fTimeOffsetTrigPhase = 4.008 * ( double( (fTrigPhase + fTrigPhaseOffset)%fTrigPhaseMultiple - 0.5*fTrigPhaseMultiple ) ); 
+  
+  //test whether this works:
+  //  std::cout << "(evtime,trigphase)=(" << evtime << ", " << fTrigPhase << ")" << std::endl;
+  
   //static const char* const here = "Decode()";
+  
   // Loop over modules for the reference time
   SBSElement *blk = nullptr;
   if (!fDisableRefADC || !fDisableRefTDC) {
@@ -1229,7 +1263,26 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   //
   Int_t nhit = evdata.GetNumHits(d->crate, d->slot, chan);
   Double_t reftime  = 0;
+  
+  // if( !IsRef && fCorrectTDCforTrigPhase ){
+  //   // if( IsRef && fCorrectTDCforTrigPhase ){
+  //   //blk->TDC()->SetTrigPhaseCorr( fTimeOffsetTrigPhase );
+  // }
 
+  // if( IsRef && fCorrectTDCforTrigPhase ){ //For reference channels, set "reftime" to the raw-TDC equivalent of the trigger phase correction for the reference channel(s):
+  //   double cal = blk->TDC()->GetCal();
+  //   double offset = blk->TDC()->GetOffset();
+
+  //   // Since val would be (raw-offset)*cal, then raw = offset + val/cal
+  //   // next question: should we ADD or subtract the time offset here?
+  //   // as of right now, at line 1133, we set the time offset to a negative number.
+  //   // We are defining a ref time for the ref time here
+  //   // this will be SUBTRACTED from the raw TDC for the ref channel. That means it will be ADDED to the TDC
+  //   // for other channels that use this one as ref.
+  //   // Offset is positive, therefore ref time will get a positive correction, which becomes a negative correction
+  //   // to channels using this one as reference. 
+  //   reftime = offset - fTimeOffsetTrigPhase/cal; 
+  // }
   
   // For VETROC the TDC hits are not in time order. Need to arrange in time order.
   std::vector<TDCHits> tdchit;
@@ -1237,7 +1290,9 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
    // std::cout << "**** time ordering hits *****" << std::endl;
     for(Int_t ihit = 0; ihit < nhit; ihit++) {
       TDCHits c1 = {evdata.GetRawData(d->crate, d->slot, chan, ihit),evdata.GetData(d->crate, d->slot, chan, ihit)};
-      //std::cout << "slot = " << d->slot << " chan = " << chan << " hit = " << ihit << " crate = " << d->crate << " rawtime = " << c1.rawtime << std::endl;
+      //if (d->slot == 20) {
+	//	std::cout << "slot = " << d->slot << " chan = " << chan << " hit = " << ihit << " crate = " << d->crate << " rawtime = " << c1.rawtime << std::endl;
+      //}
       tdchit.push_back(c1);
     }
     std::sort(tdchit.begin(), tdchit.end(), [](const TDCHits& c1, const TDCHits& c2) {return c1.rawtime < c2.rawtime;});
@@ -1286,7 +1341,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 	  // 	    << ": (tempdata, trigtime, offset, cal)=(" << tempdata << ", " << trigtime << ", "
 	  // 	    << offset << ", " << cal << "), corrected ref. time = ";
 	  tempdata=(tempdata-trigtime-offset)*cal; //convert to a time so we can choose the correct hit if there are multiple hits in the ref channel. NOTE here the subtraction of F1 trigtime!
-
+	  
 	  //std::cout << tempdata << " ns" << std::endl;
 	}
 	if (abs(tempdata-RefCent) < MinDiff) {
@@ -1295,10 +1350,13 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
 	}
       }
 
-      //let's try 
-      reftime = refblk->TDC()->GetDataRaw(HitIndex); //This does NOT have F1 trig. time subtracted!
+      //this is still raw TDC; 
+     
+      reftime = refblk->TDC()->GetDataRaw(HitIndex); //This does NOT have F1 trig. time subtracted!  
+      
       refblk->TDC()->SetGoodHit(HitIndex);
-
+	
+      
       // if( d->GetModel() == 6401 ){
       // 	std::cout << "F1 TDC final decoded (ref time, hit index)=(" << reftime << " ns, " << HitIndex << ")" << std::endl; 
       // }
@@ -1309,6 +1367,7 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
   
   Int_t edge = 0;
   Int_t elemID=blk->GetID();
+
   for(Int_t ihit = 0; ihit < nhit; ihit++) {
     if(fModeTDC == SBSModeTDC::kTDCSimple) {
       UInt_t rawdata = evdata.GetData(d->crate, d->slot, chan, ihit);
@@ -1364,7 +1423,8 @@ Int_t SBSGenericDetector::DecodeTDC( const THaEvData& evdata,
       edge = tdchit[ihit].edge;
       //           std::cout << ihit << " " << evdata.GetData(d->crate, d->slot, chan, ihit) - reftime << " " << edge << std::endl;
       if (edge ==1 && ihit ==0) continue; // skip first hit if trailing edge
-      if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
+      // if (fModeTDC != SBSModeTDC::kTDCSimple && edge ==0 && ihit == nhit-1)  continue; // skip last hit if leading edge
+      if( edge == 0 && ihit == nhit-1 ) continue; //skip last hit if leading edge (AJRP note: it is not possible to get into this IF block if fModeTDC is "kTDCsimple". Thus the commented statement above always evaluates false and defeats its own intended logic.)
       blk->TDC()->Process(elemID,tdchit[ihit].rawtime - reftime, edge);
     }
   }
@@ -1420,6 +1480,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	fRefGood.TDCelemID.push_back(blk->GetID());
         const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();
 	Double_t tempval=hit.le.val;
+
+	
+	
         if(fModeTDC == SBSModeTDC::kTDCSimple) { // need to recalculate for F1 data
 	  Double_t cal=blk->TDC()->GetCal();
 	  Double_t offset=blk->TDC()->GetOffset();
@@ -1430,10 +1493,14 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	  // What's the motivation? This most likely explains the +/- 128 LSB (~14.3 ns)
 	  // sub-peaks in the trigger-corrected rf time differences between BB and HCAL
 	}
+	
         fRefGood.t.push_back(tempval);
         fRefGood.t_mult.push_back(blk->TDC()->GetNHits());
         if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
-          fRefGood.t_te.push_back(hit.te.val);
+	  tempval = hit.te.val;
+	  
+	  //          fRefGood.t_te.push_back(hit.te.val);
+	  fRefGood.t_te.push_back(tempval);
           fRefGood.t_ToT.push_back(hit.ToT.val);
         }
 	
@@ -1660,15 +1727,24 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
         fGood.TDCcol.push_back(blk->GetCol());
         fGood.TDClayer.push_back(blk->GetLayer());
         fGood.TDCelemID.push_back(blk->GetID());
-	if (blk->GetCol() >= 672) {
-		std::cout << "PMT = " << blk->GetID() << "  Row = " << blk->GetRow() << "  Col = " << 
-		blk->GetCol() << "  Layer = " << blk->GetLayer() << "  LE = " << hit.le.val << std::endl;   
-        }
-	fGood.t.push_back(hit.le.val);
+
+	// if (blk->GetID() > 2687) {
+	// 	std::cout << "PMT = " << blk->GetID() << "  Row = " << blk->GetRow() << "  Col = " << 
+	// 	blk->GetCol() << "  Layer = " << blk->GetLayer() << "  LE = " << hit.le.val << std::endl;   
+        // }
+
+	double tempval = hit.le.val;
+
+	
+	//fGood.t.push_back(hit.le.val);
+	fGood.t.push_back( tempval );
         fGood.t_mult.push_back(blk->TDC()->GetNHits());
         if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
-          fGood.t_te.push_back(hit.te.val);
-          fGood.t_ToT.push_back(hit.ToT.val);
+	  tempval = hit.te.val;
+
+	  //          fGood.t_te.push_back(hit.te.val);
+	  fGood.t_te.push_back( tempval );
+	  fGood.t_ToT.push_back(hit.ToT.val);
         }
 	//td::cout << "LE time = " << hit.le.val << "     TE time = " << hit.te.val << "     Tot = " << hit.ToT.val << std::endl;
 
@@ -1709,6 +1785,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	const std::vector<SBSData::TDCHit> &hits = blk->TDC()->GetAllHits();
 	for( const auto &hit : hits) {
 	  fRaw.TDCelemID.push_back(hit.elemID);
+	  
 	  fRaw.t.push_back(hit.le.val);
 	  if(fModeTDC == SBSModeTDC::kTDC) { // has trailing info
 	    fRaw.t_te.push_back(hit.te.val);
@@ -2023,11 +2100,17 @@ void SBSGenericDetector::DecodeRFandTriggerTime( const THaEvData &evdata ){
       }
       
       double ttemp = (RawTDC-F1TrigTime-offset)*cal;
+      
       double tdiff = ttemp - goodtimecut;
       if( LeadingEdgeBit == 0 && ( besthit < 0 || fabs(tdiff) < mintdiff ) ){
 	besthit = ihit;
 	mintdiff = fabs(tdiff);
 	fTrigTime = ttemp;
+
+	// if( fCorrectTDCforTrigPhase ){
+	//   fTrigTime += fTimeOffsetTrigPhase;
+	// }
+	
 	F1TrigTime_trigchan = F1TrigTime;
 	RawTDC_trigchan = Int_t( RawTDC );
 	goodtrig = true;
@@ -2115,6 +2198,9 @@ void SBSGenericDetector::DecodeRFandTriggerTime( const THaEvData &evdata ){
 	F1TrigTime_RFchan = F1TrigTime;
 	RawTDC_RFchan = RawTDC;
 	fRFtime = ttemp;
+	// if( fCorrectTDCforTrigPhase ){
+	//   fRFtime += fTimeOffsetTrigPhase;
+	// }
       }
     }     
   }

@@ -160,7 +160,7 @@ class SBSGEMModule : public THaSubDetector {
   virtual Int_t   DefineVariables( EMode mode );
   //We are overriding THaDetectorBase's ReadGeometry method for SBSGEMModule, because we use a different definition of the angles:
   virtual Int_t   ReadGeometry( FILE* file, const TDatime& date, 
-			      Bool_t required = true );
+				Bool_t required = true );
   
   virtual Int_t   Begin( THaRunBase* r=0 );
   virtual Int_t   End( THaRunBase* r=0 );
@@ -199,8 +199,11 @@ class SBSGEMModule : public THaSubDetector {
   Int_t GetStripNumber( UInt_t rawstrip, UInt_t pos, UInt_t invert );
 
   void PrintPedestals( std::ofstream &dbfile_CM, std::ofstream &daqfile_ped, std::ofstream &daqfile_CM );
+  void PrintRawADCrange( std::ofstream &dbfile_ADCrange );
+
+  int GetNumGoodHitsAPV( UInt_t isamp, const mpdmap_t &apvinfo, UInt_t nhits=128 );
   
-  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, UInt_t nhits=128 ); //default to "sorting" method:
+  double GetCommonMode( UInt_t isamp, Int_t flag, const mpdmap_t &apvinfo, UInt_t nhits=128, bool out_of_range=false ); //default to "sorting" method:
 
   //Simulation of common-mode correction algorithm as applied to full readout events:
   double GetCommonModeCorrection( UInt_t isamp, const mpdmap_t &apvinfo, UInt_t &ngood, const UInt_t &nhits=128, bool fullreadout=false, Int_t flag=0 );
@@ -248,6 +251,13 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeRollingAverage_by_APV;
   std::vector<Double_t> fCommonModeRollingRMS_by_APV;
   std::vector<UInt_t> fNeventsRollingAverage_by_APV;
+
+  
+  //These arrays will hold the results for all full readout events
+  std::vector<Double_t> fRawADCminResult_by_APV;
+  std::vector<Double_t> fRawADCmaxResult_by_APV;
+  std::vector<Int_t> fNumFullReadoutEvents_by_APV; //count full readout events by APV number
+  
 
   std::vector<std::deque<Double_t> > fCMbiasResultContainer_by_APV;
   std::vector<Double_t> fCommonModeOnlineBiasRollingAverage_by_APV;
@@ -346,6 +356,8 @@ class SBSGEMModule : public THaSubDetector {
   Double_t fCommonModeScanRange_Nsigma; //Scan range for common-mode histogramming method calculation, in units of RMS, +/- Nsigma about the mean, default = 4
   Double_t fCommonModeStepSize_Nsigma; //Step size in units of RMS, default = 1/5:
 
+
+  
   //same as in MPDModule: unavoidable to duplicate this definition unless someone smarter than I cam
   //can come up with a way to do so:
   UInt_t fChan_CM_flags;  
@@ -386,9 +398,10 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<UInt_t> fStripAPV;
   std::vector<UInt_t> fRawStripAPV;
   std::vector<Int_t> fRawADC_APV;
+  std::vector<Int_t> fRawADC_nopedsub_APV;
   std::vector<Double_t> fPedSubADC_APV;
   std::vector<Double_t> fCommonModeSubtractedADC_APV;
-
+  
   //Let's store the online calculated common-mode in its own dedicated array as well:
   std::vector<Double_t> fCM_online; //size equal to fN_MPD_TIME_SAMP
   
@@ -398,19 +411,19 @@ class SBSGEMModule : public THaSubDetector {
   Int_t fNstrips_hit_pos; //total Number of strips fired after positive zero suppression
   Int_t fNstrips_hit_neg; //total Number of strips fired after negative zero suppression
   Int_t fNdecoded_ADCsamples; //= fNstrips_hit * fN_MPD_TIME_SAMP
-  UInt_t fNstrips_hitU; //total number of U strips fired
-  UInt_t fNstrips_hitV; //total number of V strips fired
-  UInt_t fNstrips_hitU_neg; //total number of U strips fired negative
-  UInt_t fNstrips_hitV_neg; //total number of V strips fired negative
+  Int_t fNstrips_hitU; //total number of U strips fired
+  Int_t fNstrips_hitV; //total number of V strips fired
+  Int_t fNstrips_hitU_neg; //total number of U strips fired negative
+  Int_t fNstrips_hitV_neg; //total number of V strips fired negative
 
   // Number of strips passing basic zero suppression thresholds:
-  UInt_t fNstrips_keep;
-  UInt_t fNstrips_keepU;
-  UInt_t fNstrips_keepV;
+  Int_t fNstrips_keep;
+  Int_t fNstrips_keepU;
+  Int_t fNstrips_keepV;
   //Number of strips passing "local max" thresholds:
-  UInt_t fNstrips_keep_lmax;
-  UInt_t fNstrips_keep_lmaxU;
-  UInt_t fNstrips_keep_lmaxV; 
+  Int_t fNstrips_keep_lmax;
+  Int_t fNstrips_keep_lmaxU;
+  Int_t fNstrips_keep_lmaxV; 
   
   UInt_t fTrackPassedThrough; //flag to indicate track passed through module:
   
@@ -489,6 +502,7 @@ class SBSGEMModule : public THaSubDetector {
 
   UInt_t fMAX2DHITS; // Max. 2d hits per module, to limit memory usage:
   UInt_t fN2Dhits; // number of 2D hits found in region of interest:
+  UInt_t fN2Dhits_total; 
   std::vector<sbsgemhit_t> fHits; //2D hit reconstruction results
 
   /////////////////////// Global variables that are more convenient for ROOT Tree/Histogram Output (to the extent needed): ///////////////////////
@@ -536,6 +550,19 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeRMSU;
   std::vector<Double_t> fCommonModeRMSV;
 
+  // Define variables to hold APV-specific min and max values (saturation limits) for RAW ADC value in full readout events:
+  // Defaults will be zero and 4096 (2^12)
+  // These will inform common-mode analysis of full readout events; we aren't using them in any way yet.
+  // We can load them from the database directly, and/or we can put them in the "gemped" directory and write a custom method to
+  // load them.
+
+  //These are either to be loaded from the database or loaded by a custom method (preferable):
+  // These are CONSTANT parameters during a replay
+  std::vector<Double_t> fRawADCminU;
+  std::vector<Double_t> fRawADCmaxU;
+  std::vector<Double_t> fRawADCminV;
+  std::vector<Double_t> fRawADCmaxV; 
+  
   std::vector<Double_t> fCMbiasU;
   std::vector<Double_t> fCMbiasV;
   
@@ -677,9 +704,14 @@ class SBSGEMModule : public THaSubDetector {
   
   //Pedestal plots: only generate if pedestal mode = true:
   bool fPedHistosInitialized;
+
+  bool fPedDiagHistosInitialized;
   
   TH2D *hrawADCs_by_stripU; //raw adcs by strip, no corrections, filled for each SAMPLE:
   TH2D *hrawADCs_by_stripV; //raw adcs by strip, no corrections, filled for each SAMPLE:
+  TH2D *hrawADCs_by_stripU_nopedsub; //Add pedestal back in!
+  TH2D *hrawADCs_by_stripV_nopedsub; //Add pedestal back in!
+  
   TH2D *hcommonmode_subtracted_ADCs_by_stripU; //common-mode subtracted ADCS without ped subtraction
   TH2D *hcommonmode_subtracted_ADCs_by_stripV; 
   TH2D *hpedestal_subtracted_ADCs_by_stripU; //common-mode AND pedestal subtracted ADCs
@@ -696,12 +728,46 @@ class SBSGEMModule : public THaSubDetector {
   TH1D *hpedestal_subtracted_ADCsU;
   TH1D *hpedestal_subtracted_ADCsV;
 
+  //Summed over all strips, pedestal-subtracted and  common-mode subtracted ADCs:
+  TH1D *hpedestal_subtracted_ADCsU_goodCM;
+  TH1D *hpedestal_subtracted_ADCsV_goodCM;
+
   TH1D *hdeconv_ADCsU; //full readout events only
   TH1D *hdeconv_ADCsV; //full readout events only
+
+  TH1D *hdeconv_ADCsU_goodCM; //full readout events only
+  TH1D *hdeconv_ADCsV_goodCM; //full readout events only
+
+  //Raw ADC distribution by APV card:
+  TH2D *hrawADCs_by_APV_U;
+  TH2D *hrawADCs_by_APV_V;
+
+  TH2D *hrawADCs_by_APV_U_goodCM;
+  TH2D *hrawADCs_by_APV_V_goodCM;
+
+  TH2D *hrawADCs_by_APV_U_nopedsub;
+  TH2D *hrawADCs_by_APV_V_nopedsub;
+
+  TH2D *hrawADCs_by_APV_U_nopedsub_goodCM;
+  TH2D *hrawADCs_by_APV_V_nopedsub_goodCM;
+
+  //Pedestal and common-mode subtracted ADC distribution by APV card:
+  TH2D *hADCs_by_APV_U;
+  TH2D *hADCs_by_APV_V;
+
+  TH2D *hADCs_by_APV_U_goodCM;
+  TH2D *hADCs_by_APV_V_goodCM;
+
+  //For all events, determine whether an APV threw a common-mode out-of-range condition:
+  TH2D *hCM_OR_by_APV_U;
+  TH2D *hCM_OR_by_APV_V;
   
-  //in pedestal-mode analysis, we 
+  //These histograms we MAY wish to make all the time (but probably not)
   TH2D *hcommonmode_mean_by_APV_U;
   TH2D *hcommonmode_mean_by_APV_V;
+
+  TH2D *hcommonmode_online_by_APV_U;
+  TH2D *hcommonmode_online_by_APV_V;
 
   TH1D *hpedrmsU_distribution;
   TH1D *hpedrmsU_by_strip;

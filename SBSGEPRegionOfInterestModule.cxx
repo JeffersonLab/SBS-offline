@@ -15,7 +15,9 @@
 #include "SBSGEPEArm.h" //For the electron arm:
 #include "SBSEArm.h" //For the proton arm
 #include "SBSECal.h"
+#include "SBSHCal.h"
 #include "SBSGEMSpectrometerTracker.h"
+#include "SBSGEMPolarimeterTracker.h"
 #include "TClonesArray.h"
 #include "THaTrack.h"
 #include "TMath.h"
@@ -28,9 +30,14 @@ SBSGEPRegionOfInterestModule::SBSGEPRegionOfInterestModule( const char *name, co
   fParmName = "sbs";
   fEarmDetName = "ecal";
   fParmDetName = "gemFT";
-
-  fTestTracks = new TClonesArray("THaTrack",1);
+  fParmDetNamePol = "gemFPP";
+  fParmDetNameCalo = "hcal";
   
+  fTestTracks = new TClonesArray("THaTrack",1);
+
+  fTargZ0 = 0.0;
+  
+  fDataValid = false; 
 }
 //_____________________________________________________________________________
 SBSGEPRegionOfInterestModule::~SBSGEPRegionOfInterestModule()
@@ -82,6 +89,10 @@ Int_t SBSGEPRegionOfInterestModule::DefineVariables( THaAnalysisObject::EMode mo
     { "ptheta", "proton expected polar angle (rad)", "fptheta_central" },
     { "pphi", "proton expected azimuthal angle (rad)", "fpphi_central" },
     { "pp", "proton expected momentum (GeV/c)", "fPp_central" },
+    { "xfp0", "predicted X at fp (assuming point target at origin)", "fxfp_central" },
+    { "yfp0", "predicted Y at fp (assuming point target at origin)", "fyfp_central" },
+    { "xpfp0", "predicted X' at fp (assuming point target at origin)", "fxpfp_central" },
+    { "ypfp0", "predicted Y' at fp (assuming point target at origin)", "fypfp_central" },
     { nullptr }
   };
 
@@ -128,6 +139,9 @@ Int_t SBSGEPRegionOfInterestModule::ReadDatabase( const TDatime &date ){
     { "parm_name", &fParmName, kString, 0, 1, 1 },
     { "edet_name", &fEarmDetName, kString, 0, 1, 1 },
     { "pdet_name", &fParmDetName, kString, 0, 1, 1 },
+    { "pdetpol_name", &fParmDetNamePol, kString, 0, 1, 1 },
+    { "pdetcalo_name", &fParmDetNameCalo, kString, 0, 1, 1 },
+    { "z0targ", &fTargZ0, kDouble, 0, 1, 1 },
     { nullptr }
   };
   
@@ -142,6 +156,7 @@ Int_t SBSGEPRegionOfInterestModule::ReadDatabase( const TDatime &date ){
   return kOK;
   
 }
+
 //_____________________________________________________________________________
 Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   //Okay here we go: we've written the code needed to start writing the code.
@@ -152,6 +167,8 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   bool gotParm = false;
   bool gotEdet = false;
   bool gotPdet = false;
+  bool gotPdetPol = false;
+  bool gotPdetCalo = false;
   
   TIter aiter(gHaApps);
 
@@ -160,6 +177,9 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
   SBSECal *Edet = nullptr;
   SBSGEMSpectrometerTracker *Pdet = nullptr;
+  SBSGEMPolarimeterTracker *PdetPol = nullptr;
+
+  SBSHCal *PdetCalo = nullptr;
   
   while( (app = (THaApparatus*) aiter()) ){
     std::string appname = app->GetName();
@@ -180,21 +200,48 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
 	Pdet = dynamic_cast<SBSGEMSpectrometerTracker*>(Parm->GetDetector(fParmDetName.c_str()));
 	if( Pdet ) gotPdet = true;
+
+	PdetPol = dynamic_cast<SBSGEMPolarimeterTracker*>(Parm->GetDetector(fParmDetNamePol.c_str()));
+
+	if( PdetPol ) gotPdetPol = true;
+	
+	PdetCalo = dynamic_cast<SBSHCal*>(Parm->GetDetector(fParmDetNameCalo.c_str()));
+	if( PdetCalo ) gotPdetCalo = true;
+	
       }
     }
   }
 
-  if( !gotParm || !gotEarm || !gotEdet || !gotPdet ){
-    std::cout << "Error: missing Earm and/or Parm and/or Edet and/or Pdet! (gotEarm, gotParm, gotEdet, gotPdet)=(" << gotEarm << ", " << gotParm << ", "
-	      << gotEdet << ", " << gotPdet << ")" << std::endl;
+  if( !gotParm || !gotEarm || !gotEdet || !gotPdet || !gotPdetPol || !gotPdetCalo ){
+    std::cout << "Error: missing Earm and/or Parm and/or Edet and/or Pdet and/or PdetPol and/or PdetCalo! (gotEarm, gotParm, gotEdet, gotPdet, gotPdetPol, gotPdetCalo)=(" << gotEarm << ", " << gotParm << ", "
+	      << gotEdet << ", " << gotPdet << ", " << gotPdetPol
+	      << ", " << gotPdetCalo << ")" << std::endl;
     fDataValid = false;
     return 0;
   }
 
+  if( !Parm->GetGEPtrackingMode() ){ //proton arm must have "GEP tracking mode" set to use this module
+    fDataValid = false;
+    return 0;
+  }
+  
   //If we reached this point, then we can grab E arm and P arm info:
 
-  //Always clear out proton arm constraint points before evaluating ROI:
+  //Always clear out proton arm front tracker constraint points before evaluating ROI:
+  
   Pdet->ClearConstraints();
+  PdetPol->ClearConstraints();
+
+  //Require at least an HCAL cluster and an E Arm "track":
+  if( PdetCalo->GetNclust() <= 0 || Earm->GetNTracks() <= 0 ) return 0;
+
+  auto HCalClusters = PdetCalo->GetClusters();
+
+  int ibest_hcal = PdetCalo->GetBestClusterIndex();
+
+  double xHCAL = HCalClusters[ibest_hcal]->GetX() + PdetCalo->GetOrigin().X();
+  double yHCAL = HCalClusters[ibest_hcal]->GetY() + PdetCalo->GetOrigin().Y();
+  double zHCAL = PdetCalo->GetOrigin().Z();
   
   double ThetaEarm = Earm->GetThetaGeo(); //E arm is ordinarily on beam left, so this angle SHOULD be positive
   double ThetaParm = Parm->GetThetaGeo(); //P arm is ordinarily on beam right, so this angle SHOULD be negative
@@ -209,177 +256,265 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   TVector3 Parm_xaxis( 0, -1, 0 ); //TRANSPORT system; +x = down
   TVector3 Parm_yaxis = Parm_zaxis.Cross( Parm_xaxis ).Unit();
 
+  //Set HCAL global cluster position. Not yet clear whether and/or how we will use this:
+  fHCALclusterpos_global = Parm->GetHCALdist() * Parm_zaxis +
+    HCalClusters[ibest_hcal]->GetX() * Parm_xaxis +
+    HCalClusters[ibest_hcal]->GetY() * Parm_yaxis; 
+
+  
+  
   //Grab the E arm "track" 
-  if( Earm->GetNTracks() >= 1 ){
-    TClonesArray *EarmTracks = Earm->GetTracks();
-
-    THaTrack *EarmTrack = ( (THaTrack*) (*EarmTracks)[0] );
-
-    double xclust = EarmTrack->GetX();
-    double yclust = EarmTrack->GetY();
-    double ECALdist = Earm->GetECalDist();
-
-    fECAL_energy = EarmTrack->GetEnergy();
+  //  if( Earm->GetNTracks() >= 1 ){
+  TClonesArray *EarmTracks = Earm->GetTracks();
+  
+  THaTrack *EarmTrack = ( (THaTrack*) (*EarmTracks)[0] );
+  
+  double xclust = EarmTrack->GetX();
+  double yclust = EarmTrack->GetY();
+  double ECALdist = Earm->GetECalDist();
+  
+  fECAL_energy = EarmTrack->GetEnergy();
+  
+  //TVector3 ECALpos(xclust,yclust,ECALdist);
+  TVector3 ECALpos_global = xclust * Earm_xaxis + yclust * Earm_yaxis + ECALdist * Earm_zaxis;
+  
+  fECALclusterpos_global = ECALpos_global;
+  
+  Pdet->SetECALpos( ECALpos_global );
+  
+  TVector3 vertex_central(0,0,fTargZ0);
+  
+  // Central ECAL direction:
+  TVector3 ECALdir_global = (ECALpos_global - vertex_central).Unit();
+  
+  double ebeam = fBeam4Vect.E();
+  double Mp = fmass_proton_GeV;
+  
+  Pdet->SetBeamE( ebeam );
+  //Unclear whether and how we'll use this for the back tracker:
+  PdetPol->SetBeamE( ebeam );
+  PdetPol->SetECALpos( ECALpos_global );
     
-    //TVector3 ECALpos(xclust,yclust,ECALdist);
-    TVector3 ECALpos_global = xclust * Earm_xaxis + yclust * Earm_yaxis + ECALdist * Earm_zaxis;
+  fetheta_central = ECALdir_global.Theta();
+  fephi_central = ECALdir_global.Phi();
+  fEprime_central = ebeam/(1.0+ebeam/Mp*(1.0-cos(fetheta_central)));
 
-    fECALclusterpos_global = ECALpos_global;
-    // Central ECAL direction:
-    TVector3 ECALdir_global = ECALpos_global.Unit();
+  double Q2 = 2.0*ebeam*fEprime_central*(1.0-cos(fetheta_central));
+  double tau = Q2/(4.0*Mp*Mp);
+  fPp_central = sqrt(Q2*(1.0+tau)); // = sqrt(nu^2 + 2M nu)
+  fptheta_central = acos( (ebeam-fEprime_central*cos(fetheta_central))/fPp_central );
+  fpphi_central = fephi_central + TMath::Pi();
 
-    double ebeam = fBeam4Vect.E();
-    double Mp = fmass_proton_GeV;
+  // std::cout << "SBSGEMRegionOfInterestModule: multi tracks enabled = "
+  // 	      << Pdet->MultiTracksEnabled() << std::endl;
+  //Get constraint point offsets for centering:
+
+  //Calculate "central" expected proton track regardless of whether we're using the z-vertex binning:
+
+  // This calculation assumes a point target at the origin:
+  TVector3 pnhat_central( sin(fptheta_central)*cos(fpphi_central),sin(fptheta_central)*sin(fpphi_central),cos(fptheta_central));
+  TVector3 ProtonMomentum = fPp_central * pnhat_central;
+  double raytemp[6];
     
-    fetheta_central = ECALdir_global.Theta();
-    fephi_central = ECALdir_global.Phi();
-    fEprime_central = ebeam/(1.0+ebeam/Mp*(1.0-cos(fetheta_central)));
-
-    double Q2 = 2.0*ebeam*fEprime_central*(1.0-cos(fetheta_central));
-    double tau = Q2/(4.0*Mp*Mp);
-    fPp_central = sqrt(Q2*(1.0+tau)); // = sqrt(nu^2 + 2M nu)
-    fptheta_central = acos( (ebeam-fEprime_central*cos(fetheta_central))/fPp_central );
-    fpphi_central = fephi_central + TMath::Pi();
-
-    // std::cout << "SBSGEMRegionOfInterestModule: multi tracks enabled = "
-    // 	      << Pdet->MultiTracksEnabled() << std::endl;
-
-    //Get constraint point offsets for centering:
-    double x0fcp = Parm->GetFrontConstraintX0(0);
-    double y0fcp = Parm->GetFrontConstraintY0(0);
-    double x0bcp = Parm->GetBackConstraintX0(0);
-    double y0bcp = Parm->GetBackConstraintY0(0);
+  TVector3 vdummy(0,0,fTargZ0);
+  TVector3 dummy;
+  Parm->LabToTransport( vdummy, ProtonMomentum, dummy, raytemp );
     
-    if( Pdet->MultiTracksEnabled() ){ //use multiple constraint points:
+  double xptar = raytemp[1];
+  double yptar = raytemp[3];
+  double xtar = raytemp[0];
+  double ytar = raytemp[2];
+    
+  int itrack = fTestTracks->GetLast()+1;
+  THaTrack *Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
+    
+  Ttemp->SetTarget( xtar, ytar, xptar, yptar );
+  Ttemp->SetMomentum( fPp_central );
+    
+  Parm->CalcFpCoords( Ttemp );
+    
+  Ttemp->Set( Ttemp->GetDX(), Ttemp->GetDY(), Ttemp->GetDTheta(), Ttemp->GetDPhi() );
+    
+  double xfp = Ttemp->GetX();
+  double yfp = Ttemp->GetY();
+  double xpfp = Ttemp->GetTheta();
+  double ypfp = Ttemp->GetPhi();
+    
+  //set output variables:
+  fxfp_central = xfp;
+  fyfp_central = yfp;
+  fxpfp_central = xpfp;
+  fypfp_central = ypfp;
 
-      //First clear out any existing constraint points for FT:
+  //Now calculate "central" values of front and back constraints:
+  
+  
+  double x0fcp_front = Parm->GetFrontConstraintX0(0);
+  double y0fcp_front = Parm->GetFrontConstraintY0(0);
+  double x0bcp_front = Parm->GetBackConstraintX0(0);
+  double y0bcp_front = Parm->GetBackConstraintY0(0);
+
+  double x0fcp_back = Parm->GetFrontConstraintX0(1);
+  double y0fcp_back = Parm->GetFrontConstraintY0(1);
+  double x0bcp_back = Parm->GetBackConstraintX0(1);
+  double y0bcp_back = Parm->GetBackConstraintY0(1);
+
+  // Calculate all these once, then use them to set front and back tracker
+  // constraints IFF the "multi-tracks" flag is set: 
+  std::vector<TVector3> FCPfront(fNbinsVertexZ), FCPback(fNbinsVertexZ),
+    BCPfront(fNbinsVertexZ), BCPback(fNbinsVertexZ);
+
+  TVector3 vertex;
+  double zbinwidth = (fVertexZmax - fVertexZmin)/double(fNbinsVertexZ);
+  
+  //if( Pdet->MultiTracksEnabled() ){ //use multiple constraint points:
       
-      TVector3 vertex;
+  //      std::cout << "GEP region of interest vertex scan:" << std::endl;
+  for( int ibin=0; ibin<fNbinsVertexZ; ibin++ ){
+    
+    //Set vertex assumption:
+    vertex.SetXYZ(0.0,0.0,fVertexZmin + (ibin+0.5)*zbinwidth);
+    
+    // std::cout << "(ibin, zvertex)=(" << ibin << ", " << vertex.Z() << ")"
+    // 	  << std::endl;
+    
+    //Now calculate electron scattering angle and the rest of e and p kinematic variables:
+    TVector3 enhat = (ECALpos_global-vertex).Unit();
+    
+    double etheta = enhat.Theta();
+    double ephi = enhat.Phi();
+    double eprime = ebeam/(1.0+ebeam/Mp*(1.0-cos(etheta)));
+    Q2 = 2.0*ebeam*eprime*(1.0-cos(etheta));
+    tau = Q2/(4.0*Mp*Mp);
+    
+    double pp = sqrt(Q2*(1.0+tau));
+    double ptheta = acos( (ebeam-eprime*cos(etheta))/pp );
+    double pphi = ephi + TMath::Pi();
+    
+    //Proton direction (unit vector):
+    TVector3 pnhat(sin(ptheta)*cos(pphi),sin(ptheta)*sin(pphi),cos(ptheta));
+    
+    ProtonMomentum = pp*pnhat;
+    //Next we need to calculate this in SBS (Parm) transport coordinates:
+    
+    //	double raytemp[6];
+    
+    TVector3 tvert; 
+    
+    Parm->LabToTransport( vertex, ProtonMomentum, tvert, raytemp );
+    //	TVector3 pnhat_SBS( pnhat.Dot( Parm_xaxis ), pnhat.Dot( Parm_yaxis ), pnhat.Dot( Parm_zaxis ) );
+    //double xptar_p = pnhat_SBS.X()/pnhat_SBS.Z();
+    //double yptar_p = pnhat_SBS.Y()/pnhat_SBS.Z();
+    
+    xptar = raytemp[1];
+    yptar = raytemp[3];
+    xtar = raytemp[0];
+    ytar = raytemp[2];
+    
+    //Now with these quantities calculated, we are able to use the forward optics matrix to predict the FP track:
+    
+    itrack = fTestTracks->GetLast() + 1;
+    
+    //Initialize with the default constructor (no arguments);
+    Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
+    
+    Ttemp->SetTarget( xtar, ytar, xptar, yptar );
+    Ttemp->SetMomentum( pp );
+    
+    //Track to focal plane:
+    Parm->CalcFpCoords( Ttemp );
+    
+    //Although it doesn't matter that much, set the "regular" FP coordinates based on the "detector" coordinates:
+    Ttemp->Set( Ttemp->GetDX(), Ttemp->GetDY(), Ttemp->GetDTheta(), Ttemp->GetDPhi() );
+    //After the line above, the "det" coordinates are the same as the "regular" coordinates.
+    //We could, of course, just grab the "det" coordinates directly:
+    
+    xfp = Ttemp->GetX();
+    yfp = Ttemp->GetY();
+    xpfp = Ttemp->GetTheta();
+    ypfp = Ttemp->GetPhi();
+    
+    //Now we add front and back constraint points based on these calculated track parameters.
+    // What Z value should we assume for the back constraint point? For the front it's easy.
+    // For the back 
+    
+    double zfcp_front = 0.0;
+    double zbcp_front = Pdet->GetZmaxLayer() + 0.05; //the 0.05 here (5 cm past the back GEM layer) is arbitrary... may need adjustment
 
-      double zbinwidth = (fVertexZmax - fVertexZmin)/double(fNbinsVertexZ);
-      //      std::cout << "GEP region of interest vertex scan:" << std::endl;
-      for( int ibin=0; ibin<fNbinsVertexZ; ibin++ ){
-	
-	//Set vertex assumption:
-	vertex.SetXYZ(0.0,0.0,fVertexZmin + (ibin+0.5)*zbinwidth);
+    FCPfront[ibin].SetXYZ( xfp + xpfp*zfcp_front + x0fcp_front, yfp + ypfp*zfcp_front + y0fcp_front, zfcp_front );
+    BCPfront[ibin].SetXYZ( xfp + xpfp*zbcp_front + x0bcp_front, yfp + ypfp*zbcp_front + y0bcp_front, zbcp_front );
+    
+    double zfcp_back = Parm->GetAnalyzerZ0(); //project to midpoint of analyzer
+    double zbcp_back = zHCAL; //This is the HCAL "origin" z coordinate (about 6.4 m downstream from GEM/optics origin)
 
-	// std::cout << "(ibin, zvertex)=(" << ibin << ", " << vertex.Z() << ")"
-	// 	  << std::endl;
-	
-	//Now calculate electron scattering angle and the rest of e and p kinematic variables:
-	TVector3 enhat = (ECALpos_global-vertex).Unit();
+    FCPback[ibin].SetXYZ( xfp + xpfp*zfcp_back + x0fcp_back, yfp + ypfp*zfcp_back + y0fcp_back, zfcp_back );
+    BCPback[ibin].SetXYZ( xHCAL + x0bcp_back, yHCAL + y0bcp_back, zHCAL );
+    
+    // Pdet->SetFrontConstraintPoint( xfp + x0fcp, yfp + y0fcp, 0.0 );
+    // Pdet->SetBackConstraintPoint( xfp + xpfp * zback + x0bcp, yfp + ypfp*zback + y0bcp, zback );
+    
+    //   //Also add constraint points to diagnostic outputs:
+    // Parm->AddFrontConstraintPoint( xfp + x0fcp, yfp + y0fcp, 0.0 );
+    // Parm->AddBackConstraintPoint( xfp + xpfp * zback + x0bcp, yfp + ypfp*zback + y0bcp, zback );
+    
+    //   fDataValid = true;
+    //Now, IF the multi-track search is enabled (and if the code is written correctly), this should be sufficient
+  } //end loop over z vertex bins 
 
-	double etheta = enhat.Theta();
-	double ephi = enhat.Phi();
-	double eprime = ebeam/(1.0+ebeam/Mp*(1.0-cos(etheta)));
-	Q2 = 2.0*ebeam*eprime*(1.0-cos(etheta));
-	tau = Q2/(4.0*Mp*Mp);
+  if( Pdet->MultiTracksEnabled() ){
 
-	double pp = sqrt(Q2*(1.0+tau));
-	double ptheta = acos( (ebeam-eprime*cos(etheta))/pp );
-	double pphi = ephi + TMath::Pi();
-
-	//Proton direction (unit vector):
-	TVector3 pnhat(sin(ptheta)*cos(pphi),sin(ptheta)*sin(pphi),cos(ptheta));
-
-	TVector3 ProtonMomentum = pp*pnhat;
-	//Next we need to calculate this in SBS (Parm) transport coordinates:
-
-	double raytemp[6];
-
-	TVector3 tvert; 
-	
-	Parm->LabToTransport( vertex, ProtonMomentum, tvert, raytemp );
-	//	TVector3 pnhat_SBS( pnhat.Dot( Parm_xaxis ), pnhat.Dot( Parm_yaxis ), pnhat.Dot( Parm_zaxis ) );
-	//double xptar_p = pnhat_SBS.X()/pnhat_SBS.Z();
-	//double yptar_p = pnhat_SBS.Y()/pnhat_SBS.Z();
-
-	double xptar = raytemp[1];
-	double yptar = raytemp[3];
-	double xtar = raytemp[0];
-	double ytar = raytemp[2];
-
-	//Now with these quantities calculated, we are able to use the forward optics matrix to predict the FP track:
-	
-	int itrack = fTestTracks->GetLast() + 1;
-
-	//Initialize with the default constructor (no arguments);
-	THaTrack *Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
-
-	Ttemp->SetTarget( xtar, ytar, xptar, yptar );
-	Ttemp->SetMomentum( pp );
-
-	//Track to focal plane:
-	Parm->CalcFpCoords( Ttemp );
-
-	//Although it doesn't matter that much, set the "regular" FP coordinates based on the "detector" coordinates:
-	Ttemp->Set( Ttemp->GetDX(), Ttemp->GetDY(), Ttemp->GetDTheta(), Ttemp->GetDPhi() );
-	//After the line above, the "det" coordinates are the same as the "regular" coordinates.
-	//We could, of course, just grab the "det" coordinates directly:
-	
-	double xfp = Ttemp->GetX();
-	double yfp = Ttemp->GetY();
-	double xpfp = Ttemp->GetTheta();
-	double ypfp = Ttemp->GetPhi();
-
-	//Now we add front and back constraint points based on these calculated track parameters.
-	// What Z value should we assume for the back constraint point? For the front it's easy.
-	// For the back 
-
-	double zfront = 0.0;
-	double zback = Pdet->GetZmaxLayer() + 0.05; //the 0.05 here (5 cm past the back GEM layer) is arbitrary... may need adjustment
-	
-	Pdet->SetFrontConstraintPoint( xfp + x0fcp, yfp + y0fcp, 0.0 );
-	Pdet->SetBackConstraintPoint( xfp + xpfp * zback + x0bcp, yfp + ypfp*zback + y0bcp, zback );
-	
-	//Also add constraint points to diagnostic outputs:
-	Parm->AddFrontConstraintPoint( xfp + x0fcp, yfp + y0fcp, 0.0 );
-	Parm->AddBackConstraintPoint( xfp + xpfp * zback + x0bcp, yfp + ypfp*zback + y0bcp, zback );
-	
-	fDataValid = true;
-	//Now, IF the multi-track search is enabled (and if the code is written correctly), this should be sufficient
-      } //end loop over z vertex bins 
-    } else { // end if multi-tracks enabled)
-      //Just do a single constraint point using the point-target assumption at the origin:
-
-      TVector3 pnhat( sin(fptheta_central)*cos(fpphi_central),sin(fptheta_central)*sin(fpphi_central),cos(fptheta_central));
-      TVector3 ProtonMomentum = fPp_central * pnhat;
-      double raytemp[6];
-
-      TVector3 vdummy(0,0,0);
-      TVector3 dummy;
-      Parm->LabToTransport( vdummy, ProtonMomentum, dummy, raytemp );
-
-      double xptar = raytemp[1];
-      double yptar = raytemp[3];
-      double xtar = raytemp[0];
-      double ytar = raytemp[2];
-
-      int itrack = fTestTracks->GetLast()+1;
-      THaTrack *Ttemp = new( (*fTestTracks)[itrack] ) THaTrack();
-
-      Ttemp->SetTarget( xtar, ytar, xptar, yptar );
-      Ttemp->SetMomentum( fPp_central );
-
-      Parm->CalcFpCoords( Ttemp );
-
-      Ttemp->Set( Ttemp->GetDX(), Ttemp->GetDY(), Ttemp->GetDTheta(), Ttemp->GetDPhi() );
-
-      double xfp = Ttemp->GetX();
-      double yfp = Ttemp->GetY();
-      double xpfp = Ttemp->GetTheta();
-      double ypfp = Ttemp->GetPhi();
-
-      double zfront = 0.0;
-      double zback = Pdet->GetZmaxLayer() + 0.05;
-      
-      Pdet->SetFrontConstraintPoint(xfp + x0fcp, yfp + y0fcp, 0.0 );
-      Pdet->SetBackConstraintPoint( xfp+xpfp*zback + x0bcp, yfp+ypfp*zback + y0bcp, zback );
-
-      fDataValid = true;
-      
+    for( int ibin=0; ibin<fNbinsVertexZ; ibin++ ){
+      Pdet->SetFrontConstraintPoint( FCPfront[ibin] );
+      Pdet->SetBackConstraintPoint( BCPfront[ibin] );
+      //The following lines are just filling diagnostic output variables:
+      //Parm->AddFrontConstraintPoint( FCPfront[ibin] );
+      //Parm->AddBackConstraintPoint( BCPfront[ibin] );
     }
+    
+  } else { // end if multi-tracks enabled)
+      
+    double zfront = 0.0;
+    double zback = Pdet->GetZmaxLayer() + 0.05;
+
+    TVector3 fcptemp( fxfp_central + fxpfp_central*zfront + x0fcp_front, fyfp_central + fypfp_central*zfront + y0fcp_front, zfront );
+    TVector3 bcptemp( fxfp_central + fxpfp_central*zback + x0bcp_front, fyfp_central+fypfp_central*zback + y0bcp_front, zback );
+    
+    Pdet->SetFrontConstraintPoint( fcptemp );
+    Pdet->SetBackConstraintPoint( bcptemp );
+
+    // Parm->AddFrontConstraintPoint( fcptemp );
+    // Parm->AddBackConstraintPoint( bcptemp );
   }
+
+  if( PdetPol->MultiTracksEnabled() ){ //Then do a z-vertex scan:
+    for( int ibin=0; ibin<fNbinsVertexZ; ibin++ ){
+      PdetPol->SetFrontConstraintPoint( FCPback[ibin] );
+      PdetPol->SetBackConstraintPoint( BCPback[ibin] );
+
+      //Save these for later; after all tracking decisions are finalized
+      //Parm->AddFrontConstraintPoint( FCPback[ibin] );
+      //Parm->AddBackConstraintPoint( BCPback[ibin] );
+    }
+  } else {
+    double zfront = Parm->GetAnalyzerZ0();
+    double zback = zHCAL;
+
+    TVector3 fcptemp( fxfp_central + fxpfp_central*zfront + x0fcp_back,
+		      fyfp_central + fypfp_central*zfront + y0fcp_back,
+		      zfront );
+    TVector3 bcptemp( fxfp_central + fxpfp_central*zback + x0bcp_back,
+		      fyfp_central + fypfp_central*zback + y0bcp_back,
+		      zback );
+    PdetPol->SetFrontConstraintPoint( fcptemp ); 
+    PdetPol->SetBackConstraintPoint( bcptemp );
+
+    //Save these for later; after all tracking decisions are finalized.
+    //Parm->AddFrontConstraintPoint( fcptemp );
+    //Parm->AddBackConstraintPoint( bcptemp );
+    
+  }
+
+  fDataValid = true;
   
   return 0;
 }

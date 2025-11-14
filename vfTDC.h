@@ -1,9 +1,9 @@
-#ifndef Podd_VETROCcdetModule
-#define Podd_VETROCcdetModule
+#ifndef Podd_vfTDCModule
+#define Podd_vfTDCModule
 
 /////////////////////////////////////////////////////////////////////
 //
-//   VETROCcdetModule
+//   vfTDCModule
 //
 /////////////////////////////////////////////////////////////////////
 
@@ -14,13 +14,13 @@
 
 namespace Decoder {
 
-  class VETROCcdetModule : public VmeModule {
+  class vfTDCModule : public VmeModule {
 
   public:
 
-    VETROCcdetModule() : slot_data(nullptr) {}
-    VETROCcdetModule(Int_t crate, Int_t slot);
-    virtual ~VETROCcdetModule() = default;
+    vfTDCModule() : slot_data(nullptr) {}
+    vfTDCModule(Int_t crate, Int_t slot);
+    virtual ~vfTDCModule() = default;
 
     using VmeModule::GetData;
     using VmeModule::Init;
@@ -59,7 +59,7 @@ namespace Decoder {
     } tdc_data;
 
     static TypeIter_t fgThisType;
-    ClassDef(VETROCcdetModule,0)  //  VETROCcdetModule of a module; make your replacements
+    ClassDef(vfTDCModule,0)  //  vfTDCModule of a module; make your replacements
 
       };
 

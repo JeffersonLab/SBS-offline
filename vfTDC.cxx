@@ -1,4 +1,4 @@
-/** \class VETROCcdet Module
+/** \class vfTDC Module
     \author Stephen Wood
     \author Simona Malace
     \author Brad Sawatzky
@@ -8,7 +8,7 @@
     THaCodaDecoder.C in podd 1.5.   (Written by S. Malace, modified by B. Sawatzky)
 */
 
-#include "VETROCcdet.h"
+#include "vfTDC.h"
 #include "THaSlotData.h"
 #include "jlabdec.h"
 #include <iostream>
@@ -23,27 +23,27 @@ namespace Decoder {
   const UInt_t NTDCCHAN = 256;
   const UInt_t MAXHIT = 100;
 
-  Module::TypeIter_t VETROCcdetModule::fgThisType =
-    DoRegister( ModuleType( "Decoder::VETROCcdetModule" , 527 ));
+  Module::TypeIter_t vfTDCModule::fgThisType =
+    DoRegister( ModuleType( "Decoder::vfTDCModule" , 527 ));
 
-  VETROCcdetModule::VETROCcdetModule(Int_t crate, Int_t slot)
+  vfTDCModule::vfTDCModule(Int_t crate, Int_t slot)
     : VmeModule(crate, slot), fNumHits(NTDCCHAN), fTdcData(NTDCCHAN*MAXHIT),
       fTdcOpt(NTDCCHAN*MAXHIT), slot_data(nullptr)
   {
-    VETROCcdetModule::Init();
+    vfTDCModule::Init();
   }
 
-  void VETROCcdetModule::Init() {
+  void vfTDCModule::Init() {
     VmeModule::Init();
     fNumHits.resize(NTDCCHAN);
     fTdcData.resize(NTDCCHAN*MAXHIT);
     fTdcOpt.resize(NTDCCHAN*MAXHIT);
     Clear();
     IsInit = true;
-    fName = "VETROCcdet Module";
+    fName = "vfTDC Module";
   }
 
-  UInt_t VETROCcdetModule::LoadSlot( THaSlotData* sldat, const UInt_t* evbuffer,
+  UInt_t vfTDCModule::LoadSlot( THaSlotData* sldat, const UInt_t* evbuffer,
                                    const UInt_t *pstop) {
     // This is a simple, default method for loading a slot
     const UInt_t *p = evbuffer;
@@ -58,7 +58,7 @@ namespace Decoder {
     return fWordsSeen;
   }
 
-  UInt_t VETROCcdetModule::LoadSlot( THaSlotData* sldat, const UInt_t* evbuffer,
+  UInt_t vfTDCModule::LoadSlot( THaSlotData* sldat, const UInt_t* evbuffer,
                                    UInt_t pos, UInt_t len ) {
     // Fill data structures of this class, utilizing bank structure
     // Read until out of data or until decode says that the slot is finished
@@ -72,8 +72,8 @@ namespace Decoder {
     return fWordsSeen;
   }
 
-  Int_t VETROCcdetModule::Decode(const UInt_t *p) {
-    //std::cout << "In this VETROCcdetModule::Decode()" << std::endl;
+  Int_t vfTDCModule::Decode(const UInt_t *p) {
+    //std::cout << "In this vfTDCModule::Decode()" << std::endl;
     Int_t glbl_trl = 0;
     UInt_t data_type_cont =(*p >> 31) & 0x1; 
     UInt_t data_type_def =(*p >> 27) & 0xF; 
@@ -114,7 +114,7 @@ namespace Decoder {
 	if (tdc_data.glb_hdr_slno == fSlot) {
 #ifdef WITH_DEBUG
 	if (fDebugFile)
-	  *fDebugFile << "VETROCcdetModule:: Block HEADER >> data = " 
+	  *fDebugFile << "vfTDCModule:: Block HEADER >> data = " 
 		      << hex << *p << " >> event number = " << dec 
 		      <<  << " >> slot number = "  
 		      << tdc_data.glb_hdr_slno << endl;
@@ -209,7 +209,7 @@ namespace Decoder {
 
 #ifdef WITH_DEBUG
 	if (fDebugFile)
-	  *fDebugFile << "VETROCcdetModule:: MEASURED DATA >> data = " 
+	  *fDebugFile << "vfTDCModule:: MEASURED DATA >> data = " 
 		      << hex << *p << " >> channel = " << dec
 		      << tdc_data.chan << " >> edge = "
 		      << tdc_data.opt  << " >> raw time = "
@@ -219,7 +219,7 @@ namespace Decoder {
 	 //if (tdc_data.ev_hdr_slno == 10 && tdc_data.chan >= 96 && tdc_data.chan <= 112) {
 	 /*if (tdc_data.ev_hdr_slno >= 20) {
         	 //std::cout << std::endl;
-		 std::cout << "VETROCcdetModule:: MEASURED DATA >> data = " 
+		 std::cout << "vfTDCModule:: MEASURED DATA >> data = " 
 	 	      << hex << *p << " >> channel = " << dec
 	 	      << tdc_data.chan << " >> slot = " << tdc_data.ev_hdr_slno << " >> edge = "
 	 	      << tdc_data.opt  << " >> status = "
@@ -243,33 +243,33 @@ namespace Decoder {
     case 15 : // buffer alignment filler word; skip
       break;
     default:	// unknown word
-	cout << "unknown word for VETROCcdetModule: " << hex << (*p) << dec << endl;
+	cout << "unknown word for vfTDCModule: " << hex << (*p) << dec << endl;
 	cout << "according to global header ev. nr. is: " << " " << tdc_data.glb_hdr_evno << endl;
 	break;
     }
     return glbl_trl;  
   }
 
-  UInt_t VETROCcdetModule::GetData( UInt_t chan, UInt_t hit ) const {
+  UInt_t vfTDCModule::GetData( UInt_t chan, UInt_t hit ) const {
     if( hit >= fNumHits[chan] ) return 0;
     UInt_t idx = chan * MAXHIT + hit;
     if( idx > MAXHIT * NTDCCHAN ) return 0;
     return fTdcData[idx];
   }
 
-  UInt_t VETROCcdetModule::GetOpt( UInt_t chan, UInt_t hit ) const {
+  UInt_t vfTDCModule::GetOpt( UInt_t chan, UInt_t hit ) const {
     if( hit >= fNumHits[chan] ) return 0;
     UInt_t idx = chan * MAXHIT + hit;
     if( idx > MAXHIT * NTDCCHAN ) return 0;
     return fTdcOpt[idx];
   }
   
-  void VETROCcdetModule::Clear( Option_t* ) {
+  void vfTDCModule::Clear( Option_t* ) {
     fNumHits.assign(NTDCCHAN, 0);
     fTdcData.assign(NTDCCHAN * MAXHIT, 0);
   }
 }
 
-ClassImp(Decoder::VETROCcdetModule)
+ClassImp(Decoder::vfTDCModule)
 
 

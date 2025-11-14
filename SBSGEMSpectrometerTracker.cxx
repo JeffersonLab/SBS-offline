@@ -31,6 +31,10 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fNegSignalStudy = false;
   
   fIsSpectrometerTracker = true; //used by tracker base
+  //fIsGEPFrontTracker = false;
+  fUseElasticConstraint = false;
+  fElasticConstraintIsInitialized = false;
+
   fUseOpticsConstraint = false;
 
   fUseSlopeConstraint = false;
@@ -38,6 +42,14 @@ SBSGEMSpectrometerTracker::SBSGEMSpectrometerTracker( const char* name, const ch
   fTestTrackInitialized = false;
 
   fTestTracks = new TClonesArray("THaTrack",1);
+
+  //These are only used if fUseElasticConstraint is true;
+  fDPP0 = 0.0;
+  fDPPcut = 0.2;
+  fdthtar0 = 0.0;
+  fdthtarcut = 0.05;
+  fdphtar0 = 0.0;
+  fdphtarcut = 0.05;
 }
 
 SBSGEMSpectrometerTracker::~SBSGEMSpectrometerTracker(){
@@ -121,6 +133,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
   int usetrigtime = fUseTrigTime ? 1 : 0;
 
+  int useelasticconstraint = fUseElasticConstraint ? 1 : 0;
+  
   int multitracksearch = fMultiTrackSearch ? 1 : 0;
 
   int nontrackmode = fNonTrackingMode ? 1 : 0;
@@ -133,6 +147,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "modules",  &modconfig, kString, 0, 0, 1 }, //read the list of modules:
     { "pedfile",  &fpedfilename, kString, 0, 1 },
     { "cmfile",  &fcmfilename, kString, 0, 1 },
+    { "rawADCrangefile", &frawADCrangefilename, kString, 0, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
@@ -153,6 +168,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
+    { "dump_rawADCrange", &fDumpRawADCrange, kInt, 0, 1, 1 },
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
     { "xptar_min", &fxptarmin_track, kDouble, 0, 1, 1},
@@ -190,6 +206,13 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "cuttrackt0", &fCutTrackT0, kDouble, 0, 1, 1 },
     { "multitracksearch", &multitracksearch, kInt, 0, 1, 1},
     { "nontrackingmode", &nontrackmode, kInt, 0, 1, 1},
+    { "useelasticconstraint", &useelasticconstraint, kInt, 0, 1, 1 },
+    { "dpp0", &fDPP0, kDouble, 0, 1, 1 },
+    { "dppcut", &fDPPcut, kDouble, 0, 1, 1},
+    { "dthtar0", &fdthtar0, kDouble, 0, 1, 1},
+    { "dthtarcut", &fdthtarcut, kDouble, 0, 1, 1},
+    { "dphtar0", &fdphtar0, kDouble, 0, 1, 1},
+    { "dphtarcut", &fdphtarcut, kDouble, 0, 1, 1},
     {0}
   };
 
@@ -303,6 +326,8 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     modcounter++;
   }
 
+  fUseElasticConstraint = useelasticconstraint > 0;
+  
   if( !fModulesInitialized ) fModulesInitialized = true;
 
   //Define the number of modules from the "modules" string:
@@ -349,8 +374,14 @@ void SBSGEMSpectrometerTracker::Clear( Option_t *opt ){
   SBSGEMTrackerBase::Clear();
 
   ClearConstraints();
+
+  //The following lines were moved here from ClearConstraints() called above so that these lines only get invoked once per event. In some use cases, the "ClearConstraints()" method above is invoked more than once per event (and potentially after the "ECALpos" gets initialized for the elastic constraint).
+  fECALpos.SetXYZ(kBig,kBig,kBig);
+  fElasticConstraintIsInitialized = false;
   
   //fTrigTime = 0.0;
+
+  fclustering_done = false;
   
   for( auto& module: fModules ) {
     module->Clear(opt);
@@ -565,6 +596,27 @@ Int_t SBSGEMSpectrometerTracker::End( THaRunBase* run ){
 
     
   }
+
+  if( fDumpRawADCrange ){ //Print out raw ADC min/max values by APV card;
+    TString fnametemp;
+    fnametemp.Form( "RawADCrange_%s_%s_run%d.txt",
+		    GetApparatus()->GetName(),
+		    GetName(), runnum );
+    
+    frawADCrangefile.open( fnametemp.Data() );
+
+    TString sdate = run->GetDate().AsString();
+    sdate.Prepend("#");
+    
+    frawADCrangefile << sdate << std::endl;
+    frawADCrangefile << "# copy into $DB_DIR/gemped to use these raw ADC min/max values in analysis of full readout events" << std::endl;
+    frawADCrangefile << "# Format = crate, slot, mpd/fiber, adc_ch, raw ADC min, raw ADC max" << std::endl;
+    
+    for( auto& module : fModules ){
+      module->PrintRawADCrange( frawADCrangefile );
+    }
+    frawADCrangefile.close();
+  }
   
   return 0;
 }
@@ -768,6 +820,9 @@ Int_t SBSGEMSpectrometerTracker::CoarseTrack( TClonesArray& tracks ){
     //std::cout << "SBSGEMSpectrometerTracker::CoarseTrack...";
     //If no external constraints on the track search region are being used/defined, we do the track-finding in CoarseTrack (before processing all the THaNonTrackingDetectors in the parent spectrometer):
     //std::cout << "calling find_tracks..." << std::endl;
+    //Add a separate call to "hit_reconstruction" here:
+    if( !fclustering_done ) hit_reconstruction();
+    
     if( !ftracking_done ) find_tracks();
 
     for( int itrack=0; itrack<fNtracks_found; itrack++ ){
@@ -803,6 +858,8 @@ Int_t SBSGEMSpectrometerTracker::FineTrack( TClonesArray& tracks ){
     if( fConstraintInitialized ){
       // std::cout << "[SBSGEMSpectrometerTracker::FineTrack()]: name = "
       // 		<< GetName() << std::endl;
+
+      if( !fclustering_done ) hit_reconstruction();
       
       if( !ftracking_done ) find_tracks();
 
@@ -885,7 +942,72 @@ bool SBSGEMSpectrometerTracker::PassedOpticsConstraint( TVector3 track_origin, T
 	  fabs( yptemp - ypfpforward_temp - fdypfp0 ) <= fdypfpcut;
       }
     }
-    return goodtarget && goodtgtfp;
+
+    bool elastic_cut = true;
+    if( goodtarget && fUseElasticConstraint && fElasticConstraintIsInitialized && !coarsecheck ){ //This is the place to implement elastic ep constr; it is assumed here that we are detecting protons and this is the GEP front tracker:
+      //double thspec = spec->GetThetaGeo();
+
+      //Set x and y beam positions to zero since they aren't yet calibrated:
+      TVector3 vertextemp(0,0,trtemp->GetVertexZ());
+      TVector3 enhat = (fECALpos - vertextemp).Unit();
+
+      //      std::cout << "Vertex = " << std::endl;
+      //vertextemp.Print();
+
+      // std::cout << std::endl << "edir = " << std::endl;
+      //enhat.Print();
+      
+      double Mp = fProtonMass;
+      double ebeam = fBeamE;
+      double etheta = enhat.Theta();
+      double ephi = enhat.Phi();
+
+      //      std::cout << "beam energy = " << ebeam << std::endl;
+      
+      double Eprime_eth = ebeam/(1.0+ebeam/Mp*(1.0-cos(etheta)));
+      double nu_eth = ebeam-Eprime_eth;
+      double Q2_eth = 2.0*Mp*nu_eth;
+      double pp_eth = sqrt(pow(nu_eth,2)+Q2_eth);
+
+      double ptheta_eth = acos( (ebeam-Eprime_eth*cos(etheta))/pp_eth );
+      double pphi_eph = ephi + TMath::Pi();
+
+      TVector3 pnhat_e( sin(ptheta_eth)*cos(pphi_eph),
+			sin(ptheta_eth)*sin(pphi_eph),
+			cos(ptheta_eth) );
+
+      //      std::cout << "pdir = " << std::endl;
+      //pnhat_e.Print();
+      
+      TVector3 vdummy;
+      double raytemp[6];
+      
+      spec->LabToTransport( vertextemp, pp_eth*pnhat_e, vdummy, raytemp );
+
+      double pthtar_e = raytemp[1];
+      double pphtar_e = raytemp[3];
+
+      // std::cout << "(pthtar_e, pphtar_e) = (" << pthtar_e <<
+      // 	", " << pphtar_e << ")" << std::endl;
+      
+      
+      double ptheta = trtemp->GetPvect().Theta();
+
+      double pp_ptheta = 2.0*Mp*ebeam*(Mp+ebeam)*cos(ptheta)/(pow(Mp,2)+2.0*Mp*ebeam + pow(ebeam*sin(ptheta),2));
+
+      double dpptest = trtemp->GetP()/pp_ptheta - 1.0;
+      double dthtartest = xptartemp - pthtar_e;
+      double dphtartest = yptartemp - pphtar_e;
+
+      elastic_cut = fabs( dpptest - fDPP0 ) <= fDPPcut &&
+	fabs( dthtartest - fdthtar0 ) <= fdthtarcut &&
+	fabs( dphtartest - fdphtar0 ) <= fdphtarcut;
+
+     
+      
+    }
+    
+    return goodtarget && goodtgtfp && elastic_cut;
   } else {
     return false;
   }

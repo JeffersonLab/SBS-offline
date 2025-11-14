@@ -44,6 +44,16 @@ public:
   void AddBackConstraintPoint( TVector3 cpoint );
   void AddBackConstraintPoint( double x, double y, double z );
 
+  void AddFrontConstraintPoint_FT( TVector3 cpoint );
+  void AddFrontConstraintPoint_FT( double x, double y, double z );
+  void AddBackConstraintPoint_FT( TVector3 cpoint );
+  void AddBackConstraintPoint_FT( double x, double y, double z );
+
+  void AddFrontConstraintPoint_FPP( TVector3 cpoint );
+  void AddFrontConstraintPoint_FPP( double x, double y, double z );
+  void AddBackConstraintPoint_FPP( TVector3 cpoint );
+  void AddBackConstraintPoint_FPP( double x, double y, double z );
+  
   Double_t GetFrontConstraintWidthX(int icp=0);
   Double_t GetFrontConstraintWidthY(int icp=0);
   Double_t GetBackConstraintWidthX(int icp=0);
@@ -55,7 +65,21 @@ public:
 
   Bool_t IsPolarimeter() const { return fPolarimeterMode; }
   
-  
+  Double_t GetAtimeHCAL() const { return fHCALtime_ADC; }
+  Double_t GetTDCtimeHCAL() const { return fHCALtime_TDC; }
+
+  Double_t GetHCALdist() const { return fHCALdist; }
+
+  Bool_t GetGEPtrackingMode() const { return fGEPtrackingMode; }
+  Int_t GetGEPtrackingFlag() const { return fGEPtrackingFlag; }
+
+  Double_t GetAnalyzerZ0() const { return fAnalyzerZ0; }
+  Double_t GetAnalyzerThick() const { return fAnalyzerThick; }
+
+  //Utility method to calculate theta, phi, sclose, zclose between two generic straight-lines in 3D space:
+  void CalcScatParams( TVector3 pos1, TVector3 dir1, TVector3 pos2, TVector3 dir2,
+		       double &theta, double &phi,
+		       double &sclose, double &zclose ); 
   
 protected:
   virtual Int_t ReadDatabase( const TDatime& date );
@@ -103,6 +127,28 @@ protected:
   std::vector<double> fBackConstraintY;
   std::vector<double> fBackConstraintZ;
 
+  //Also define these separately for front and back trackers to help analysis;
+  // We'll keep the ones above for backwards compatibility with existing scripts that use them and
+  // for a "non-polarimeter" context:
+  std::vector<double> fFrontConstraintX_FT;
+  std::vector<double> fFrontConstraintY_FT;
+  std::vector<double> fFrontConstraintZ_FT;
+  std::vector<double> fBackConstraintX_FT;
+  std::vector<double> fBackConstraintY_FT;
+  std::vector<double> fBackConstraintZ_FT;
+
+  std::vector<double> fFrontConstraintX_FPP;
+  std::vector<double> fFrontConstraintY_FPP;
+  std::vector<double> fFrontConstraintZ_FPP;
+  std::vector<double> fBackConstraintX_FPP;
+  std::vector<double> fBackConstraintY_FPP;
+  std::vector<double> fBackConstraintZ_FPP;
+
+  //I know this is lazy, but I'm going to store HCAL ADC and TDC times for the "best" cluster as data members here to make the "coincidence module" easier to writ:
+
+  Double_t fHCALtime_ADC;
+  Double_t fHCALtime_TDC;
+  
   Double_t fHCALtheta_n; //xHCAL/HCALdist
   Double_t fHCALphi_n; //yHCAL/HCALdist
 
@@ -162,7 +208,10 @@ protected:
   
   Double_t fAnalyzerZ0; //Z of midpoint of analyzer. 
   Double_t fAnalyzerThick; //Total thickness of analyzer
-
+  Double_t fSigmaZclose; // resolution of Z close ~probably about 1 mm/sin(theta)
+  
+  Double_t fMaxFPPscatteringAngle; //for use in dynamic constraint point calculation
+  
   int fNbinsZBackTrackerConstraint; // we'll divide the analyzer thickness for the back polarimeter tracker into bins for the constraint definition
   
   //Also include (optional) forward optics model to aid in false track rejection. 
@@ -180,8 +229,8 @@ protected:
   std::vector<int> f_fol;
   std::vector<int> f_fom;
 
-  Bool_t fGEPtrackingMode; //Flag to turn on GEP tracking mode. 
-
+  Bool_t fGEPtrackingMode; //Boolean flag to turn on GEP tracking mode. 
+  Int_t fGEPtrackingFlag; //Integer flag to control the behavior of the GEP tracking algorithm
   
   
   ClassDef(SBSEArm,0) // BigBite spectrometer

@@ -449,11 +449,11 @@ Int_t SBSBigBite::ReadDatabase( const TDatime& date )
 
     for( unsigned int term=0; term<nterms; term++ ){
       fb_ETOF[term] = TOF_param[6*term];
-      f_oi_ETOF[term] = int(TOF_param[6*term+1]);
-      f_oj_ETOF[term] = int(TOF_param[6*term+2]);
+      f_om_ETOF[term] = int(TOF_param[6*term+1]);
+      f_ol_ETOF[term] = int(TOF_param[6*term+2]);
       f_ok_ETOF[term] = int(TOF_param[6*term+3]);
-      f_ol_ETOF[term] = int(TOF_param[6*term+4]);
-      f_om_ETOF[term] = int(TOF_param[6*term+5]);
+      f_oj_ETOF[term] = int(TOF_param[6*term+4]);
+      f_oi_ETOF[term] = int(TOF_param[6*term+5]);
     }
     
   }
@@ -661,7 +661,7 @@ Int_t SBSBigBite::DefineVariables( EMode mode ){
     { nullptr }
   };
   DefineVarsFromList( beamtrackvars, mode );
-    
+  
   RVarDef constraintvars[] = {
     { "x_fcp", "front track constraint x", "fFrontConstraintX" },
     { "y_fcp", "front track constraint y", "fFrontConstraintY" },

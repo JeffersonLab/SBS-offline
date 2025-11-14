@@ -33,6 +33,10 @@ public:
   //Need to add some public "get" methods for constraint point information:
   TVector3 GetFrontConstraintPoint(int icp=0);
   TVector3 GetBackConstraintPoint(int icp=0);
+  //We currently don't contemplate having different numbers of front and back constraint points; i.e., they are always
+  //stored in pairs, but let's define separate Get() methods for the sizes of both front and back constraint point arrays:
+  Int_t GetNumConstraintPointsFront() const { return fConstraintPoint_Front.size(); }
+  Int_t GetNumConstraintPointsBack() const { return fConstraintPoint_Back.size(); }
   
   void SetFrontConstraintPoint( TVector3 fcp );
   void SetBackConstraintPoint( TVector3 bcp );
@@ -79,6 +83,8 @@ public:
 
   virtual bool PassedOpticsConstraint( TVector3 track_origin, TVector3 track_direction, bool coarse=false );
 
+  
+  
   bool CheckConstraint( double xtr, double ytr, double xptr, double yptr, bool coarse=false );
   
   inline void SetPedestalMode( int pm=1 ){ fPedestalMode = ( pm != 0 ); fSubtractPedBeforeCommonMode = ( pm < 0 ); fPedMode_DBoverride = true; }
@@ -86,6 +92,8 @@ public:
   inline void SetMakeCommonModePlots( int cmplots=0 ){ fCommonModePlotsFlag = cmplots; fCommonModePlotsFlagIsSet = true; }
 
   inline void SetNonTrackingMode( int ntm=1 ){ fNonTrackingMode = ( ntm != 0 ); fNonTrackingMode_DBoverride = true; }
+
+  bool GetNonTrackingMode() const { return fNonTrackingMode; }
   
   //Need to add some public "getter" and "setter" methods for the polarimeter-mode analysis:
   int GetNtracks() const { return fNtracks_found; }
@@ -104,9 +112,35 @@ public:
   double GetZmaxLayer() const { return fZmaxLayer; };
 
   //We need to be able to check that front and back constraint points are initialized:
-  bool FrontConstraintIsIinitialized() const { return fConstraintPoint_Front_IsInitialized; };
+  bool FrontConstraintIsInitialized() const { return fConstraintPoint_Front_IsInitialized; };
   bool BackConstraintIsInitialized() const { return fConstraintPoint_Back_IsInitialized; };
   bool ConstraintIsInitialized() const { return fConstraintInitialized; }
+
+  //bool IsGEPFrontTracker() const { return fIsGEPFrontTracker; }
+  bool UseElasticConstraint() const { return fUseElasticConstraint; }
+  bool ElasticConstraintIsInitialized() const { return fElasticConstraintIsInitialized; }
+
+  //  void SetGEPFrontTracker( bool b ){ fIsGEPFrontTracker = b; }
+  void SetUseElasticConstraint( bool b ){ fUseElasticConstraint = b; }
+  
+  void SetECALpos( TVector3 pos ){ fECALpos = pos; fElasticConstraintIsInitialized = true; }
+  
+  //void SetECALpos( TVector3 pos ){ fECALpos = pos; }
+  //These are constants to be set via database:
+  void SetBeamE( double E ){ fBeamE = E; }
+  void SetDpp0( double dpp0){ fDPP0 = dpp0; }
+  void SetDppCut( double dppcut ){ fDPPcut = dppcut; }
+  void SetDthtar0( double dthtar0 ){ fdthtar0 = dthtar0; }
+  void SetDthtarCut( double dthtarcut ){ fdthtarcut = dthtarcut; }
+  void SetDphtar0( double dphtar0 ){ fdphtar0 = dphtar0; }
+  void SetDphtarCut( double dphtarcut ){ fdphtarcut = dphtarcut; }
+  void SetDppCut( double dpp0, double dppcut ){ fDPP0 = dpp0; fDPPcut = dppcut; }
+  void SetDthtarCut( double dthtar0, double dthtarcut ){ fdthtar0 = dthtar0; fdthtarcut = dthtarcut; }
+  void SetDphtarCut( double dphtar0, double dphtarcut ){ fdphtar0 = dphtar0; fdphtarcut = dphtarcut; }
+
+  //1D and 2D clustering (need to make this public): 
+  void hit_reconstruction();
+  bool ClusteringIsDone() const { return fclustering_done; }
   
 protected:
   SBSGEMTrackerBase(); //only derived classes can construct me.
@@ -115,6 +149,9 @@ protected:
   bool fclustering_done;
   bool ftracking_done;
 
+  //  bool fIsGEPFrontTracker;
+  bool fUseElasticConstraint;
+  bool fElasticConstraintIsInitialized;
   bool fIsSpectrometerTracker; //default to true:
   bool fIsPolarimeterTracker;
   bool fMultiTrackSearch; //default to false!
@@ -122,8 +159,6 @@ protected:
   
   bool fNegSignalStudy;
 
-  //1D and 2D clustering: 
-  void hit_reconstruction();
   //track-finding: 
   void find_tracks();
 
@@ -630,13 +665,19 @@ protected:
   bool fEfficiencyInitialized;
   bool fMakeEfficiencyPlots; //default to TRUE
   bool fDumpGeometryInfo; //default to FALSE
+   //Flag to dump raw ADC range to file in format required by database:
+  Bool_t fDumpRawADCrange; //dump measured range of raw ADC values by APV card in full readout events to a file that can be copy-pasted in the database
   
   // output files for pedestal info when running in pedestal mode:
-  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq, fCMbiasfile_dbase; 
-  // input files for (optional) loading of pedestals from database:
-
+  std::ofstream fpedfile_dbase, fCMfile_dbase, fpedfile_daq, fCMfile_daq, fCMbiasfile_dbase;
+  //output file for writing raw ADC range information by APV card in the format required by the custom loading method:
+  std::ofstream frawADCrangefile;
+  
+  // input file names for (optional) loading of pedestals from database:
+  
   std::string fpedfilename;
   std::string fcmfilename;
+  std::string frawADCrangefilename;
 
   //Trigger time TDDC channel information to correct GEM hit times for trigger time (if applicable):
   Double_t fTrigTime; //trigger time 
@@ -655,6 +696,20 @@ protected:
   Bool_t fPurgeHitsFlag; //0 = normal behavior, purge only 2D hit combinations used on tracks. 1 = purge all 2D hit candidates containing the 1D cluster on track: 
 
   //Double_t fRefTime_offset;
+
+  Bool_t fUseConstraintPenaltyTerm; //Include "penalty term" for chi2 calculation based on constraint points:
+  Double_t fConstraintPenaltySigmaX,fConstraintPenaltySigmaY,fConstraintPenaltySigmaXp, fConstraintPenaltySigmaYp;
+
+  //Let's get a bit more direct about this:
+  TVector3 fECALpos; //electron cluster position in global Hall coordinates
+  Double_t fBeamE;
+
+  const Double_t fProtonMass = 0.93827208816; //PDG value as of 4/8/2025
+  // limits in exclusivity cut variables to select
+  // elastically scattered proton tracks in track-finding algorithm:
+  Double_t fDPP0, fDPPcut; //limits on p/pel(pth)-1
+  Double_t fdthtar0, fdthtarcut; 
+  Double_t fdphtar0, fdphtarcut; //limits on pphi - pphi(ephi)
   
 };
 

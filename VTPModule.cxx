@@ -155,7 +155,7 @@ void VTPModule::Init()
 }
 
 //_____________________________________________________________________________
-Int_t VTPModule::Decode( const UInt_t* pdat )
+  Int_t VTPModule::Decode( const UInt_t* pdat )
 {
   assert(pdat);
   uint32_t data = *pdat;
@@ -327,15 +327,10 @@ void VTPModule::DecodeCluster( UInt_t pdat, uint32_t data_type_id )
   uint32_t cn = 0;
   uint32_t cx = 0;
   uint32_t cy = 0;
-  uint32_t det_id = 0;
-  
   if( data_type_id )  { //  cluster word 1
-    det_id = (pdat >> 23) & 0xF; // 12: ECAL 11: HCAL
+    uint32_t det_id = (pdat >> 23) & 0xF; // 12: ECAL 13: HCAL
     vtp_cluster_data.det_id = det_id;
-    if(det_id == HCAL)
-      ce = (pdat >> 0) & 0xFFFF; //  cluster energy, mask 16 bits
-    else // ECAL
-      ce = (pdat >> 0) & 0x3FFF; //  cluster energy, mask 14 bits      
+      ce = (pdat >> 0) & 0x3FFF; //  cluster energy, mask 14 bits
     vtp_cluster_data.energy.push_back( ce ); 
     
 #ifdef WITH_DEBUG
@@ -347,8 +342,8 @@ void VTPModule::DecodeCluster( UInt_t pdat, uint32_t data_type_id )
 
   }
   else { //  ckuster word 2
-
-    if(det_id == HCAL) {
+ 
+    if(vtp_cluster_data.det_id == HCAL) {
       cx = (pdat >> 20) & 0xF;    //  cluster x (col) coordinate, mask 4 bits
       cy = (pdat >> 15) & 0x1F;   //  cluster y (row) coordinate, mask 5 bits
       cn = (pdat >> 11) & 0xF;    //  number of hits in the cluster, mask 4 bits

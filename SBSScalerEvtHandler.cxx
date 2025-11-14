@@ -320,7 +320,7 @@ Int_t SBSScalerEvtHandler::ReadDatabase(const TDatime& date )
     string myStr;
     vector<string> bcm_names = Podd::vsplit(bcm_namelist);
     for(Int_t i=0;i<fNumBCMs;i++) {
-       myStr = "sbs.bcm." + bcm_names[i] + ".current"; 
+       myStr = fName + ".bcm." + bcm_names[i] + ".current"; 
        fBCM_Name.push_back(myStr);
        fBCM_delta_charge[i]=0.;
     }
