@@ -53,7 +53,7 @@ SBSBBTotalShower::SBSBBTotalShower( const char* name,
                                    const char* description,
                                    THaApparatus* apparatus ) :
   SBSCalorimeter(name,description,apparatus),
-  fShower(nullptr), fPreShower(nullptr),fMaxDx(0.4), fMaxDy(0.4)
+  fShower(nullptr), fPreShower(nullptr),fMaxDx(0.4), fMaxDy(0.4), fBestClusterSelectionFlag(0)
   //fE(0.0), fX(0.0), fY(0.0)
 {
     // Constructor. With this method, the subdetectors are created using
@@ -243,6 +243,7 @@ Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
     { "MaxDy",   &fMaxDy,   kDouble, 0, 1},
     { "pssh_matchmap_y",   &pssh_matchmap_y,   kIntV, 0, 1},
     { "totalsum_threshold", &fTotalSum_Threshold, kDouble, 0, 1},
+    { "bestclusterselectionflag", &fBestClusterSelectionFlag, kInt, 0, 1},
     { 0 }
   };
   
@@ -304,6 +305,7 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
   fShower->FindClusters();
   // match blocks hit in Preshower to clusters in the  Shower
   std::vector<SBSCalorimeterCluster*> &ShowerClusters = fShower->GetClusters();
+  
   fSHclusPSclusIDmap.resize(ShowerClusters.size());
   std::vector<SBSBlockSet> &PreShowerBlockSet = fPreShower->GetBlockSet();
   std::vector<SBSCalorimeterCluster*> &PreShowerClusters = fPreShower->GetClusters();
@@ -312,6 +314,11 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
   double TotalSum_max = 0.0;
   int iclust_sh_TotalSum_max = -1;
   int iclust_ps_TotalSum_max = -1;
+
+  bool anyPSmatch = false;
+  int iclsh_best = -1;
+  int iclps_best = -1;
+  double Emax_SHPSmatch = 0.0;
   
   for (UInt_t nc=0;nc<ShowerClusters.size();nc++) {
     Double_t xsh = ShowerClusters[nc]->GetX();
@@ -353,7 +360,8 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
 
     double TotalSum = ShowerClusters[nc]->GetE();
     if( AddToPreShowerCluster ){
-      TotalSum += PreShowerClusters[fSHclusPSclusIDmap[nc]]->GetE(); 
+      TotalSum += PreShowerClusters[fSHclusPSclusIDmap[nc]]->GetE();
+      anyPSmatch = true;
     }
 
     if( iclust_sh_TotalSum_max < 0 || TotalSum > TotalSum_max ){
@@ -361,9 +369,19 @@ Int_t SBSBBTotalShower::CoarseProcess(TClonesArray& tracks )
       iclust_sh_TotalSum_max = nc;
       iclust_ps_TotalSum_max = fSHclusPSclusIDmap[nc];
     }
+
+    if( AddToPreShowerCluster && TotalSum > Emax_SHPSmatch ){
+      iclsh_best = nc;
+      iclps_best = fSHclusPSclusIDmap[nc];
+      Emax_SHPSmatch = TotalSum;
+    }
   }
 
-  
+  if( fBestClusterSelectionFlag == 1 && anyPSmatch ){
+    iclust_sh_TotalSum_max = iclsh_best;
+    iclust_ps_TotalSum_max = iclps_best;
+    TotalSum_max = Emax_SHPSmatch;
+  }
   
   //Now let's override "Main cluster" variables for both shower and preshower:
   //First: clear out fMainclus:
