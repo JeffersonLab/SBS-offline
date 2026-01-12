@@ -1420,7 +1420,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       if(simev->Tgep->Harm_FT_dighit_samp->at(j)>=0){
 	strips.push_back(chan);
 	samps.push_back(simev->Tgep->Harm_FT_dighit_adc->at(j));
-	//simev->Tgep->Harm_FT_dighit_mcfrac->at(j)
+	//cout << simev->Tgep->Harm_FT_dighit_adc_good->at(j) << endl;
       }
       
       if(fDebug>3)
@@ -1476,7 +1476,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       if(simev->Tgep->Harm_FPP1_dighit_samp->at(j)>=0){
 	strips.push_back(chan);
 	samps.push_back(simev->Tgep->Harm_FPP1_dighit_adc->at(j));
-	//simev->Tgep->Harm_FPP1_dighit_mcfrac->at(j)
+	//cout << simev->Tgep->Harm_FPP1_dighit_adc_good->at(j) << endl;
       }
       
       if(fDebug>3)
