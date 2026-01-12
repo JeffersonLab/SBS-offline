@@ -34,6 +34,12 @@ public:
   virtual Int_t        CoarseProcess( TClonesArray& tracks );
   virtual Int_t        FineProcess( TClonesArray& tracks );
 
+  Double_t GetRefTime() const { return fRefTime; }
+  Bool_t RefTimeIsSet() const { return fRefTimeIsSet; }
+
+  void SetRefTime( double tref=0.0 );
+  
+  
 protected:
 
   //Double_t fTrackX;      // x pos of Golden Track in RICH plane
@@ -41,7 +47,13 @@ protected:
 
   Double_t fMaxSep; // Max separation between PMT and another PMT to count as "neighbors"
   Double_t fMaxSep2; //square of fMaxSep
+  Double_t fMaxTdiffClust; // max diff between hits and cluster mean for addition to clusters
+  Double_t fMaxTdiffRefTime; // max diff between hits and ref time for addition to clusters
 
+  Double_t fRefTime; //ordinarily the shower atimeblk or hodoscope cluster mean time
+  Bool_t fRefTimeIsSet;
+  Bool_t fUseRefTimeDiffCut; 
+  
   Int_t fNmirror; //Number of GRINCH mirrors (define track match cuts separately for each mirror)
 
   Int_t fOrderTrackMatchY; // Default to 3. For now we implement GRINCH dy = pol3( track phi ); later we may get fancier:

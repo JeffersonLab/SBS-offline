@@ -725,10 +725,22 @@ Int_t SBSBigBite::CoarseReconstruct()
   int npts = 0;
   double EpsEtotRatio = 0;
   TIter next( fNonTrackingDetectors );
+
+  bool GotShowerADCtime = false; 
+  double ShowerADCtime = 0.0;
+
+  SBSGRINCH *GRINCH_ptr = nullptr; 
+  bool gotGRINCHptr = false;
+  
   while( auto* theNonTrackDetector =
 	 static_cast<THaNonTrackingDetector*>( next() )) {
     //if(theNonTrackDetector->InheritsFrom("SBSBBShower")){
     //if(theNonTrackDetector->InheritsFrom("SBSCalorimeter")){
+    if( theNonTrackDetector->InheritsFrom("SBSGRINCH") ){
+      GRINCH_ptr = static_cast<SBSGRINCH*>(theNonTrackDetector);
+      gotGRINCHptr = true;
+    }
+    
     if(theNonTrackDetector->InheritsFrom("SBSBBTotalShower")){//More explicit
       //cout << "found SBSBBTtotalShower" << endl;
       SBSBBTotalShower* BBTotalShower = reinterpret_cast<SBSBBTotalShower*>(theNonTrackDetector);
@@ -746,6 +758,10 @@ Int_t SBSBigBite::CoarseReconstruct()
       //   << " X = " << BBTotalShower->GetPreShower()->GetX()
       //   << " Y = " << BBTotalShower->GetPreShower()->GetY()
       //   << endl;
+
+      ShowerADCtime = BBTotalShower->GetShower()->GetAtime();
+      GotShowerADCtime = true;
+      
       if(GetMultiTracks()){
 	std::vector<SBSCalorimeterCluster*> ShowerClusters = BBTotalShower->GetShower()->GetClusters();
 	std::vector<SBSCalorimeterCluster*> PreShowerClusters = BBTotalShower->GetPreShower()->GetClusters();
@@ -1109,7 +1125,12 @@ Int_t SBSBigBite::CoarseReconstruct()
     }//end if(inheritsfrom(SBSCalorimeter))
         
   }//end loop on non tracking detectors
-    
+
+  //Set "reference time" for GRINCH as applicable:
+  if( gotGRINCHptr && GotShowerADCtime ){
+    GRINCH_ptr->SetRefTime( ShowerADCtime );
+  }
+  
   //std::cout << " call SBSBigBite::CoarseReconstruct" << std::endl;
   //THaSpectrometer::CoarseReconstruct();
     
