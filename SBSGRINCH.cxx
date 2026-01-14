@@ -52,6 +52,11 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
 
   fMaxTdiffClust = 30.0; //ns (default);
   fMaxTdiffRefTime = 30.0; //ns (default)
+
+  fGRINCH_dToffset = 0.0; //ns (default);
+  fGRINCH_dTsigma = 2.0; //ns (default)
+
+  fUseRefTimeDiffCut = false; //default to false
   
   //Set up default track match cuts based on mirror number:
 
@@ -197,6 +202,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     { "trackmatch_xmin", &fTrackMatchXmin, kDoubleV, 0, 1, 1 },
     { "trackmatch_xmax", &fTrackMatchXmax, kDoubleV, 0, 1, 1 },
     { "trackmatch_nsigma_cut", &fTrackMatchNsigmaCut, kDouble, 0, 1, 1 },
+    { "trackmatch_dtsigma", &fGRINCH_dTsigma, kDouble, 0, 1, 1 },
+    { "trackmatch_dtoffset", &fGRINCH_dToffset, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -416,7 +423,7 @@ Int_t SBSGRINCH::FindClusters()
 
     bool keep = true;
     if( fRefTimeIsSet && fUseRefTimeDiffCut ){
-      keep = fabs( tpmt[pmtnum] - fRefTime ) <= fMaxTdiffRefTime;
+      keep = fabs( tpmt[pmtnum] - fRefTime - fGRINCH_dToffset ) <= fMaxTdiffRefTime;
     }
 
     if( keep ){
@@ -611,15 +618,25 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
 
     Double_t dxbest = kBig;
     Double_t dybest = kBig;
+    Double_t dtbest = kBig;
     
     SBSCherenkov_Cluster *clusttemp = GetCluster( iclust );
 
+    double xGRINCH = clusttemp->GetXcenter();
+    double yGRINCH = clusttemp->GetYcenter();
+    
+    double tGRINCH = clusttemp->GetMeanTimeCorrected();
+
+    double dtGRINCH = tGRINCH - fGRINCH_dToffset; //THIS assumes GRINCH time to be aligned at offset
+    if( fRefTimeIsSet ) dtGRINCH -= fRefTime; //"ref time" is ordinarily from the shower
+    
     for( int itrack=0; itrack<ntracks; itrack++ ){
       auto* theTrack = static_cast<THaTrack*>( tracks.At(itrack) ); 
    
       // Now we need to come up with some sort of matching criterion for GRINCH clusters and tracks. 
       // I suppose what we want for now is the cluster closest to the track along X and/or Y This could become more 
-      // sophisticated over time
+      // sophisticated over time.
+      // Also consider timing!
  
       //Project track to GRINCH entrance window: 
       double zGRINCH = GetOrigin().Z();
@@ -635,39 +652,42 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       //int iclmin=-1;
 
       //    for( int iclust=0; iclust<nclust; iclust++ ){
-      //SBSCherenkov_Cluster *clusttemp = ( (SBSCherenkov_Cluster*) (*fClusters)[iclust] );
-      
-      double xGRINCH = clusttemp->GetXcenter();
-      double yGRINCH = clusttemp->GetYcenter();
+      //SBSCherenkov_Cluster *clusttemp = ( (SBSCherenkov_Cluster*) (*fClusters)[iclust] );	
 
-      for( int imirr=0; imirr<fNmirror; imirr++ ){
-	if( xtrack >= fTrackMatchXmin[imirr] && xtrack < fTrackMatchXmax[imirr] ){
-	  //double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]-fTrackMatchPslope/ptrack);
-	  //Implement new x-matching criterion parametrized based on track theta:
-	  double xdiff = xGRINCH - xtrack - ( fTrackMatchX0[imirr] + fTrackMatchXslope[imirr]*thetatrack );
-	  //double ydiff = fabs(ytrack - fTrackMatchYslope[imirr] * yGRINCH - fTrackMatchY0[imirr]);
+      if( fabs(dtGRINCH) <= fMaxTdiffRefTime || !fUseRefTimeDiffCut ){ //don't consider clusters with bad GRINCH timing:
+	
+	for( int imirr=0; imirr<fNmirror; imirr++ ){
+	  if( xtrack >= fTrackMatchXmin[imirr] && xtrack < fTrackMatchXmax[imirr] ){
+	    //double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]-fTrackMatchPslope/ptrack);
+	    //Implement new x-matching criterion parametrized based on track theta:
+	    double xdiff = xGRINCH - xtrack - ( fTrackMatchX0[imirr] + fTrackMatchXslope[imirr]*thetatrack );
+	    //double ydiff = fabs(ytrack - fTrackMatchYslope[imirr] * yGRINCH - fTrackMatchY0[imirr]);
+	    
+	    //The lines below implement Maria's 3rd-order polynomial in track phi for the y correlation:
+	    double ypredict = fTrackMatchY0[imirr];
+	    for( int ipar=1; ipar<fOrderTrackMatchY; ipar++ ){
+	      ypredict += fTrackMatchYslope[3*imirr + ipar-1] * pow( phitrack, ipar );
+	    }
+	    
+	    double ydiff = yGRINCH - ytrack - ypredict; 
+	    
+	    double diff2 = pow( xdiff/fTrackMatchXsigma[imirr], 2 ) + pow( ydiff/fTrackMatchYsigma[imirr], 2 );
 
-	  //The lines below implement Maria's 3rd-order polynomial in track phi for the y correlation:
-	  double ypredict = fTrackMatchY0[imirr];
-	  for( int ipar=1; ipar<fOrderTrackMatchY; ipar++ ){
-	    ypredict += fTrackMatchYslope[3*imirr + ipar-1] * pow( phitrack, ipar );
-	  }
-	  
-	  double ydiff = yGRINCH - ytrack - ypredict; 
-	  
-	  double diff2 = pow( xdiff/fTrackMatchXsigma[imirr], 2 ) + pow( ydiff/fTrackMatchYsigma[imirr], 2 );
-    
-	  //     if( xdiff <= fTrackMatchXcut ){
-	  if( diff2 <= pow( fTrackMatchNsigmaCut, 2 ) ){
-	    //if( iclmin < 0 || xdiff < minxdiff ){
-	    if( itrmin < 0 || diff2 < mindiff2 ){
-	      itrmin = itrack;
-	      bestmirror = imirr+1; //keep Maria's numbering convention of 1 to 4
-	      //  minxdiff = xdiff;
-	      mindiff2 = diff2;
-
-	      dxbest = xdiff;
-	      dybest = ydiff;
+	    if( fUseRefTimeDiffCut ) diff2 += pow(dtGRINCH/fGRINCH_dTsigma,2);
+	    
+	    //     if( xdiff <= fTrackMatchXcut ){
+	    if( diff2 <= pow( fTrackMatchNsigmaCut, 2 ) ){
+	      //if( iclmin < 0 || xdiff < minxdiff ){
+	      if( itrmin < 0 || diff2 < mindiff2 ){
+		itrmin = itrack;
+		bestmirror = imirr+1; //keep Maria's numbering convention of 1 to 4
+		//  minxdiff = xdiff;
+		mindiff2 = diff2;
+		
+		dxbest = xdiff;
+		dybest = ydiff;
+		dtbest = dtGRINCH;
+	      }
 	    }
 	  }
 	}

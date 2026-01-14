@@ -53,6 +53,9 @@ protected:
   Double_t fRefTime; //ordinarily the shower atimeblk or hodoscope cluster mean time
   Bool_t fRefTimeIsSet;
   Bool_t fUseRefTimeDiffCut; 
+
+  Double_t fGRINCH_dToffset; //offset of GRINCH time difference wrt shower (ordinarily and by default should be zero)
+  Double_t fGRINCH_dTsigma; //sigma of GRINCH time difference wrt (ordinarily) shower.
   
   Int_t fNmirror; //Number of GRINCH mirrors (define track match cuts separately for each mirror)
 
