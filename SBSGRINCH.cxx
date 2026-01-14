@@ -423,7 +423,7 @@ Int_t SBSGRINCH::FindClusters()
 
     bool keep = true;
     if( fRefTimeIsSet && fUseRefTimeDiffCut ){
-      keep = fabs( tpmt[pmtnum] - fRefTime - fGRINCH_dToffset ) <= fMaxTdiffRefTime;
+      keep = fabs( tpmt[pmtnum] - fRefTime - fGRINCH_dToffset ) <= fMaxTdiffClust; //use cluster time cut here for individual hits
     }
 
     if( keep ){
@@ -654,7 +654,7 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       //    for( int iclust=0; iclust<nclust; iclust++ ){
       //SBSCherenkov_Cluster *clusttemp = ( (SBSCherenkov_Cluster*) (*fClusters)[iclust] );	
 
-      if( fabs(dtGRINCH) <= fMaxTdiffRefTime || !fUseRefTimeDiffCut ){ //don't consider clusters with bad GRINCH timing:
+      if( fabs(dtGRINCH) <= fMaxTdiffRefTime || !fUseRefTimeDiffCut ){ //don't consider clusters with bad GRINCH timing for track matching
 	
 	for( int imirr=0; imirr<fNmirror; imirr++ ){
 	  if( xtrack >= fTrackMatchXmin[imirr] && xtrack < fTrackMatchXmax[imirr] ){
