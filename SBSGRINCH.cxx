@@ -676,45 +676,53 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
 	    if( fUseRefTimeDiffCut ) diff2 += pow(dtGRINCH/fGRINCH_dTsigma,2);
 	    
 	    //     if( xdiff <= fTrackMatchXcut ){
-	    if( diff2 <= pow( fTrackMatchNsigmaCut, 2 ) ){
+	    //if( diff2 <= pow( fTrackMatchNsigmaCut, 2 ) ){
 	      //if( iclmin < 0 || xdiff < minxdiff ){
-	      if( itrmin < 0 || diff2 < mindiff2 ){
-		itrmin = itrack;
-		bestmirror = imirr+1; //keep Maria's numbering convention of 1 to 4
-		//  minxdiff = xdiff;
-		mindiff2 = diff2;
-		
-		dxbest = xdiff;
-		dybest = ydiff;
-		dtbest = dtGRINCH;
-	      }
+	    //don't apply hard cuts on diff2 until the end
+	    if( itrmin < 0 || diff2 < mindiff2 ){
+	      itrmin = itrack;
+	      bestmirror = imirr+1; //keep Maria's numbering convention of 1 to 4
+	      //  minxdiff = xdiff;
+	      mindiff2 = diff2;
+	      
+	      dxbest = xdiff;
+	      dybest = ydiff;
+	      dtbest = dtGRINCH;
+	    
 	    }
 	  }
 	}
       }
     }
-
+    
     if( itrmin >= 0 ){ //match:
       //SBSCherenkov_Cluster *clusttemp = ( (SBSCherenkov_Cluster*) (*fClusters)[iclmin] );
       //SBSCherenkov_Cluster *clusttemp = GetCluster( iclmin );
 
-      auto* theTrack = static_cast<THaTrack*>( tracks.At(itrmin) ); 
+      bool goodposition = pow( dxbest/fTrackMatchXsigma[bestmirror-1], 2 ) + pow( dybest/fTrackMatchYsigma[bestmirror-1], 2 ) <= pow( fTrackMatchNsigmaCut, 2 );
+      bool goodtime = fabs( dtbest ) <= fMaxTdiffRefTime || !fUseRefTimeDiffCut;
 
-      clusttemp->SetTrackIndex( itrmin ); 
-      clusttemp->SetTrack( theTrack );
-      clusttemp->SetMirrorIndex( bestmirror );
+      bool goodmatch = goodposition && goodtime;
 
-      clusttemp->SetDX( dxbest );
-      clusttemp->SetDY( dybest );
-      
-      //We also need to loop on all the hits and set the track index for those hits:
-      TIter next(clusttemp->GetHitList());
-      SBSCherenkov_Hit *hittemp;
-      while( ( hittemp = static_cast<SBSCherenkov_Hit*>( next() ) ) ){
-	hittemp->SetTrackIndex( itrmin );
+      if( goodmatch ){
+	auto* theTrack = static_cast<THaTrack*>( tracks.At(itrmin) ); 
+	
+	clusttemp->SetTrackIndex( itrmin ); 
+	clusttemp->SetTrack( theTrack );
+	clusttemp->SetMirrorIndex( bestmirror );
+	
+	clusttemp->SetDX( dxbest );
+	clusttemp->SetDY( dybest );
+	
+	//We also need to loop on all the hits and set the track index for those hits:
+	TIter next(clusttemp->GetHitList());
+	SBSCherenkov_Hit *hittemp;
+	while( ( hittemp = static_cast<SBSCherenkov_Hit*>( next() ) ) ){
+	  hittemp->SetTrackIndex( itrmin );
+	}
+	
+	nmatch++;
       }
-
-      nmatch++;
     }
     
   }
