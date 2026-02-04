@@ -6515,66 +6515,101 @@ double SBSGEMModule::GetCommonModeCorrection( UInt_t isamp, const mpdmap_t &apvi
     //Attempt to calculate a correction:
     if( fCommonModeFlag == 0 ){
       //sorting: this method will be significantly biased if we use the same "low strip" rejection as for full-readout events
-      if( ngoodhits >= fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange ){
-	std::vector<double> sortedADCs(ngood);
-	for( int ihit=0; ihit<ngood; ihit++ ){
-	  int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
-	  double ADCtemp = fPedSubADC_APV[iraw]; 
-	  if( !fullreadout ) ADCtemp += fCM_online[isamp]; //Add back in online common-mode if it was subtracted online
-	  sortedADCs[ihit] = ADCtemp;
-	}
+      if( ngoodhits >= fCommonModeMinStripsInRange ){
+	      std::vector<double> sortedADCs(ngood);
+	      for( int ihit=0; ihit<ngood; ihit++ ){
+	        int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
+	        double ADCtemp = fPedSubADC_APV[iraw]; 
+	        if( !fullreadout ) ADCtemp += fCM_online[isamp]; //Add back in online common-mode if it was subtracted online
+	        sortedADCs[ihit] = ADCtemp;
+	      }
 	
-	double cm_temp = 0.0;
-	int stripcount=0;
+	      double cm_temp = 0.0;
+	      int stripcount=0;
 	
-	std::sort( sortedADCs.begin(), sortedADCs.end() );
-	
-	for( int k=fCommonModeNstripRejectLow; k<ngoodhits-fCommonModeNstripRejectHigh; k++ ){
-	  cm_temp += sortedADCs[k];
-	  stripcount++;
-	}
-	CMcorrection = fCM_online[isamp] - cm_temp/double(stripcount);
+	      std::sort( sortedADCs.begin(), sortedADCs.end() );
+        // Comment out the next 4 lines belonging to the original generic sorting algorithm:
+	      //for( int k=fCommonModeNstripRejectLow; k<ngoodhits-fCommonModeNstripRejectHigh; k++ ){
+	      //  cm_temp += sortedADCs[k];
+	      //  stripcount++;
+	      //}
+
+// Add the "enhanced" part of the algorithm here:
+        // Create a moving "search window" within sorted ADCs
+        int firststrip = 0;
+        double mindiff = sortedADCs.back() - sortedADCs.front();
+        int windowsize = fCommonModeMinStripsInRange;  // May need to revist this definition if we want smaller or larger windows for corrections
+        for( int j=0; j<=int(sortedADCs.size()) - windowsize; j++ ){
+          double diff = sortedADCs[j + windowsize - 1] - sortedADCs[j];
+          if( diff < mindiff ){
+            mindiff = diff;
+            firststrip = j;
+            double sum = 0.0;
+            for( int k=j; k<j+windowsize; k++ ){
+              sum += sortedADCs[k];
+            }
+            cm_temp = sum/double(windowsize);
+          }
+        }
+        // We average all the strips within +/-3*sigma_ped of this cm_temp value
+        stripcount=0;
+        double sumADC =0.0;
+        for( int ihit=0; ihit<ngood; ihit++ ){
+          int iraw = isamp + fN_MPD_TIME_SAMP*goodhits[ihit];
+          int strip = fStripAPV[iraw];
+          double pedRMS = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
+          
+          if( fabs( fPedSubADC_APV[iraw] - cm_temp ) <= 3.0*pedRMS*fRMS_ConversionFactor ){
+            sumADC += fPedSubADC_APV[iraw];
+            stripcount++;
+          }
+        }
+
+        if( stripcount >= windowsize ){ // Check if there were more strips within 3 sigma than in our orginal window
+          cm_temp = sumADC/double(stripcount);
+        }
+
+	    CMcorrection = fCM_online[isamp] - cm_temp;
       }
-    } else if( fCommonModeFlag == 1 ){
-      
+    } else if( fCommonModeFlag == 1 ){ // Flag 1 does not exist for GetCommonMode function, hear it does Danning method
+
       double cm_min = cm_mean - fCommonModeDanningMethod_NsigmaCut*cm_rms;
       double cm_max = cm_mean + fCommonModeDanningMethod_NsigmaCut*cm_rms;
 	
       double cm_temp = 0.0;
       for( int iter=0; iter<fCommonModeNumIterations; iter++ ){
 	  
-	int nstripsinrange = 0;
+	      int nstripsinrange = 0;
+	      double sumADCinrange = 0.0;
 	  
-	double sumADCinrange = 0.0;
+	      for( int ihit=0; ihit<ngood; ihit++ ){
+	        int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
+	        double ADCtemp = fPedSubADC_APV[iraw];
+	    
+	        if( !fullreadout ) ADCtemp += fCM_online[isamp];
+	    
+	        double rmstemp = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
+	    
+	        double mintemp = cm_min;
+	        double maxtemp = cm_max;
+	    
+	        if( iter > 0 ){
+	          maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
+	          mintemp = cm_temp - fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
+	        }
+	    
+	        if( ADCtemp >= mintemp && ADCtemp <= maxtemp ){
+	          nstripsinrange++;
+	          sumADCinrange += ADCtemp;
+	        }  
+	      }
 	  
-	for( int ihit=0; ihit<ngood; ihit++ ){
-	  int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
-	  double ADCtemp = fPedSubADC_APV[iraw];
-	    
-	  if( !fullreadout ) ADCtemp += fCM_online[isamp];
-	    
-	  double rmstemp = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
-	    
-	  double mintemp = cm_min;
-	  double maxtemp = cm_max;
-	    
-	  if( iter > 0 ){
-	    maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
-	    mintemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
-	  }
-	    
-	  if( ADCtemp >= mintemp && ADCtemp >= maxtemp ){
-	    nstripsinrange++;
-	    sumADCinrange += ADCtemp;
-	  }  
-	}
-	  
-	if( nstripsinrange >= fCommonModeMinStripsInRange ){
-	  cm_temp = sumADCinrange/double(nstripsinrange);
-	  ngoodhits = nstripsinrange;
-	} else if( iter == 0 ){ //don't attempt correction, just return 0
-	  CMcorrection = 0.0;
-	}
+	      if( nstripsinrange >= fCommonModeMinStripsInRange ){
+	        cm_temp = sumADCinrange/double(nstripsinrange);
+	        ngoodhits = nstripsinrange;
+	      } else if( iter == 0 ){ //don't attempt correction, just return 0
+	        CMcorrection = 0.0;
+	      }
       }
 
       CMcorrection = fCM_online[isamp] - cm_temp;
