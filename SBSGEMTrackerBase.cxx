@@ -142,6 +142,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fConstraintPenaltySigmaY = 0.1;
   fConstraintPenaltySigmaXp = 0.1;
   fConstraintPenaltySigmaYp = 0.1;
+
+  fDumpRawADCrange = false;
   
 }
 

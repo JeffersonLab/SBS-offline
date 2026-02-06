@@ -151,6 +151,7 @@ void SBSHCal::Clear( Option_t* opt )
   fLEDBit = -1;
   fLEDCount = 0;
   SBSCalorimeter::Clear(opt);
+  fRefADCtimeGoodCluster = 0.0;
 }
 /*
  * Generic SBSHCal destructor

@@ -130,6 +130,8 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   int multitracksearch = fMultiTrackSearch ? 1 : 0;
 
   int nontrackmode = fNonTrackingMode ? 1 : 0;
+
+  int dumprawadcrange = fDumpRawADCrange ? 1 : 0;
   
   //  std::vector<int> mingoodhits; 
   //std::vector<double> chi2cut_space;
@@ -157,7 +159,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
-    { "dump_rawADCrange", &fDumpRawADCrange, kInt, 0, 1, 1 },
+    { "dump_rawADCrange", &dumprawadcrange, kInt, 0, 1, 1 },
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
     { "usetrigtime", &usetrigtime, kInt, 0, 1, 1 },
@@ -221,6 +223,8 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     Error("", "[SBSGEMPolarimeterTracker::ReadDatabase] No modules defined");
   }
 
+  fDumpRawADCrange = ( dumprawadcrange != 0 );
+  
   int modcounter = 0;
 
   
