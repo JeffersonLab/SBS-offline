@@ -395,14 +395,26 @@ Int_t SBSCalorimeter::MakeGoodBlocks()
 	  fGoodBlocks.gain.push_back(blk->GetAgain());
 	  fGoodBlocks.ADCTime.push_back(ahit.time.val);
 	} else {
-	  SBSData::Waveform *wave = blk->Waveform();
-	  blk->SetE(wave->GetIntegral().val);
-	  //blk->SetAintp(wave->GetIntegral().val / wave->GetGain());
-	  blk->SetAgain(wave->GetGain() / wave->GetTrigCal());
-	  blk->SetAtime(wave->GetTime().val);
-	  fGoodBlocks.e.push_back(wave->GetIntegral().val);
-	  fGoodBlocks.gain.push_back(blk->GetAgain());
-	  fGoodBlocks.ADCTime.push_back(wave->GetTime().val);
+	  if(fEnableMultiPulse){
+	    SBSData::Waveform *wave = blk->Waveform();
+	    Int_t ind_mult = wave->GetGoodHitIndex();
+	    blk->SetE(wave->GetIntegralMulti(ind_mult).val);
+	    //blk->SetAintp(wave->GetIntegral().val / wave->GetGain());
+	    blk->SetAgain(wave->GetGain() / wave->GetTrigCal());
+	    blk->SetAtime(wave->GetTimeMulti(ind_mult).val);
+	    fGoodBlocks.e.push_back(wave->GetIntegralMulti(ind_mult).val);
+	    fGoodBlocks.gain.push_back(blk->GetAgain());
+	    fGoodBlocks.ADCTime.push_back(wave->GetTimeMulti(ind_mult).val);
+	  }else{
+	    SBSData::Waveform *wave = blk->Waveform();
+	    blk->SetE(wave->GetIntegral().val);
+	    //blk->SetAintp(wave->GetIntegral().val / wave->GetGain());
+	    blk->SetAgain(wave->GetGain() / wave->GetTrigCal());
+	    blk->SetAtime(wave->GetTime().val);
+	    fGoodBlocks.e.push_back(wave->GetIntegral().val);
+	    fGoodBlocks.gain.push_back(blk->GetAgain());
+	    fGoodBlocks.ADCTime.push_back(wave->GetTime().val);
+	  }
 	}
 	if (WithTDC() && blk->TDC()->HasData() ) { 
 	  const SBSData::TDCHit &hit = blk->TDC()->GetGoodHit();

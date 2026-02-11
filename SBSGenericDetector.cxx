@@ -41,7 +41,7 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fDisableRefADC(true),fDisableRefTDC(true),
   fStoreEmptyElements(false), fIsMC(false), fChanMapStart(0),
   fCoarseProcessed(false), fFineProcessed(false),
-  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false)
+  fConst(1.0), fSlope(0.0), fAccCharge(0.0), fStoreRawHits(false), fEnableMultiPulse(false)
 {
   // Constructor.
   fDecodeRFtime = false;
@@ -1112,6 +1112,11 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
       ve.push_back({ "Ref.samps", "Calibrated ADC samples",  "fGood.samps" });
       ve.push_back({ "Ref.samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
     }
+    /*
+    if (fEnableMultiPulse){
+      ve.push_back({ kip
+    }
+    */
   }
 
   ve.push_back({0}); // Needed to specify the end of list
@@ -1245,10 +1250,19 @@ Int_t SBSGenericDetector::DecodeADC( const THaEvData& evdata,
     for(UInt_t i = 0; i < nhit; i++) {
       samples[i] = evdata.GetData(d->crate, d->slot, chan, i);
     }
-    blk->Waveform()->Process(samples);
+    if(fEnableMultiPulse){
+      blk->Waveform()->ProcessMulti(samples);
+    }else{
+      blk->Waveform()->Process(samples);
+    }
     samples.clear();
     SBSData::Waveform *wave = blk->Waveform();
-    wave->SetValTime(wave->GetTime().val- reftime);
+    if(fEnableMultiPulse){
+      //time.raw and time.val are already set in SBSData.cxx for multipulse in ProcessMulti
+      //wave->SetValTime(wave->GetTimeMulti(wave->GetGoodHitIndex()).val- reftime); //using GetTimeMulti
+    }else{
+      wave->SetValTime(wave->GetTime().val- reftime);
+    }
   }
   return nhit;
 }
@@ -1855,66 +1869,151 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	  }
 	}
       } else { // Waveform mode
-        SBSData::Waveform *wave = blk->Waveform();
-	if(wave->HasData()) {		
-          if(fStoreRawHits) {
-	    std::vector<Double_t> &s_r =wave->GetDataRaw();
-	    std::vector<Double_t> &s_c = wave->GetData();
-	    nsamples = s_r.size();
-	    idx = fGood.samps.size();
-	    fGood.sidx.push_back(idx);
-	    fGood.samps_elemID.push_back(k);
-	    fGood.nsamps.push_back(nsamples);
-	    fGood.samps.resize(idx+nsamples);
-	    for(size_t s = 0; s < nsamples; s++) {
-	      fGood.samps[idx+s]   = s_c[s];
-            }
-	  }
-	  if (wave->GetGoodHitIndex() >=0) {
-	    fNGoodADChits++;
-	    fGood.ADCrow.push_back(blk->GetRow());
-	    fGood.ADCcol.push_back(blk->GetCol());
-	    fGood.ADClayer.push_back(blk->GetLayer());
-	    fGood.ADCelemID.push_back(blk->GetID());
-	    fGood.ADCxpos.push_back(blk->GetX());
-	    fGood.ADCypos.push_back(blk->GetY());	  	  	    
+	if(fEnableMultiPulse == true){
+	  SBSData::Waveform *wave = blk->Waveform();
+	  if(wave->HasData()) {
+	    Int_t ind_mult = wave->GetGoodHitIndex();
+	    if(fStoreRawHits) {
+	      std::vector<Double_t> &s_r =wave->GetDataRaw();
+	      std::vector<Double_t> &s_c = wave->GetData();
+	      nsamples = s_r.size();
+	      idx = fGood.samps.size();
+	      fGood.sidx.push_back(idx);
+	      fGood.samps_elemID.push_back(k);
+	      fGood.nsamps.push_back(nsamples);
+	      fGood.samps.resize(idx+nsamples);
+	      for(size_t s = 0; s < nsamples; s++) {
+		fGood.samps[idx+s]   = s_c[s];
+	      }
+	    }
+	    if (wave->GetGoodHitIndex() >=0) {
+	      fNGoodADChits++;
+	      fGood.ADCrow.push_back(blk->GetRow());
+	      fGood.ADCcol.push_back(blk->GetCol());
+	      fGood.ADClayer.push_back(blk->GetLayer());
+	      fGood.ADCelemID.push_back(blk->GetID());
+	      fGood.ADCxpos.push_back(blk->GetX());
+	      fGood.ADCypos.push_back(blk->GetY());	  	  	    
+	      
+	      //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
+	      
+	      fGood.ped.push_back(wave->GetPed());
+	      fGood.a_mult.push_back(0);
+	      if (wave->GetTimeMulti(ind_mult).val>0) fGood.a_mult.push_back(1);
+	      fGood.a.push_back(wave->GetIntegralMulti(ind_mult).raw);
+	      Double_t gain= wave->GetGain();
+	      fGood.a_p.push_back(wave->GetIntegralMulti(ind_mult).val/gain);
+	      fGood.a_c.push_back(wave->GetIntegralMulti(ind_mult).val);
+	      fGood.a_amp.push_back(wave->GetAmplitudeMulti(ind_mult).raw);
+	      Double_t again=wave->GetAmpCal();	      
+	      Double_t trigcal=wave->GetTrigCal();	      
+	      fGood.a_amp_p.push_back(wave->GetAmplitudeMulti(ind_mult).val/again);
+	      fGood.a_amp_c.push_back(wave->GetAmplitudeMulti(ind_mult).val);
+	      fGood.a_amptrig_p.push_back(wave->GetAmplitudeMulti(ind_mult).val/again*trigcal);
+	      fGood.a_amptrig_c.push_back(wave->GetAmplitudeMulti(ind_mult).val*trigcal);
+	      fGood.a_time.push_back(wave->GetTimeMulti(ind_mult).val);
+	      /*
+	      //kip testing output
+	      if(wave->GetNHits() >= 2 ){
+		//std::cout << "blk id: " <<  blk->GetID() << std::endl;
+		std::cout << "samp_indx: " << idx/62 << " up to " << (idx+nsamples)/62 << std::endl;
+		std::cout << "chosen best pulse: " << ind_mult << std::endl;
+		std::cout << "number of pulses found: " << wave->GetNHits() << std::endl;
 
-	    //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
-	 
-	    fGood.ped.push_back(wave->GetPed());
-	    fGood.a_mult.push_back(0);
-	    if (wave->GetTime().val>0) fGood.a_mult.push_back(1);
-	    fGood.a.push_back(wave->GetIntegral().raw);
-	    Double_t gain= wave->GetGain();
-	    fGood.a_p.push_back(wave->GetIntegral().val/gain);
-	    fGood.a_c.push_back(wave->GetIntegral().val);
-	    fGood.a_amp.push_back(wave->GetAmplitude().raw);
-	    Double_t again=wave->GetAmpCal();	      
-	    Double_t trigcal=wave->GetTrigCal();	      
-	    fGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
-	    fGood.a_amp_c.push_back(wave->GetAmplitude().val);
-	    fGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
-	    fGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
-	    fGood.a_time.push_back(wave->GetTime().val);
-	  } else if (fStoreEmptyElements) {
-	    fGood.ADCrow.push_back(blk->GetRow());
-	    fGood.ADCcol.push_back(blk->GetCol());
-	    fGood.ADClayer.push_back(blk->GetLayer());
-	    fGood.ADCelemID.push_back(blk->GetID());
-	    fGood.ADCxpos.push_back(blk->GetX());
-	    fGood.ADCypos.push_back(blk->GetY());	  	  	    
-	    fGood.a_mult.push_back(0);
-	    fGood.ped.push_back(wave->GetPed());
-	    fGood.a.push_back(wave->GetIntegral().raw);
-	    Double_t gain= wave->GetGain();
-	    fGood.a_p.push_back(wave->GetIntegral().val/gain);
-	    fGood.a_c.push_back(wave->GetIntegral().val);
-            fGood.a_amp.push_back(0.0);
-            fGood.a_amp_p.push_back(0.0);
-            fGood.a_amp_c.push_back(0.0);
-            fGood.a_amptrig_p.push_back(0.0);
-            fGood.a_amptrig_c.push_back(0.0);
-            fGood.a_time.push_back(0.0);
+		for(int xx = 0; xx < wave->GetNHits(); xx++){
+		  std::cout << "  pulse " << xx << std::endl;
+		  std::cout << "time : " << wave->GetTimeMulti(xx).val << std::endl;
+		  std::cout << "a_amp_p :" << wave->GetAmplitudeMulti(xx).val << std::endl;
+		}
+		std::cout << std::endl;
+
+		
+	      }
+	      */
+	    } else if (fStoreEmptyElements) {
+	      fGood.ADCrow.push_back(blk->GetRow());
+	      fGood.ADCcol.push_back(blk->GetCol());
+	      fGood.ADClayer.push_back(blk->GetLayer());
+	      fGood.ADCelemID.push_back(blk->GetID());
+	      fGood.ADCxpos.push_back(blk->GetX());
+	      fGood.ADCypos.push_back(blk->GetY());	  	  	    
+	      fGood.a_mult.push_back(0);
+	      fGood.ped.push_back(wave->GetPed());
+	      fGood.a.push_back(wave->GetIntegralMulti(ind_mult).raw);
+	      Double_t gain= wave->GetGain();
+	      fGood.a_p.push_back(wave->GetIntegralMulti(ind_mult).val/gain);
+	      fGood.a_c.push_back(wave->GetIntegralMulti(ind_mult).val);
+	      fGood.a_amp.push_back(0.0);
+	      fGood.a_amp_p.push_back(0.0);
+	      fGood.a_amp_c.push_back(0.0);
+	      fGood.a_amptrig_p.push_back(0.0);
+	      fGood.a_amptrig_c.push_back(0.0);
+	      fGood.a_time.push_back(0.0);
+	    }
+	  }
+	} else {
+	  SBSData::Waveform *wave = blk->Waveform();
+	  if(wave->HasData()) {
+	    //std::cout << "Hit index: " << wave->GetGoodHitIndex() << std::endl;
+	    if(fStoreRawHits) {
+	      std::vector<Double_t> &s_r =wave->GetDataRaw();
+	      std::vector<Double_t> &s_c = wave->GetData();
+	      nsamples = s_r.size();
+	      idx = fGood.samps.size();
+	      fGood.sidx.push_back(idx);
+	      fGood.samps_elemID.push_back(k);
+	      fGood.nsamps.push_back(nsamples);
+	      fGood.samps.resize(idx+nsamples);
+	      for(size_t s = 0; s < nsamples; s++) {
+		fGood.samps[idx+s]   = s_c[s];
+	      }
+	    }
+	    if (wave->GetGoodHitIndex() >=0) {
+	      fNGoodADChits++;
+	      fGood.ADCrow.push_back(blk->GetRow());
+	      fGood.ADCcol.push_back(blk->GetCol());
+	      fGood.ADClayer.push_back(blk->GetLayer());
+	      fGood.ADCelemID.push_back(blk->GetID());
+	      fGood.ADCxpos.push_back(blk->GetX());
+	      fGood.ADCypos.push_back(blk->GetY());	  	  	    
+	      
+	      //std::cout << "SBSCalorimeter, " << GetName() << " " << blk->GetID() << " " << blk->GetRow() << " " << blk->GetCol() << " " << blk->GetX() << " " << blk->GetY() << std::endl;
+	      
+	      fGood.ped.push_back(wave->GetPed());
+	      fGood.a_mult.push_back(0);
+	      if (wave->GetTime().val>0) fGood.a_mult.push_back(1);
+	      fGood.a.push_back(wave->GetIntegral().raw);
+	      Double_t gain= wave->GetGain();
+	      fGood.a_p.push_back(wave->GetIntegral().val/gain);
+	      fGood.a_c.push_back(wave->GetIntegral().val);
+	      fGood.a_amp.push_back(wave->GetAmplitude().raw);
+	      Double_t again=wave->GetAmpCal();	      
+	      Double_t trigcal=wave->GetTrigCal();	      
+	      fGood.a_amp_p.push_back(wave->GetAmplitude().val/again);
+	      fGood.a_amp_c.push_back(wave->GetAmplitude().val);
+	      fGood.a_amptrig_p.push_back(wave->GetAmplitude().val/again*trigcal);
+	      fGood.a_amptrig_c.push_back(wave->GetAmplitude().val*trigcal);
+	      fGood.a_time.push_back(wave->GetTime().val);
+	    } else if (fStoreEmptyElements) {
+	      fGood.ADCrow.push_back(blk->GetRow());
+	      fGood.ADCcol.push_back(blk->GetCol());
+	      fGood.ADClayer.push_back(blk->GetLayer());
+	      fGood.ADCelemID.push_back(blk->GetID());
+	      fGood.ADCxpos.push_back(blk->GetX());
+	      fGood.ADCypos.push_back(blk->GetY());	  	  	    
+	      fGood.a_mult.push_back(0);
+	      fGood.ped.push_back(wave->GetPed());
+	      fGood.a.push_back(wave->GetIntegral().raw);
+	      Double_t gain= wave->GetGain();
+	      fGood.a_p.push_back(wave->GetIntegral().val/gain);
+	      fGood.a_c.push_back(wave->GetIntegral().val);
+	      fGood.a_amp.push_back(0.0);
+	      fGood.a_amp_p.push_back(0.0);
+	      fGood.a_amp_c.push_back(0.0);
+	      fGood.a_amptrig_p.push_back(0.0);
+	      fGood.a_amptrig_c.push_back(0.0);
+	      fGood.a_time.push_back(0.0);
+	    }
 	  }
 	}
       }
@@ -1967,7 +2066,27 @@ Int_t SBSGenericDetector::FindGoodHit(SBSElement *blk)
 	blk->ADC()->SetGoodHit(HitIndex);
 	GoodHit=1;
       }
-
+    } else if (fModeADC == SBSModeADC::kWaveform && fEnableMultiPulse == true) {
+      SBSData::Waveform *wave = blk->Waveform();
+      wave->SetGoodHit(-1);
+      if (wave->HasData())  {
+	Int_t nhits = wave->GetNHits(); //returns size of multipulse vector
+	Double_t MinDiff = 10000.;
+	Int_t HitIndex = -1;
+	Double_t GoodTimeCut = wave->GetGoodTimeCut(); //using this from adc for now
+	for (Int_t ih=0; ih<nhits; ih++) {
+	  Double_t PulseTime = wave->GetTimeDataMulti(ih);
+	  //this finds the best timed hit from the pulses in the multipulse vector
+	  //do we want to store multiple of these within a threshold of PulseTime-GoodTimeCut?
+	  //if so need a separate SetGoodHitMulti setter method
+	  if (PulseTime > 0 && abs(PulseTime-GoodTimeCut) < MinDiff) {
+	    HitIndex = ih;
+	    MinDiff = abs(PulseTime - GoodTimeCut);
+	  }
+	}
+	wave->SetGoodHit(HitIndex);
+	GoodHit=1;
+      }
     } else if (fModeADC == SBSModeADC::kWaveform) {
       SBSData::Waveform *wave = blk->Waveform();
       wave->SetGoodHit(-1);

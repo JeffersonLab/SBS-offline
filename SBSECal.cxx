@@ -22,6 +22,7 @@ SBSECal::SBSECal( const char* name, const char* description,
   // SetModeTDC(SBSModeTDC::kTDCSimple);
   // SetDisableRefTDC(true);
   // fWithLED = true;
+  SetEnableMultiPulse(true);
 
   //Default values for time-based cuts for best cluster selection:
   // fRequireTDCGoodCluster = false;

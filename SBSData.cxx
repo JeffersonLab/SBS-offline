@@ -206,6 +206,8 @@ namespace SBSData {
 	}
       }
     }
+
+    
     //
     //    std::cout << " Int = " << IntMinBin << " " << IntMaxBin<< " ThresCrossBin =   " << ThresCrossBin << " peak-found " << PeakFound << std::endl ;
     //
@@ -223,6 +225,11 @@ namespace SBSData {
       std::cout << " Threshold = " << fThresVal << " ped = " << fSamples.ped << " element = " << ThresCrossBin << " " << " Vmid = " << VMid << "  sum = " << sum << " max = " << max << " time = " << FineTime << " tcal = " << fSamples.tcal <<  std::endl;
       }
     */
+    /*
+    if(FineTime == 0.0){
+      std::cout << "time 0 at finetime and peakfound is: " << PeakFound << std::endl;
+    }
+    */
     fSamples.pulse.integral.raw = sum;
     fSamples.pulse.integral.val = (sum-sped)*fSamples.cal;
     fSamples.pulse.time.raw = FineTime;
@@ -234,6 +241,139 @@ namespace SBSData {
     fHasData = (vals.size() > 0);
   }
 
+  void Waveform::ProcessMulti(std::vector<Double_t> &vals)
+  {
+    //printf("vals size %d, samples raw size %d\n", vals.size(), fSamples.samples_raw.size());
+    if( vals.size() != fSamples.samples_raw.size()) {
+      // Resize our data vector
+      fSamples.samples_raw.resize(vals.size());
+      fSamples.samples.resize(vals.size());
+      Clear();
+    }
+    //
+    for(size_t i = 0; i < vals.size(); i++ ) {
+      fSamples.samples_raw[i] = vals[i]*fSamples.ChanTomV;
+    }
+    // Determining pedestal in first and last four samples. Will choose the
+    // minimum of the two.
+    Double_t pedsum_fsamps=0, pedsum_lsamps=0;
+    Int_t NPedsum=GetNPedBin(), totTimeSamps=vals.size();
+    
+    NPedsum= TMath::Min(NPedsum,int(vals.size()));
+    // std::cout << " Npedsum = " << NPedsum << " " << GetNPedBin() << std::endl;
+    
+    for(Int_t i = 0; i < NPedsum ; i++ ) {
+      // Computing pedestal using first N samples
+      pedsum_fsamps += fSamples.samples_raw[i];
+      // Computing pedestal using last N samples
+      pedsum_lsamps += fSamples.samples_raw[(totTimeSamps-1)-i];
+    }
+   
+    SetPed( TMath::Min(pedsum_fsamps,pedsum_lsamps)/NPedsum );
+    for(size_t i = 0; i < vals.size(); i++ ) {
+      fSamples.samples[i] = (fSamples.samples_raw[i]-fSamples.ped)*fSamples.cal;
+    }
+    
+    // Look for multiple threshold crossings
+    Double_t ThresVal=GetThres(); // mV
+    UInt_t ThresCrossBin=TMath::Max(NPedsum-1,0);
+    std::vector<UInt_t> ThresCrossBinList;
+    //    std::cout << " ped = " << fSamples.ped << " thres = " << ThresVal << std::endl ;
+    while ( ThresCrossBin < vals.size() ) {
+      //look for threshold crossings
+      if( fSamples.samples_raw[ThresCrossBin] >= fSamples.ped+ThresVal ){
+	//incase first sample is above threshold (is this necessary?)
+	if( ThresCrossBin == 0 ){
+	  ThresCrossBinList.push_back(ThresCrossBin);
+	//otherwise just check that the previous sample was actually below threshold so we dont just add all samples above threshold
+	}else if( fSamples.samples_raw[ThresCrossBin-1] < fSamples.ped+ThresVal ){
+	  ThresCrossBinList.push_back(ThresCrossBin);
+	}
+      }
+      ThresCrossBin++;
+    }
+    //
+ 
+    fSamples.multipulse.resize(ThresCrossBinList.size());
+    
+    //Loop over all threshold crossings
+    for(int ncross = 0; ncross < ThresCrossBinList.size(); ncross++){
+
+      // if threshold crossing found
+      UInt_t NSB = GetNSB();
+      UInt_t NSA = GetNSA();
+      UInt_t FixedThresCrossBin=GetFixThresBin();
+      Double_t FineTime = 0;
+      Double_t max  = 0;
+      Double_t sum = 0;
+      Double_t sped = 0;
+      
+      Bool_t PeakFound= kFALSE;
+      UInt_t PeakBin= 0;
+      UInt_t IntMinBin= 0;
+      UInt_t IntMaxBin= vals.size();
+      
+      if (ThresCrossBinList[ncross] < vals.size()) {
+	IntMinBin= TMath::Max(ThresCrossBinList[ncross]-NSB,IntMinBin);
+	IntMaxBin= TMath::Min(ThresCrossBinList[ncross]+NSA-1,IntMaxBin);
+      } else {
+	IntMinBin = TMath::Max(FixedThresCrossBin-NSB,IntMinBin);
+	IntMaxBin = TMath::Min(FixedThresCrossBin+NSA-1,IntMaxBin);
+      }
+      // convert to pC, assume tcal is in ns, and 50ohm resistance
+      Double_t pC_Conv = fSamples.tcal/50.;
+      
+      for(size_t i =IntMinBin ; i <IntMaxBin ; i++ ) {
+	sped+=fSamples.ped*pC_Conv;
+	sum+=fSamples.samples_raw[i]*pC_Conv;
+	if ( i >= ThresCrossBinList[ncross] && !PeakFound) {
+	  if (fSamples.samples_raw[i] > max) {
+	    max = fSamples.samples_raw[i];
+	  } else {
+	    PeakFound= kTRUE;
+	    PeakBin = i-1;
+	  }
+	}
+      }
+      //
+      //    std::cout << " Int = " << IntMinBin << " " << IntMaxBin<< " ThresCrossBin =   " << ThresCrossBin << " peak-found " << PeakFound << std::endl ;
+      //
+      Double_t VMid = (max+fSamples.ped)/2.;
+      if (PeakFound) {
+	for(size_t i =IntMinBin ; i <PeakBin+1 ; i++ ) {
+	  if (VMid >= fSamples.samples_raw[i]  && VMid < fSamples.samples_raw[i+1]) {
+	    FineTime = i+(VMid-fSamples.samples_raw[i])/(fSamples.samples_raw[i+1]-fSamples.samples_raw[i]);
+	    /*
+	    std::cout << "good finetime" << std::endl;
+	  }else{
+	    std::cout << "Vmid: " << VMid << " ped: " << fSamples.ped << " , fsamp i: " << fSamples.samples_raw[i] << " , fsamp i+1: " << fSamples.samples_raw[i+1] << " ,i is: " << i << std::endl;
+	    */
+	  }
+	}
+      }
+      
+      /*
+	if (ThresCrossBin==vals.size()) {
+	std::cout << " Threshold = " << fThresVal << " ped = " << fSamples.ped << " element = " << ThresCrossBin << " " << " Vmid = " << VMid << "  sum = " << sum << " max = " << max << " time = " << FineTime << " tcal = " << fSamples.tcal <<  std::endl;
+	}
+      
+      if(FineTime == 0.0){
+	std::cout << "time 0 at finetime and peakfound is: " << PeakFound << std::endl;
+      }
+      */
+      fSamples.multipulse[ncross].integral.raw = sum;
+      fSamples.multipulse[ncross].integral.val = (sum-sped)*fSamples.cal;
+      fSamples.multipulse[ncross].time.raw = FineTime;
+      fSamples.multipulse[ncross].time.val = (FineTime)*fSamples.tcal + fSamples.timeoffset;
+      fSamples.multipulse[ncross].amplitude.raw = max;
+      fSamples.multipulse[ncross].amplitude.val = (max-fSamples.ped)*fSamples.acal;
+      if (max==0) fSamples.multipulse[ncross].amplitude.val=max;
+      //
+      //std::cout << "starting new threshold crossing" << std::endl;
+    }
+    fHasData = (vals.size() > 0);
+  }
+  
   void Waveform::Clear()
   {
     for(size_t i = 0; i < fSamples.samples.size(); i++) {
