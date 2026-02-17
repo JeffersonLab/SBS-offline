@@ -89,6 +89,7 @@ struct SBSGenericOutputData {
   std::vector<Int_t> nsamps;      //< [] Number of ADC samples
   std::vector<Int_t> sidx;        //< [] Index of start of ADC samples in for this row-col-layer
   std::vector<Double_t> samps;     //< []*nsamps ADC samples
+  std::vector<Int_t> npulses;     //< []*number of pulses in waveform
 
   // Quick clear class
   void clear() {

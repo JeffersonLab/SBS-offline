@@ -1112,11 +1112,11 @@ Int_t SBSGenericDetector::DefineVariables( EMode mode )
       ve.push_back({ "Ref.samps", "Calibrated ADC samples",  "fGood.samps" });
       ve.push_back({ "Ref.samps_elemID", "Calibrated ADC samples",  "fGood.samps_elemID" });
     }
-    /*
+    
     if (fEnableMultiPulse){
-      ve.push_back({ kip
+      ve.push_back({ "npulses", "Number of pulses above threshold in waveform", "fGood.npulses" });
     }
-    */
+    
   }
 
   ve.push_back({0}); // Needed to specify the end of list
@@ -1912,6 +1912,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	      fGood.a_amptrig_p.push_back(wave->GetAmplitudeMulti(ind_mult).val/again*trigcal);
 	      fGood.a_amptrig_c.push_back(wave->GetAmplitudeMulti(ind_mult).val*trigcal);
 	      fGood.a_time.push_back(wave->GetTimeMulti(ind_mult).val);
+	      fGood.npulses.push_back(wave->GetNHits());
 	      /*
 	      //kip testing output
 	      if(wave->GetNHits() >= 2 ){
