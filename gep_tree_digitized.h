@@ -383,13 +383,13 @@ public :
    std::vector<int>     *Harm_FT_dighit_strip;
    std::vector<int>     *Harm_FT_dighit_adc;
    std::vector<int>     *Harm_FT_dighit_samp;
-   std::vector<double>  *Harm_FT_dighit_adc_good;
+   std::vector<int>     *Harm_FT_dighit_adc_good;
    Int_t           Harm_FPP1_dighit_nstrips;
    std::vector<int>     *Harm_FPP1_dighit_module;
    std::vector<int>     *Harm_FPP1_dighit_strip;
    std::vector<int>     *Harm_FPP1_dighit_adc;
    std::vector<int>     *Harm_FPP1_dighit_samp;
-   std::vector<double>  *Harm_FPP1_dighit_adc_good;
+   std::vector<int>     *Harm_FPP1_dighit_adc_good;
 
    // List of branches
    TBranch        *b_simc_sigma;   //!
