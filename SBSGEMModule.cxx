@@ -1721,7 +1721,16 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
 	int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
 	UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
-
+	int ADC_good = 0;//MC only...
+	if(fIsMC){
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((strip & 1<<ibit)>>ibit) << " ";}cout << endl;}
+	  //the adc_good should be the 20th to 7 bits of strip if we have this "good adc" encoded
+	  ADC_good = (strip & 0x7FF80) >> 7;
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((ADC_good & 1<<ibit)>>ibit) << " ";}cout << endl;}
+	  //the actual strip number should be the last 7 bits of strip if we have this "good adc" encoded
+	  strip = strip & 0x7F;
+	}
+	
 	int isamp = iraw%fN_MPD_TIME_SAMP;
 	  
 	Int_t ADC = Int_t( decoded_rawADC );
@@ -1730,6 +1739,8 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
 	rawADC[iraw] = ADC;
+	//cout << GetParent()->GetName() << endl;
+	//if(strcmp(GetParent()->GetName(), "gemFT")==0)cout << "GEM decode: iraw " << iraw << " strip " << strip << " samp " << isamp << " raw adc " <<  decoded_rawADC << " adc good? " << ADC_good << endl;
 	
 	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 
