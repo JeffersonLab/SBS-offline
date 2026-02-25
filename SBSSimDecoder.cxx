@@ -1426,7 +1426,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       
       if(fDebug>3)
-	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FT_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FT_dighit_adc->at(j) << " " << simev->Tgep->Harm_FT_dighit_adc_good->at(j) << endl;
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FT_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FT_dighit_adc->at(j) << " good " << simev->Tgep->Harm_FT_dighit_adc_good->at(j) << endl;
       //if(mod>=26 && simev->Tgep->Harm_FT_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
       
       if(j==simev->Tgep->Harm_FT_dighit_nstrips-1){
@@ -1487,7 +1487,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       }
       
       if(fDebug>3)
-	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FPP1_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FPP1_dighit_adc->at(j) << endl;
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FPP1_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FPP1_dighit_adc->at(j) << " good " << simev->Tgep->Harm_FPP1_dighit_adc_good->at(j) << endl;
       //if(mod>=26 && simev->Tgep->Harm_FPP1_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
       
       if(j==simev->Tgep->Harm_FPP1_dighit_nstrips-1){
@@ -1512,6 +1512,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
 	    myev->push_back(samps[k]+strips[k]*(1<<13)+goodsamps[k]*(1<<20));
+	    //for(int ibit = 32; ibit>=0; ibit--){cout << ((myev->back() & 1<<ibit)>>ibit) << " ";}cout << endl;
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
