@@ -1455,7 +1455,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	    //UInt_t evpushback = strips[k]*(1<<13)+samps[k]+goodsamps[k]*(1<<20);
 	    //for(int ibit = 0; ibit<32; ibit++){cout << ((evpushback & 1<<ibit)>>ibit) << " ";}cout << endl;
 	    myev->push_back(samps[k]+strips[k]*(1<<13)+goodsamps[k]*(1<<20));
-	    for(int ibit = 32; ibit>=0; ibit--){cout << ((myev->back() & 1<<ibit)>>ibit) << " ";}cout << endl;
+	    //for(int ibit = 32; ibit>=0; ibit--){cout << ((myev->back() & 1<<ibit)>>ibit) << " ";}cout << endl;
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
