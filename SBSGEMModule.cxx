@@ -1499,7 +1499,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	    hMPD_FineTimeStamp_vs_Fiber->Fill( fiber, fTfine_by_APV[apvcounter] * 4.0 );
 	  }
-	    
+	  
 	  Long64_t Tcoarse = Thigh << 16 | ( Tlow << 8 );
 	  double Tc = double(Tcoarse);
 	  
@@ -1723,10 +1723,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
 	int ADC_good = 0;//MC only...
 	if(fIsMC){
-	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((strip & 1<<ibit)>>ibit) << " ";}cout << endl;}
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((decoded_rawADC & 1<<ibit)>>ibit) << "";}cout << endl;}
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((strip & 1<<ibit)>>ibit) << "";}cout << endl;}
 	  //the adc_good should be the 20th to 7 bits of strip if we have this "good adc" encoded
 	  ADC_good = (strip & 0x7FF80) >> 7;
-	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((ADC_good & 1<<ibit)>>ibit) << " ";}cout << endl;}
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((ADC_good & 1<<ibit)>>ibit) << "";}cout << endl;}
 	  //the actual strip number should be the last 7 bits of strip if we have this "good adc" encoded
 	  strip = strip & 0x7F;
 	}
@@ -1734,13 +1735,19 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	int isamp = iraw%fN_MPD_TIME_SAMP;
 	  
 	Int_t ADC = Int_t( decoded_rawADC );
-	
+	// ***if*** (and only if) raw ADC decode is above 2^12, that means the value that was encoded is negative;
+	// evdata.GetData(...)method takes the last 13 bits, so we end up with rawADC = 2^13+ADC 
+	// therefore, we need to correct it by subtracting 2^13:
+	if(ADC>= (1<<12)){
+	  //cout << ADC << " " << (1<<12) << endl;
+	  ADC = ADC - (1<<13);
+	}
 	rawStrip[iraw] = strip;
 	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
 	rawADC[iraw] = ADC;
 	//cout << GetParent()->GetName() << endl;
-	//if(strcmp(GetParent()->GetName(), "gemFT")==0)cout << "GEM decode: iraw " << iraw << " strip " << strip << " samp " << isamp << " raw adc " <<  decoded_rawADC << " adc good? " << ADC_good << endl;
+	//if(strcmp(GetParent()->GetName(), "gemFT")==0)cout << "GEM decode: iraw " << iraw << " strip " << strip << " samp " << isamp << " raw adc " <<  decoded_rawADC << " adc " <<  ADC << " adc good? " << ADC_good << endl;
 	
 	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 
