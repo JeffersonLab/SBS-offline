@@ -1738,7 +1738,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	// ***if*** (and only if) raw ADC decode is above 2^12, that means the value that was encoded is negative;
 	// evdata.GetData(...)method takes the last 13 bits, so we end up with rawADC = 2^13+ADC 
 	// therefore, we need to correct it by subtracting 2^13:
-	if(ADC>= (1<<12)){
+	if(fIsMC && ADC>= (1<<12)){
 	  //cout << ADC << " " << (1<<12) << endl;
 	  ADC = ADC - (1<<13);
 	}
