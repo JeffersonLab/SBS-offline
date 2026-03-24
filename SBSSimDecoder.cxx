@@ -781,7 +781,9 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
   std::vector<UInt_t> strips;
   std::vector<UInt_t> samps;
   std::vector<UInt_t> times;
-
+  //containers for the "adc_good" info
+  std::vector<UInt_t> goodsamps;
+  
   bool loadevt = false;
   //int cur_apv = -1;
   
@@ -1124,7 +1126,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
-	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	    myev->push_back(strips[k]*(1<<13)+samps[k]);//strips[k]<< 13 | samps[k]);
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
@@ -1419,11 +1421,21 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       if(simev->Tgep->Harm_FT_dighit_samp->at(j)>=0){
 	strips.push_back(chan);
-	samps.push_back(simev->Tgep->Harm_FT_dighit_adc->at(j));
+	// if dighit_adc is negative, it will store samps as 2^32 + adc, which will mess up the encoding
+	// therefore, we need to "preencode" samps as 2^13+adc instead of 2^32+adc if adc is negative
+	// change propagated to FPP1; should it be propoagated to all GEM detectors???
+	if(simev->Tgep->Harm_FT_dighit_adc->at(j)>=0){
+	  //adc >= 0: no need to do anything special
+	  samps.push_back(simev->Tgep->Harm_FT_dighit_adc->at(j));
+	}else{
+	  //adc < 0: store adc in samps vector as 2^13+adc:
+	  samps.push_back((1<<13)+simev->Tgep->Harm_FT_dighit_adc->at(j));
+	}
+	goodsamps.push_back(simev->Tgep->Harm_FT_dighit_adc_good->at(j));
       }
       
       if(fDebug>3)
-	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FT_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FT_dighit_adc->at(j) << endl;
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FT_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FT_dighit_adc->at(j) << " good " << simev->Tgep->Harm_FT_dighit_adc_good->at(j) << endl;
       //if(mod>=26 && simev->Tgep->Harm_FT_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
       
       if(j==simev->Tgep->Harm_FT_dighit_nstrips-1){
@@ -1443,11 +1455,16 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	
 	if(!samps.empty()){
 	  //myev->push_back(SBSSimDataDecoder::EncodeHeader(5, apvnum, samps.size()));
-	  //I think I'm onto something here, but I also need to transmit strip num 
+	  //I think I'm onto something here, but I also need to transmit strip num
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
-	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	    // Encode "adc_good" in the "free" bits for the myev word
+	    //cout << strips[k] << "  " << samps[k] << " " << goodsamps[k] << " " << strips[k]*(1<<13)+samps[k]+goodsamps[k]*(1<<20) << " => ";// << endl;
+	    //UInt_t evpushback = strips[k]*(1<<13)+samps[k]+goodsamps[k]*(1<<20);
+	    //for(int ibit = 0; ibit<32; ibit++){cout << ((evpushback & 1<<ibit)>>ibit) << " ";}cout << endl;
+	    myev->push_back(samps[k]+strips[k]*(1<<13)+goodsamps[k]*(1<<20));
+	    //for(int ibit = 32; ibit>=0; ibit--){cout << ((myev->back() & 1<<ibit)>>ibit) << "";}cout << endl;
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
@@ -1474,11 +1491,20 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
       
       if(simev->Tgep->Harm_FPP1_dighit_samp->at(j)>=0){
 	strips.push_back(chan);
-	samps.push_back(simev->Tgep->Harm_FPP1_dighit_adc->at(j));
+	// if dighit_adc is negative, it will store samps as 2^32 + adc, which will mess up the encoding
+	// therefore, we need to "preencode" samps as 2^13+adc instead of 2^32+adc if adc is negative
+	if(simev->Tgep->Harm_FPP1_dighit_adc->at(j)>=0){
+	  //adc >= 0: no need to do anything special
+	  samps.push_back(simev->Tgep->Harm_FPP1_dighit_adc->at(j));
+	}else{
+	  //adc < 0: store adc in samps vector as 2^13+adc:
+	  samps.push_back((1<<13)+simev->Tgep->Harm_FPP1_dighit_adc->at(j));
+	}
+	goodsamps.push_back(simev->Tgep->Harm_FPP1_dighit_adc_good->at(j));
       }
       
       if(fDebug>3)
-	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FPP1_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FPP1_dighit_adc->at(j) << endl;
+	cout << " mod " << mod << " lchan " << lchan << " crate " << crate << " slot " << slot << " apvnum " << apvnum << " chan " << chan << " samp " << simev->Tgep->Harm_FPP1_dighit_samp->at(j)  << " adc " << simev->Tgep->Harm_FPP1_dighit_adc->at(j) << " good " << simev->Tgep->Harm_FPP1_dighit_adc_good->at(j) << endl;
       //if(mod>=26 && simev->Tgep->Harm_FPP1_dighit_samp->at(j)==5)cout << mod << " " << lchan << " " << apvnum << endl;
       
       if(j==simev->Tgep->Harm_FPP1_dighit_nstrips-1){
@@ -1502,7 +1528,8 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
-	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	    myev->push_back(samps[k]+strips[k]*(1<<13)+goodsamps[k]*(1<<20));
+	    //for(int ibit = 32; ibit>=0; ibit--){cout << ((myev->back() & 1<<ibit)>>ibit) << " ";}cout << endl;
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
@@ -1696,7 +1723,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
-	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	    myev->push_back(strips[k]*(1<<13)+samps[k]);//strips[k]<< 13 | samps[k]);
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
@@ -1751,7 +1778,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
-	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	    myev->push_back(strips[k]*(1<<13)+samps[k]);//strips[k]<< 13 | samps[k]);
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
@@ -1806,7 +1833,7 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  myev->push_back(SBSSimDataDecoder::EncodeHeader(9, apvnum, samps.size()));
 	  for(int k = 0; k<(int)samps.size(); k++){
 	    // cout << " " << samps[k];
-	    myev->push_back(strips[k]*8192+samps[k]);//strips[k]<< 13 | samps[k]);
+	    myev->push_back(strips[k]*(1<<13)+samps[k]);//strips[k]<< 13 | samps[k]);
 	  }
 	  //for(int l = 0; l<myev->size();l++)cout << myev->at(l) << " ";
 	  //cout << endl;
