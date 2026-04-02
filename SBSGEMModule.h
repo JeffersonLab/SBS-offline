@@ -497,8 +497,12 @@ class SBSGEMModule : public THaSubDetector {
   UInt_t fNclustV_neg; // number of negative V clusters found
   UInt_t fNclustU_total; // Number of U clusters found in entire active area, without enforcing search region constraint
   UInt_t fNclustV_total; // Number of U clusters found in entire active area, without enforcing search region constraint
+  UInt_t fNclustU_good; // number of U clusters with 'keep==true', to be used in the 2D hit formation.
+  UInt_t fNclustV_good; // number of V clusters with 'keep==true', to be used in the 2D hit formation.
   std::vector<sbsgemcluster_t> fUclusters; //1D clusters along "U" direction
+  std::vector<Int_t> fGoodUclustersIndex;  //Vector holding index of good clusters from the fUclusters to be considered for 2D hit reconstruction.
   std::vector<sbsgemcluster_t> fVclusters; //1D clusters along "V" direction
+  std::vector<Int_t> fGoodVclustersIndex;  //Vector holding index of good clusters from the fVclusters to be considered for 2D hit reconstruction.
 
   UInt_t fMAX2DHITS; // Max. 2d hits per module, to limit memory usage:
   UInt_t fN2Dhits; // number of 2D hits found in region of interest:
