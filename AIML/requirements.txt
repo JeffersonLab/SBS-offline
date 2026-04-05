@@ -1,0 +1,5 @@
+torch>=1.10.0
+numpy>=1.20.0
+uproot>=5.0.0
+awkward>=2.0.0
+matplotlib>=3.4.0
