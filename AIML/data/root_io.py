@@ -286,6 +286,451 @@ def hits_to_graph(hits, layer_ids, r_connect=50.0, k_nearest=8):
     return edge_index, edge_attr
 
 
+# ---------------------------------------------------------------------------
+# G4SBS Monte Carlo truth tree formats
+# ---------------------------------------------------------------------------
+
+# Branch naming conventions for G4SBS truth-level GEM hit trees.
+# The tree name is "T" and branches follow the pattern:
+#   {detector_prefix}_hit_{field}
+# Common detector prefixes for GEM:
+#   Earm.BBGEM   - BigBite GEM (GMn, GEn experiments)
+#
+# These provide MC truth needed for supervised training labels.
+
+G4SBS_GEM_HIT_FIELDS = [
+    "plane",   # GEM plane/layer index
+    "x",       # local x position (m)
+    "y",       # local y position (m)
+    "z",       # local z position (m)
+    "xg",      # global x position (m)
+    "yg",      # global y position (m)
+    "zg",      # global z position (m)
+    "t",       # average hit time (ns)
+    "trms",    # hit time RMS (ns)
+    "tmin",    # minimum hit time (ns)
+    "tmax",    # maximum hit time (ns)
+    "tx",      # local track x at plane (m)
+    "ty",      # local track y at plane (m)
+    "txp",     # track dx/dz slope
+    "typ",     # track dy/dz slope
+    "trid",    # Geant4 track ID
+    "mid",     # Geant4 mother track ID
+    "pid",     # PDG particle ID
+    "p",       # particle momentum (GeV)
+    "edep",    # energy deposit (GeV)
+    "beta",    # particle velocity v/c
+    "vx",      # vertex x (m)
+    "vy",      # vertex y (m)
+    "vz",      # vertex z (m)
+    "xin",     # entry point x (m)
+    "yin",     # entry point y (m)
+    "zin",     # entry point z (m)
+    "xout",    # exit point x (m)
+    "yout",    # exit point y (m)
+    "zout",    # exit point z (m)
+]
+
+G4SBS_GEM_TRACK_FIELDS = [
+    "TID",       # Geant4 track ID
+    "PID",       # PDG particle ID
+    "MID",       # mother track ID
+    "NumHits",   # number of hits on track
+    "NumPlanes", # number of planes hit
+    "NDF",       # degrees of freedom
+    "Chi2fit",   # chi2 of fit
+    "Chi2true",  # chi2 vs true trajectory
+    "X",         # track x at reference plane (m)
+    "Y",         # track y at reference plane (m)
+    "Xp",        # track dx/dz
+    "Yp",        # track dy/dz
+    "T",         # track time (ns)
+    "P",         # track momentum (GeV)
+    "Sx",        # spin x component
+    "Sy",        # spin y component
+    "Sz",        # spin z component
+    "Xfit",      # fitted track x (m)
+    "Yfit",      # fitted track y (m)
+    "Xpfit",     # fitted dx/dz
+    "Ypfit",     # fitted dy/dz
+]
+
+# Digitized GEM strip branches (6 ADC time samples per strip)
+G4SBS_GEM_DIG_FIELDS = ["strip", "adc_0", "adc_1", "adc_2", "adc_3", "adc_4", "adc_5"]
+
+
+def load_g4sbs_gem_data(
+    filepath,
+    tree_name="T",
+    det_prefix="Earm_BBGEM",
+    max_events=None,
+    convert_to_mm=True,
+):
+    """Load G4SBS truth-level GEM hit and track data for training.
+
+    Reads the Geant4 simulation truth tree produced by G4SBS and converts
+    it into the per-event dict format expected by the AIML training pipeline.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to G4SBS output ROOT file (or digitized file).
+    tree_name : str
+        TTree name (default "T").
+    det_prefix : str
+        Detector branch prefix. Use "Earm_BBGEM" for BigBite GEM (GMn/GEn).
+        Branch names follow the pattern ``{det_prefix}_hit_{field}``.
+        Note: dots in branch names may appear as underscores in uproot.
+    max_events : int or None
+        Maximum number of events to load.
+    convert_to_mm : bool
+        Convert G4SBS positions from meters to mm (the SBS-offline convention).
+
+    Returns
+    -------
+    events : list[dict]
+        Per-event dictionaries compatible with GEMTrackGraphDataset:
+        - "hits": (n_hits, n_features) float32 array
+        - "layer_ids": (n_hits,) int64 array of plane indices
+        - "labels": (n_hits,) float32 (1=primary signal, 0=secondary/noise)
+        - "track_ids": (n_hits,) int64 Geant4 track IDs
+        - "true_tracks": list of dicts with track parameters
+        - "pids": (n_hits,) int64 PDG particle IDs
+        - "momenta": (n_hits,) float32 particle momenta (GeV)
+        - "edep": (n_hits,) float32 energy deposits (GeV)
+    mc_tracks : list[list[dict]]
+        Per-event list of MC truth track parameter dicts.
+    """
+    _check_uproot()
+
+    # Build branch names - try both dot and underscore separators
+    hit_prefix = f"{det_prefix}_hit"
+    track_prefix = f"{det_prefix}_Track"
+    nhits_branch = f"{det_prefix}_hit_nhits"
+    ntracks_branch = f"{det_prefix}_Track_ntracks"
+
+    hit_branches = [f"{hit_prefix}_{f}" for f in G4SBS_GEM_HIT_FIELDS]
+    track_branches = [f"{track_prefix}_{f}" for f in G4SBS_GEM_TRACK_FIELDS]
+
+    with uproot.open(filepath) as f:
+        tree = f[tree_name]
+        available = set(tree.keys())
+
+        # Auto-detect branch naming: dots vs underscores
+        if nhits_branch not in available:
+            alt_prefix = det_prefix.replace("_", ".")
+            hit_prefix_alt = f"{alt_prefix}.hit"
+            track_prefix_alt = f"{alt_prefix}.Track"
+            nhits_branch_alt = f"{alt_prefix}.hit.nhits"
+
+            if nhits_branch_alt in available:
+                hit_branches = [f"{hit_prefix_alt}.{f}" for f in G4SBS_GEM_HIT_FIELDS]
+                track_branches = [f"{track_prefix_alt}.{f}" for f in G4SBS_GEM_TRACK_FIELDS]
+                nhits_branch = nhits_branch_alt
+                ntracks_branch = f"{alt_prefix}.Track.ntracks"
+
+        # Filter to available branches
+        hit_branches_avail = [b for b in hit_branches if b in available]
+        track_branches_avail = [b for b in track_branches if b in available]
+
+        if not hit_branches_avail:
+            raise ValueError(
+                f"No G4SBS GEM hit branches found with prefix '{det_prefix}'. "
+                f"Available branches (first 30): {sorted(available)[:30]}"
+            )
+
+        all_branches = hit_branches_avail[:]
+        if nhits_branch in available:
+            all_branches.append(nhits_branch)
+        all_branches.extend(track_branches_avail)
+        if ntracks_branch in available:
+            all_branches.append(ntracks_branch)
+
+        entry_stop = max_events if max_events else None
+        arrays = tree.arrays(all_branches, entry_stop=entry_stop, library="np")
+
+        n_events = len(next(iter(arrays.values())))
+        scale = 1000.0 if convert_to_mm else 1.0  # m -> mm
+
+        # Build a field lookup for hit data
+        def _get_hit(field, event_idx):
+            for sep in ["_", "."]:
+                key = f"{hit_prefix}{sep}{field}" if sep == "_" else f"{hit_prefix.replace('_', '.')}.{field}"
+                # Try both naming conventions
+                for candidate in [f"{hit_prefix}_{field}",
+                                  f"{hit_prefix.replace('_hit', '.hit')}.{field}"]:
+                    if candidate in arrays:
+                        return np.asarray(arrays[candidate][event_idx])
+            return None
+
+        def _get_track(field, event_idx):
+            for candidate in [f"{track_prefix}_{field}",
+                              f"{track_prefix.replace('_Track', '.Track')}.{field}"]:
+                if candidate in arrays:
+                    return np.asarray(arrays[candidate][event_idx])
+            return None
+
+        events = []
+        mc_tracks_all = []
+
+        for ev in range(n_events):
+            # --- Extract hit data ---
+            plane = _get_hit("plane", ev)
+            if plane is None or len(plane) == 0:
+                continue
+
+            n_hits = len(plane)
+
+            # Positions (prefer global, fall back to local)
+            xg = _get_hit("xg", ev)
+            yg = _get_hit("yg", ev)
+            zg = _get_hit("zg", ev)
+            if xg is None:
+                xg = _get_hit("x", ev)
+                yg = _get_hit("y", ev)
+                zg = _get_hit("z", ev)
+
+            # Timing
+            t_hit = _get_hit("t", ev)
+            trms = _get_hit("trms", ev)
+
+            # Track slopes
+            txp = _get_hit("txp", ev)
+            typ = _get_hit("typ", ev)
+
+            # Track IDs and particle info
+            trid = _get_hit("trid", ev)
+            pid = _get_hit("pid", ev)
+            momentum = _get_hit("p", ev)
+            edep = _get_hit("edep", ev)
+            beta = _get_hit("beta", ev)
+
+            # Build feature matrix matching our 14-feature convention:
+            # [x, y, z, E, t, t_corr, asym, tdiff, corr_clust, corr_strip,
+            #  E_deconv, asym_deconv, t_deconv, tdiff_deconv]
+            # For G4SBS truth data we fill what we have and use placeholders
+            # for features that only exist after digitization + reconstruction.
+            x_mm = xg * scale if xg is not None else np.zeros(n_hits)
+            y_mm = yg * scale if yg is not None else np.zeros(n_hits)
+            z_mm = zg * scale if zg is not None else np.zeros(n_hits)
+            e_gev = edep if edep is not None else np.zeros(n_hits)
+            t_ns = t_hit if t_hit is not None else np.zeros(n_hits)
+            t_rms = trms if trms is not None else np.zeros(n_hits)
+            slope_x = txp if txp is not None else np.zeros(n_hits)
+            slope_y = typ if typ is not None else np.zeros(n_hits)
+            mom = momentum if momentum is not None else np.zeros(n_hits)
+            b = beta if beta is not None else np.zeros(n_hits)
+
+            hits = np.column_stack([
+                x_mm, y_mm, z_mm,          # positions (mm)
+                e_gev * 1e6,                # energy deposit (keV, more natural scale)
+                t_ns,                        # hit time (ns)
+                t_ns,                        # corrected time (same as t for truth)
+                slope_x,                     # dx/dz slope (proxy for ADC asymmetry)
+                slope_y,                     # dy/dz slope (proxy for time diff)
+                mom,                         # momentum (proxy for cluster correlation)
+                b,                           # beta (proxy for strip correlation)
+                e_gev * 1e6 * 0.9,          # placeholder for deconv energy
+                slope_x,                     # placeholder for deconv asymmetry
+                t_ns,                        # placeholder for deconv time
+                t_rms,                       # time RMS as proxy for deconv tdiff
+            ]).astype(np.float32)
+
+            layer_ids = plane.astype(np.int64)
+
+            # --- Truth labels ---
+            # Primary signal: track ID 1 is typically the primary scattered particle
+            # in G4SBS. Hits with trid > 0 and pid == +/-11 (electron) or
+            # pid matching the primary are signal.
+            trid_arr = trid.astype(np.int64) if trid is not None else -np.ones(n_hits, dtype=np.int64)
+            pid_arr = pid.astype(np.int64) if pid is not None else np.zeros(n_hits, dtype=np.int64)
+
+            # Signal = any hit from a particle that traverses >= 3 planes
+            # (mimics the SBS-offline tracking requirement)
+            unique_trids, trid_counts = np.unique(trid_arr[trid_arr > 0], return_counts=True)
+            signal_trids = set(unique_trids[trid_counts >= 3])
+            labels = np.array([1.0 if int(tid) in signal_trids else 0.0
+                               for tid in trid_arr], dtype=np.float32)
+
+            # --- Extract MC truth tracks ---
+            mc_tracks = []
+            tid_track = _get_track("TID", ev)
+            if tid_track is not None and len(tid_track) > 0:
+                for it in range(len(tid_track)):
+                    track_dict = {}
+                    for field in G4SBS_GEM_TRACK_FIELDS:
+                        val = _get_track(field, ev)
+                        if val is not None and it < len(val):
+                            track_dict[field] = float(val[it])
+                    # Convert position fields to mm
+                    for pos_field in ["X", "Y", "Xfit", "Yfit"]:
+                        if pos_field in track_dict:
+                            track_dict[pos_field] *= scale
+                    mc_tracks.append(track_dict)
+
+            events.append({
+                "hits": hits,
+                "layer_ids": layer_ids,
+                "labels": labels,
+                "track_ids": trid_arr,
+                "true_tracks": mc_tracks,
+                "pids": pid_arr,
+                "momenta": mom.astype(np.float32),
+                "edep": (e_gev * 1e6).astype(np.float32),
+            })
+            mc_tracks_all.append(mc_tracks)
+
+    return events, mc_tracks_all
+
+
+def load_g4sbs_digitized_strips(
+    filepath,
+    tree_name="T",
+    det_prefix="Earm_BBGEM",
+    n_modules=5,
+    max_events=None,
+):
+    """Load digitized GEM strip ADC samples from a G4SBS digitized file.
+
+    Reads the 6-sample ADC waveforms per strip, organized by GEM module.
+    Useful for training the GEMConvAutoencoder on waveform denoising.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to digitized ROOT file.
+    tree_name : str
+        TTree name.
+    det_prefix : str
+        Detector prefix (e.g. "Earm_BBGEM").
+    n_modules : int
+        Number of GEM modules (planes * 2 for x/y readout).
+        For BigBite GEM with 5 planes: modules 1x,1y,...,5x,5y.
+    max_events : int or None
+        Maximum events to read.
+
+    Returns
+    -------
+    list[dict]
+        Per-event dicts with:
+        - "strips": list of (strip_id, module_id, adc_samples[6]) arrays per module
+        - "waveforms": (n_strips, 6) float32 array of all ADC waveforms
+        - "module_ids": (n_strips,) int array of module assignments
+    """
+    _check_uproot()
+
+    with uproot.open(filepath) as f:
+        tree = f[tree_name]
+        available = set(tree.keys())
+
+        # Detect branch naming for digitized GEM strips
+        # Pattern: {prefix}_{layer}{axis}_dighit_{field}
+        # e.g. Earm_BBGEM_1x_dighit_strip, Earm_BBGEM_1x_dighit_adc_0
+        # or:  Earm.BBGEM.dighit.{field} (flat module-based)
+
+        module_branches = {}
+        for layer in range(1, 6):  # layers 1-5
+            for axis in ["x", "y"]:
+                mod_name = f"{layer}{axis}"
+                mod_prefix = f"{det_prefix}_{mod_name}_dighit"
+                # Also try dot notation
+                mod_prefix_dot = f"{det_prefix.replace('_', '.')}_{mod_name}_dighit"
+
+                for prefix_try in [mod_prefix, mod_prefix_dot]:
+                    strip_key = f"{prefix_try}_strip"
+                    if strip_key in available:
+                        branches = [f"{prefix_try}_{f}" for f in G4SBS_GEM_DIG_FIELDS]
+                        branches_avail = [b for b in branches if b in available]
+                        if branches_avail:
+                            module_branches[mod_name] = branches_avail
+                        break
+
+        # Also check flat dighit format (module + strip + adc_0..5)
+        flat_prefix = f"{det_prefix}_dighit"
+        flat_prefix_dot = f"{det_prefix.replace('_', '.')}.dighit"
+        for prefix_try in [flat_prefix, flat_prefix_dot]:
+            mod_key = f"{prefix_try}_module"
+            if mod_key in available:
+                branches = [f"{prefix_try}_{f}" for f in
+                            ["module"] + G4SBS_GEM_DIG_FIELDS]
+                branches_avail = [b for b in branches if b in available]
+                if branches_avail:
+                    module_branches["flat"] = branches_avail
+                break
+
+        if not module_branches:
+            raise ValueError(
+                f"No digitized GEM strip branches found with prefix '{det_prefix}'. "
+                f"Available (first 30): {sorted(available)[:30]}"
+            )
+
+        # Load all needed branches
+        all_branches = []
+        for branches in module_branches.values():
+            all_branches.extend(branches)
+        all_branches = list(set(all_branches))
+
+        entry_stop = max_events if max_events else None
+        arrays = tree.arrays(all_branches, entry_stop=entry_stop, library="np")
+        n_events_total = len(next(iter(arrays.values())))
+
+        events = []
+        for ev in range(n_events_total):
+            all_waveforms = []
+            all_module_ids = []
+
+            if "flat" in module_branches:
+                # Flat format: single set of branches with module index
+                prefix_try = flat_prefix if f"{flat_prefix}_module" in arrays else flat_prefix_dot
+                modules = np.asarray(arrays[f"{prefix_try}_module"][ev])
+                strips = np.asarray(arrays[f"{prefix_try}_strip"][ev])
+                adcs = []
+                for s in range(6):
+                    key = f"{prefix_try}_adc_{s}"
+                    if key in arrays:
+                        adcs.append(np.asarray(arrays[key][ev], dtype=np.float32))
+                    else:
+                        adcs.append(np.zeros(len(modules), dtype=np.float32))
+                waveforms = np.stack(adcs, axis=-1)
+                all_waveforms.append(waveforms)
+                all_module_ids.append(modules.astype(np.int32))
+            else:
+                # Per-module format
+                mod_idx = 0
+                for mod_name, branches in sorted(module_branches.items()):
+                    strip_key = [b for b in branches if b.endswith("_strip")]
+                    if not strip_key:
+                        continue
+                    strips = np.asarray(arrays[strip_key[0]][ev])
+                    n_strips_ev = len(strips)
+                    if n_strips_ev == 0:
+                        mod_idx += 1
+                        continue
+
+                    adcs = []
+                    for s in range(6):
+                        adc_key = [b for b in branches if b.endswith(f"_adc_{s}")]
+                        if adc_key and adc_key[0] in arrays:
+                            adcs.append(np.asarray(arrays[adc_key[0]][ev], dtype=np.float32))
+                        else:
+                            adcs.append(np.zeros(n_strips_ev, dtype=np.float32))
+                    waveforms = np.stack(adcs, axis=-1)
+                    all_waveforms.append(waveforms)
+                    all_module_ids.append(np.full(n_strips_ev, mod_idx, dtype=np.int32))
+                    mod_idx += 1
+
+            if all_waveforms:
+                events.append({
+                    "waveforms": np.concatenate(all_waveforms, axis=0),
+                    "module_ids": np.concatenate(all_module_ids, axis=0),
+                })
+            else:
+                events.append({"waveforms": np.zeros((0, 6), dtype=np.float32),
+                               "module_ids": np.zeros(0, dtype=np.int32)})
+
+    return events
+
+
 def generate_synthetic_gem_data(
     n_events=1000,
     n_layers=5,

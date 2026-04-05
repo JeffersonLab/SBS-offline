@@ -22,7 +22,11 @@ Machine learning components for the SuperBigBite (SBS) detector reconstruction a
 
 ### Data Pipeline (`data/`)
 
-- **root_io.py**: Reads GEM hit/track data from SBS-offline ROOT files via `uproot`. Also provides synthetic data generation for development.
+- **root_io.py**: Reads GEM hit/track data from SBS-offline ROOT files via `uproot`. Includes:
+  - `load_gem_hits_from_root()` - Load reconstructed hits from SBS-offline replay output
+  - `load_g4sbs_gem_data()` - Load G4SBS MC truth hits + tracks with full particle info
+  - `load_g4sbs_digitized_strips()` - Load digitized strip ADC waveforms (6 samples)
+  - `generate_synthetic_gem_data()` - Generate synthetic events for development
 - **gem_dataset.py**: PyTorch Dataset classes for both autoencoder training (per-hit) and GNN training (per-event graphs).
 
 ## Quick Start
@@ -53,7 +57,47 @@ python scripts/inference.py \
     --output results.npz
 ```
 
-### Train on real data
+### Generate training data from G4SBS
+
+```bash
+# From G4SBS truth-level ROOT files (e.g., GMn BigBite GEM):
+python scripts/generate_training_data.py \
+    --input '/volatile/halla/sbs/simulations/gmn_sbs4_*.root' \
+    --det-prefix Earm_BBGEM \
+    --output-dir training_data/gmn \
+    --max-events 50000
+
+# Include digitized ADC waveforms for convolutional autoencoder:
+python scripts/generate_training_data.py \
+    --input '/path/to/digitized/simdigtest_*.root' \
+    --det-prefix Earm_BBGEM \
+    --include-waveforms \
+    --output-dir training_data/gmn_dig
+
+# Quick test with synthetic data:
+python scripts/generate_training_data.py \
+    --synthetic --n-events 5000 \
+    --output-dir training_data/synthetic
+```
+
+The generator reads G4SBS Monte Carlo truth trees (Geant4 track IDs, particle
+IDs, momenta, energy deposits) and produces labeled training datasets with
+train/val/test splits, pre-built graphs, and normalization statistics.
+
+### Train on G4SBS data
+
+```bash
+# After generating training data:
+python scripts/train_autoencoder.py \
+    --input training_data/gmn/train.npz \
+    --epochs 100
+
+python scripts/train_gnn_tracker.py \
+    --input training_data/gmn/train.npz \
+    --epochs 80
+```
+
+### Train on replay data
 
 ```bash
 # From SBS-offline replay ROOT files:
@@ -77,6 +121,23 @@ The AIML module reads from and writes to the same ROOT tree structure used by th
 | `sbsgemhit_t.ontrack` | Training label (MC truth) |
 | `SBSGEMTrackerBase` track parameters | Validation reference |
 
+### G4SBS Branch Mapping
+
+For MC truth training data, the generator reads from G4SBS output trees:
+
+| G4SBS Branch (`Earm.BBGEM`) | AIML Usage |
+|---|---|
+| `hit.xg/yg/zg` | Hit position (converted m -> mm) |
+| `hit.plane` | Layer assignment for graph construction |
+| `hit.trid` | Track ID for signal/noise labeling |
+| `hit.pid` | PDG particle ID |
+| `hit.p` | Particle momentum (GeV) |
+| `hit.edep` | Energy deposit (GeV -> keV) |
+| `hit.t/trms` | Hit timing |
+| `hit.txp/typ` | Track slopes |
+| `Track.TID/PID/X/Y/Xp/Yp/P` | MC truth track parameters |
+| `dighit.strip/adc_0..5` | Digitized strip ADC waveforms (6 samples) |
+
 ## Directory Structure
 
 ```
@@ -98,7 +159,8 @@ AIML/
 │   └── visualization.py    # Event displays, training curves
 └── scripts/
     ├── __init__.py
-    ├── train_autoencoder.py   # Autoencoder training script
-    ├── train_gnn_tracker.py   # GNN training script
-    └── inference.py           # Full inference pipeline
+    ├── generate_training_data.py  # G4SBS training data generator
+    ├── train_autoencoder.py       # Autoencoder training script
+    ├── train_gnn_tracker.py       # GNN training script
+    └── inference.py               # Full inference pipeline
 ```
