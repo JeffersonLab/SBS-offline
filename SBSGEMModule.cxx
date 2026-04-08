@@ -2945,7 +2945,7 @@ void SBSGEMModule::find_2Dhits(){
     double xmin = 10000000, xmax = -10000000, ymin = 10000000, ymax = -10000000; // Define bounds that are sure to be overriden.
     double umin = 10000000, umax = -10000000, vmin = 10000000, vmax = -10000000; 
 
-    // Let us loop through all the contraint points and find the above.
+    // Let us loop through all the constraint points and find the above.
     for ( int icp = 0; icp < fxcmin.size(); icp++  ){
 
       double xmin_icp = fxcmin[icp];
@@ -2995,10 +2995,10 @@ void SBSGEMModule::find_2Dhits(){
 
   if( fNclustU > 0 && fNclustV > 0 ){
 
-    fGoodUclustersIndex.resize( fNclustU );
-    fGoodVclustersIndex.resize( fNclustV );
     fGoodUclustersIndex.clear();
     fGoodVclustersIndex.clear();
+    fGoodUclustersIndex.resize( fNclustU );
+    fGoodVclustersIndex.resize( fNclustV );
 
     fNclustU_good = 0;
     fNclustV_good = 0;
