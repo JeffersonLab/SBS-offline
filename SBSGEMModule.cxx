@@ -2082,8 +2082,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    double CMbias = CMbiasDB;
 	    
 	    if( fNeventsOnlineBias_by_APV[apvcounter] >= std::min( UInt_t(100), std::max(UInt_t(10), fN_MPD_TIME_SAMP * fNeventsCommonModeLookBack) ) ){
-	      CMbias = fCommonModeOnlineBiasRollingAverage_by_APV[apvcounter]; 
-	    }
+	      CMbias = fCommonModeOnlineBiasRollingAverage_by_APV[apvcounter];
+        CommonModeCorrection[isamp] += 2.0*CMbias*(1.0-double(ngood)/double(fN_APV25_CHAN));  // Only apply when rolling average is filled
+      } else {
+        CommonModeCorrection[isamp] = 0.0;
+      }
 
 	    //bias is DEFINED as Online common-mode MINUS correction MINUS "true" common-mode:
 	    //"correction" is DEFINED as Online common-mode MINUS "corrected common-mode" and is to be ADDED to the ADC values:
@@ -2096,7 +2099,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    // = uncorrected ADC + [correction + bias]
 	    // [...] = correction to be ADDED to ADC
 	    // --> corrected correction = correction + bias
-	    CommonModeCorrection[isamp] += 2.0*CMbias*(1.0-double(ngood)/double(fN_APV25_CHAN));
+	    //CommonModeCorrection[isamp] += 2.0*CMbias*(1.0-double(ngood)/double(fN_APV25_CHAN));
 	    
 	    //"TRUE" common-mode is equal to 
 	    
@@ -6585,9 +6588,12 @@ double SBSGEMModule::GetCommonModeCorrection( UInt_t isamp, const mpdmap_t &apvi
 
         if( stripcount >= windowsize ){ // Check if there were more strips within 3 sigma than in our orginal window
           cm_temp = sumADC/double(stripcount);
+          CMcorrection = fCM_online[isamp] - cm_temp;
+        } else {
+          CMcorrection = 0;
         }
 
-	    CMcorrection = fCM_online[isamp] - cm_temp;
+	    //CMcorrection = fCM_online[isamp] - cm_temp;
       }
     } else if( fCommonModeFlag == 1 ){ // Flag 1 does not exist for GetCommonMode function, hear it does Danning method
 
