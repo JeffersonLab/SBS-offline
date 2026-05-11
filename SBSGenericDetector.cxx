@@ -1636,8 +1636,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	}
 	//    } else if  (fModeADC == SBSModeADC::kWaveform ){ // Waveform mode
       } else if( fModeADC == SBSModeADC::kWaveform && blk->Waveform()->HasData()){
+	
         SBSData::Waveform *wave = blk->Waveform();
-	if(wave->HasData()) {		
+	if(wave->HasData()) {
           if(fStoreRawHits) {
 	    std::vector<Double_t> &s_r =wave->GetDataRaw();
 	    std::vector<Double_t> &s_c = wave->GetData();
@@ -1860,8 +1861,16 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
       } else { // Waveform mode
         SBSData::Waveform *wave = blk->Waveform();
 	if(wave->HasData()) {		
+	  //Now that we have this, we want to fill no matter what as long as it has data
+	  std::vector<Double_t> &s_r =wave->GetDataRaw();
+	  nsamples = s_r.size();
+	  if(hFADCsampPedDiff != nullptr){
+	    for(size_t s = 0; s < nsamples; s++) {
+	      hFADCsampPedDiff->Fill( blk->GetID(), s_r[s] -wave->GetPed());
+	    }
+	  }
           if(fStoreRawHits) {
-	    std::vector<Double_t> &s_r =wave->GetDataRaw();
+	    //std::vector<Double_t> &s_r =wave->GetDataRaw();
 	    std::vector<Double_t> &s_c = wave->GetData();
 	    nsamples = s_r.size();
 	    idx = fGood.samps.size();
@@ -2015,31 +2024,45 @@ SBSElement* SBSGenericDetector::MakeElement(Double_t x, Double_t y, Double_t z,
 Int_t SBSGenericDetector::Begin( THaRunBase *run ){
   UInt_t runnum = run->GetNumber();
 
+  TString appname(GetApparatus()->GetName());
+  TString detname(GetName());
+  
   if( fDecodeRFtime && fElemID_RFtime >= 0 ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
     //TString histname;
     //histname.Form("hdTRF_%s_%s", GetApparatus()->GetName(), GetName() );
-
-    TString appname(GetApparatus()->GetName());
-    TString detname(GetName());
 
     std::cout << "Creating RF time interval histogram for detector " << appname << "." << detname << std::endl; 
     
     hdTRF = new TH1D( TString::Format("hdTRF_%s_%s", appname.Data(), detname.Data()), "Consecutive leading-edge RF hits; #Deltat (ns);", 4000, 0.0, 500.0);
   } else {
     hdTRF = nullptr;
+    
   }
 
+  if(fModeADC == SBSModeADC::kWaveform){
+    std::cout << "Creating sample - pedestal histogram for detector " << appname << "." << detname << std::endl;
+    
+    hFADCsampPedDiff = new TH2D(TString::Format("hFADCsampPedDiff_%s_%s", appname.Data(), detname.Data()),
+				";PMT number;FADC sample - Pedestal", fNelem, 0, fNelem, 1000, -100, 900);
+  }else{
+    std::cout << "Cant create sample - pedestal histogram for detector " << appname << "." << detname << std::endl;
+    hFADCsampPedDiff = nullptr;
+  }
+  
   return kOK;
 }
 
 Int_t SBSGenericDetector::End( THaRunBase *run ){
   UInt_t runnum = run->GetNumber();
 
-  if( fDecodeRFtime && fElemID_RFtime >= 0 && hdTRF != nullptr ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
+  if( fDecodeRFtime && fElemID_RFtime >= 0 && hdTRF != nullptr){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
     
     hdTRF->Write(0,kOverwrite);
   }
-
+  if(SBSModeADC::kWaveform && hFADCsampPedDiff!= nullptr){
+    hFADCsampPedDiff->Write(0,kOverwrite);
+  }
+  
   return kOK;
 }
 

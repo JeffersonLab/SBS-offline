@@ -209,6 +209,24 @@ THaAnalysisObject::EStatus SBSBBTotalShower::Init( const TDatime& run_time )
     return fStatus;
 }
 
+Int_t SBSBBTotalShower::Begin( THaRunBase *run ){
+  SBSGenericDetector::Begin(run);
+  
+  if(fShower!=nullptr)fShower->Begin(run);
+  if(fPreShower!=nullptr)fPreShower->Begin(run);
+  
+  return kOK;
+}
+
+Int_t SBSBBTotalShower::End( THaRunBase *run ){
+  SBSGenericDetector::Begin(run);
+ 
+  if(fShower!=nullptr)fShower->End(run);
+  if(fPreShower!=nullptr)fPreShower->End(run);
+  
+  return kOK;
+}
+
 //_____________________________________________________________________________
 Int_t SBSBBTotalShower::ReadDatabase( const TDatime& date )
 {
