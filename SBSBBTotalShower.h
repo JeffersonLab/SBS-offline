@@ -47,6 +47,10 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   virtual Int_t      CoarseProcess( TClonesArray& tracks );
   virtual Int_t      FineProcess( TClonesArray& tracks );
 
+  //let's overload Begin and End for SBSBBTotalShower so that it can call those for Shower and Preshower!!!
+  virtual Int_t   Begin( THaRunBase* r=0 );
+  virtual Int_t   End( THaRunBase* r=0 );
+
   SBSBBShower* GetShower() const      { return fShower; }
   SBSBBShower* GetPreShower() const   { return fPreShower; }
   
