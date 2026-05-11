@@ -210,8 +210,6 @@ THaAnalysisObject::EStatus SBSBBTotalShower::Init( const TDatime& run_time )
 }
 
 Int_t SBSBBTotalShower::Begin( THaRunBase *run ){
-  SBSGenericDetector::Begin(run);
-  
   if(fShower!=nullptr)fShower->Begin(run);
   if(fPreShower!=nullptr)fPreShower->Begin(run);
   
@@ -219,8 +217,6 @@ Int_t SBSBBTotalShower::Begin( THaRunBase *run ){
 }
 
 Int_t SBSBBTotalShower::End( THaRunBase *run ){
-  SBSGenericDetector::Begin(run);
- 
   if(fShower!=nullptr)fShower->End(run);
   if(fPreShower!=nullptr)fPreShower->End(run);
   
