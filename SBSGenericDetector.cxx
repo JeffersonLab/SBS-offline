@@ -1866,7 +1866,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	  nsamples = s_r.size();
 	  if(hFADCsampPedDiff != nullptr){
 	    for(size_t s = 0; s < nsamples; s++) {
-	      hFADCsampPedDiff->Fill( blk->GetID(), s_r[s] -wave->GetPed());
+	      hFADCsampPedDiff->Fill( blk->GetID()-fChanMapStart , s_r[s] -wave->GetPed());
 	    }
 	  }
           if(fStoreRawHits) {
