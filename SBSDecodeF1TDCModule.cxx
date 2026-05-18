@@ -225,6 +225,7 @@ namespace Decoder {
 	    F1slots[nF1]=f1slot;
 	    nF1++;
 	    fNumHits.resize(fNumChan*nF1);
+	    fnWarnHitsPerChannel.resize(fNumChan*nF1,0);
 	    fTdcData.resize(fNumChan*nF1*MAXHIT);
 	  }
 	  lastSlot = f1slot;
@@ -290,7 +291,19 @@ namespace Decoder {
 	  Int_t chSlot = idxSlot*fNumChan + chan;
 	  Int_t idx = chSlot*MAXHIT + fNumHits[chSlot]; // multiple hits, multiple slots 
 	  if (idx >= 0 && idx < Int_t(MAXHIT*nF1*fNumChan)  && fNumHits[chSlot]<MAXHIT) fTdcData[idx] = raw;
-	  if(fNumHits[chSlot]>=MAXHIT) cout << "F1TDC warning: more than " << MAXHIT << " hits in channel " << chan << " / slot " << f1slot << ". Not taking last hit(s), although counting them." << endl;
+	  if( fNumHits[chSlot]>=MAXHIT ){
+
+	    fnWarnHitsPerChannel[chSlot]++;
+	    if ( fnWarnHitsPerChannel[chSlot]<=fMaxWarningsHitsPerChannel || !fSuppressWarningHitsPerChannel ){
+	      cout << "F1TDC warning: more than " << MAXHIT << " hits in channel " << chan << " / slot " << f1slot << ". Not taking last hit(s), although counting them." << endl;
+	      if( fnWarnHitsPerChannel[chSlot] == fMaxWarningsHitsPerChannel ){
+		cout << "Max num warnings reached for F1TDC (slot,chan)=(" << f1slot << ", " << chan
+		     << "), suppressing further warnings" << endl;
+	      }
+	    }
+	    
+	  }
+	  
 	  (fNumHits[chSlot])++;
 	  //cout << "chSlot=" << chSlot << " - lastSlot=" << lastSlot << " - nF1=" << nF1 << " -- ch=" << chan << " - word=0x" << hex << (*loc) << dec << " - raw=" << raw << endl;
 	}
@@ -307,7 +320,9 @@ namespace Decoder {
   {
     //default to not suppressing the warning:
     fSuppressWarningHitFIFOoverflow = false;
-    fMaxWarningsHitFIFOoverflow = 1000;
+    fSuppressWarningHitsPerChannel = true;
+    fMaxWarningsHitFIFOoverflow = 100;
+    fMaxWarningsHitsPerChannel = 10;
     SBSDecodeF1TDCLowResModule::Init();
   }
 
@@ -315,7 +330,9 @@ namespace Decoder {
     SBSDecodeF1TDCModule(crate,slot)
   {
     fSuppressWarningHitFIFOoverflow = false;
-    fMaxWarningsHitFIFOoverflow = 1000;
+    fSuppressWarningHitsPerChannel = true;
+    fMaxWarningsHitFIFOoverflow = 100;
+    fMaxWarningsHitsPerChannel = 10;
     
     SBSDecodeF1TDCHighResModule::Init();
   }
@@ -333,11 +350,13 @@ namespace Decoder {
     Init();
     UInt_t suppressFIFOwarnflag; 
     
-    vector<ConfigStrReq> req = { {"suppress_hitFIFOwarn",fMaxWarningsHitFIFOoverflow} };
-
+    vector<ConfigStrReq> req = { {"suppress_hitFIFOwarn",fMaxWarningsHitFIFOoverflow},
+				 {"suppress_hitsperchan",fMaxWarningsHitsPerChannel} };
+    
     ParseConfigStr( configstr, req );
     
     fSuppressWarningHitFIFOoverflow = fMaxWarningsHitFIFOoverflow > 0 ? true : false;
+    fSuppressWarningHitsPerChannel = fMaxWarningsHitsPerChannel > 0 ? true : false; 
     //if( fSuppressWarningHitFIFOoverflow ){
 
     //hard code until the parsing bug is understood.
@@ -364,11 +383,13 @@ namespace Decoder {
 
     //UInt_t suppressFIFOwarnflag = fSuppressWarningHitFIFOoverflow ? 1 : 0;
     
-    vector<ConfigStrReq> req = { {"suppress_hitFIFOwarn",fMaxWarningsHitFIFOoverflow} };
+    vector<ConfigStrReq> req = { {"suppress_hitFIFOwarn",fMaxWarningsHitFIFOoverflow},
+				 {"suppress_hitsperchan",fMaxWarningsHitsPerChannel} };
 
     ParseConfigStr( configstr, req );
     
     fSuppressWarningHitFIFOoverflow = fMaxWarningsHitFIFOoverflow > 0 ? true : false;
+    fSuppressWarningHitsPerChannel = fMaxWarningsHitsPerChannel > 0 ? true : false; 
     //if( fSuppressWarningHitFIFOoverflow ){
 
     // if( fSuppressWarningHitFIFOoverflow ){
