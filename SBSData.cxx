@@ -329,7 +329,7 @@ namespace SBSData {
 	if ( i >= ThresCrossBinList[ncross] && !PeakFound) {
 	  if (fSamples.samples_raw[i] > max) {
 	    max = fSamples.samples_raw[i];
-	  } else {
+	  } else if (fSamples.samples_raw[i+1] < max) { //check not just random dip down
 	    PeakFound= kTRUE;
 	    PeakBin = i-1;
 	  }
