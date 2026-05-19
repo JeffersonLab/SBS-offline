@@ -518,6 +518,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fRawADCminResult_by_APV.resize( nentry );
   fRawADCmaxResult_by_APV.resize( nentry );
   fNumFullReadoutEvents_by_APV.resize( nentry, 0 );
+
+  fNwarnBadCM_by_APV.resize( nentry, 0 );
   
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
     mpdmap_t thisdata;
@@ -2373,8 +2375,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 			       (static_cast<THaDetector*>(GetParent()))->GetApparatus()->GetName(),
 			       GetParent()->GetName(),
 			       GetName() );
-	  
-	  std::cout << "Warning in SBSGEMModule::Decode for module " << sname << ", bad CM for (axis,pos)=(" << it->axis << ", " << it->pos << ")" << std::endl;
+
+	  fNwarnBadCM_by_APV[it->index]++;
+	  if( fNwarnBadCM_by_APV[it->index] <= 10 ){
+	    std::cout << "Warning in SBSGEMModule::Decode for module " << sname << ", bad CM for (axis,pos)=(" << it->axis << ", " << it->pos << "), skipping..." << std::endl;
+	    if( fNwarnBadCM_by_APV[it->index] == 10 ){
+	      std::cout << "Reached maximum number of warnings for this APV, suppressing further warnings..." << std::endl;
+	    }
+	  }
 	  
 	  continue; 
 	}

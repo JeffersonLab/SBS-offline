@@ -252,6 +252,7 @@ class SBSGEMModule : public THaSubDetector {
   std::vector<Double_t> fCommonModeRollingRMS_by_APV;
   std::vector<UInt_t> fNeventsRollingAverage_by_APV;
 
+  std::vector<Int_t> fNwarnBadCM_by_APV;
   
   //These arrays will hold the results for all full readout events
   std::vector<Double_t> fRawADCminResult_by_APV;
