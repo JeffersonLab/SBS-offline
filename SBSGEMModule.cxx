@@ -31,6 +31,11 @@ SBSGEMModule::SBSGEMModule( const char *name, const char *description,
 
   fNegSignalStudy = kFALSE;
 
+  //FALSE by default
+  fAPVReversePulsePolarityU = kFALSE;
+  fAPVReversePulsePolarityV = kFALSE;
+
+  
   fPedestalMode = kFALSE;
   fPedHistosInitialized = kFALSE;
   fPedDiagHistosInitialized = kFALSE;
@@ -289,6 +294,10 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   int cmplots_flag = fMakeCommonModePlots ? 1 : 0;
   int zerosuppress_flag = fZeroSuppress ? 1 : 0;
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
+
+  int apv_reversepulsepolarity_u_flag = fAPVReversePulsePolarityU ? 1 : 0;
+  int apv_reversepulsepolarity_v_flag = fAPVReversePulsePolarityV ? 1 : 0;
+    
   int onlinezerosuppress_flag = fOnlineZeroSuppression ? 1 : 0;
 
   int eventinfoplots_flag = fMakeEventInfoPlots ? 1 : 0;
@@ -353,6 +362,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
     { "zerosuppress", &zerosuppress_flag, kUInt, 0, 1, 1}, //(optional, search): toggle offline zero suppression (default = true).
     { "zerosuppress_nsigma", &fZeroSuppressRMS, kDouble, 0, 1, 1}, //(optional, search):
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
+    { "apv_reversepulsepolarity_u", &apv_reversepulsepolarity_u_flag, kUInt, 0, 1, 1},// (optional, search):
+    { "apv_reversepulsepolarity_v", &apv_reversepulsepolarity_v_flag, kUInt, 0, 1, 1},// (optional, search):
     { "onlinezerosuppress", &onlinezerosuppress_flag, kUInt, 0, 1, 1}, //(optional, search)
     { "commonmode_meanU", &fCommonModeMeanU, kDoubleV, 0, 1, 0}, //(optional, don't search)
     { "commonmode_meanV", &fCommonModeMeanV, kDoubleV, 0, 1, 0}, //(optional, don't search)
@@ -438,6 +449,9 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fOnlineZeroSuppression = onlinezerosuppress_flag != 0;
 
   fNegSignalStudy = negsignalstudy_flag != 0;
+
+  fAPVReversePulsePolarityU = apv_reversepulsepolarity_u_flag != 0;
+  fAPVReversePulsePolarityV = apv_reversepulsepolarity_v_flag != 0;
 
   fMakeEventInfoPlots = eventinfoplots_flag != 0;
 
@@ -1729,12 +1743,15 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	rawStrip[iraw] = strip;
 	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
-	rawADC[iraw] = ADC;
-	
 	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
+	//That should take care of the uRgroove, but I need to test (EPAF, 2026/05/23)
+	if( axis == SBSGEM::kUaxis && fAPVReversePulsePolarityU)ADC = ped-ADC;
+	if( axis == SBSGEM::kVaxis && fAPVReversePulsePolarityV)ADC = ped-ADC;
+	
+	rawADC[iraw] = ADC;
 
 	rawADC_nopedsub[iraw] = ADC;
-	
+
 	if( fPedSubFlag != 0 ){ //ped subtraction online; add pedestal back in to the "nopedsub" value:
 	  rawADC_nopedsub[iraw] = Int_t(ADC +  ped);
 	}
