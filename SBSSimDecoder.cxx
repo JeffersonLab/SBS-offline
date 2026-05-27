@@ -1431,7 +1431,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  //adc < 0: store adc in samps vector as 2^13+adc:
 	  samps.push_back((1<<13)+simev->Tgep->Harm_FT_dighit_adc->at(j));
 	}
-	goodsamps.push_back(simev->Tgep->Harm_FT_dighit_adc_good->at(j));
+	if(simev->Tgep->Harm_FT_dighit_adc_good){
+	  goodsamps.push_back(simev->Tgep->Harm_FT_dighit_adc_good->at(j));
+	}else{
+	  goodsamps.push_back(0);
+	}
       }
       
       if(fDebug>3)
@@ -1500,7 +1504,11 @@ Int_t SBSSimDecoder::LoadDetector( std::map<Decoder::THaSlotData*,
 	  //adc < 0: store adc in samps vector as 2^13+adc:
 	  samps.push_back((1<<13)+simev->Tgep->Harm_FPP1_dighit_adc->at(j));
 	}
-	goodsamps.push_back(simev->Tgep->Harm_FPP1_dighit_adc_good->at(j));
+	if(simev->Tgep->Harm_FPP1_dighit_adc_good){
+	  goodsamps.push_back(simev->Tgep->Harm_FPP1_dighit_adc_good->at(j));
+	}else{
+	  goodsamps.push_back(0);
+	}
       }
       
       if(fDebug>3)

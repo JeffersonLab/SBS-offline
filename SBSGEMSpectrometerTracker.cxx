@@ -141,6 +141,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
 
   int dumprawadcrange = fDumpRawADCrange ? 1 : 0;
   
+  int storeall_1Dclusters = fStoreAll1Dclusters ? 1 : 0;
   //  std::vector<int> mingoodhits; 
   //std::vector<double> chi2cut_space;
   //std::vector<double> chi2cut_hits;
@@ -151,6 +152,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
     { "cmfile",  &fcmfilename, kString, 0, 1 },
     { "rawADCrangefile", &frawADCrangefilename, kString, 0, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
+    { "storeall_1Dclusters", &storeall_1Dclusters, kInt, 0, 1, 1 },
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
     { "maxhitcombos_inner", &fMaxHitCombinations_InnerLayers, kInt, 0, 1},
@@ -240,6 +242,7 @@ Int_t SBSGEMSpectrometerTracker::ReadDatabase( const TDatime& date ){
   fNegSignalStudy = negsignalstudy_flag != 0;
 
   fIsMC = (mc_flag != 0);
+  fStoreAll1Dclusters = (storeall_1Dclusters != 0);
   fTryFastTrack = (fasttrack_flag != 0);
 
   fUseSlopeConstraint = (useslopeconstraint != 0 );

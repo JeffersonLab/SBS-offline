@@ -27,6 +27,7 @@
 #include "SBSElement.h"
 #include "Helper.h"
 #include "TH1D.h"
+#include "TH2D.h"
 #include "THaRunBase.h"
 
 namespace SBSModeADC {
@@ -243,7 +244,8 @@ protected:
   Bool_t fDecodeRFtime;
   Bool_t fDecodeTrigTime;
 
-  TH1D *hdTRF; //histogram to hold RF time differences (for TDC calibration purposes):
+  TH1D *hdTRF; //histogram to hold RF time differences (for TDC calibration purposes)
+  TH2D *hFADCsampPedDiff;
   
   Double_t   fRFtime;    //Decoded accelerator RF time
   Double_t   fTrigTime;  //Decoded "trigger" time (for copy of "main" trigger (usually either BigBite singles or coincidence))

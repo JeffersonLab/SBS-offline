@@ -70,9 +70,12 @@ private:
 protected:
   
   Bool_t fSuppressWarningHitFIFOoverflow;
-
-  UInt_t fMaxWarningsHitFIFOoverflow;
+  Bool_t fSuppressWarningHitsPerChannel;
   
+  UInt_t fMaxWarningsHitFIFOoverflow;
+  UInt_t fMaxWarningsHitsPerChannel;
+  
+  std::vector<UInt_t> fnWarnHitsPerChannel;
   std::vector<UInt_t> fnWarnHitFIFOoverflow; //count hit fifo overflow warnings by channel
   
    ClassDef(SBSDecodeF1TDCModule,0)  //  JLab F1 TDC Module, test version
