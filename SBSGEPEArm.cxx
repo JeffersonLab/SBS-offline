@@ -31,9 +31,8 @@ THaSpectrometer( name, description )
 
   SetPID( false );
 
-  
-  fECALdist = 4.7; // default 4.7 m (highest-Q2 GEP setting)
-  
+  fECALdist = 6.0; // default 6.0 m (highest-Q2 GEP setting) distance defined in earm run db!
+
 }
 
 //_____________________________________________________________________________
@@ -84,7 +83,7 @@ Int_t SBSGEPEArm::ReadDatabase( const TDatime& date )
     std::cerr << "SBSGEPEArm::ReadDatabase(): database not found!"<< std::endl;
     return kFileError;
   }
-     
+  
   fIsInit = true;
   
   return kOK;

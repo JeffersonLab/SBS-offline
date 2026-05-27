@@ -13,7 +13,7 @@
 #include "TString.h"
 
 //We're going to store the pointers to Earm and Parm directly here:
-class SBSEArm; class SBSGEPEArm;
+class SBSEArm; class SBSGEPEArm; class SBSECal;
 
 class SBSGEPHeepCoinModule : public THaPhysicsModule {
   
@@ -103,10 +103,12 @@ protected:
   //We may choose to add others later...
   TString fEarmName; //electron spectrometer name (default = "earm");
   TString fParmName; //proton spectrometer name (default = "sbs");
-
+  TString fECalName; //ECAL detector name (default = "ecal");
+  
   //Pointers to spectrometer objects (technically the parent classes)
   SBSEArm *fPspectro; 
   SBSGEPEArm *fEspectro;
+  SBSECal *fECal;
 
   Double_t fProtonMass;
 
