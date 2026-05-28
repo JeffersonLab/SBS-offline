@@ -32,11 +32,11 @@ SBSTimingHodoscope::SBSTimingHodoscope( const char* name, const char* descriptio
   
   //default values for clustering parameters:
   fClusMaxSize = 5;
-  fMaxYposDiffCluster = 0.15;//m
-  fMaxTimeDiffCluster = 10.0;//ns
+  fMaxYposDiffCluster = 0.3; //We need to relax the default tolerance here; typical ~500 ps resolution for individual hits implies ~4.6 cm resolution for the position from L/R difference.  
+  fMaxTimeDiffCluster = 10.0; //ns -- This is a good default but could be shrunk after calibration
   
-  fTrackMatchCutX = 0.05;
-  fTrackMatchCutY = 0.15;
+  fTrackMatchCutX = 0.1; //We'll relax the default cut a little bit here
+  fTrackMatchCutY = 0.3; //We REALLY need to relax the default cut here
 
   fTDCBarOffset = 0;
   fADCBarOffset = 32;
@@ -134,14 +134,25 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
 
   // If problem with vscint or tdiff0 db entries, set defaults
   if( fvScint.size() != (UInt_t)fNelem/2 ) {
-    std::cout << " vScint vector too small " << fvScint.size() << " # of bars =" << fNelem/2 << std::endl;
+    double vscint_default = 0.178;
+    if( fvScint.size() == 1 ){
+      vscint_default = fvScint[0];
+    } else {
+      std::cout << " vScint vector too small " << fvScint.size() << " # of bars =" << fNelem/2 << std::endl;
+    }
     fvScint.resize((UInt_t)fNelem/2);
-    std::fill(fvScint.begin(), fvScint.end(),  0.178 ); // m/ns
+    std::fill(fvScint.begin(), fvScint.end(),  vscint_default ); // m/ns
   }
   if( ftDiff0.size() != (UInt_t)fNelem/2 ) {
-    std::cout << " tDiff0 vector too small " << ftDiff0.size() << " # of bars =" << fNelem/2 << std::endl;
+    double t0default = 0.0;
+    if( ftDiff0.size() == 1 ) { //if exactly one value was provided, assume the user intended to provide it as default for all channels:
+      t0default = ftDiff0[0];
+    } else {
+      std::cout << " tDiff0 vector too small " << ftDiff0.size() << " # of bars =" << fNelem/2 << std::endl;
+    }
+    
     ftDiff0.resize((UInt_t)fNelem/2);
-    std::fill(ftDiff0.begin(), ftDiff0.end(),  0.0 ); // ns
+    std::fill(ftDiff0.begin(), ftDiff0.end(),  t0default ); // ns
   }
 
   if( fMeanTimeOffset.size() != (UInt_t) fNelem/2 ){ //default mean time offsets to zero:
@@ -149,7 +160,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     std::fill( fMeanTimeOffset.begin(), fMeanTimeOffset.end(), 0.0 );
   }
 
-  if( fRFtimeOffset.size() != (UInt_t) fNelem/2 ){
+  if( fRFtimeOffset.size() != (UInt_t) fNelem/2 ){ //default RF offsets to zero if not provided
     fRFtimeOffset.resize((UInt_t)fNelem);
     std::fill( fRFtimeOffset.begin(),fRFtimeOffset.end(), 0.0 );
   }
@@ -167,7 +178,7 @@ Int_t SBSTimingHodoscope::ReadDatabase( const TDatime& date )
     if (ypos.size() == (UInt_t)fNelem) {
       for (Int_t ne=0;ne<fNelem;ne++) {
 	SBSElement* blk= fElements[ne];
-	blk->SetY(ypos[ne]);
+	blk->SetY(ypos[ne]+GetOrigin().X()); //offset block vertical position by X origin (specified via "position" variable)
       }
     } else {
       std::cout << " ypos vector too small " << ypos.size() << " # of elements =" << fNelem << std::endl;
@@ -288,12 +299,14 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     { "allclus.totmean", "cluster mean ToT",    "fOutClus.tot"},
     { "allclus.tdiff", "cluster max bar tdiff", "fOutClus.tdiff"},
     { "allclus.itrack", "track index", "fOutClus.trackindex"},
+    { "allclus.iclust", "clust index", "fOutClus.clustindex"},
     { "allclus.tleft", "cluster max bar tleft", "fOutClus.tleft"},
     { "allclus.tright", "cluster max bar tright", "fOutClus.tright"},
     { "allclus.totleft", "cluster max bar totleft", "fOutClus.totleft"},
     { "allclus.totright", "cluster max bar totright", "fOutClus.totright"},
     { "allclus.tmeanRFcorr", "RF corrected mean time", "fOutClus.tRFcorr"},
     { "allclus.etof", "Time-of-flight (assuming electron)", "fOutClus.etof"},
+    { "allclus.tfinal", "all cluster final corrected time (ns)", "fOutClus.tCorrected"},
     { 0 }
   };
   err = DefineVarsFromList( vars_clus, mode );
@@ -308,12 +321,14 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     { "clus.bar.tdc.timehitpos", "main clus Bar Time Hit pos from L [m]",  "fMainClusBars.y"},
     { "clus.bar.tdc.vpos",       "main clus Bar vertical position [m]",    "fMainClusBars.x"},
     { "clus.bar.tdc.itrack",  "main clus Bar track index", "fMainClusBars.trackindex" },
+    { "clus.bar.tdc.iclust",  "main clus Bar cluster index", "fMainClusBars.clustindex" },
     { "clus.bar.tdc.tleft", "main clus Bar tleft, no corrections", "fMainClusBars.tleft" },
     { "clus.bar.tdc.tright", "main clus Bar tright, no corrections", "fMainClusBars.tright" },
     { "clus.bar.tdc.totleft", "main clus Bar tot left, no corrections", "fMainClusBars.totleft" },
     { "clus.bar.tdc.totright", "main clus Bar tot right, no corrections", "fMainClusBars.totright" },
     { "clus.bar.tdc.tmeanRFcorr", "main clus Bar RF corrected mean time (ns)", "fMainClusBars.tRFcorr" },
     { "clus.bar.tdc.etof", "main clus bar tof (assuming electron)", "fMainClusBars.etof"},
+    { "clus.bar.tdc.tfinal", "main clus bar final corrected time (ns)", "fMainClusBars.tCorrected" },
     { 0 }
   };
 
@@ -337,6 +352,7 @@ Int_t SBSTimingHodoscope::DefineVariables( EMode mode )
     { "clus.trackindex", "cluster track index", "fMainClus.trackindex"},
     { "clus.tmeanRFcorr", "cluster mean T with RF correction", "fMainClus.tRFcorr"},
     { "clus.etof", "cluster TOF assuming electron (ns)", "fMainClus.etof"},
+    { "clus.tfinal", "cluster final corrected time (ns)", "fMainClus.tCorrected" },
     { 0 }
   };
   err = DefineVarsFromList( vars_mainclus, mode );
@@ -517,7 +533,8 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	  // tR - tmean0 = t0R - (t0L+t0R)/2 + (L/2+y)/v = -(t0L-t0R)/2 + (L/2+y)/v
 	  // Now tL - tR = t0L-t0R - 2y/v 
 
-	  Double_t t0bar = fMeanTimeOffset[BarInc];
+	  //With new formalism, let's include the "RF offset" in the mean time offset
+	  Double_t t0bar = fMeanTimeOffset[BarInc] + fRFtimeOffset[BarInc];
 
 	  RleW -= t0bar;
 	  RteW -= t0bar;
@@ -528,7 +545,7 @@ Int_t SBSTimingHodoscope::CoarseProcess( TClonesArray& tracks )
 	
 	  Double_t bartimediff = (LleW - RleW);
 	  
-	  
+	  //note "tDiff0" is basically obsolete and now always defaults to zero
 	  Double_t HorizPos = -0.5 * (bartimediff-ftDiff0.at(BarInc)) * fvScint.at(BarInc); // position from L based on timediff and in m. 
 
 	  //SizeCol gives bar half-length for genericdetector based on current value in DB
@@ -677,8 +694,30 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
       RFcorr = GetRFtime();
     }
 
-    fOutClus.tRFcorr.push_back(fOutClus.t.back()-RFcorr - fRFtimeOffset[fOutClus.id.back()]);
+    //fOutClus.tRFcorr.push_back(fOutClus.t.back()-RFcorr);
     fOutClus.etof.push_back( 0.0 ); //default to zero if not track-matched
+    fOutClus.clustindex.push_back( i );
+
+    // It is envisioned that this will be a "raw" hodoscope time, with the influence of reference time subtraction removed, for direct comparison to other detectors
+    // (shower and preshower ADC, GRINCH, HCAL ADC, etc).
+
+    //default to "regular" mean time:
+    double tcorrected = GetCluster(i)->GetTmean();
+
+    if( fDecodeTrigTime && fTrigTimeIsRef ){ //NOTE: the check on fTrigTimeIsRef is an imperfect/incomplete way of checking that the channel containing the trigger time was defined as a reference channel in the DB. It does NOT guarantee that any given hodoscope channel actually used the same channel as fTrigTime for the ref. time subtraction!
+      //If trigger time is decoded and defined as a ref channel, add back in to get "raw" time (note that this ASSUMES that the trigger time has been defined as reference
+      // in the database and subtracted from the raw TDC values! Interpretation won't be valid if this is NOT the case!)
+      tcorrected += GetTrigTime() - GetTrigTimeCentral(); //If properly configured, this centers trigger time distribution near zero
+      RFcorr += GetTrigTime() - GetTrigTimeCentral();
+    }
+
+    if( TrigPhaseCorrectionIsEnabled() ){ //actually, we want to apply the trig phase correction regardless of whether the trigger time was subtracted as reference.
+      tcorrected -= GetTrigPhaseCorrection(); 
+      RFcorr -= GetTrigPhaseCorrection();
+    }
+    
+    fOutClus.tCorrected.push_back( tcorrected ); 
+    fOutClus.tRFcorr.push_back( tcorrected - RFcorr );
     
     fOutClus.trackindex.push_back(-1);
   }
@@ -689,7 +728,7 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   // In all envisioned use cases, this will be an instance of SBSBigBite!
   auto *theSpectrometer = static_cast<THaSpectrometer*>( GetApparatus() );
 
-  if( theSpectrometer->InheritsFrom("SBSBigBite") ){ //This SHOULD always be true but we should probably write this more robustly in case we re-use this class in some other context. It's probably bad form to make this class depend on SBSBigBite explicitly, but whatever, I guess.
+  if( theSpectrometer->InheritsFrom("SBSBigBite") ){ //This SHOULD always be true but we should probably write this more robustly in case we re-use this class in some other context. It's probably bad form to make this class depend on SBSBigBite explicitly, but we probably won't reuse the timing hodoscope in any other context, and if we did, we probably wouldn't reuse this code in its present form:
     SBSBigBite *theBigBite = reinterpret_cast<SBSBigBite*>( theSpectrometer );
     ETOF_avg = theBigBite->GetETOF_avg();
   }
@@ -742,14 +781,17 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
   //fill main cluster variables with clusters on good tracks:
   for( int i=0; i<GetNClusters(); i++ ){
     //if( fOutClus.trackindex[i] >= 0 ){
-    if( fOutClus.trackindex[i] == 0 ){ //
+    if( fOutClus.trackindex[i] == 0 ){ // the loop over tracks above picks the "best" match for each track. So each track can be matched with no more than one hodoscope cluster:
+      
       auto *track = static_cast<THaTrack*>( tracks.At(fOutClus.trackindex[i]));
 
       double TOFcorr = track->GetPathLen()/0.299792458;
 
+      double vz = track->GetVertexZ();
+      
       double RFcorr = 0.0;
       if( fDecodeRFtime && fDecodeTrigTime ){
-	RFcorr = GetRFtime();
+	RFcorr = GetRFtime() + vz/0.299792458;
 	//	std::cout << "RF correction = " << RFcorr << std::endl;
       }
       
@@ -765,8 +807,24 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
       fMainClus.totleft.push_back(GetCluster(i)->GetTOTleft());
       fMainClus.totright.push_back(GetCluster(i)->GetTOTright());
       fMainClus.trackindex.push_back( fOutClus.trackindex[i] );
+      fMainClus.clustindex.push_back( i );
       fMainClus.etof.push_back( TOFcorr );
-      fMainClus.tRFcorr.push_back( fMainClus.t.back() - RFcorr - fRFtimeOffset[fMainClus.id.back()]);
+      //fMainClus.tRFcorr.push_back( fMainClus.t.back() - RFcorr);
+
+      double tcorrected = fMainClus.t.back() - (TOFcorr - ETOF_avg);
+      if( fDecodeTrigTime && fTrigTimeIsRef ){
+	tcorrected += GetTrigTime() - GetTrigTimeCentral();
+	RFcorr += GetTrigTime() - GetTrigTimeCentral(); //switch back to "raw" RF time for consistency
+      }
+      
+      if( TrigPhaseCorrectionIsEnabled() ){
+	tcorrected -= GetTrigPhaseCorrection();
+	RFcorr -= GetTrigPhaseCorrection(); //also correct RF time for trig. phase if applicable:
+      }
+      
+
+      fMainClus.tCorrected.push_back( tcorrected );
+      fMainClus.tRFcorr.push_back( tcorrected - RFcorr );
       //AJRP: we should fill these variables regardless;
       // output is contolled by the odef file:
       //if(fDataOutputLevel>0){
@@ -782,9 +840,24 @@ Int_t SBSTimingHodoscope::FineProcess( TClonesArray& tracks )
 	fMainClusBars.totright.push_back(GetCluster(i)->GetElement(j)->GetRightHit().ToT.val);
 	fMainClusBars.x.push_back(GetCluster(i)->GetElement(j)->GetElementPos());
 	fMainClusBars.y.push_back(GetCluster(i)->GetElement(j)->GetHitPos());
-	fMainClusBars.tRFcorr.push_back( fMainClusBars.t.back()-RFcorr - fRFtimeOffset[fMainClusBars.id.back()] );
+	//fMainClusBars.tRFcorr.push_back( fMainClusBars.t.back()-RFcorr );
 	fMainClusBars.etof.push_back( TOFcorr );
 	fMainClusBars.trackindex.push_back( fOutClus.trackindex[i] );
+	fMainClusBars.clustindex.push_back( i );
+
+	tcorrected = fMainClusBars.t.back() - (TOFcorr - ETOF_avg);
+	if( fDecodeTrigTime && fTrigTimeIsRef ){
+	  tcorrected += GetTrigTime() - GetTrigTimeCentral();
+	}
+
+	if( TrigPhaseCorrectionIsEnabled() ){
+	  tcorrected -= -GetTrigPhaseCorrection();
+	}
+	
+	fMainClusBars.tCorrected.push_back( tcorrected );
+
+	fMainClusBars.tRFcorr.push_back( tcorrected - RFcorr ); //NOTE: we don't need to correct the RF correction again because we already did it above (it's not bar-specific!)
+	
       }
     }
   }
@@ -1235,6 +1308,8 @@ void SBSTimingHodoscope::ClearHodoOutput(SBSTimingHodoscopeOutput &out)
   out.totright.clear();
   out.tRFcorr.clear();
   out.trackindex.clear();
+  out.clustindex.clear();
+  out.tCorrected.clear();
   out.etof.clear();
 }
 

@@ -56,6 +56,8 @@ SBSGenericDetector::SBSGenericDetector( const char* name, const char* descriptio
   fCorrectTDCforTrigPhase = false;
   fTrigPhaseOffset = 0;
   fTimeOffsetTrigPhase = 0.0;
+
+  fTrigTimeCentral = 0.0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -148,6 +150,7 @@ Int_t SBSGenericDetector::ReadDatabase( const TDatime& date )
     { "crate_trigtime",  &fCrate_TrigTime, kUInt, 0, 1, 1 },
     { "slot_trigtime", &fSlot_TrigTime, kUInt, 0, 1, 1 },
     { "chan_trigtime", &fChan_TrigTime, kUInt, 0, 1, 1 },
+    { "trigtime_central", &fTrigTimeCentral, kDouble, 0, 1, 1 },
     { "usetrigphasecorr", &usetrigphasecorr, kInt, 0, 1, 1 },
     { "trigphaseoffset", &fTrigPhaseOffset, kUInt, 0, 1, 1 },
     { "trigphasemultiple", &fTrigPhaseMultiple, kUInt, 0, 1, 1 },
@@ -1647,8 +1650,9 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	}
 	//    } else if  (fModeADC == SBSModeADC::kWaveform ){ // Waveform mode
       } else if( fModeADC == SBSModeADC::kWaveform && blk->Waveform()->HasData()){
+	
         SBSData::Waveform *wave = blk->Waveform();
-	if(wave->HasData()) {		
+	if(wave->HasData()) {
           if(fStoreRawHits) {
 	    std::vector<Double_t> &s_r =wave->GetDataRaw();
 	    std::vector<Double_t> &s_c = wave->GetData();
@@ -1913,24 +1917,7 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
 	      fGood.a_amptrig_c.push_back(wave->GetAmplitudeMulti(ind_mult).val*trigcal);
 	      fGood.a_time.push_back(wave->GetTimeMulti(ind_mult).val);
 	      fGood.npulses.push_back(wave->GetNHits());
-	      /*
-	      //kip testing output
-	      if(wave->GetNHits() >= 2 ){
-		//std::cout << "blk id: " <<  blk->GetID() << std::endl;
-		std::cout << "samp_indx: " << idx/62 << " up to " << (idx+nsamples)/62 << std::endl;
-		std::cout << "chosen best pulse: " << ind_mult << std::endl;
-		std::cout << "number of pulses found: " << wave->GetNHits() << std::endl;
 
-		for(int xx = 0; xx < wave->GetNHits(); xx++){
-		  std::cout << "  pulse " << xx << std::endl;
-		  std::cout << "time : " << wave->GetTimeMulti(xx).val << std::endl;
-		  std::cout << "a_amp_p :" << wave->GetAmplitudeMulti(xx).val << std::endl;
-		}
-		std::cout << std::endl;
-
-		
-	      }
-	      */
 	    } else if (fStoreEmptyElements) {
 	      fGood.ADCrow.push_back(blk->GetRow());
 	      fGood.ADCcol.push_back(blk->GetCol());
@@ -2133,31 +2120,45 @@ SBSElement* SBSGenericDetector::MakeElement(Double_t x, Double_t y, Double_t z,
 Int_t SBSGenericDetector::Begin( THaRunBase *run ){
   UInt_t runnum = run->GetNumber();
 
+  TString appname(GetApparatus()->GetName());
+  TString detname(GetName());
+  
   if( fDecodeRFtime && fElemID_RFtime >= 0 ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
     //TString histname;
     //histname.Form("hdTRF_%s_%s", GetApparatus()->GetName(), GetName() );
-
-    TString appname(GetApparatus()->GetName());
-    TString detname(GetName());
 
     std::cout << "Creating RF time interval histogram for detector " << appname << "." << detname << std::endl; 
     
     hdTRF = new TH1D( TString::Format("hdTRF_%s_%s", appname.Data(), detname.Data()), "Consecutive leading-edge RF hits; #Deltat (ns);", 4000, 0.0, 500.0);
   } else {
     hdTRF = nullptr;
+    
   }
 
+  if(fModeADC == SBSModeADC::kWaveform){
+    std::cout << "Creating sample - pedestal histogram for detector " << appname << "." << detname << std::endl;
+    
+    hFADCsampPedDiff = new TH2D(TString::Format("hFADCsampPedDiff_%s_%s", appname.Data(), detname.Data()),
+				";PMT number;FADC sample - Pedestal", fNelem, 0, fNelem, 1000, -100, 900);
+  }else{
+    std::cout << "Cant create sample - pedestal histogram for detector " << appname << "." << detname << std::endl;
+    hFADCsampPedDiff = nullptr;
+  }
+  
   return kOK;
 }
 
 Int_t SBSGenericDetector::End( THaRunBase *run ){
   UInt_t runnum = run->GetNumber();
 
-  if( fDecodeRFtime && fElemID_RFtime >= 0 && hdTRF != nullptr ){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
+  if( fDecodeRFtime && fElemID_RFtime >= 0 && hdTRF != nullptr){ //Make histogram to measure spacings between RF hits for TDC calibration purposes:
     
     hdTRF->Write(0,kOverwrite);
   }
-
+  if(SBSModeADC::kWaveform && hFADCsampPedDiff!= nullptr){
+    hFADCsampPedDiff->Write(0,kOverwrite);
+  }
+  
   return kOK;
 }
 

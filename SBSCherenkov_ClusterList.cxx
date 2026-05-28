@@ -29,6 +29,7 @@ SBSCherenkov_Hit::SBSCherenkov_Hit():
 {
   fClustIndex = -1;
   fTrackIndex = -1;
+  fTimeCorrected = kBig;
 } 
 
 //_____________________________________________________________________________
@@ -41,6 +42,10 @@ SBSCherenkov_Hit::SBSCherenkov_Hit( Int_t pmtnum, Int_t i, Int_t j,
 {
   fClustIndex = -1;
   fTrackIndex = -1;
+  fTimeCorrected = fTime;
+  // if( TrigPhaseCorrectionIsEnabled() ){
+  //   fTimeCorrected -= GetTrigPhaseCorrection();
+  // }
 }
 
 //_____________________________________________________________________________
@@ -65,6 +70,7 @@ void SBSCherenkov_Hit::Clear( Option_t *opt ){
   fX = kBig;
   fY = kBig;
   fTime = kBig;
+  fTimeCorrected = kBig;
   fAmp = kBig;
 }
 
@@ -108,8 +114,8 @@ void SBSCherenkov_Hit::Show(FILE * fout1)
 SBSCherenkov_Cluster::SBSCherenkov_Cluster() : // f(0)
   fXcenter(0), fYcenter(0),
   fXcenter_w(0), fYcenter_w(0), fCharge(0),
-  fMeanTime(0), fMeanAmp(0),
-  fTimeRMS(0), fAmpRMS(0),
+  fMeanTime(0), fMeanTimeCorrected(0), fMeanAmp(0),
+  fTimeRMS(0), fTimeRMSCorrected(0), fAmpRMS(0),
   fTrackMatch(false), fTrack(0)
 {
   fTrackIndex = -1;
@@ -125,8 +131,8 @@ SBSCherenkov_Cluster::SBSCherenkov_Cluster() : // f(0)
 SBSCherenkov_Cluster::SBSCherenkov_Cluster( const SBSCherenkov_Cluster& rhs ) : // f(rhs.f)
   TObject(rhs), fXcenter(rhs.fXcenter), fYcenter(rhs.fYcenter),
   fXcenter_w(rhs.fXcenter_w), fYcenter_w(rhs.fYcenter_w), fCharge(rhs.fCharge), 
-  fMeanTime(rhs.fMeanTime), fMeanAmp(rhs.fMeanAmp),
-  fTimeRMS(rhs.fTimeRMS), fAmpRMS(rhs.fAmpRMS),
+  fMeanTime(rhs.fMeanTime), fMeanTimeCorrected(rhs.fMeanTimeCorrected),fMeanAmp(rhs.fMeanAmp),
+  fTimeRMS(rhs.fTimeRMS), fTimeRMSCorrected(rhs.fTimeRMSCorrected), fAmpRMS(rhs.fAmpRMS),
   fTrackMatch(rhs.fTrackMatch), fTrack(rhs.fTrack), fTrackIndex(rhs.fTrackIndex),
   fMirrorIndex(rhs.fMirrorIndex), fTrackMatch_dx(rhs.fTrackMatch_dx), fTrackMatch_dy(rhs.fTrackMatch_dy)
 {
@@ -155,6 +161,9 @@ SBSCherenkov_Cluster& SBSCherenkov_Cluster::operator=( const SBSCherenkov_Cluste
     fTrackMatch = rhs.fTrackMatch;
     fTrack = rhs.fTrack;
 
+    fMeanTimeCorrected = rhs.fMeanTimeCorrected;
+    fTimeRMSCorrected = rhs.fTimeRMSCorrected;
+    
     fTrackIndex = rhs.fTrackIndex;
     fMirrorIndex = rhs.fMirrorIndex;
 
@@ -209,8 +218,12 @@ void SBSCherenkov_Cluster::MergeCluster( const SBSCherenkov_Cluster& rhs )
     ((Double_t)(list1size+list2size));
   fMeanAmp = (fMeanAmp*((Double_t)list1size)+rhs.fMeanAmp*((Double_t)list2size))/
     ((Double_t)(list1size+list2size));
+
+  fMeanTimeCorrected = (fMeanTimeCorrected*((Double_t) list1size)+rhs.fMeanTimeCorrected*((Double_t)list2size))/((Double_t)(list1size+list2size));
   
   fTimeRMS = sqrt( (pow(fTimeRMS, 2)*((Double_t)list1size) + pow(rhs.fTimeRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  fTimeRMSCorrected = sqrt( (pow(fTimeRMSCorrected, 2)*((Double_t)list1size) + pow(rhs.fTimeRMSCorrected, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
+  
   fAmpRMS = sqrt( (pow(fAmpRMS, 2)*((Double_t)list1size) + pow(rhs.fAmpRMS, 2)*((Double_t)list2size) )/((Double_t)(list1size+list2size)) );
   //return *this;
 }
@@ -232,8 +245,10 @@ void SBSCherenkov_Cluster::Clear( Option_t* opt ) // f = 0;
     fYcenter_w = 0;
     fCharge = 0;
     fMeanTime = 0;
+    fMeanTimeCorrected = 0.0;
     fMeanAmp = 0;
     fTimeRMS = 0;
+    fTimeRMSCorrected = 0.0;
     fAmpRMS = 0;
     fTrackMatch = false;
     fTrack = 0;
@@ -269,13 +284,42 @@ void SBSCherenkov_Cluster::Insert( SBSCherenkov_Hit* theHit )
   fYcenter_w+= theHit->GetAmp()*theHit->GetY();
   fXcenter_w = fXcenter_w/fCharge;
   fYcenter_w = fYcenter_w/fCharge;
+
+  //The commented-out RMS time calculation below may not be correct as written. 
+  // t2avg = rms^2 + tavg^2
+  
+  Double_t tavg_old = fMeanTime;
+  Double_t trms_old = fTimeRMS;
+  //Double_t nold = Double_t(listnewsize-1);
+  Double_t n = Double_t(listnewsize);
+  
+  Double_t t2avg_old = pow(trms_old,2) + pow( tavg_old, 2 );
+  Double_t t2avg_new = ((n-1.0) * t2avg_old + pow(theHit->GetTime(),2))/n;
+
+  Double_t tavg_corr_old = fMeanTimeCorrected;
+  Double_t trms_corr_old = fTimeRMSCorrected;
+  Double_t t2avg_corr_old = pow( trms_corr_old, 2 ) + pow( tavg_corr_old, 2 );
+  Double_t t2avg_corr_new = ((n-1.0) * t2avg_corr_old + pow(theHit->GetTimeCorrected(),2))/n;
+
+  Double_t Ampavg_old = fMeanAmp;
+  Double_t Amprms_old = fAmpRMS;
+  Double_t A2avg_old = pow(Amprms_old,2) + pow(Ampavg_old,2);
+  Double_t A2avg_new = ((n-1.0)*A2avg_old + pow(theHit->GetAmp(),2))/n;
   
   fMeanTime = (fMeanTime*((Double_t)(listnewsize-1))+theHit->GetTime())/((Double_t)listnewsize);
+  fMeanTimeCorrected = (fMeanTimeCorrected*((Double_t)(listnewsize-1))+theHit->GetTimeCorrected())/((Double_t)listnewsize);
+  
   fMeanAmp = (fMeanAmp*((Double_t)(listnewsize-1))+theHit->GetAmp())/((Double_t)listnewsize);
-  fTimeRMS = sqrt((pow(fTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTime(), 2))/
-  			((Double_t)listnewsize));
-  fAmpRMS = sqrt((pow(fAmpRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetAmp(), 2))/
-  			 ((Double_t)listnewsize));
+  
+  //  fTimeRMS = sqrt((pow(fTimeRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetTime(), 2))/
+  //			((Double_t)listnewsize));
+  fTimeRMS = sqrt(t2avg_new - pow(fMeanTime,2));
+  //fTimeRMSCorrected = sqrt((pow(fTimeRMSCorrected,2)*((Double_t)(listnewsize-1))+pow(theHit->GetTimeCorrected(), 2 ) )/((Double_t)listnewsize)); 
+  fTimeRMSCorrected = sqrt(t2avg_corr_new - pow(fMeanTimeCorrected,2));
+  
+  //  fAmpRMS = sqrt((pow(fAmpRMS, 2)*((Double_t)(listnewsize-1))+ pow(theHit->GetAmp(), 2))/
+  //			 ((Double_t)listnewsize));
+  fAmpRMS = sqrt(A2avg_new - pow(fMeanAmp,2));
 }
 
 //_____________________________________________________________________________

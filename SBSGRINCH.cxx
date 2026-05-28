@@ -50,6 +50,14 @@ SBSGRINCH::SBSGRINCH( const char* name, const char* description,
 
   fMaxSep2 = pow(fMaxSep,2);
 
+  fMaxTdiffClust = 30.0; //ns (default);
+  fMaxTdiffRefTime = 30.0; //ns (default)
+
+  fGRINCH_dToffset = 0.0; //ns (default);
+  fGRINCH_dTsigma = 2.0; //ns (default)
+
+  fUseRefTimeDiffCut = false; //default to false
+  
   //Set up default track match cuts based on mirror number:
 
   fNmirror = 4; 
@@ -148,6 +156,9 @@ void SBSGRINCH::Clear( Option_t* opt )
   if( fDoBench ) fBench->Begin("Clear");
   SBSCherenkovDetector::Clear(opt);
   if( fDoBench ) fBench->Stop("Clear");
+
+  fRefTimeIsSet = false;
+  fRefTime = 0.0;
 }
 
 //_____________________________________________________________________________
@@ -172,8 +183,13 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
   
   //add grinch specific stuff here if needed
 
+  int usereftimediffcut = fUseRefTimeDiffCut ? 1 : 0;
+  
   const DBRequest request[] = { 
     { "maxsep", &fMaxSep, kDouble, 0, 1, 1 },
+    { "maxtdiff_clust", &fMaxTdiffClust, kDouble, 0, 1, 1 },
+    { "maxtdiff_ref", &fMaxTdiffRefTime, kDouble, 0, 1, 1 },
+    { "usereftimediffcut", &usereftimediffcut, kInt, 0, 1, 1 },
     { "nmirror", &fNmirror, kInt, 0, 1, 1 },
     { "trackmatch_yorder", &fOrderTrackMatchY, kInt, 0, 1, 1 },
     { "trackmatch_pslope", &fTrackMatchPslope, kDouble, 0, 1, 1 },
@@ -186,6 +202,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
     { "trackmatch_xmin", &fTrackMatchXmin, kDoubleV, 0, 1, 1 },
     { "trackmatch_xmax", &fTrackMatchXmax, kDoubleV, 0, 1, 1 },
     { "trackmatch_nsigma_cut", &fTrackMatchNsigmaCut, kDouble, 0, 1, 1 },
+    { "trackmatch_dtsigma", &fGRINCH_dTsigma, kDouble, 0, 1, 1 },
+    { "trackmatch_dtoffset", &fGRINCH_dToffset, kDouble, 0, 1, 1 },
     {0}
   };
 
@@ -193,6 +211,8 @@ Int_t SBSGRINCH::ReadDatabase( const TDatime& date )
 
   fMaxSep2 = pow(fMaxSep,2);
 
+  fUseRefTimeDiffCut = (usereftimediffcut != 0);
+  
   //Check size of track match cut arrays, if they were loaded from the DB they had better all be the same size:
   bool sizecheck = ( fTrackMatchXslope.size() == fNmirror && 
 		     fTrackMatchX0.size() == fNmirror && 
@@ -242,7 +262,9 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
     { "allclus.x_mean",  " GRINCH cluster X center",        "fClusters.SBSCherenkov_Cluster.GetXcenter()"          },
     { "allclus.y_mean",  " GRINCH cluster Y center",        "fClusters.SBSCherenkov_Cluster.GetYcenter()"          },
     { "allclus.t_mean", " GRINCH cluster mean time",       "fClusters.SBSCherenkov_Cluster.GetMeanTime()"         },
+    { "allclus.t_mean_corr", " GRINCH cluster mean corrected time", "fClusters.SBSCherenkov_Cluster.GetMeanTimeCorrected()" },
     { "allclus.t_rms", "RMS of GRINCH cluster hit times", "fClusters.SBSCherenkov_Cluster.GetTimeRMS()" },
+    { "allclus.t_rms_corr", "RMS of GRINCH cluster corrected times", "fClusters.SBSCherenkov_Cluster.GetTimeRMSCorrected()" },
     { "allclus.tot_mean", " GRINCH cluster mean time over threshold", "fClusters.SBSCherenkov_Cluster.GetMeanAmp()" },
     { "allclus.adc",     " GRINCH cluster total charge",    "fClusters.SBSCherenkov_Cluster.GetCharge()"           },
     { "allclus.dx", " GRINCH cluster corrected dx wrt track projection", "fClusters.SBSCherenkov_Cluster.GetDX()" },
@@ -259,7 +281,9 @@ Int_t SBSGRINCH::DefineVariables( EMode mode )
     { "clus.x_mean",  " GRINCH best cluster X center",        "fBestCluster.GetXcenter()"          },
     { "clus.y_mean",  " GRINCH best cluster Y center",        "fBestCluster.GetYcenter()"          },
     { "clus.t_mean", " GRINCH best cluster mean time",       "fBestCluster.GetMeanTime()"         },
+    { "clus.t_mean_corr", " GRINCH best cluster mean corrected time", "fBestCluster.GetMeanTimeCorrected()" },
     { "clus.t_rms", "RMS of GRINCH best cluster hit times", "fBestCluster.GetTimeRMS()" },
+    { "clus.t_rms_corr", " RMS of GRINCH best cluster corrected hit times", "fBestCluster.GetTimeRMSCorrected()" },
     { "clus.tot_mean", " GRINCH best cluster mean time over threshold", "fBestCluster.GetMeanAmp()" },
     { "clus.adc",     " GRINCH best cluster total charge",    "fBestCluster.GetCharge()"           },
     { "clus.dx", " GRINCH cluster corrected dx wrt track projection", "fBestCluster.GetDX()" },
@@ -295,8 +319,14 @@ Int_t SBSGRINCH::CoarseProcess( TClonesArray& tracks )
   
   // add clustering here: hits have been filtered by SBSCherenkovDetector::CoarseProcess()
   // clustering ought to be coded in function "FindClusters" below
-  
-  /*int err = */FindClusters();
+
+  // NOTE: is there any particular reason we can't move the GRINCH clustering to FineProcess() to take advantage of
+  // "reference" timing?
+  // I don't see why not! 
+
+  //GRINCH clustering moved to FineProcess so we can grab "reference" time from the
+  //shower
+  /*int err = *///FindClusters();
   
   if( fDoBench ) fBench->Stop("CoarseProcess");
   if(fDebug)cout << "End Coarse Process" << endl;
@@ -316,7 +346,10 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
 
   if( fDoBench ) fBench->Begin("FineProcess");
 
-  SBSCherenkovDetector::FineProcess(tracks);
+  SBSCherenkovDetector::FineProcess(tracks); //currently this does nothing
+
+  //Moved clustering here so we can implement tighter time cuts internally to clustering:
+  FindClusters();
   
   //Int_t nmatch = 0;
   fNtrackMatch = 0;
@@ -347,42 +380,58 @@ Int_t SBSGRINCH::FineProcess( TClonesArray& tracks )
 Int_t SBSGRINCH::FindClusters()
 {
   // here will be implemented the clustering for the GRINCH
-  // Basic idea: loop on all the good hits; group all contiguous nearest-neighbor hits into clusters based on position and/or row/col number; 
+  // Basic idea: loop on all the good hits; group all contiguous nearest-neighbor hits into clusters based on position and/or row/col number (and time); 
   // when this is called, the "fHits" array has already been filled by CoarseProcess
   
   Int_t ngoodhits = GetNumHits(); 
 
   Int_t nclust = 0;
 
-  std::set<Int_t> list_pmts; //list of all fired PMTs
+  //std::set<Int_t> list_pmts; //list of all fired PMTs (currently not actually used)
   std::set<Int_t> unused_pmts; //list of all PMTs that aren't part of clusters
   std::map<Int_t,Int_t> hitindex_pmts; //index in hit array of fired PMTs
   //std::map<Int_t,Bool_t> hitused_pmts; //flag to indicate a PMT has already been used in a cluster
   std::map<Int_t,Int_t> pmt_row;
   std::map<Int_t,Int_t> pmt_col; 
-
+ 
   std::map<Int_t,Double_t> xpmt;
   std::map<Int_t,Double_t> ypmt; 
-
+  std::map<Int_t,Double_t> tpmt; 
+  
   std::map<Int_t,Int_t> clustindex_pmts; //cluster index of pmts (maybe redundant, unclear if necessary yet)
 
   std::vector<std::set<Int_t> > pmtlist_clusters;
-
+  std::vector<Double_t> tmean_clusters;
+  
   pmtlist_clusters.clear();
 
+  // If reference time has been set, start the first cluster
+  // using the hit closest in time to the reference time. 
+  
   for( int ihit=0; ihit<ngoodhits; ihit++ ){
     int pmtnum = GetHit(ihit)->GetPMTNum();
-    list_pmts.insert( pmtnum );
-    unused_pmts.insert( pmtnum );
+    
     pmt_row[pmtnum] = GetHit(ihit)->GetRow();
     pmt_col[pmtnum] = GetHit(ihit)->GetCol();
     xpmt[pmtnum] = GetHit(ihit)->GetX();
     ypmt[pmtnum] = GetHit(ihit)->GetY();
+    tpmt[pmtnum] = GetHit(ihit)->GetTimeCorrected(); //includes trigger phase correction
+    
     hitindex_pmts[pmtnum] = ihit;
     //hitused_pmts[pmtnum] = false;
     clustindex_pmts[pmtnum] = -1;
+
+    bool keep = true;
+    if( fRefTimeIsSet && fUseRefTimeDiffCut ){
+      keep = fabs( tpmt[pmtnum] - fRefTime - fGRINCH_dToffset ) <= fMaxTdiffClust; //use cluster time cut here for individual hits
+    }
+
+    if( keep ){
+      //list_pmts.insert( pmtnum );
+      unused_pmts.insert( pmtnum );
+    }
   }
-  
+
   nclust = 0; //for readability
 
   //Start "new" improved clustering algorithm here:
@@ -399,12 +448,22 @@ Int_t SBSGRINCH::FindClusters()
       pmtlist_clusters.push_back( pmtlist_temp );
       clustindex_pmts[ipmt] = nclust;
       unused_pmts.erase( ipmt );
-	  
+
+      tmean_clusters.push_back( tpmt[ipmt] );
+      
       //Now loop on all OTHER unused PMTs and add any immediate neighbors of ipmt found to this cluster:
       for( auto jpmt : unused_pmts ){
 	//if( jpmt != ipmt ){ //In principle this check is unnecessary since we already erased ipmt
 	Double_t sep2 = pow( xpmt[ipmt] - xpmt[jpmt], 2 ) + pow( ypmt[ipmt] - ypmt[jpmt], 2 );
-	if( sep2 <= fMaxSep2 ){ //neighbor! 
+
+	Double_t dt = tpmt[jpmt] - tmean_clusters[nclust];
+	
+	if( sep2 <= fMaxSep2 && fabs( dt ) <= fMaxTdiffClust ){ //in-time neighbor!
+	  //update candidate cluster mean time as PMTs are added:
+	  double oldtmean = tmean_clusters[nclust];
+	  double npmt_clust = pmtlist_clusters[nclust].size();
+	  tmean_clusters[nclust] = (oldtmean * npmt_clust + tpmt[jpmt])/(npmt_clust+1.0);
+	    
 	  pmtlist_clusters[nclust].insert( jpmt );
 	  //unused_pmts.erase( jpmt ); DON'T modify the set while iterating on it, this could have unintended consequences
 	  clustindex_pmts[jpmt] = nclust;
@@ -416,13 +475,19 @@ Int_t SBSGRINCH::FindClusters()
 	unused_pmts.erase(jpmt);
       }
       nclust++; //increment cluster count. IMPORTANT!
-    } else { //nclust > 0. loop on all existing clusters. Compare this PMT to all PMTs in all existing clusters, add it to the first cluster containing a neighbor of this PMT according to MaxSep!
+    } else { //nclust > 0. loop on all existing clusters. Compare this PMT to all PMTs in all existing clusters, add it to the first cluster containing an in-time neighbor of this PMT according to MaxSep!
       int iclust=0; 
       while( unused_pmts.find( ipmt ) != unused_pmts.end() && iclust < nclust ){
 	//for( int iclust=0; iclust<nclust; iclust++ ){
 	for( auto jpmt : pmtlist_clusters[iclust] ){ //loop on all PMTs in the cluster and check for a match:
 	  Double_t sep2 = pow( xpmt[ipmt]-xpmt[jpmt],2 ) + pow( ypmt[ipmt]-ypmt[jpmt],2);
-	  if( sep2 <= fMaxSep2 ){ //iclust contains a neighbor of ipmt, add ipmt to iclust!  
+	  Double_t dt = tpmt[ipmt]-tmean_clusters[iclust];
+	  
+	  if( sep2 <= fMaxSep2 && fabs( dt ) <= fMaxTdiffClust ){ //iclust contains a neighbor of ipmt, add ipmt to iclust!  
+	    double oldtmean = tmean_clusters[iclust];
+	    double npmt_clust = pmtlist_clusters[iclust].size();
+	    tmean_clusters[iclust] = (oldtmean * npmt_clust + tpmt[ipmt])/(npmt_clust+1.0);
+	    
 	    pmtlist_clusters[iclust].insert( ipmt );
 	    clustindex_pmts[ipmt] = iclust;
 	    unused_pmts.erase(ipmt);
@@ -433,18 +498,25 @@ Int_t SBSGRINCH::FindClusters()
       }
      
       //check whether the current pmt was matched to any existing cluster:
-      if( unused_pmts.find( ipmt ) != unused_pmts.end() ){ //this PMT was not matched to any existing cluster; start new one!
+      if( unused_pmts.find( ipmt ) != unused_pmts.end() ){ //this PMT was not matched to any existing cluster; start a new one!
 	std::set<Int_t> pmtlist_temp;
 	pmtlist_temp.insert( ipmt );
 	pmtlist_clusters.push_back( pmtlist_temp );
 	clustindex_pmts[ipmt] = nclust; 
 	unused_pmts.erase( ipmt );
 
+	tmean_clusters.push_back( tpmt[ipmt] );
+
 	//after creating a new cluster, loop on all remaining unused pmts and check for immediate neighbors of this one! 
 	for( auto jpmt : unused_pmts ){
 	//if( jpmt != ipmt ){ //In principle this check is unnecessary since we already erased ipmt
 	  Double_t sep2 = pow( xpmt[ipmt] - xpmt[jpmt], 2 ) + pow( ypmt[ipmt] - ypmt[jpmt], 2 );
-	  if( sep2 <= fMaxSep2 ){ //neighbor! 
+	  Double_t dt = tpmt[jpmt] - tmean_clusters[nclust];
+	  
+	  if( sep2 <= fMaxSep2 && fabs( dt ) <= fMaxTdiffClust ){ //neighbor!
+	    double oldtmean = tmean_clusters[nclust];
+	    double npmt_clust = pmtlist_clusters[nclust].size();
+	    tmean_clusters[nclust] = (oldtmean * npmt_clust + tpmt[jpmt])/(npmt_clust+1.0);
 	    pmtlist_clusters[nclust].insert( jpmt );
 	    //unused_pmts.erase( jpmt ); DON'T modify the set while iterating on it, this could have unintended consequences
 	    clustindex_pmts[jpmt] = nclust;
@@ -546,15 +618,25 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
 
     Double_t dxbest = kBig;
     Double_t dybest = kBig;
+    Double_t dtbest = kBig;
     
     SBSCherenkov_Cluster *clusttemp = GetCluster( iclust );
 
+    double xGRINCH = clusttemp->GetXcenter();
+    double yGRINCH = clusttemp->GetYcenter();
+    
+    double tGRINCH = clusttemp->GetMeanTimeCorrected();
+
+    double dtGRINCH = tGRINCH - fGRINCH_dToffset; //THIS assumes GRINCH time to be aligned at offset
+    if( fRefTimeIsSet ) dtGRINCH -= fRefTime; //"ref time" is ordinarily from the shower
+    
     for( int itrack=0; itrack<ntracks; itrack++ ){
       auto* theTrack = static_cast<THaTrack*>( tracks.At(itrack) ); 
    
       // Now we need to come up with some sort of matching criterion for GRINCH clusters and tracks. 
       // I suppose what we want for now is the cluster closest to the track along X and/or Y This could become more 
-      // sophisticated over time
+      // sophisticated over time.
+      // Also consider timing!
  
       //Project track to GRINCH entrance window: 
       double zGRINCH = GetOrigin().Z();
@@ -570,66 +652,77 @@ Int_t SBSGRINCH::MatchClustersWithTracks( TClonesArray& tracks )
       //int iclmin=-1;
 
       //    for( int iclust=0; iclust<nclust; iclust++ ){
-      //SBSCherenkov_Cluster *clusttemp = ( (SBSCherenkov_Cluster*) (*fClusters)[iclust] );
-      
-      double xGRINCH = clusttemp->GetXcenter();
-      double yGRINCH = clusttemp->GetYcenter();
+      //SBSCherenkov_Cluster *clusttemp = ( (SBSCherenkov_Cluster*) (*fClusters)[iclust] );	
 
-      for( int imirr=0; imirr<fNmirror; imirr++ ){
-	if( xtrack >= fTrackMatchXmin[imirr] && xtrack < fTrackMatchXmax[imirr] ){
-	  //double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]-fTrackMatchPslope/ptrack);
-	  //Implement new x-matching criterion parametrized based on track theta:
-	  double xdiff = xGRINCH - xtrack - ( fTrackMatchX0[imirr] + fTrackMatchXslope[imirr]*thetatrack );
-	  //double ydiff = fabs(ytrack - fTrackMatchYslope[imirr] * yGRINCH - fTrackMatchY0[imirr]);
+      if( fabs(dtGRINCH) <= fMaxTdiffRefTime || !fUseRefTimeDiffCut ){ //don't consider clusters with bad GRINCH timing for track matching
+	
+	for( int imirr=0; imirr<fNmirror; imirr++ ){
+	  if( xtrack >= fTrackMatchXmin[imirr] && xtrack < fTrackMatchXmax[imirr] ){
+	    //double xdiff =  fabs(xtrack - fTrackMatchXslope[imirr] * xGRINCH - fTrackMatchX0[imirr]-fTrackMatchPslope/ptrack);
+	    //Implement new x-matching criterion parametrized based on track theta:
+	    double xdiff = xGRINCH - xtrack - ( fTrackMatchX0[imirr] + fTrackMatchXslope[imirr]*thetatrack );
+	    //double ydiff = fabs(ytrack - fTrackMatchYslope[imirr] * yGRINCH - fTrackMatchY0[imirr]);
+	    
+	    //The lines below implement Maria's 3rd-order polynomial in track phi for the y correlation:
+	    double ypredict = fTrackMatchY0[imirr];
+	    for( int ipar=1; ipar<fOrderTrackMatchY; ipar++ ){
+	      ypredict += fTrackMatchYslope[3*imirr + ipar-1] * pow( phitrack, ipar );
+	    }
+	    
+	    double ydiff = yGRINCH - ytrack - ypredict; 
+	    
+	    double diff2 = pow( xdiff/fTrackMatchXsigma[imirr], 2 ) + pow( ydiff/fTrackMatchYsigma[imirr], 2 );
 
-	  //The lines below implement Maria's 3rd-order polynomial in track phi for the y correlation:
-	  double ypredict = fTrackMatchY0[imirr];
-	  for( int ipar=1; ipar<fOrderTrackMatchY; ipar++ ){
-	    ypredict += fTrackMatchYslope[3*imirr + ipar-1] * pow( phitrack, ipar );
-	  }
-	  
-	  double ydiff = yGRINCH - ytrack - ypredict; 
-	  
-	  double diff2 = pow( xdiff/fTrackMatchXsigma[imirr], 2 ) + pow( ydiff/fTrackMatchYsigma[imirr], 2 );
-    
-	  //     if( xdiff <= fTrackMatchXcut ){
-	  if( diff2 <= pow( fTrackMatchNsigmaCut, 2 ) ){
-	    //if( iclmin < 0 || xdiff < minxdiff ){
+	    if( fUseRefTimeDiffCut ) diff2 += pow(dtGRINCH/fGRINCH_dTsigma,2);
+	    
+	    //     if( xdiff <= fTrackMatchXcut ){
+	    //if( diff2 <= pow( fTrackMatchNsigmaCut, 2 ) ){
+	      //if( iclmin < 0 || xdiff < minxdiff ){
+	    //don't apply hard cuts on diff2 until the end
 	    if( itrmin < 0 || diff2 < mindiff2 ){
 	      itrmin = itrack;
 	      bestmirror = imirr+1; //keep Maria's numbering convention of 1 to 4
 	      //  minxdiff = xdiff;
 	      mindiff2 = diff2;
-
+	      
 	      dxbest = xdiff;
 	      dybest = ydiff;
+	      dtbest = dtGRINCH;
+	    
 	    }
 	  }
 	}
       }
     }
-
+    
     if( itrmin >= 0 ){ //match:
       //SBSCherenkov_Cluster *clusttemp = ( (SBSCherenkov_Cluster*) (*fClusters)[iclmin] );
       //SBSCherenkov_Cluster *clusttemp = GetCluster( iclmin );
 
-      auto* theTrack = static_cast<THaTrack*>( tracks.At(itrmin) ); 
+      bool goodposition = pow( dxbest/fTrackMatchXsigma[bestmirror-1], 2 ) + pow( dybest/fTrackMatchYsigma[bestmirror-1], 2 ) <= pow( fTrackMatchNsigmaCut, 2 );
+      bool goodtime = fabs( dtbest ) <= fMaxTdiffRefTime || !fUseRefTimeDiffCut;
 
-      clusttemp->SetTrackIndex( itrmin ); 
-      clusttemp->SetTrack( theTrack );
-      clusttemp->SetMirrorIndex( bestmirror );
+      bool goodmatch = goodposition && goodtime;
 
-      clusttemp->SetDX( dxbest );
-      clusttemp->SetDY( dybest );
-      
-      //We also need to loop on all the hits and set the track index for those hits:
-      TIter next(clusttemp->GetHitList());
-      SBSCherenkov_Hit *hittemp;
-      while( ( hittemp = static_cast<SBSCherenkov_Hit*>( next() ) ) ){
-	hittemp->SetTrackIndex( itrmin );
+      if( goodmatch ){
+	auto* theTrack = static_cast<THaTrack*>( tracks.At(itrmin) ); 
+	
+	clusttemp->SetTrackIndex( itrmin ); 
+	clusttemp->SetTrack( theTrack );
+	clusttemp->SetMirrorIndex( bestmirror );
+	
+	clusttemp->SetDX( dxbest );
+	clusttemp->SetDY( dybest );
+	
+	//We also need to loop on all the hits and set the track index for those hits:
+	TIter next(clusttemp->GetHitList());
+	SBSCherenkov_Hit *hittemp;
+	while( ( hittemp = static_cast<SBSCherenkov_Hit*>( next() ) ) ){
+	  hittemp->SetTrackIndex( itrmin );
+	}
+	
+	nmatch++;
       }
-
-      nmatch++;
     }
     
   }
@@ -656,6 +749,11 @@ Int_t SBSGRINCH::SelectBestCluster(Int_t nmatch){
   }
 
   return best;
+}
+
+void SBSGRINCH::SetRefTime( Double_t RefTime ){
+  fRefTime = RefTime;
+  fRefTimeIsSet = true;
 }
 
 ClassImp(SBSGRINCH)

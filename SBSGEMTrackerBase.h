@@ -242,6 +242,8 @@ protected:
   
   bool fIsMC;
 
+  bool fStoreAll1Dclusters;
+
   int fNmodules; //Total number of modules
   int fNlayers;  //total number of tracking layers
 

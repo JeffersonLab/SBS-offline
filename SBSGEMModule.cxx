@@ -518,6 +518,8 @@ Int_t SBSGEMModule::ReadDatabase( const TDatime& date ){
   fRawADCminResult_by_APV.resize( nentry );
   fRawADCmaxResult_by_APV.resize( nentry );
   fNumFullReadoutEvents_by_APV.resize( nentry, 0 );
+
+  fNwarnBadCM_by_APV.resize( nentry, 0 );
   
   for( Int_t mapline = 0; mapline < nentry; mapline++ ){
     mpdmap_t thisdata;
@@ -1499,7 +1501,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 
 	    hMPD_FineTimeStamp_vs_Fiber->Fill( fiber, fTfine_by_APV[apvcounter] * 4.0 );
 	  }
-	    
+	  
 	  Long64_t Tcoarse = Thigh << 16 | ( Tlow << 8 );
 	  double Tc = double(Tcoarse);
 	  
@@ -1721,15 +1723,33 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
       for( int iraw=0; iraw<nsamp; iraw++ ){ //NOTE: iraw = isamp + fN_MPD_TIME_SAMP * istrip
 	int strip = evdata.GetRawData( it->crate, it->slot, effChan, iraw );
 	UInt_t decoded_rawADC = evdata.GetData( it->crate, it->slot, effChan, iraw );
-
+	int ADC_good = 0;//MC only...
+	if(fIsMC){
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((decoded_rawADC & 1<<ibit)>>ibit) << "";}cout << endl;}
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((strip & 1<<ibit)>>ibit) << "";}cout << endl;}
+	  //the adc_good should be the 20th to 7 bits of strip if we have this "good adc" encoded
+	  ADC_good = (strip & 0x7FF80) >> 7;
+	  //if(strcmp(GetParent()->GetName(), "gemFT")==0){for(int ibit = 32; ibit>=0; ibit--){cout << ((ADC_good & 1<<ibit)>>ibit) << "";}cout << endl;}
+	  //the actual strip number should be the last 7 bits of strip if we have this "good adc" encoded
+	  strip = strip & 0x7F;
+	}
+	
 	int isamp = iraw%fN_MPD_TIME_SAMP;
 	  
 	Int_t ADC = Int_t( decoded_rawADC );
-	
+	// ***if*** (and only if) raw ADC decode is above 2^12, that means the value that was encoded is negative;
+	// evdata.GetData(...)method takes the last 13 bits, so we end up with rawADC = 2^13+ADC 
+	// therefore, we need to correct it by subtracting 2^13:
+	if(fIsMC && ADC>= (1<<12)){
+	  //cout << ADC << " " << (1<<12) << endl;
+	  ADC = ADC - (1<<13);
+	}
 	rawStrip[iraw] = strip;
 	Strip[iraw] = GetStripNumber( strip, it->pos, it->invert );
 
 	rawADC[iraw] = ADC;
+	//cout << GetParent()->GetName() << endl;
+	//if(strcmp(GetParent()->GetName(), "gemFT")==0)cout << "GEM decode: iraw " << iraw << " strip " << strip << " samp " << isamp << " raw adc " <<  decoded_rawADC << " adc " <<  ADC << " adc good? " << ADC_good << endl;
 	
 	double ped = (axis == SBSGEM::kUaxis ) ? fPedestalU[Strip[iraw]] : fPedestalV[Strip[iraw]];
 
@@ -2064,8 +2084,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    double CMbias = CMbiasDB;
 	    
 	    if( fNeventsOnlineBias_by_APV[apvcounter] >= std::min( UInt_t(100), std::max(UInt_t(10), fN_MPD_TIME_SAMP * fNeventsCommonModeLookBack) ) ){
-	      CMbias = fCommonModeOnlineBiasRollingAverage_by_APV[apvcounter]; 
-	    }
+	      CMbias = fCommonModeOnlineBiasRollingAverage_by_APV[apvcounter];
+        CommonModeCorrection[isamp] += 2.0*CMbias*(1.0-double(ngood)/double(fN_APV25_CHAN));  // Only apply when rolling average is filled
+      } else {
+        CommonModeCorrection[isamp] = 0.0;
+      }
 
 	    //bias is DEFINED as Online common-mode MINUS correction MINUS "true" common-mode:
 	    //"correction" is DEFINED as Online common-mode MINUS "corrected common-mode" and is to be ADDED to the ADC values:
@@ -2078,7 +2101,7 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	    // = uncorrected ADC + [correction + bias]
 	    // [...] = correction to be ADDED to ADC
 	    // --> corrected correction = correction + bias
-	    CommonModeCorrection[isamp] += 2.0*CMbias*(1.0-double(ngood)/double(fN_APV25_CHAN));
+	    //CommonModeCorrection[isamp] += 2.0*CMbias*(1.0-double(ngood)/double(fN_APV25_CHAN));
 	    
 	    //"TRUE" common-mode is equal to 
 	    
@@ -2352,8 +2375,14 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 			       (static_cast<THaDetector*>(GetParent()))->GetApparatus()->GetName(),
 			       GetParent()->GetName(),
 			       GetName() );
-	  
-	  std::cout << "Warning in SBSGEMModule::Decode for module " << sname << ", bad CM for (axis,pos)=(" << it->axis << ", " << it->pos << ")" << std::endl;
+
+	  fNwarnBadCM_by_APV[it->index]++;
+	  if( fNwarnBadCM_by_APV[it->index] <= 10 ){
+	    std::cout << "Warning in SBSGEMModule::Decode for module " << sname << ", bad CM for (axis,pos)=(" << it->axis << ", " << it->pos << "), skipping..." << std::endl;
+	    if( fNwarnBadCM_by_APV[it->index] == 10 ){
+	      std::cout << "Reached maximum number of warnings for this APV, suppressing further warnings..." << std::endl;
+	    }
+	  }
 	  
 	  continue; 
 	}
@@ -2875,59 +2904,128 @@ void SBSGEMModule::find_2Dhits(){
   //Start with 1D clustering; if the constraint array for this module has EXACTLY one point and the store all clusters flag is
   // NOT set, do the clustering with constraints! Otherwise do it without constraints!
 
-  if( fxcmin.size() >= 1 && !fStoreAll1Dclusters ){ 
+  // if( fxcmin.size() >= 1 && !fStoreAll1Dclusters ){ 
 
-    double xcenter = 0.5*(fxcmin[0]+fxcmax[0]);
-    double xwidth = 0.5*(fxcmax[0]-fxcmin[0]);
-    double ycenter = 0.5*(fycmin[0]+fycmax[0]);
-    double ywidth = 0.5*(fycmax[0]-fycmin[0]);
+  //   double xcenter = 0.5*(fxcmin[0]+fxcmax[0]);
+  //   double xwidth = 0.5*(fxcmax[0]-fxcmin[0]);
+  //   double ycenter = 0.5*(fycmin[0]+fycmax[0]);
+  //   double ywidth = 0.5*(fycmax[0]-fycmin[0]);
 
-    double ucenter = xcenter * fPxU + ycenter * fPyU;
-    double vcenter = xcenter * fPxV + ycenter * fPyV;
+  //   double ucenter = xcenter * fPxU + ycenter * fPyU;
+  //   double vcenter = xcenter * fPxV + ycenter * fPyV;
 
-    double umin,umax,vmin,vmax;
+  //   double umin,umax,vmin,vmax;
 
-    double xmin = fxcmin[0];
-    double xmax = fxcmax[0];
-    double ymin = fycmin[0];
-    double ymax = fycmax[0];
+  //   double xmin = fxcmin[0];
+  //   double xmax = fxcmax[0];
+  //   double ymin = fycmin[0];
+  //   double ymax = fycmax[0];
     
-    //check the four corners of the rectangle and compute the maximum values of u and v occuring at the four corners of the rectangular region:
-    // NOTE: we will ALSO enforce the 2D search region in X and Y when we combine 1D U/V clusters into 2D X/Y hits, which, depending on the U/V strip orientation
-    // can exclude some 2D hits that would have passed the U/V constraints defined by the corners of the X/Y rectangle, but been outside the X/Y constraint rectangle
+  //   //check the four corners of the rectangle and compute the maximum values of u and v occuring at the four corners of the rectangular region:
+  //   // NOTE: we will ALSO enforce the 2D search region in X and Y when we combine 1D U/V clusters into 2D X/Y hits, which, depending on the U/V strip orientation
+  //   // can exclude some 2D hits that would have passed the U/V constraints defined by the corners of the X/Y rectangle, but been outside the X/Y constraint rectangle
 
-    double u00 = xmin * fPxU + ymin * fPyU;
-    double u01 = xmin * fPxU + ymax * fPyU;
-    double u10 = xmax * fPxU + ymin * fPyU;
-    double u11 = xmax * fPxU + ymax * fPyU;
+  //   double u00 = xmin * fPxU + ymin * fPyU;
+  //   double u01 = xmin * fPxU + ymax * fPyU;
+  //   double u10 = xmax * fPxU + ymin * fPyU;
+  //   double u11 = xmax * fPxU + ymax * fPyU;
 
-    //this is some elegant-looking (compact) code, but perhaps algorithmically clunky:
-    umin = std::min( u00, std::min(u01, std::min(u10, u11) ) );
-    umax = std::max( u00, std::max(u01, std::max(u10, u11) ) );
+  //   //this is some elegant-looking (compact) code, but perhaps algorithmically clunky:
+  //   umin = std::min( u00, std::min(u01, std::min(u10, u11) ) );
+  //   umax = std::max( u00, std::max(u01, std::max(u10, u11) ) );
 
-    double v00 = xmin * fPxV + ymin * fPyV;
-    double v01 = xmin * fPxV + ymax * fPyV;
-    double v10 = xmax * fPxV + ymin * fPyV;
-    double v11 = xmax * fPxV + ymax * fPyV;
+  //   double v00 = xmin * fPxV + ymin * fPyV;
+  //   double v01 = xmin * fPxV + ymax * fPyV;
+  //   double v10 = xmax * fPxV + ymin * fPyV;
+  //   double v11 = xmax * fPxV + ymax * fPyV;
   
-    vmin = std::min( v00, std::min(v01, std::min(v10, v11) ) );
-    vmax = std::max( v00, std::max(v01, std::max(v10, v11) ) );
+  //   vmin = std::min( v00, std::min(v01, std::min(v10, v11) ) );
+  //   vmax = std::max( v00, std::max(v01, std::max(v10, v11) ) );
+    
+  //   find_clusters_1D(SBSGEM::kUaxis, ucenter, 0.5*(umax-umin) ); //u strips
+  //   find_clusters_1D(SBSGEM::kVaxis, vcenter, 0.5*(vmax-vmin) ); //v strips
+  // } else { //use the default wide-open limits!
+  //   // std::cout << "Calling 1D cluster finding with storage of ALL 1D clusters, num. constraints = "
+  //   // 	      << fxcmin.size() << std::endl;
+  //   find_clusters_1D(SBSGEM::kUaxis);
+  //   find_clusters_1D(SBSGEM::kVaxis);
+  // }
+
+    if( fxcmin.size() >= 1 ){
+
+    double xmin = 10000000, xmax = -10000000, ymin = 10000000, ymax = -10000000; // Define bounds that are sure to be overriden.
+    double umin = 10000000, umax = -10000000, vmin = 10000000, vmax = -10000000; 
+
+    // Let us loop through all the constraint points and find the above.
+    for ( int icp = 0; icp < fxcmin.size(); icp++  ){
+
+      double xmin_icp = fxcmin[icp];
+      double xmax_icp = fxcmax[icp];
+      double ymin_icp = fycmin[icp];
+      double ymax_icp = fycmax[icp];
+
+      xmin = std::min( xmin, xmin_icp );
+      xmax = std::max( xmax, xmax_icp );
+      ymin = std::min( ymin, ymin_icp );
+      ymax = std::max( ymax, ymax_icp );
+
+      double u00 = xmin_icp * fPxU + ymin_icp * fPyU;
+      double u01 = xmin_icp * fPxU + ymax_icp * fPyU;
+      double u10 = xmax_icp * fPxU + ymin_icp * fPyU;
+      double u11 = xmax_icp * fPxU + ymax_icp * fPyU;
+
+      //this is some elegant-looking (compact) code, but perhaps algorithmically clunky:      
+      umin = std::min( umin, std::min( u00, std::min(u01, std::min(u10, u11) ) ) );
+      umax = std::max( umax, std::max( u00, std::max(u01, std::max(u10, u11) ) ) );
+
+      double v00 = xmin_icp * fPxV + ymin_icp * fPyV;
+      double v01 = xmin_icp * fPxV + ymax_icp * fPyV;
+      double v10 = xmax_icp * fPxV + ymin_icp * fPyV;
+      double v11 = xmax_icp * fPxV + ymax_icp * fPyV;
+
+      vmin = std::min( vmin, std::min( v00, std::min(v01, std::min(v10, v11) ) ) );
+      vmax = std::max( vmax, std::max( v00, std::max(v01, std::max(v10, v11) ) ) );
+    }    
+
+    double ucenter = 0.5*(umin + umax);
+    double vcenter = 0.5*(vmin + vmax);
     
     find_clusters_1D(SBSGEM::kUaxis, ucenter, 0.5*(umax-umin) ); //u strips
     find_clusters_1D(SBSGEM::kVaxis, vcenter, 0.5*(vmax-vmin) ); //v strips
   } else { //use the default wide-open limits!
     // std::cout << "Calling 1D cluster finding with storage of ALL 1D clusters, num. constraints = "
-    // 	      << fxcmin.size() << std::endl;
+    //        << fxcmin.size() << std::endl;
     find_clusters_1D(SBSGEM::kUaxis);
     find_clusters_1D(SBSGEM::kVaxis);
   }
 
   // std::cout << "After 1D cluster-finding, (fNclustU,fNclustV)=("
-  // 	    << fNclustU << ", " << fNclustV << ")" << std::endl;
+  //      << fNclustU << ", " << fNclustV << ")" << std::endl;
   
   //Now make 2D clusters:
 
   if( fNclustU > 0 && fNclustV > 0 ){
+
+    fGoodUclustersIndex.clear();
+    fGoodVclustersIndex.clear();
+    fGoodUclustersIndex.resize( fNclustU );
+    fGoodVclustersIndex.resize( fNclustV );
+
+    fNclustU_good = 0;
+    fNclustV_good = 0;
+
+    for ( int iclus = 0; iclus < fNclustU; iclus++ ){      
+      if ( fUclusters[iclus].keep == true ){
+        fGoodUclustersIndex[fNclustU_good] = iclus;
+        fNclustU_good++;
+      }
+    }
+    for ( int iclus = 0; iclus < fNclustV; iclus++ ){
+      if ( fVclusters[iclus].keep == true ){
+        fGoodVclustersIndex[fNclustV_good] = iclus;
+        fNclustV_good++;
+      }
+    }
   
     // fxcmin = -1.e12;
     // fxcmax = 1.e12;
@@ -3977,8 +4075,8 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
 
     //clusttemp.t_mean_fit -= fStripMaxTcut_central_fit[axis];
     
-    //initialize "keep" flag for all 1D clusters to true:
-    clusttemp.keep = true;
+    //initialize "keep" flag for all 1D clusters to false (ADR on March 26, 2026):
+    clusttemp.keep = false;
       
     clusttemp.isneg = false; //This is used for negative strip analysis
     clusttemp.isnegontrack = false; //This is used for negative strip analysis
@@ -3995,10 +4093,12 @@ void SBSGEMModule::find_clusters_1D( SBSGEM::GEMaxis_t axis, Double_t constraint
     if( sumADC >= fThresholdClusterSum && clusttemp.nstrips >= 2 ){ //Increment "total cluster multiplicity"
       nclust_tot++;
     }
-    
-    //Hopefully this works correctly:
-    if( fabs( clusttemp.hitpos_mean - constraint_center ) <= constraint_width || fStoreAll1Dclusters ){
 
+    bool isClusterWithinConstraint = fabs( clusttemp.hitpos_mean - constraint_center ) <= constraint_width;
+    if ( isClusterWithinConstraint ) clusttemp.keep = true;
+    
+    //if( fabs( clusttemp.hitpos_mean - constraint_center ) <= constraint_width || fStoreAll1Dclusters ){
+    if( isClusterWithinConstraint || fStoreAll1Dclusters ){
       //Fit max strip time for hits in constraint region:
       // double Tfit = FitStripTime( hitindex[stripmax], 20.0 );
       // fStripTfit[hitindex[stripmax]] = Tfit;
@@ -4365,7 +4465,8 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   fHits.clear();
   fN2Dhits = 0;
 
-  fHits.resize( std::min( fNclustU*fNclustV, fMAX2DHITS ) );
+  // fHits.resize( std::min( fNclustU*fNclustV, fMAX2DHITS ) );
+  fHits.resize( std::min( fNclustU_good*fNclustV_good, fMAX2DHITS ) );
   
   //if( fNclustU * fNclustV > fMAX2DHITS ){
   //   std::cout << "Warning in SBSGEMModule::fill_2D_hit_arrays(): 
@@ -4395,10 +4496,15 @@ void SBSGEMModule::fill_2D_hit_arrays(){
   bool maxhits_exceeded = false;
 
   //std::cout << "Starting 2D hit finding..." << std::endl;
-  for( UInt_t iu=0; iu<fNclustU; iu++ ){
-    for( UInt_t iv=0; iv<fNclustV; iv++ ){
+  // for( UInt_t iu=0; iu<fNclustU; iu++ ){
+  //   for( UInt_t iv=0; iv<fNclustV; iv++ ){
+  for( UInt_t igoodU=0; igoodU<fNclustU_good; igoodU++ ){
+    int iu = fGoodUclustersIndex[igoodU];
+    for( UInt_t igoodV=0; igoodV<fNclustV_good; igoodV++ ){
+      int iv = fGoodVclustersIndex[igoodV];
       //Check that this is a "good" cluster and that it was not already used in track formation:
-      if( fUclusters[iu].keep && fVclusters[iv].keep && !fUclusters[iu].ontrack && !fVclusters[iv].ontrack ){ 
+      // if( fUclusters[iu].keep && fVclusters[iv].keep && !fUclusters[iu].ontrack && !fVclusters[iv].ontrack ){ 
+      if( !fUclusters[iu].ontrack && !fVclusters[iv].ontrack ){
 	//Initialize sums for computing cluster and strip correlation coefficients:
 	sbsgemhit_t hittemp; // declare a temporary "hit" object:
 
@@ -6515,66 +6621,104 @@ double SBSGEMModule::GetCommonModeCorrection( UInt_t isamp, const mpdmap_t &apvi
     //Attempt to calculate a correction:
     if( fCommonModeFlag == 0 ){
       //sorting: this method will be significantly biased if we use the same "low strip" rejection as for full-readout events
-      if( ngoodhits >= fCommonModeNstripRejectLow + fCommonModeNstripRejectHigh + fCommonModeMinStripsInRange ){
-	std::vector<double> sortedADCs(ngood);
-	for( int ihit=0; ihit<ngood; ihit++ ){
-	  int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
-	  double ADCtemp = fPedSubADC_APV[iraw]; 
-	  if( !fullreadout ) ADCtemp += fCM_online[isamp]; //Add back in online common-mode if it was subtracted online
-	  sortedADCs[ihit] = ADCtemp;
-	}
+      if( ngoodhits >= fCommonModeMinStripsInRange ){
+	      std::vector<double> sortedADCs(ngood);
+	      for( int ihit=0; ihit<ngood; ihit++ ){
+	        int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
+	        double ADCtemp = fPedSubADC_APV[iraw]; 
+	        if( !fullreadout ) ADCtemp += fCM_online[isamp]; //Add back in online common-mode if it was subtracted online
+	        sortedADCs[ihit] = ADCtemp;
+	      }
 	
-	double cm_temp = 0.0;
-	int stripcount=0;
+	      double cm_temp = 0.0;
+	      int stripcount=0;
 	
-	std::sort( sortedADCs.begin(), sortedADCs.end() );
-	
-	for( int k=fCommonModeNstripRejectLow; k<ngoodhits-fCommonModeNstripRejectHigh; k++ ){
-	  cm_temp += sortedADCs[k];
-	  stripcount++;
-	}
-	CMcorrection = fCM_online[isamp] - cm_temp/double(stripcount);
+	      std::sort( sortedADCs.begin(), sortedADCs.end() );
+        // Comment out the next 4 lines belonging to the original generic sorting algorithm:
+	      //for( int k=fCommonModeNstripRejectLow; k<ngoodhits-fCommonModeNstripRejectHigh; k++ ){
+	      //  cm_temp += sortedADCs[k];
+	      //  stripcount++;
+	      //}
+
+// Add the "enhanced" part of the algorithm here:
+        // Create a moving "search window" within sorted ADCs
+        int firststrip = 0;
+        double mindiff = sortedADCs.back() - sortedADCs.front();
+        int windowsize = fCommonModeMinStripsInRange;  // May need to revist this definition if we want smaller or larger windows for corrections
+        for( int j=0; j<=int(sortedADCs.size()) - windowsize; j++ ){
+          double diff = sortedADCs[j + windowsize - 1] - sortedADCs[j];
+          if( diff < mindiff ){
+            mindiff = diff;
+            firststrip = j;
+            double sum = 0.0;
+            for( int k=j; k<j+windowsize; k++ ){
+              sum += sortedADCs[k];
+            }
+            cm_temp = sum/double(windowsize);
+          }
+        }
+        // We average all the strips within +/-3*sigma_ped of this cm_temp value
+        stripcount=0;
+        double sumADC =0.0;
+        for( int ihit=0; ihit<ngood; ihit++ ){
+          int iraw = isamp + fN_MPD_TIME_SAMP*goodhits[ihit];
+          int strip = fStripAPV[iraw];
+          double pedRMS = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[strip] : fPedRMSV[strip];
+          
+          if( fabs( fPedSubADC_APV[iraw] - cm_temp ) <= 3.0*pedRMS*fRMS_ConversionFactor ){
+            sumADC += fPedSubADC_APV[iraw];
+            stripcount++;
+          }
+        }
+
+        if( stripcount >= windowsize ){ // Check if there were more strips within 3 sigma than in our orginal window
+          cm_temp = sumADC/double(stripcount);
+          CMcorrection = fCM_online[isamp] - cm_temp;
+        } else {
+          CMcorrection = 0;
+        }
+
+	    //CMcorrection = fCM_online[isamp] - cm_temp;
       }
-    } else if( fCommonModeFlag == 1 ){
-      
+    } else if( fCommonModeFlag == 1 ){ // Flag 1 does not exist for GetCommonMode function, hear it does Danning method
+
       double cm_min = cm_mean - fCommonModeDanningMethod_NsigmaCut*cm_rms;
       double cm_max = cm_mean + fCommonModeDanningMethod_NsigmaCut*cm_rms;
 	
       double cm_temp = 0.0;
       for( int iter=0; iter<fCommonModeNumIterations; iter++ ){
 	  
-	int nstripsinrange = 0;
+	      int nstripsinrange = 0;
+	      double sumADCinrange = 0.0;
 	  
-	double sumADCinrange = 0.0;
+	      for( int ihit=0; ihit<ngood; ihit++ ){
+	        int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
+	        double ADCtemp = fPedSubADC_APV[iraw];
+	    
+	        if( !fullreadout ) ADCtemp += fCM_online[isamp];
+	    
+	        double rmstemp = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
+	    
+	        double mintemp = cm_min;
+	        double maxtemp = cm_max;
+	    
+	        if( iter > 0 ){
+	          maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
+	          mintemp = cm_temp - fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
+	        }
+	    
+	        if( ADCtemp >= mintemp && ADCtemp <= maxtemp ){
+	          nstripsinrange++;
+	          sumADCinrange += ADCtemp;
+	        }  
+	      }
 	  
-	for( int ihit=0; ihit<ngood; ihit++ ){
-	  int iraw = isamp + fN_MPD_TIME_SAMP * goodhits[ihit];
-	  double ADCtemp = fPedSubADC_APV[iraw];
-	    
-	  if( !fullreadout ) ADCtemp += fCM_online[isamp];
-	    
-	  double rmstemp = ( apvinfo.axis == SBSGEM::kUaxis ) ? fPedRMSU[fStripAPV[iraw]] : fPedRMSV[fStripAPV[iraw]];
-	    
-	  double mintemp = cm_min;
-	  double maxtemp = cm_max;
-	    
-	  if( iter > 0 ){
-	    maxtemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
-	    mintemp = cm_temp + fCommonModeDanningMethod_NsigmaCut * rmstemp * fRMS_ConversionFactor;
-	  }
-	    
-	  if( ADCtemp >= mintemp && ADCtemp >= maxtemp ){
-	    nstripsinrange++;
-	    sumADCinrange += ADCtemp;
-	  }  
-	}
-	  
-	if( nstripsinrange >= fCommonModeMinStripsInRange ){
-	  cm_temp = sumADCinrange/double(nstripsinrange);
-	  ngoodhits = nstripsinrange;
-	} else if( iter == 0 ){ //don't attempt correction, just return 0
-	  CMcorrection = 0.0;
-	}
+	      if( nstripsinrange >= fCommonModeMinStripsInRange ){
+	        cm_temp = sumADCinrange/double(nstripsinrange);
+	        ngoodhits = nstripsinrange;
+	      } else if( iter == 0 ){ //don't attempt correction, just return 0
+	        CMcorrection = 0.0;
+	      }
       }
 
       CMcorrection = fCM_online[isamp] - cm_temp;

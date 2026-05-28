@@ -47,6 +47,10 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   virtual Int_t      CoarseProcess( TClonesArray& tracks );
   virtual Int_t      FineProcess( TClonesArray& tracks );
 
+  //let's overload Begin and End for SBSBBTotalShower so that it can call those for Shower and Preshower!!!
+  virtual Int_t   Begin( THaRunBase* r=0 );
+  virtual Int_t   End( THaRunBase* r=0 );
+
   SBSBBShower* GetShower() const      { return fShower; }
   SBSBBShower* GetPreShower() const   { return fPreShower; }
   
@@ -70,6 +74,9 @@ class SBSBBTotalShower : public SBSCalorimeter { //THaPidDetector {
   Double_t    fMaxDy;       // Maximum dx between shower and preshower centers
   Double_t    fTotalSum_Threshold; //Software threshold for shower and (matched) pre-shower cluster energies
 
+  Int_t       fBestClusterSelectionFlag; // 0 (default): highest total energy regardless of whether a matched PS cluster is found
+                                         // 1: preference clusters with a matched SH+PS pair even if a higher-energy SH cluster is available without a PS match.
+  
   Int_t       fPassedThreshold; //variable to indicate whether we were over threshold:
   /*
   // Per event data

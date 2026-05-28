@@ -187,6 +187,12 @@ Int_t SBSEArm::ReadRunDatabase( const TDatime &date ){
   fOpticsOrigin.SetXYZ( 0.0, 0.0, fMagDist + 2.085 );
 
   fMaxFPPscatteringAngle = asin( 1.5/std::max(1.5,GetPcentral()) );
+
+  //After HCAL distance is set, define default values for dynamic constraint slope and offset:
+  fDynamicConstraintSlopeX = 1.0/fHCALdist;
+  fDynamicConstraintSlopeY = 1.0/fHCALdist;
+  fDynamicConstraintOffsetX = 0.0;
+  fDynamicConstraintOffsetY = 0.0;
   
   return kOK;
 }
@@ -963,15 +969,29 @@ Int_t SBSEArm::CoarseReconstruct()
   
   fHCALtime_ADC = HCalClusters[i_max]->GetAtime();
   fHCALtime_TDC = HCalClusters[i_max]->GetTDCtime();
+
+  // For back constraint point definitions, we DO want to offset
+  // the HCAL cluster coordinates by the "origin" coordinates. WHY? Aren't the X and Y offsets
+  // redundant in this case with the user-configurable constraint-centering offsets from the
+  // SBS DB? When there is a large vertical offset of the GEM coordinate origin as in GEP
+  // we want to include the HCAL origin coordinates in the definition of the back constraint points,
+  // so that the required constraint centering offset is as close to zero as possible:
   
   x_bcp = HCalClusters[i_max]->GetX() + HCal->GetOrigin().X();
   y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
   z_bcp = HCal->GetOrigin().Z();
 
-  //Constraint "slopes" for dynamic constraint point calculation:
+  // Constraint "slopes" for dynamic constraint point calculation:
+  // Here again we DON'T want to include the HCAL "origin" coordinates in the calculation
+  // risks defining too many redundant offset parameters. 
   double thcp = HCalClusters[i_max]->GetX() * fDynamicConstraintSlopeX + fDynamicConstraintOffsetX;
   double phcp = HCalClusters[i_max]->GetY() * fDynamicConstraintSlopeY + fDynamicConstraintOffsetY;    
   
+  // Do not add HCAL "origin" coordinates to these variables; the
+  // "origin" coordinates are in a "GEM-local" system, whereas the
+  // HCAL "X" and "Y" coordinates are defined in a "spectrometer-local" coordinate system.
+  // If you need to offset the HCAL X and Y positions, do so by offsetting the
+  // individual block positions in the DB!
   fHCALtheta_n = HCalClusters[i_max]->GetX()/fHCALdist;
   fHCALphi_n = HCalClusters[i_max]->GetY()/fHCALdist;
 
@@ -999,7 +1019,7 @@ Int_t SBSEArm::CoarseReconstruct()
 					  fBackConstraintWidthY[0] );
   }
 
-  if( fGEPtrackingMode ) return 0; //all constraint-point setting in GEP mode will be done in the region-of-interest module
+  if( fGEPtrackingMode ) return 0; //all constraint-point setting in the GEP tracking mode will be done via the region-of-interest module
   
   //x_fcp = fGEMorigin.X();
   //y_fcp = fGEMorigin.Y();
@@ -1023,6 +1043,10 @@ Int_t SBSEArm::CoarseReconstruct()
       //double thcp = fDynamicConstraintSlopeX * (x_bcp) + fDynamicConstraintOffsetX;
       //double phcp = fDynamicConstraintSlopeY * (y_bcp) + fDynamicConstraintOffsetY;
 
+      //Important to keep in mind here when defining offsets that in THIS calculation,
+      //{x/y}_bcp include the HCAL origin coordinates as offsets, whereas 
+      // thcp does NOT!
+      
       x_fcp = x_bcp + thcp * (z_fcp - z_bcp);
       y_fcp = y_bcp + phcp * (z_fcp - z_bcp);
       
@@ -1042,7 +1066,7 @@ Int_t SBSEArm::CoarseReconstruct()
 					 fBackConstraintWidthY[0]);
 
     if( BackTracker != nullptr ){
-      // IF there is a back tracker, and we're not using polarimeter mode,
+      // IF there is a back tracker, but we're not using polarimeter mode,
       // initialize it with identical constraints as the front:
       BackTracker->SetBackConstraintPoint(x_bcp, y_bcp, z_bcp);
       BackTracker->SetFrontConstraintPoint(x_fcp, y_fcp, z_fcp);
@@ -1137,8 +1161,39 @@ Int_t SBSEArm::Track()
 {
   //std::cout << "SBSEArm::Track(): polarimeter mode = " << fPolarimeterMode << std::endl;
   // Fine track Reconstruction
+
+  //We need these lines regardless so let's pull them outside of the if-block below:
+  SBSGEMSpectrometerTracker *FrontTracker = nullptr;
+  TIter next2( fTrackingDetectors );
+  while( auto* theTrackDetector =
+	 static_cast<THaTrackingDetector*>( next2() )) {
+    //What is the purpose of the line below?
+    assert(dynamic_cast<THaTrackingDetector*>(theTrackDetector));
+    // std::cout << "Got tracking detector, name = "
+    // 		<< theTrackDetector->GetName() << std::endl;
+    
+    
+    
+    if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
+      FrontTracker = static_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
+      //std::cout << "Got Front tracker, name = " << FrontTracker->GetName() << std::endl;
+    }
+  }
+  
   if( !fPolarimeterMode ){  //Call regular spectrometer Track() method
     THaSpectrometer::Track();
+
+    if( FrontTracker != nullptr ){ //Add any constraint points if they exist:
+      for( int icp=0; icp<FrontTracker->GetNumConstraintPointsFront(); icp++ ){
+	AddFrontConstraintPoint( FrontTracker->GetFrontConstraintPoint(icp) );
+	AddFrontConstraintPoint_FT( FrontTracker->GetFrontConstraintPoint(icp) );
+      }
+
+      for( int icp=0; icp<FrontTracker->GetNumConstraintPointsBack(); icp++ ){
+	AddBackConstraintPoint( FrontTracker->GetBackConstraintPoint(icp) );
+	AddBackConstraintPoint_FT( FrontTracker->GetBackConstraintPoint(icp) );
+      }
+    }
   } else { //Polarimeter mode: behavior depends on experiment (GEN-RP or GEP):
     //Grab pointer to back tracker, do tracking there, then initialize front tracker constraints, and do tracking there too:
     if( !IsDone(kCoarseRecon) )
@@ -1147,22 +1202,7 @@ Int_t SBSEArm::Track()
     // std::cout << "Number of tracking detectors assigned to this EArm = "
     // 	      << fTrackingDetectors->GetSize() << std::endl;
     
-    SBSGEMSpectrometerTracker *FrontTracker = nullptr;
-    TIter next2( fTrackingDetectors );
-    while( auto* theTrackDetector =
-	   static_cast<THaTrackingDetector*>( next2() )) {
-      //What is the purpose of the line below?
-      assert(dynamic_cast<THaTrackingDetector*>(theTrackDetector));
-      // std::cout << "Got tracking detector, name = "
-      // 		<< theTrackDetector->GetName() << std::endl;
-
-      
-      
-      if(theTrackDetector->InheritsFrom("SBSGEMSpectrometerTracker")){
-	FrontTracker = static_cast<SBSGEMSpectrometerTracker*>(theTrackDetector);
-	//std::cout << "Got Front tracker, name = " << FrontTracker->GetName() << std::endl;
-      }
-    }
+    
     
     SBSGEMPolarimeterTracker *BackTracker = nullptr; 
     TIter next(fNonTrackingDetectors);

@@ -239,6 +239,7 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
 
   int ibest_hcal = PdetCalo->GetBestClusterIndex();
 
+  //The following are HCAL cluster positions in the GEM FP coordinate system!
   double xHCAL = HCalClusters[ibest_hcal]->GetX() + PdetCalo->GetOrigin().X();
   double yHCAL = HCalClusters[ibest_hcal]->GetY() + PdetCalo->GetOrigin().Y();
   double zHCAL = PdetCalo->GetOrigin().Z();
@@ -268,10 +269,16 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   TClonesArray *EarmTracks = Earm->GetTracks();
   
   THaTrack *EarmTrack = ( (THaTrack*) (*EarmTracks)[0] );
-  
+
   double xclust = EarmTrack->GetX();
   double yclust = EarmTrack->GetY();
-  double ECALdist = Earm->GetECalDist();
+  double ECALdist = Earm->GetECalDist() + Edet->GetOrigin().Z();
+
+  // Note: The "E arm track" X and Y positions have already been offset by earm.ecal.position!
+  // However, "GetECalDist()" returns the "ecaldist" parameter defined via the run DB, and it is NOT corrected according to earm.ecal.position!
+  // Thus, the "track" angles here would be inconsistent with those defined in SBSGEPEArm unless we also offset ECALdist here!
+  // For consistency, let's ALSO offset ECALdist by the Z position above!
+  // NOTE also, this means that earm.ecal.position is always to be interpreted as a "small" offset from nominal or "ideal"
   
   fECAL_energy = EarmTrack->GetEnergy();
   
@@ -280,7 +287,7 @@ Int_t SBSGEPRegionOfInterestModule::Process( const THaEvData &evdata ){
   
   fECALclusterpos_global = ECALpos_global;
   
-  Pdet->SetECALpos( ECALpos_global );
+  Pdet->SetECALpos( ECALpos_global ); //For implementation of "elastic constraint" within track-finding in the FT
   
   TVector3 vertex_central(0,0,fTargZ0);
   

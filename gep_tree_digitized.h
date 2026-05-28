@@ -383,11 +383,13 @@ public :
    std::vector<int>     *Harm_FT_dighit_strip;
    std::vector<int>     *Harm_FT_dighit_adc;
    std::vector<int>     *Harm_FT_dighit_samp;
+   std::vector<int>     *Harm_FT_dighit_adc_good;
    Int_t           Harm_FPP1_dighit_nstrips;
    std::vector<int>     *Harm_FPP1_dighit_module;
    std::vector<int>     *Harm_FPP1_dighit_strip;
    std::vector<int>     *Harm_FPP1_dighit_adc;
    std::vector<int>     *Harm_FPP1_dighit_samp;
+   std::vector<int>     *Harm_FPP1_dighit_adc_good;
 
    // List of branches
    TBranch        *b_simc_sigma;   //!
@@ -703,11 +705,13 @@ public :
    TBranch        *b_Harm_FT_dighit_strip;   //!
    TBranch        *b_Harm_FT_dighit_adc;   //!
    TBranch        *b_Harm_FT_dighit_samp;   //!
+   TBranch        *b_Harm_FT_dighit_adc_good;   //!
    TBranch        *b_Harm_FPP1_dighit_nstrips;   //!
    TBranch        *b_Harm_FPP1_dighit_module;   //!
    TBranch        *b_Harm_FPP1_dighit_strip;   //!
    TBranch        *b_Harm_FPP1_dighit_adc;   //!
    TBranch        *b_Harm_FPP1_dighit_samp;   //!
+   TBranch        *b_Harm_FPP1_dighit_adc_good;   //!
 
    gep_tree_digitized(TTree *tree=0);
    virtual ~gep_tree_digitized();
@@ -1037,10 +1041,12 @@ void gep_tree_digitized::Init(TTree *tree)
    Harm_FT_dighit_strip = 0;
    Harm_FT_dighit_adc = 0;
    Harm_FT_dighit_samp = 0;
+   Harm_FT_dighit_adc_good = 0;
    Harm_FPP1_dighit_module = 0;
    Harm_FPP1_dighit_strip = 0;
    Harm_FPP1_dighit_adc = 0;
    Harm_FPP1_dighit_samp = 0;
+   Harm_FPP1_dighit_adc_good = 0;
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -1360,11 +1366,13 @@ void gep_tree_digitized::Init(TTree *tree)
    fChain->SetBranchAddress("Harm.FT.dighit.strip", &Harm_FT_dighit_strip, &b_Harm_FT_dighit_strip);
    fChain->SetBranchAddress("Harm.FT.dighit.adc", &Harm_FT_dighit_adc, &b_Harm_FT_dighit_adc);
    fChain->SetBranchAddress("Harm.FT.dighit.samp", &Harm_FT_dighit_samp, &b_Harm_FT_dighit_samp);
+   fChain->SetBranchAddress("Harm.FT.dighit.adc_good", &Harm_FT_dighit_adc_good, &b_Harm_FT_dighit_adc_good);
    fChain->SetBranchAddress("Harm.FPP1.dighit.nstrips", &Harm_FPP1_dighit_nstrips, &b_Harm_FPP1_dighit_nstrips);
    fChain->SetBranchAddress("Harm.FPP1.dighit.module", &Harm_FPP1_dighit_module, &b_Harm_FPP1_dighit_module);
    fChain->SetBranchAddress("Harm.FPP1.dighit.strip", &Harm_FPP1_dighit_strip, &b_Harm_FPP1_dighit_strip);
    fChain->SetBranchAddress("Harm.FPP1.dighit.adc", &Harm_FPP1_dighit_adc, &b_Harm_FPP1_dighit_adc);
    fChain->SetBranchAddress("Harm.FPP1.dighit.samp", &Harm_FPP1_dighit_samp, &b_Harm_FPP1_dighit_samp);
+   fChain->SetBranchAddress("Harm.FPP1.dighit.adc_good", &Harm_FPP1_dighit_adc_good, &b_Harm_FPP1_dighit_adc_good);
    Notify();
 }
 

@@ -122,6 +122,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   //int usefronttrackconstraintflag = fUseFrontTrackConstraint ? 1 : 0; 
   
   int mc_flag = fIsMC ? 1 : 0;
+  int storeall_1Dclusters = fStoreAll1Dclusters ? 1 : 0;
   int fasttrack_flag = fTryFastTrack ? 1 : 0;
   //int useforwardopticsconstraint = fUseForwardOpticsConstraint ? 1 : 0;
   int negsignalstudy_flag = fNegSignalStudy ? 1 : 0;
@@ -130,6 +131,8 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   int multitracksearch = fMultiTrackSearch ? 1 : 0;
 
   int nontrackmode = fNonTrackingMode ? 1 : 0;
+
+  int dumprawadcrange = fDumpRawADCrange ? 1 : 0;
   
   //  std::vector<int> mingoodhits; 
   //std::vector<double> chi2cut_space;
@@ -141,6 +144,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     { "cmfile",  &fcmfilename, kString, 0, 1 },
     { "rawADCrangefile", &frawADCrangefilename, kString, 0, 1 },
     { "is_mc",        &mc_flag,    kInt, 0, 1, 1 }, //NOTE: is_mc can also be defined via the constructor in the replay script
+    { "storeall_1Dclusters", &storeall_1Dclusters, kInt, 0, 1, 1 },
     { "minhitsontrack", &fMinHitsOnTrack, kInt, 0, 1},
     { "maxhitcombos", &fMaxHitCombinations, kInt, 0, 1},
     { "maxhitcombos_inner", &fMaxHitCombinations_InnerLayers, kInt, 0, 1},
@@ -157,7 +161,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     { "do_neg_signal_study", &negsignalstudy_flag, kUInt, 0, 1, 1}, //(optional, search): toggle doing negative signal analysis
     { "do_efficiencies", &doefficiency_flag, kInt, 0, 1, 1},
     { "dump_geometry_info", &fDumpGeometryInfo, kInt, 0, 1, 1},
-    { "dump_rawADCrange", &fDumpRawADCrange, kInt, 0, 1, 1 },
+    { "dump_rawADCrange", &dumprawadcrange, kInt, 0, 1, 1 },
     { "efficiency_bin_width_1D", &fBinSize_efficiency1D, kDouble, 0, 1, 1 },
     { "efficiency_bin_width_2D", &fBinSize_efficiency2D, kDouble, 0, 1, 1 },
     { "usetrigtime", &usetrigtime, kInt, 0, 1, 1 },
@@ -198,6 +202,7 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
   fNegSignalStudy = negsignalstudy_flag != 0;
 
   fIsMC = (mc_flag != 0);
+  fStoreAll1Dclusters = (storeall_1Dclusters != 0);
   fTryFastTrack = (fasttrack_flag != 0);
   
   //fOnlineZeroSuppression = (onlinezerosuppressflag != 0);
@@ -221,6 +226,8 @@ Int_t SBSGEMPolarimeterTracker::ReadDatabase( const TDatime& date ){
     Error("", "[SBSGEMPolarimeterTracker::ReadDatabase] No modules defined");
   }
 
+  fDumpRawADCrange = ( dumprawadcrange != 0 );
+  
   int modcounter = 0;
 
   

@@ -193,6 +193,7 @@ Int_t SBSCherenkovDetector::DefineVariables( EMode mode )
     { "hit.yhit",   " PMT hit y",          "fHits.SBSCherenkov_Hit.GetY()"      },
     { "hit.amp",    " PMT hit amplitude", "fHits.SBSCherenkov_Hit.GetAmp()"    },
     { "hit.time",   " PMT hit time",       "fHits.SBSCherenkov_Hit.GetTime()"   },
+    { "hit.time_corr", " PMT hit time corrected", "fHits.SBSCherenkov_Hit.GetTimeCorrected()" },
     { "hit.clustindex", " Index of cluster to which this hit belongs", "fHits.SBSCherenkov_Hit.GetClustIndex()" },
     { "hit.trackindex", " Index of track to which this hit belongs", "fHits.SBSCherenkov_Hit.GetTrackIndex()" },
     { "ntrackmatch", "Number of track-matched clusters", "fNtrackMatch" },
@@ -260,13 +261,22 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
     //double t0 = fElements[fGood.TDCelemID[k]]->TDC()->GetGoodTimeCut();
 
     //    if(tmin<=fGood.t[k] && fGood.t[k]<=tmax){
-    if( fHit_tmin <= fGood.t[k] && fGood.t[k] <= fHit_tmax ){
+
+    double tcheck = fGood.t[k];
+    
+    if( TrigPhaseCorrectionIsEnabled() ){
+      tcheck -= GetTrigPhaseCorrection();
+    }
+      
+    //if( fHit_tmin <= fGood.t[k] && fGood.t[k] <= fHit_tmax ){
+    if( fHit_tmin <= tcheck && tcheck <= fHit_tmax ){
       the_hit = new( (*fHits)[nHit++] ) SBSCherenkov_Hit();
       
       the_hit->SetPMTNum(fGood.TDCelemID[k]);
       the_hit->SetRow(fGood.TDCrow[k]);
       the_hit->SetCol(fGood.TDCcol[k]);
       the_hit->SetTime(fGood.t[k]);
+      the_hit->SetTimeCorrected( fGood.t[k] - GetTrigPhaseCorrection() );
       
       x = (fElements[fGood.TDCelemID[k]])->GetX();
       y = (fElements[fGood.TDCelemID[k]])->GetY();
@@ -281,7 +291,7 @@ Int_t SBSCherenkovDetector::CoarseProcess( TClonesArray& tracks )
       the_hit->SetAmp(amp);
     }
   }
-  //clustering to be done by dereived class...
+  //clustering to be done by derived class...
   
   if( fDoBench ) fBench->Stop("CoarseProcess");
   if(fDebug)cout << "End Coarse Process" << endl;

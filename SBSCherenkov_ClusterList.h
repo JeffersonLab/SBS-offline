@@ -46,6 +46,7 @@ class SBSCherenkov_Hit : public TObject {
   Double_t    GetX()        const {return fX;}
   Double_t    GetY()        const {return fY;}
   Double_t    GetTime()     const {return fTime;}
+  Double_t    GetTimeCorrected() const { return fTimeCorrected; }
   Double_t    GetAmp()      const {return fAmp;}
   //Int_t      GetFlag()     const {return fFlag;}
   //Int_t      GetVeto()     const {return fVeto;}
@@ -63,6 +64,7 @@ class SBSCherenkov_Hit : public TObject {
   void       SetY( Double_t y )         {fY = y;}
   void       SetTime( Double_t t )      {fTime = t;}
   void       SetAmp( Double_t a )       {fAmp = a;}
+  void       SetTimeCorrected( Double_t t ){ fTimeCorrected = t; }
   //void       SetFlag( Int_t Flag )     {fFlag = Flag;}
   //void       SetVeto( Int_t Veto )     {fVeto = Veto;}
 
@@ -86,6 +88,7 @@ private:
   Double_t   fX;      // Hit X position in PMT matrix
   Double_t   fY;      // Hit Y position in PMT matrix
   Double_t   fTime;      // Time from TDC
+  Double_t   fTimeCorrected; //TDC time with trigger phase correction (and, if applicable, walk correction)
   Double_t   fAmp;      // Amplitude from ADC or ToT
   //Int_t     fFlag;   // ?
   //Int_t     fVeto;   // ?
@@ -131,6 +134,9 @@ class SBSCherenkov_Cluster : public TObject {
   Double_t GetTimeRMS() const  { return fTimeRMS; }
   Double_t GetAmpRMS() const  { return fAmpRMS; }
 
+  Double_t GetMeanTimeCorrected() const { return fMeanTimeCorrected; }
+  Double_t GetTimeRMSCorrected() const { return fTimeRMSCorrected; }
+
   Int_t GetTrackIndex() const { return fTrackIndex; }
   Int_t GetMirrorIndex() const { return fMirrorIndex; }
 
@@ -149,6 +155,9 @@ class SBSCherenkov_Cluster : public TObject {
   void    SetMeanAmp(Double_t meantot) { fMeanAmp = meantot; }
   void    SetTimeRMS(Double_t tdcrms)   { fTimeRMS = tdcrms; }
   void    SetAmpRMS(Double_t totrms)   { fAmpRMS = totrms; }
+
+  void    SetMeanTimeCorrected(Double_t meantime) { fMeanTimeCorrected = meantime; }
+  void    SetTimeRMSCorrected(Double_t rmstime) { fTimeRMSCorrected = rmstime; }
   
   void    SetTrack( THaTrack* track ) { fTrack = track; }
   void    SetTrackIndex( Int_t itr ){ fTrackIndex = itr; }
@@ -169,8 +178,10 @@ class SBSCherenkov_Cluster : public TObject {
   Double_t    fCharge;    // Sum of ADCs
   
   Double_t    fMeanTime;   // Mean rising time of all hits in the list
+  Double_t    fMeanTimeCorrected; //trigger phase correction (and optional walk correction)
   Double_t    fMeanAmp;   // Mean time over threshold of all hits in the list
   Double_t    fTimeRMS;    // Rising time RMS of all hits in the list
+  Double_t    fTimeRMSCorrected;
   Double_t    fAmpRMS;    // time-over-threshold RMS of all hits in the list
 
   Bool_t     fTrackMatch;// true if a track can be matched to the cluster

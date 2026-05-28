@@ -31,9 +31,8 @@ THaSpectrometer( name, description )
 
   SetPID( false );
 
-  
-  fECALdist = 4.7; // default 4.7 m (highest-Q2 GEP setting)
-  
+  fECALdist = 6.0; // default 6.0 m (highest-Q2 GEP setting) distance defined in earm run db!
+
 }
 
 //_____________________________________________________________________________
@@ -84,7 +83,7 @@ Int_t SBSGEPEArm::ReadDatabase( const TDatime& date )
     std::cerr << "SBSGEPEArm::ReadDatabase(): database not found!"<< std::endl;
     return kFileError;
   }
-     
+  
   fIsInit = true;
   
   return kOK;
@@ -177,14 +176,16 @@ Int_t SBSGEPEArm::CoarseReconstruct()
   }
 
   if( ECal != nullptr && ECal->GetNclust() > 0 ){
-    double xclust = ECal->GetX();
-    double yclust = ECal->GetY();
+    //Here is definitely the right place to offset the ECAL cluster positions using the earm.ecal.position variables!
+    double xclust = ECal->GetX() + ECal->GetOrigin().X();
+    double yclust = ECal->GetY() + ECal->GetOrigin().Y();
+    double zclust = fECALdist + ECal->GetOrigin().Z(); //I might regret this, but let's provide for offsetting the z position of the cluster using the position variables
     double eclust = ECal->GetE();
 
     fECALtime_ADC = ECal->GetAtime();
     
-    fECALtheta_n = xclust/fECALdist;
-    fECALphi_n = yclust/fECALdist;
+    fECALtheta_n = xclust/zclust;
+    fECALphi_n = yclust/zclust;
 
     TVector3 ECALdir_global;
 

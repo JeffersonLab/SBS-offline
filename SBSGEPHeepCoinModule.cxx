@@ -19,12 +19,13 @@
 #include "SBSECal.h"
 #include "TList.h"
 //_____________________________________________________________________________
-SBSGEPHeepCoinModule::SBSGEPHeepCoinModule( const char *name, const char *desc, const char *espectro, const char *pspectro) : THaPhysicsModule(name, desc), fEarmName(espectro), fParmName(pspectro), fPspectro(nullptr), fEspectro(nullptr){
+SBSGEPHeepCoinModule::SBSGEPHeepCoinModule( const char *name, const char *desc, const char *espectro, const char *pspectro) : THaPhysicsModule(name, desc), fEarmName(espectro), fParmName(pspectro), fPspectro(nullptr), fEspectro(nullptr), fECal(nullptr) {
 
   //  fEarmNameespectro;
   //fParmName(psectro);
   fProtonMass = 0.93827208816; //PDG value as of 4/8/2025
   fTarget4vect.SetPxPyPzE( 0, 0, 0, fProtonMass );
+  fECalName = "ecal"; //default, can be overridden via database
 }
 
 //_____________________________________________________________________________
@@ -149,11 +150,13 @@ Int_t SBSGEPHeepCoinModule::ReadDatabase( const TDatime &date ){
 
   std::string earmname = fEarmName.Data();
   std::string parmname = fParmName.Data();
+  std::string edetname = fECalName.Data(); 
   
   //Load spectrometer names (I THINK that's all we need for the moment):
   const DBRequest request[] = {
     { "earm_name", &earmname, kString, 0, 1, 1 },
     { "parm_name", &parmname, kString, 0, 1, 1 },
+    { "edet_name", &edetname, kString, 0, 1, 1 },
     { nullptr }
   };
 
@@ -165,6 +168,7 @@ Int_t SBSGEPHeepCoinModule::ReadDatabase( const TDatime &date ){
 
   fEarmName = earmname.c_str();
   fParmName = parmname.c_str(); 
+  fECalName = edetname.c_str();
   
   fIsInit = true;
 
@@ -193,6 +197,8 @@ Int_t SBSGEPHeepCoinModule::Begin( THaRunBase *run ){ //At this point all the ap
       fEarm_zaxis.SetXYZ( sin(theta), 0, cos(theta) );
       fEarm_xaxis.SetXYZ(  0, -1, 0 );
       fEarm_yaxis = fEarm_zaxis.Cross(fEarm_xaxis).Unit();
+
+      fECal = dynamic_cast<SBSECal*>(fEspectro->GetDetector(fECalName.Data()));
     }
 
     if( app->InheritsFrom( "SBSEArm" ) && appname == fParmName ){
@@ -211,15 +217,18 @@ Int_t SBSGEPHeepCoinModule::Begin( THaRunBase *run ){ //At this point all the ap
 //_____________________________________________________________________________
 Int_t SBSGEPHeepCoinModule::Process( const THaEvData &evdata ){
   
-  if( fEspectro == nullptr || fPspectro == nullptr ){
+  if( fEspectro == nullptr || fPspectro == nullptr || fECal == nullptr ){
     fDataValid = false;
     return 0;
   }
 
-  double ECALDIST = fEspectro->GetECalDist();
+  //Add z offset here to avoid confusion!
+  double ECALDIST = fEspectro->GetECalDist() + fECal->GetOrigin().Z();
+  // No obvious way to get ECAL z offset without grabbing a pointer to the SBSECal from the list of detectors under SBSGEPEArm, so that's what we grudgingly end up doing,
+  // storing a pointer to the SBSECal (from the list of detectors for the SBSGEPEArm) as a data member of this physics module!
   
   if( fPspectro->GetNTracks() >= 1 && fEspectro->GetNTracks() >= 1 ){
-
+    
     TVector3 vdummy;
     double raytemp[6];
     
@@ -232,21 +241,17 @@ Int_t SBSGEPHeepCoinModule::Process( const THaEvData &evdata ){
     //Now for the Earm track, at this point of the code, the "xfp/yfp" variables contain the cluster positions:
     fvertex.SetXYZ(0,0,ParmTrack->GetVertexZ());
 
+    //NOTE: at this point in the code, xclust and yclust will already include the offsets from earm.ecal.position 
     double xclust = EarmTrack->GetX();
     double yclust = EarmTrack->GetY();
+    double zclust = ECALDIST;
+    
     fEcalo = EarmTrack->GetEnergy();
     
-    TVector3 clpos_local(xclust,yclust,ECALDIST);
+    TVector3 clpos_local(xclust, yclust, zclust);
 
-    TVector3 clpos_global;
-    //How this works:
-    // th = xclust/ECALDIST
-    // ph = yclust/ECALDIST
-    // p = clpos_local.Mag() = sqrt( xclus^2 + yclus^2 + ECALDIST^2 ) = distance from origin
-    // clpos_global will contain the result of "fToLabRot * p * nhat,
-    // where nhat is the unit vector along clpos_local, when we pass the following arguments to "TransportToLab": 
-    fEspectro->TransportToLab( clpos_local.Mag(), xclust/ECALDIST, yclust/ECALDIST, clpos_global );
-
+    TVector3 clpos_global = fEspectro->GetToLabRot() * clpos_local;
+    
     //Now we calculate updated tracks:
     TVector3 enhat_global = (clpos_global - fvertex).Unit(); 
 

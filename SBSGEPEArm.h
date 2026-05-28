@@ -5,6 +5,7 @@
 
 class TList;
 class THaTrack;
+class SBSECal;
 
 class SBSGEPEArm : public THaSpectrometer {
 
@@ -17,6 +18,7 @@ public:
   
   virtual Int_t FindVertices( TClonesArray& tracks );
   virtual Int_t TrackCalc();
+  
   
   virtual Int_t CoarseReconstruct();
   virtual Int_t	CoarseTrack();
@@ -49,8 +51,7 @@ protected:
   Double_t fCDETtime_TDC; //to be implemented
   
   //Distance to ECAL
-  Double_t fECALdist; //add to run database (this only changes when kinematics change). But should it be optional or mandatory? 
-  
+  Double_t fECALdist; // add to run database (this only changes when kinematics change). But should it be optional or mandatory? 
   
   
   ClassDef(SBSGEPEArm,0) // BigBite spectrometer

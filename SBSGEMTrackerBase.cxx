@@ -142,6 +142,8 @@ SBSGEMTrackerBase::SBSGEMTrackerBase(){ //Set default values of important parame
   fConstraintPenaltySigmaY = 0.1;
   fConstraintPenaltySigmaXp = 0.1;
   fConstraintPenaltySigmaYp = 0.1;
+
+  fDumpRawADCrange = false;
   
 }
 
@@ -390,9 +392,10 @@ void SBSGEMTrackerBase::CompleteInitialization(){
       fModules[imod]->SetMakeCommonModePlots( fCommonModePlotsFlag );
     }
 
-    if( fMultiTrackSearch || fNonTrackingMode ){
+    //if( fMultiTrackSearch || fNonTrackingMode ){
+    if ( fStoreAll1Dclusters ){
       fModules[imod]->fStoreAll1Dclusters = true;
-    }
+    }    
     
     for(int iAPV = 0; iAPV < fModules[imod]->fNAPVs_U; iAPV++)
       if(fModules[imod]->fCommonModeMeanU[iAPV] > 1.0) cm_already_loaded = true;

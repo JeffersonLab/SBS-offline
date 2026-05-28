@@ -27,6 +27,7 @@
 #include "SBSElement.h"
 #include "Helper.h"
 #include "TH1D.h"
+#include "TH2D.h"
 #include "THaRunBase.h"
 
 namespace SBSModeADC {
@@ -175,6 +176,7 @@ public:
   
   Double_t GetTrigPhaseCorrection() const { return fTimeOffsetTrigPhase; }
   Bool_t TrigPhaseCorrectionIsEnabled() const { return fCorrectTDCforTrigPhase; } 
+  Double_t GetTrigTimeCentral() const { return fTrigTimeCentral; }
   
   void DecodeRFandTriggerTime( const THaEvData & );
   
@@ -246,7 +248,8 @@ protected:
   Bool_t fDecodeRFtime;
   Bool_t fDecodeTrigTime;
 
-  TH1D *hdTRF; //histogram to hold RF time differences (for TDC calibration purposes):
+  TH1D *hdTRF; //histogram to hold RF time differences (for TDC calibration purposes)
+  TH2D *hFADCsampPedDiff;
   
   Double_t   fRFtime;    //Decoded accelerator RF time
   Double_t   fTrigTime;  //Decoded "trigger" time (for copy of "main" trigger (usually either BigBite singles or coincidence))
@@ -261,6 +264,7 @@ protected:
   UInt_t  fSlot_RFtime;
   UInt_t  fChan_RFtime; 
 
+  Double_t fTrigTimeCentral; //central offset value for trigger time, will be subtracted from "myspec.mydet.trigtime". Typical use case is to center the trigger time distribution near zero. Somewhat redundant with "goodtimecut", but behavior is standardized.  
   UInt_t  fCrate_TrigTime;
   UInt_t  fSlot_TrigTime;
   UInt_t  fChan_TrigTime; 
