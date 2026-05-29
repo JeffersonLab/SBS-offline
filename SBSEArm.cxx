@@ -979,21 +979,22 @@ Int_t SBSEArm::CoarseReconstruct()
   
   x_bcp = HCalClusters[i_max]->GetX() + HCal->GetOrigin().X();
   y_bcp = HCalClusters[i_max]->GetY() + HCal->GetOrigin().Y();
-  z_bcp = HCal->GetOrigin().Z();
+  z_bcp = HCal->GetOrigin().Z(); 
 
   // Constraint "slopes" for dynamic constraint point calculation:
-  // Here again we DON'T want to include the HCAL "origin" coordinates in the calculation
-  // risks defining too many redundant offset parameters. 
-  double thcp = HCalClusters[i_max]->GetX() * fDynamicConstraintSlopeX + fDynamicConstraintOffsetX;
-  double phcp = HCalClusters[i_max]->GetY() * fDynamicConstraintSlopeY + fDynamicConstraintOffsetY;    
+  // Here we also include the "origin" coordinates in the calculation, despite the risk of including too many redundant "offset" parameters:
+  //NOTE: the following will lead to incorrect angles for a GEP context, but this calculation isn't actually used in a GEP context anyway! 
+  double thcp = x_bcp * fDynamicConstraintSlopeX + fDynamicConstraintOffsetX;
+  double phcp = y_bcp * fDynamicConstraintSlopeY + fDynamicConstraintOffsetY;    
   
-  // Do not add HCAL "origin" coordinates to these variables; the
-  // "origin" coordinates are in a "GEM-local" system, whereas the
-  // HCAL "X" and "Y" coordinates are defined in a "spectrometer-local" coordinate system.
-  // If you need to offset the HCAL X and Y positions, do so by offsetting the
-  // individual block positions in the DB!
-  fHCALtheta_n = HCalClusters[i_max]->GetX()/fHCALdist;
-  fHCALphi_n = HCalClusters[i_max]->GetY()/fHCALdist;
+  // Change: DO add HCAL "origin" coordinates to these variables; the
+  // "origin" coordinates are assumed to be defined in the "GEM-local" system, whereas the
+  // HCAL "X" and "Y" coordinates are defined in a "spectrometer-local" coordinate system, where X is centered at beam height.
+  // The only experiment for which this might cause confusion is GEP, in which the GEM-local coordinate system origin is 16.5 cm above beam height!
+  // It may also affect GEN Kin. 3, for which HCAL is at a more forward "angle" 21.6 deg, than SBS (22.1 deg)
+  
+  fHCALtheta_n = x_bcp/fHCALdist;
+  fHCALphi_n = y_bcp/fHCALdist;
 
   TVector3 HCALdir_global; 
 
