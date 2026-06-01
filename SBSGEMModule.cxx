@@ -1562,9 +1562,6 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
 	  break;
 	}
       }
-    } else if( !fIsMC ){
-      std::cout << "Warning in SBSGEMModule::Decode for module " << GetName()
-		<< ": CM flags missing!" << std::endl;
     }
 
     
@@ -1682,6 +1679,11 @@ Int_t   SBSGEMModule::Decode( const THaEvData& evdata ){
     Int_t nsamp = evdata.GetNumHits( it->crate, it->slot, effChan );
    
     if( nsamp > 0 ){ //This APV card has data!
+
+      if( !fIsMC && nhits_cm_flag == 0 ){ //APV card has data but CM flags missing, spit out a warning. THIS SHOULD NEVER HAPPEN!
+	std::cout << "Warning in SBSGEMModule::Decode for module " << GetName()
+		  << ": CM flags missing!" << std::endl;
+      }
       
       // Temporary variable to store the number of hits above negative saturation threshold
       // by time sample. If we have a full readout event and we fail to calculate a good
