@@ -183,9 +183,9 @@ endforeach()
 # cmake_path wasn't introduced until cmake 3.20, not yet available on ifarm by default
 #cmake_path(SET DEFAULT_SBS_REPLAY_PATH "${PROJECT_SOURCE_DIR}/../SBS-replay")
 
-option( GEN "Use GEN-replay instead of SBS-replay as default replay directory" false )
+option( GEN "Use SBS-replay instead of SBS-replay_SOLIDtestbeam as default replay directory" false )
 
-set(REPLAYDIR SBS-replay)
+set(REPLAYDIR SBS-replay_SOLIDtestbeam)
 if( GEN )
     set(REPLAYDIR GEN-replay)
 endif()
@@ -200,11 +200,11 @@ set(SBS_REPLAY_PATH ${DEFAULT_SBS_REPLAY_PATH} CACHE PATH "Path to ${REPLAYDIR} 
 
 # check if sbs_replay_path set by default from environment matches SBS-replay or GEN-replay, adjust if needed:
 if( NOT ${SBS_REPLAY_PATH} MATCHES "/${REPLAYDIR}$" )
-  if( ${SBS_REPLAY_PATH} MATCHES "/SBS-replay$" )
-    message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment matches SBS-replay but GEN-replay option was given on the command-line, switching to SBS-replay" )
-    set(REPLAYDIR SBS-replay)
+  if( ${SBS_REPLAY_PATH} MATCHES "/SBS-replay_SOLIDtestbeam$" )
+    message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment matches SBS-replay_SOLIDtestbeam but GEN-replay option was given on the command-line, switching to SBS-replay" )
+    set(REPLAYDIR SBS-replay_SOLIDtestbeam)
   elseif( ${SBS_REPLAY_PATH} MATCHES "/GEN-replay$" )
-    message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment matches GEN-replay but SBS-replay option was given on the command-line, switching to GEN-replay" )
+    message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment matches GEN-replay but SBS-replay_SOLIDtestbeam option was given on the command-line, switching to GEN-replay" )
     set(REPLAYDIR GEN-replay)
   else() 
     message( WARNING "default replay directory ${SBS_REPLAY_PATH} from environment doesn't match a supported configuration, appending ${REPLAYDIR}, YMMV..." )
