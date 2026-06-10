@@ -90,7 +90,6 @@ struct SBSGenericOutputData {
   std::vector<Int_t> nsamps;      //< [] Number of ADC samples
   std::vector<Int_t> sidx;        //< [] Index of start of ADC samples in for this row-col-layer
   std::vector<Double_t> samps;     //< []*nsamps ADC samples
-  std::vector<Int_t> npulses;     //< []*number of pulses in waveform
 
   // Quick clear class
   void clear() {
@@ -214,7 +213,6 @@ protected:
 
   // Output variable containers
   SBSGenericOutputData fGood;     //< Good data output
-  SBSGenericOutputData fGoodMulti;     //< Good data output from multipulse
   SBSGenericOutputData fRaw;      //< All hits
   SBSGenericOutputData fRefGood;     //< Good Ref time data output
   SBSGenericOutputData fRefRaw;      //< All Ref time hits

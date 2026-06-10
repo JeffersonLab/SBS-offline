@@ -310,26 +310,24 @@ namespace SBSData {
       
       Bool_t PeakFound= kFALSE;
       UInt_t PeakBin= 0;
-      UInt_t IntMinBin= 0;
-      UInt_t IntMaxBin= vals.size();
+      //UInt_t IntMinBin= 0;
+      //UInt_t IntMaxBin= vals.size();
+      UInt_t IntMinBin= TMath::Max(ThresCrossBinList[ncross]-NSB,IntMinBin);
+      UInt_t IntMaxBin= TMath::Min(ThresCrossBinList[ncross]+NSA-1,IntMaxBin);
       
-      if (ThresCrossBinList[ncross] < vals.size()) {
-	IntMinBin= TMath::Max(ThresCrossBinList[ncross]-NSB,IntMinBin);
-	IntMaxBin= TMath::Min(ThresCrossBinList[ncross]+NSA-1,IntMaxBin);
-      } else {
-	IntMinBin = TMath::Max(FixedThresCrossBin-NSB,IntMinBin);
-	IntMaxBin = TMath::Min(FixedThresCrossBin+NSA-1,IntMaxBin);
-      }
+      //no use for FixedThresCrossBin due to this for loop requiring ThresCrossBinList having atleast one element, so IntMin/MaxBin are always defined by comparison of their initial value to the threshold crossing bin -NSB or +NSA for min or max respectively
+      
       // convert to pC, assume tcal is in ns, and 50ohm resistance
       Double_t pC_Conv = fSamples.tcal/50.;
       
       for(size_t i =IntMinBin ; i <IntMaxBin ; i++ ) {
+	if(fSamples.samples_raw[i] < fSamples.ped+ThresVal) break; //truncate integration if pulse drops below thres before going through window of integration to avoid contribution from later pulse
 	sped+=fSamples.ped*pC_Conv;
 	sum+=fSamples.samples_raw[i]*pC_Conv;
 	if ( i >= ThresCrossBinList[ncross] && !PeakFound) {
 	  if (fSamples.samples_raw[i] > max) {
 	    max = fSamples.samples_raw[i];
-	  } else if (fSamples.samples_raw[i+1] < max) { //check not just random dip down
+	  } else { //look for first decreasing sample after threshold crossing
 	    PeakFound= kTRUE;
 	    PeakBin = i-1;
 	  }
