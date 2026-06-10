@@ -303,12 +303,7 @@ class SBSGEMModule : public THaSubDetector {
   Bool_t fZeroSuppress;
   
   Bool_t fNegSignalStudy;
-  
-  // The two following flags are for uRgrooves, for which the V axis signal pulse goes below the pedestal, not above.
-  // The default value will be *false* - they can be setup in the DB, but won't be mandatory parameters;
-  Bool_t fAPVReversePulsePolarityU;
-  Bool_t fAPVReversePulsePolarityV;
-  
+
   //Moved to the MPD module class:
   Bool_t fOnlineZeroSuppression; //this MIGHT be redundant with fZeroSuppress (or not)
   Int_t fCODA_BUILD_ALL_SAMPLES;
