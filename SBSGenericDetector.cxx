@@ -2020,7 +2020,7 @@ Int_t SBSGenericDetector::FindGoodHit(SBSElement *blk)
 	    //this finds the best timed hit from the pulses in the multipulse vector
 	    //do we want to store multiple of these within a threshold of PulseTime-GoodTimeCut?
 	    //if so need a separate SetGoodHitMulti setter method
-	    if (PulseTimeRaw > 0 && fabs(PulseTime-GoodTimeCut) < MinDiff) {
+	      if (PulseTimeRaw > 0 && std::fabs(PulseTime-GoodTimeCut) < MinDiff) {
 	      HitIndex = ih;
 	      MinDiff = fabs(PulseTime - GoodTimeCut);
 	    }
