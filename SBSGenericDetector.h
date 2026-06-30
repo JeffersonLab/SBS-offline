@@ -141,6 +141,7 @@ public:
   void SetDisableRefTDC(Bool_t b) { fDisableRefTDC = b; }
   void SetStoreRawHits(Bool_t var) { fStoreRawHits = var; }
   void SetStoreEmptyElements(Bool_t b) { fStoreEmptyElements = b; }
+  void SetEnableMultiPulse(Bool_t b) { fEnableMultiPulse = b; }
 
   Bool_t WithTDC() { return fModeTDC != SBSModeTDC::kNone; };
   Bool_t WithADC() { return fModeADC != SBSModeADC::kNone; };
@@ -200,6 +201,7 @@ protected:
   Bool_t fIsMC; // flag to indicate if data are simulated;
   Int_t fF1_RollOver;
   Int_t fF1_TimeWindow;
+  Bool_t fEnableMultiPulse;
   
   // Mapping (see also fDetMap)
   UShort_t   fChanMapStart; ///< Starting number for element number (i.e. 0 or 1)

@@ -60,6 +60,7 @@ namespace SBSData {
     std::vector<Double_t> samples_raw; //< Raw samples
     std::vector<Double_t> samples;     //< Calibrated samples
     PulseADCData         pulse;       //< Pulse information
+    std::vector<PulseADCData> multipulse; //<Pulse information if searching for multiple pulses
   };
 
   ///////////////////////////////////////////////////////////////////////////////
@@ -115,7 +116,7 @@ namespace SBSData {
       Double_t GetDataRaw(UInt_t i)      const { return GetHit(i).integral.raw; }
       Double_t GetTimeData(UInt_t i)         const { return GetHit(i).time.val; }
       Double_t GetData(UInt_t i)         const { return GetHit(i).integral.val; }
-     std::vector<PulseADCData> GetAllHits()  const { return  fADC.hits; }
+      std::vector<PulseADCData> GetAllHits()  const { return  fADC.hits; }
 
       // Setters
       void SetPed(Double_t var)  { fADC.ped = var; }
@@ -224,6 +225,18 @@ namespace SBSData {
       SingleData GetTime()      const { return fSamples.pulse.time; }
       SingleData GetAmplitude() const { return fSamples.pulse.amplitude; }
       Double_t GetTimeData()    const { return fSamples.pulse.time.val; }
+      Int_t GetNHits()               { return fSamples.multipulse.size(); }
+      PulseADCData GetHitMulti(UInt_t i)     const { return fSamples.multipulse[i];        }
+      PulseADCData GetGoodHitMulti()   const { return fSamples.multipulse[fSamples.good_hit]; }
+      SingleData GetIntegralMulti(UInt_t i)  const { return GetHitMulti(i).integral;  }
+      SingleData GetTimeMulti(UInt_t i)      const { return GetHitMulti(i).time;      }
+      SingleData GetAmplitudeMulti(UInt_t i) const { return GetHitMulti(i).amplitude; }
+
+      // Some additional helper functions for easy access to the ADC integral
+      Double_t GetDataRawMulti(UInt_t i)      const { return GetHitMulti(i).integral.raw; }
+      Double_t GetTimeDataMulti(UInt_t i)         const { return GetHitMulti(i).time.val; }
+      Double_t GetDataMulti(UInt_t i)         const { return GetHitMulti(i).integral.val; }
+      std::vector<PulseADCData> GetAllHits()  const { return  fSamples.multipulse; }
 
       // Setters
       void SetValTime(Double_t var)  { fSamples.pulse.time.val = var; }
@@ -240,6 +253,10 @@ namespace SBSData {
       // Process data sets raw value, ped-subtracted and calibrated data
       virtual void Process(std::vector<Double_t> &var);
 
+      // Same as Process method, but looks for multiple pulses in the waveform window and fills multipulse vector
+      virtual void ProcessMulti(std::vector<Double_t> &var);
+
+    
       // Do we have samples data for this event?
       Bool_t HasData() const { return fHasData; }
 
