@@ -1871,10 +1871,18 @@ Int_t SBSGenericDetector::CoarseProcess(TClonesArray& )// tracks)
       } else { // Waveform mode
 	SBSData::Waveform *wave = blk->Waveform();
 	if(wave->HasData()) {
+
+	  std::vector<Double_t> &s_r =wave->GetDataRaw();
+	  nsamples = s_r.size();
+	  
+	  if(hFADCsampPedDiff != nullptr){
+	    for(size_t s = 0; s < nsamples; s++) {
+	      hFADCsampPedDiff->Fill( blk->GetID()-fChanMapStart , s_r[s] -wave->GetPed());
+	    }
+	  }
+	  
 	  if(fStoreRawHits) {
-	    std::vector<Double_t> &s_r =wave->GetDataRaw();
 	    std::vector<Double_t> &s_c = wave->GetData();
-	    nsamples = s_r.size();
 	    idx = fGood.samps.size();
 	    fGood.sidx.push_back(idx);
 	    fGood.samps_elemID.push_back(k);
